@@ -11,5 +11,5 @@ accelerate launch --config_file /data7/sooyeon/LyCORIS/gpu_config/gpu_4_5_config
                   --resolution 512,512 --net_key_names text --network_dim 64 --network_alpha 4 --train_batch_size 1 \
                   --optimizer_type AdamW --lr_scheduler cosine_with_restarts --lr_warmup_steps 144 \
                   --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 \
-                  --save_every_n_epochs 1 --sample_every_n_epochs 1 --sample_prompts /data7/sooyeon/MyData/object/normal_bagel_inference.txt
-                  --max_train_steps 5600
+                  --save_every_n_epochs 1 --sample_every_n_epochs 1 --sample_prompts /data7/sooyeon/MyData/object/normal_bagel_inference.txt \
+                  --max_train_steps 6000

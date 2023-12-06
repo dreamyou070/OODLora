@@ -1015,6 +1015,7 @@ if __name__ == "__main__":
 
     # step 2. dataset
     train_util.add_dataset_arguments(parser, True, True, True)
+    parser.add_argument("--mask_dir", type=str, default='')
     parser.add_argument("--class_caption", type=str, default='')
     parser.add_argument("--no_metadata", action="store_true",
                         help="do not save metadata in output model / メタデータを出力先モデルに保存しない")
