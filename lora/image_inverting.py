@@ -303,10 +303,12 @@ def recon_loop(latent,context,inference_times,scheduler, unet, vae,self_key_dict
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(f'../gen_test/recon_{t.item()}.png')
+        pil_img.save(f'../gen_test/with_uncon_recon_{t.item()}.png')
         # ----------------------------------------------------------------------------
         time_steps.append(inference_time)
-        noise_pred = call_unet(unet, latent, t, cond_embeddings, t.item(), None)
+        #noise_pred = call_unet(unet, latent, t, cond_embeddings, t.item(), None)
+        noise_pred = call_unet(unet, latent, t, uncond_embeddings, t.item(), None)
+        
         latent = prev_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
     return all_latent, time_steps, pil_images
