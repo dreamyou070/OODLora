@@ -169,7 +169,7 @@ def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dic
             value = self.reshape_heads_to_batch_dim(value)
 
             if not is_cross_attention:
-                query = self_query_dict[trg_indexs_list][layer_name].to(query.device)
+                #query = self_query_dict[trg_indexs_list][layer_name].to(query.device)
                 key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
                 value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
 
@@ -305,7 +305,7 @@ def recon_loop(latent,context,inference_times,scheduler, unet, vae,
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(os.path.join(base_folder_dir, f'with_con_with_self_qkv_recon_{t.item()}.png'))
+        pil_img.save(os.path.join(base_folder_dir, f'with_con_with_self_kv_recon_{t.item()}.png'))
         # ----------------------------------------------------------------------------
         time_steps.append(inference_time)
         noise_pred = call_unet(unet, latent, t, cond_embeddings, t.item(), None)
@@ -590,12 +590,6 @@ if __name__ == "__main__":
     parser.add_argument("--concept_image_folder", type=str)
     parser.add_argument("--num_ddim_steps", type=int, default=30)
     parser.add_argument("--folder_name", type=str)
-    
-    
-    
-
-    parser.add_argument("--max_self_input_time", type=int, default=10)
-    parser.add_argument("--min_value", type=int, default=3)
     parser.add_argument("--guidance_scale", type=float, default=7.5)
     parser.add_argument("--self_key_control", action='store_true')
     
