@@ -169,8 +169,6 @@ def register_self_condition_giver(unet: nn.Module, self_key_dict,self_value_dict
             value = self.reshape_heads_to_batch_dim(value)
 
             if not is_cross_attention:
-                # when self attention
-                print(f'when generating, layer_name : {layer_name}')
                 key = self_key_dict[trg_indexs_list][layer_name]
                 value = self_value_dict[trg_indexs_list][layer_name]
 
@@ -290,10 +288,9 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae):
         all_latent.append(latent)
     return all_latent, time_steps, pil_images
 
+@torch.no_grad()
 def recon_loop(latent,context,inference_times,scheduler, unet, vae,self_key_dict,self_value_dict) :
     register_self_condition_giver(unet, self_key_dict,self_value_dict)
-
-
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
