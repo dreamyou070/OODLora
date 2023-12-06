@@ -1,0 +1,20 @@
+jw, solo, shirt, long_sleeves, closed_mouth, jacket, male_focus, open_clothes, pants, hood, open_jacket, black_shirt, looking_down, black_pants, blue_jacket
+jw, solo, simple_background, white_background, closed_mouth, jacket, upper_body, male_focus, open_clothes, hood, looking_to_the_side, hoodie, hood_down, drawstring
+jw, solo, open_mouth, simple_background, white_background, male_focus, teeth, hood, hoodie, portrait, close-up, drawstring
+jw, solo, open_mouth, jacket, male_focus, indoors, hood, hoodie, hood_down
+jw, solo, long_sleeves, holding, sitting, male_focus, pants, indoors, hood, hoodie, chair, hood_down, paper, drawstring, computer, monitor, laptop, blue_hoodie, holding_paper, keyboard_(computer), office_chair, mouse_(computer)
+jw, solo, simple_background, white_background, closed_mouth, male_focus, hood, hoodie, portrait, close-up
+jw, solo, male_focus, hood, hoodie_background, hood_down, drawstring, blue_hoodie
+jw, solo, jacket, closed_eyes, upper_body, male_focus, open_clothes, teeth, hood, hoodie, hood_down, facing_viewer
+jw, solo, open_mouth, male_focus, looking_down, close-up
+jw, solo, open_mouth, jacket, upper_body, male_focus, open_clothes, hood, open_jacket, hoodie, hood_down, blue_jacket
+jw, solo, jacket, upper_body, male_focus, open_clothes, hood, hoodie, looking_down, hood_down, blue_jacket
+jw, solo, looking_at_viewer, simple_background, white_background, jacket, upper_body, male_focus, pointing, track_jacket
+jw, solo, closed_mouth, jacket, upper_body, male_focus, hood, looking_down, blue_jacket
+jw, solo, closed_mouth, jacket, upper_body, male_focus, outdoors, looking_down
+jw, solo, closed_mouth, jacket, upper_body, male_focus, sleeveless, indoors, looking_down
+jw, solo, shirt, long_sleeves, jewelry, closed_mouth, jacket, male_focus, open_clothes, pants, hood, necklace, open_jacket, hand_on_hip_background, denim, hand_on_own_chin, thinking, stroking_own_chin
+jw, solo, shirt, closed_mouth, jacket, male_focus, open_clothes, pants, indoors, hood, open_jacket, black_shirt, black_pants, hood_down, blue_jacket, hands_in_pockets
+jw, solo, simple_background, white_background, jacket, male_focus, artist_name, looking_down, portrait, close-up
+jw, solo, open_mouth, simple_background, white_background, male_focus, sweat, sweatdrop, portrait, close-up
+jw, solo, smile, white_background, male_focus, close-up

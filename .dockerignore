@@ -1,0 +1,7 @@
+../lora/.cache/
+cudnn_windows/
+../lora/bitsandbytes_windows/
+bitsandbytes_windows_deprecated/
+../lora/dataset/
+__pycache__/
+venv/

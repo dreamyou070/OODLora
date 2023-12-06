@@ -1,0 +1,14 @@
+lsy, no_humans, ground_vehicle, motor_vehicle, vehicle_focus
+lsy, simple_background, white_background, food, no_humans, plate, cake, candle, food_focus, birthday_cake
+lsy, simple_background, white_background, flower, comic, no_humans, plant, tulip
+lsy, white_background, comic, cup, no_humans, table, plant, desk, mug, computer, monitor, keyboard_(computer)
+lsy, simple_background, white_background, no_humans, ground_vehicle, motor_vehicle, vehicle_focus, motorcycle, wheel
+lsy, solo, simple_background, white_background, no_humans, pen, pencil
+lsy, solo, tree, no_humans, fire, ground_vehicle, motor_vehicle, car, train, truck
+lsy, no_humans, scenery, stairs, lamppost, pillar, arch
+lsy, simple_background, white_background, flower, greyscale, no_humans, leaf, traditional_media, plant, still_life
+lsy, 1girl, solo, long_hair, breasts, looking_at_viewer, bangs, simple_background, hair_ornament, white_background, cleavage, medium_breasts, closed_mouth, upper_body, flower, greyscale, pointy_ears, hair_flower, freckles
+lsy, 1girl, solo, looking_at_viewer, smile, short_hair, simple_background, white_background, upper_body, greyscale, hood, hoodie, hood_down
+lsy, solo, simple_background, white_background, closed_mouth, standing, full_body, closed_eyes, greyscale, from_side, no_humans, animal, animal_focus
+lsy, solo, hat, white_background, tree, no_humans, bird, top_hat
+lsy, smile, open_mouth, simple_background, white_background, jewelry, sitting, food, tongue, tongue_out, necklace, no_humans, animal, bowl, dog, animal_focus, pet_bowl

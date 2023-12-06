@@ -1,0 +1,16 @@
+A watercolor painting of a <TOK>
+a photo of <TOK>
+a monochrome photo of <TOK>
+a pencil drawing of <TOK>
+A photo of <TOK> on the beach, small waves, detailed symmetric face, beautiful composition
+A <TOK>, in the forest
+A <TOK>, walking on the street
+A painting of a <TOK> in the style of Vincent Van Gogh
+A <TOK> sit on the chair
+A <TOK>, wearing a headphone
+A <TOK>, wearing a Santa hat
+A smiling <TOK>
+An angry <TOK>
+A running <TOK>
+A jumping <TOK>
+A <TOK> is lying down
