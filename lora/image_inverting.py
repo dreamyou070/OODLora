@@ -293,8 +293,9 @@ def main(args) :
                                                                 **net_kwargs)
     else:
         network = network_module.create_network(1.0,
-                                                args.network_dim, args.network_alpha, vae,
-                                                text_encoder, unet, neuron_dropout=args.network_dropout, **net_kwargs, )
+                                                args.network_dim,
+                                                args.network_alpha,
+                                                vae, text_encoder, unet, neuron_dropout=args.network_dropout, **net_kwargs, )
     print(f' (1.3.4) apply trained state dict')
     network.apply_to(text_encoder, unet, True, True)
     if args.network_weights is not None:
@@ -319,18 +320,18 @@ def main(args) :
     elif args.sample_sampler == "heun": scheduler_cls = HeunDiscreteScheduler
     elif args.sample_sampler == "dpm_2" or args.sample_sampler == "k_dpm_2": scheduler_cls = KDPM2DiscreteScheduler
     elif args.sample_sampler == "dpm_2_a" or args.sample_sampler == "k_dpm_2_a": scheduler_cls = KDPM2AncestralDiscreteScheduler
-    else:
-        scheduler_cls = DDIMScheduler
+    else: scheduler_cls = DDIMScheduler
     if args.v_parameterization:
         sched_init_args["prediction_type"] = "v_prediction "
-
     # scheduler:
     SCHEDULER_LINEAR_START = 0.00085
     SCHEDULER_LINEAR_END = 0.0120
     SCHEDULER_TIMESTEPS = 1000
     SCHEDLER_SCHEDULE = "scaled_linear"
-    scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,
-                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,)
+    scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS,
+                              beta_start=SCHEDULER_LINEAR_START,
+                              beta_end=SCHEDULER_LINEAR_END,
+                              beta_schedule=SCHEDLER_SCHEDULE,)
 
     print(f' (1.4) model to accelerator device')
     device = args.device
@@ -341,12 +342,13 @@ def main(args) :
     else:
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
-        
-    """
+
     print(f' \n step 2. ground-truth image preparing')
     print(f' (2.1) prompt condition')
     prompt = args.prompt
     context = init_prompt(tokenizer, text_encoder, device, prompt)
+    """
+    
 
     print(f' (2.2) image condition')
     concept_img_dirs = os.listdir(args.concept_image_folder)
@@ -584,6 +586,12 @@ if __name__ == "__main__":
                         help="network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みファイル", )
     parser.add_argument("--base_weights_multiplier", type=float, default=None, nargs="*",
                         help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率", )
+    parser.add_argument("--network_dim", type=int, default=None,
+                        help="network dimensions (depends on each network) / モジュールの次元数（ネットワークにより定義は異なります）")
+    parser.add_argument("--network_alpha", type=float, default=1,
+                        help="alpha for LoRA weight scaling, default 1 (same as network_dim for same behavior as old version)", )
+    parser.add_argument("--network_dropout", type=float, default=None,
+                        help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
     parser.add_argument("--dim_from_weights", action="store_true",
