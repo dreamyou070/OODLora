@@ -281,7 +281,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae):
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        #pil_img.save(f'./inversion_{t.item()}.png')
+        pil_img.save(f'../gen_test_300_iter/with_con_with_self_qkv_inversion_{t.item()}.png')
         # ----------------------------------------------------------------------------
         time_steps.append(t.item())
         noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
