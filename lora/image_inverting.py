@@ -152,7 +152,7 @@ def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
 
-def register_self_condition_giver(unet: nn.Module, self_key_dict,self_value_dict):
+def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dict,self_value_dict):
 
     def ca_forward(self, layer_name):
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
@@ -168,9 +168,10 @@ def register_self_condition_giver(unet: nn.Module, self_key_dict,self_value_dict
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
 
-            #if not is_cross_attention:
-            #    key = self_key_dict[trg_indexs_list][layer_name]
-            #    value = self_value_dict[trg_indexs_list][layer_name]
+            if not is_cross_attention:
+                query = self_query_dict[trg_indexs_list][layer_name]
+                key = self_key_dict[trg_indexs_list][layer_name]
+                value = self_value_dict[trg_indexs_list][layer_name]
 
             if self.upcast_attention:
                 query = query.float()
@@ -289,8 +290,9 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae):
     return all_latent, time_steps, pil_images
 
 @torch.no_grad()
-def recon_loop(latent,context,inference_times,scheduler, unet, vae,self_key_dict,self_value_dict) :
-    register_self_condition_giver(unet, self_key_dict,self_value_dict)
+def recon_loop(latent,context,inference_times,scheduler, unet, vae,
+               self_query_dict, self_key_dict,self_value_dict) :
+    register_self_condition_giver(unet, self_query_dict, self_key_dict,self_value_dict)
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
@@ -303,11 +305,11 @@ def recon_loop(latent,context,inference_times,scheduler, unet, vae,self_key_dict
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(f'../gen_test/with_uncon__without_self_cond_recon_{t.item()}.png')
+        pil_img.save(f'../gen_test/with_con_with_self_qkv_recon_{t.item()}.png')
         # ----------------------------------------------------------------------------
         time_steps.append(inference_time)
-        #noise_pred = call_unet(unet, latent, t, cond_embeddings, t.item(), None)
-        noise_pred = call_unet(unet, latent, t, uncond_embeddings, t.item(), None)
+        noise_pred = call_unet(unet, latent, t, cond_embeddings, t.item(), None)
+        #noise_pred = call_unet(unet, latent, t, uncond_embeddings, t.item(), None)
 
         latent = prev_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
@@ -543,6 +545,7 @@ def main(args) :
                                                           context,
                                                           inference_times,
                                                           scheduler, unet, vae,
+                                                          self_query_dict,
                                                           self_key_dict,
                                                           self_value_dict)
 
