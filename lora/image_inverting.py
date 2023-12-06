@@ -168,9 +168,9 @@ def register_self_condition_giver(unet: nn.Module, self_key_dict,self_value_dict
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
 
-            if not is_cross_attention:
-                key = self_key_dict[trg_indexs_list][layer_name]
-                value = self_value_dict[trg_indexs_list][layer_name]
+            #if not is_cross_attention:
+            #    key = self_key_dict[trg_indexs_list][layer_name]
+            #    value = self_value_dict[trg_indexs_list][layer_name]
 
             if self.upcast_attention:
                 query = query.float()
@@ -303,12 +303,12 @@ def recon_loop(latent,context,inference_times,scheduler, unet, vae,self_key_dict
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(f'../gen_test/with_uncon_recon_{t.item()}.png')
+        pil_img.save(f'../gen_test/with_uncon__without_self_cond_recon_{t.item()}.png')
         # ----------------------------------------------------------------------------
         time_steps.append(inference_time)
         #noise_pred = call_unet(unet, latent, t, cond_embeddings, t.item(), None)
         noise_pred = call_unet(unet, latent, t, uncond_embeddings, t.item(), None)
-        
+
         latent = prev_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
     return all_latent, time_steps, pil_images
