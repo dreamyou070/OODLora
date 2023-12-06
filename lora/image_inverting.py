@@ -198,7 +198,7 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     return next_sample
 
 @torch.no_grad()
-def ddim_loop(latent, context, inference_times, scheduler, unet):
+def ddim_loop(latent, context, inference_times, scheduler, unet, vae):
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
@@ -206,6 +206,10 @@ def ddim_loop(latent, context, inference_times, scheduler, unet):
     latent_dict = {}
     for t in torch.flip(inference_times, dims=[0]):
         latent_dict[t.item()] = latent
+        with torch.no_grad():
+            np_img = latent2image(latent, vae, return_type='np')
+        pil_img = Image.fromarray(np_img)
+        pil_img.save(f'./inversion_{t.item()}.png')
         # ----------------------------------------------------------------------------
         time_steps.append(t.item())
         noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
@@ -371,7 +375,7 @@ def main(args) :
         concept_img_dir = os.path.join(args.concept_image_folder, concept_img)
         image_gt_np = load_512(concept_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        ddim_latents, time_steps = ddim_loop(latent, context, inference_times, scheduler, unet)
+        ddim_latents, time_steps = ddim_loop(latent, context, inference_times, scheduler, unet, vae)
 
 
         layer_names = attention_storer.self_query_store.keys()
