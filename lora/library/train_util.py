@@ -1105,8 +1105,6 @@ class BaseDataset(torch.utils.data.Dataset):
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                 latents = None
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
-
-
             images.append(image)
             latents_list.append(latents)
             target_size = (image.shape[2], image.shape[1]) if image is not None else (latents.shape[2] * 8, latents.shape[1] * 8)
@@ -1122,6 +1120,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
             # captionとtext encoder outputを処理する
             caption = image_info.caption  # default
+            print(f'caption : {caption}')
             trg_concept = image_info.trg_concept
             class_caption = image_info.class_caption
             if class_caption is None:
@@ -2682,8 +2681,7 @@ def add_training_arguments(parser: argparse.ArgumentParser, support_dreambooth: 
     parser.add_argument("--resume", type=str, default=None, help="saved state to resume training / 学習再開するモデルのstate")
 
     parser.add_argument("--train_batch_size", type=int, default=1, help="batch size for training / 学習時のバッチサイズ")
-    parser.add_argument(
-        "--max_token_length",
+    parser.add_argument("--max_token_length",
         type=int,
         default=None,
         choices=[None, 150, 225],
@@ -2705,8 +2703,7 @@ def add_training_arguments(parser: argparse.ArgumentParser, support_dreambooth: 
     )
 
     parser.add_argument("--max_train_steps", type=int, default=1600, help="training steps / 学習ステップ数")
-    parser.add_argument(
-        "--max_train_epochs",
+    parser.add_argument("--max_train_epochs",
         type=int,
         default=None,
         help="training epochs (overrides max_train_steps) / 学習エポック数（max_train_stepsを上書きします）",

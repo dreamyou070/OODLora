@@ -210,6 +210,7 @@ class NetworkTrainer:
 
     def is_text_encoder_outputs_cached(self, args):
         return False
+
     def cache_text_encoder_outputs_if_needed(
         self, args, accelerator, unet, vae, tokenizers, text_encoders, data_loader, weight_dtype ):
         for t_enc in text_encoders:
@@ -231,7 +232,6 @@ class NetworkTrainer:
                     index_list.append(index)
             batch_index_list.append(index_list)
         return batch_index_list
-
 
     def get_text_cond(self, args, accelerator, batch, tokenizers, text_encoders, weight_dtype):
         input_ids = batch["input_ids"].to(accelerator.device) # batch, torch_num, sen_len
@@ -260,24 +260,26 @@ class NetworkTrainer:
     def train(self, args):
 
         print(f'\n step 1. setting')
-        if args.process_title : setproctitle(args.process_title)
-        else : setproctitle('parksooyeon')
-        session_id = random.randint(0, 2**32)
-        training_started_at = time.time()
-        train_util.verify_training_args(args)
+        print(f' (1) session')
+        if args.process_title :
+            setproctitle(args.process_title)
+        else :
+            setproctitle('parksooyeon')
+        session_id = random.randint(0, 2 ** 32)
+
+        print(f' (2) seed')
+        if args.seed is None:
+            args.seed = random.randint(0, 2**32)
+        set_seed(args.seed)
+
+        print(f'\n step 2. dataset')
         train_util.prepare_dataset_args(args, True)
         cache_latents = args.cache_latents
         use_dreambooth_method = args.in_json is None
         use_user_config = args.dataset_config is not None
-        use_class_caption = args.class_caption is not None # if class_caption is provided, for subsets, add key 'class_caption' to each subset
-        if args.seed is None: args.seed = random.randint(0, 2**32)
-        set_seed(args.seed)
-
-        print(f'\n step 2. loading tokenizer')
+        use_class_caption = args.class_caption is not None
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
-
-        # データセットを準備する
         if args.dataset_class is None:
             blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
             if use_user_config:
@@ -285,14 +287,16 @@ class NetworkTrainer:
                 user_config = config_util.load_user_config(args.dataset_config)
                 ignored = ["train_data_dir", "reg_data_dir", "in_json"]
                 if any(getattr(args, attr) is not None for attr in ignored):
-                    print("ignoring the following options because config file is found: {0} / 設定ファイルが利用されるため以下のオプションは無視されます: {0}".format(", ".join(ignored)))
+                    print(
+                        "ignoring the following options because config file is found: {0} / 設定ファイルが利用されるため以下のオプションは無視されます: {0}".format(
+                            ", ".join(ignored)))
             else:
                 if use_dreambooth_method:
                     print("Using DreamBooth method.")
                     user_config = {}
-                    user_config['datasets'] = [{"subsets" : None}]
+                    user_config['datasets'] = [{"subsets": None}]
                     subsets_dict_list = []
-                    for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir, args.reg_data_dir):
+                    for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,args.reg_data_dir):
                         if use_class_caption:
                             subsets_dict['class_caption'] = args.class_caption
                         subsets_dict_list.append(subsets_dict)
@@ -302,18 +306,20 @@ class NetworkTrainer:
                     user_config = {}
                     user_config["datasets"] = []
                     user_config["datasets"].append({"subsets": [{"image_dir": args.train_data_dir,
-                                                                 "metadata_file": args.in_json,}]})
-                    # add class_caption to each subset
+                                                                 "metadata_file": args.in_json, }]})
                     if use_class_caption:
                         for subset in user_config["datasets"][0]["subsets"]:
                             subset["class_caption"] = args.class_caption
             print(f'User config: {user_config}')
             # blueprint_generator = BlueprintGenerator
             print('start of generate function ...')
-            blueprint = blueprint_generator.generate(user_config,args,tokenizer=tokenizer)
+            blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
             train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
         else:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
+
+        training_started_at = time.time()
+        train_util.verify_training_args(args)
         current_epoch = Value("i", 0)
         current_step = Value("i", 0)
         ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
@@ -322,55 +328,42 @@ class NetworkTrainer:
             train_util.debug_dataset(train_dataset_group)
             return
         if len(train_dataset_group) == 0:
-            print(
-                "No data found. Please verify arguments (train_data_dir must be the parent of folders with images) ）")
+            print("No data found. Please verify arguments (train_data_dir must be the parent of folders with images) ）")
             return
-
         if cache_latents:
-            assert (train_dataset_group.is_latent_cacheable()
-            ), "when caching latents, either color_aug or random_crop cannot be used / latentをキャッシュするときはcolor_augとrandom_cropは使えません"
+            assert (train_dataset_group.is_latent_cacheable()), "when caching latents, either color_aug or random_crop cannot be used / latentをキャッシュするときはcolor_augとrandom_cropは使えません"
         self.assert_extra_args(args, train_dataset_group)
 
-        # acceleratorを準備する
-        print("preparing accelerator")
+        print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
         is_main_process = accelerator.is_main_process
         if args.log_with == 'wandb' and is_main_process :
             import wandb
-            wandb.init(project=args.wandb_init_name,
-                       name=args.wandb_run_name)
+            wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
 
-
+        print(f'\n step 4. save directory')
         save_base_dir = args.output_dir
         _, folder_name = os.path.split(save_base_dir)
-        # save config
         record_save_dir = os.path.join(args.output_dir, "record")
         os.makedirs(record_save_dir, exist_ok=True)
         with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
 
-        # mixed precisionに対応した型を用意しておき適宜castする
+
+        print(f'\n step 5. mixed precision and model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
-
-        # モデルを読み込む
         model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
-
-        # text_encoder is List[CLIPTextModel] or CLIPTextModel
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-
-        # モデルに xformers とか memory efficient attention を組み込む
         train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
         if torch.__version__ >= "2.0.0":  # PyTorch 2.0.0 以上対応のxformersなら以下が使える
             vae.set_use_memory_efficient_attention_xformers(args.xformers)
 
-        # 差分追加学習のためにモデルを読み込む
+        print(' (5.2) lora model')
         sys.path.append(os.path.dirname(__file__))
         accelerator.print("import network module:", args.network_module)
         network_module = importlib.import_module(args.network_module)
-
         if args.base_weights is not None:
-            # base_weights が指定されている場合は、指定された重みを読み込みマージする
             for i, weight_path in enumerate(args.base_weights):
                 if args.base_weights_multiplier is None or len(args.base_weights_multiplier) <= i:
                     multiplier = 1.0
@@ -412,25 +405,15 @@ class NetworkTrainer:
             network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet, **net_kwargs)
         else:
             # LyCORIS will work with this...
-            network = network_module.create_network(
-                1.0,
-                args.network_dim,
-                args.network_alpha,
-                vae,
-                text_encoder,
-                unet,
-                neuron_dropout=args.network_dropout,
-                **net_kwargs,
-            )
+            network = network_module.create_network(1.0,
+                                                    args.network_dim,args.network_alpha,vae,
+                                                    text_encoder,unet,neuron_dropout=args.network_dropout,**net_kwargs,)
         if network is None:
             return
-
         if hasattr(network, "prepare_network"):
             network.prepare_network(args)
         if args.scale_weight_norms and not hasattr(network, "apply_max_norm_regularization"):
-            print(
-                "warning: scale_weight_norms is specified but the network does not support it / scale_weight_normsが指定されていますが、ネットワークが対応していません"
-            )
+            print("warning: scale_weight_norms is specified but the network does not support it / scale_weight_normsが指定されていますが、ネットワークが対応していません")
             args.scale_weight_norms = False
         train_unet = not args.network_train_text_encoder_only
         train_text_encoder = not args.network_train_unet_only and not self.is_text_encoder_outputs_cached(args)
@@ -456,16 +439,11 @@ class NetworkTrainer:
 
         # dataloaderを準備する
         # DataLoaderのプロセス数：0はメインプロセスになる
+        print(f' step7. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)  # cpu_count-1 ただし最大で指定された数まで
-        train_dataloader = torch.utils.data.DataLoader(
-            train_dataset_group,
-            batch_size=1,
-            shuffle=True,
-            collate_fn=collater,
-            num_workers=n_workers,
-            persistent_workers=args.persistent_data_loader_workers,)
-
-        # 学習ステップ数を計算する
+        train_dataloader = torch.utils.data.DataLoader(train_dataset_group,batch_size=1,
+                                                       shuffle=True,collate_fn=collater,num_workers=n_workers,
+                                                       persistent_workers=args.persistent_data_loader_workers,)
         if args.max_train_epochs is not None:
             args.max_train_steps = args.max_train_epochs * math.ceil(
                 len(train_dataloader) / accelerator.num_processes / args.gradient_accumulation_steps)
@@ -883,37 +861,11 @@ class NetworkTrainer:
                         if attention_storer is not None:
                             atten_collection = attention_storer.step_store
                             attention_storer.step_store = {}
-
-
                     if args.v_parameterization:
                         # v-parameterization training
                         target = noise_scheduler.get_velocity(latents, noise, timesteps)
                     else:
                         target = noise
-                    ### Masked loss ###
-                    if args.masked_loss:
-                        # get mask images then set to device
-                        # batch['mask_imgs'] is actually List[Tensor] 
-                        # for each images, get mask image and resize to noise_pred size
-                        # we may not be able to use batch['mask_imgs'] directly because of different image size
-                        # interpolating F.interpolate(mask, model_output.size()[-2:], mode='bilinear')
-                        # noise_pred is (batch_size, 3, 256, 256), mask should be 256, 256
-                        #noise_pred:torch.Tensor
-                        #print("noise_pred size: ", noise_pred.size()) # debug [2,4,256,256] [batch_size, 4, 256, 256] # 4 is timestep?
-                        #print("mask_imgs size: ", batch['mask_imgs'][0].size()) # debug, it is [256, 256]
-                        #print("target size: ", target.size()) # debug [2,4,256,256] [batch_size, 4, 256, 256] # 4 is timestep?
-                        # [256, 256] -> [1, 1, 256, 256]
-                        mask_imgs = [mask_img.unsqueeze(0).unsqueeze(0) for mask_img in batch['mask_imgs']]
-                        # interpolate
-                        mask_imgs = [F.interpolate(mask_img, noise_pred.size()[-2:], mode='bilinear') for mask_img in mask_imgs]
-                        # to Tensor
-                        mask_imgs = torch.cat(mask_imgs, dim=0) # [batch_size, 1, 256, 256]
-                        #print("mask_imgs size: ", mask_imgs[0].size()) # debug
-                        # multiply mask to noise_pred and target
-                        # element-wise multiplication
-                        noise_pred = noise_pred * mask_imgs
-                        target = target * mask_imgs
-                    batch_num = noise_pred.shape[0]
                     loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
                     loss = loss.mean([1, 2, 3])
                     loss_weights = batch["loss_weights"]  # 各sampleごとのweight
@@ -1053,35 +1005,51 @@ class NetworkTrainer:
                 writer = csv.writer(f)
                 writer.writerows(attn_loss_records)
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    train_util.add_sd_models_arguments(parser)
+    # step 1. setting
+    parser.add_argument("--process_title", type=str, default='parksooyeon')
+    parser.add_argument("--wandb_init_name", type=str)
+    parser.add_argument("--wandb_log_template_path", type=str)
+    parser.add_argument("--wandb_key", type=str)
+
+    # step 2. dataset
     train_util.add_dataset_arguments(parser, True, True, True)
-    train_util.add_training_arguments(parser, True)
-    train_util.add_optimizer_arguments(parser)
-    config_util.add_config_arguments(parser)
-    custom_train_functions.add_custom_train_arguments(parser)
+    parser.add_argument("--class_caption", type=str, default='')
     parser.add_argument("--no_metadata", action="store_true",
                         help="do not save metadata in output model / メタデータを出力先モデルに保存しない")
-    parser.add_argument("--save_model_as", type=str, default="safetensors",
-                        choices=[None, "ckpt", "pt", "safetensors"],
-                        help="format to save the model (default is .safetensors) / モデル保存時の形式（デフォルトはsafetensors）", )
-    parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")
-    parser.add_argument("--text_encoder_lr", type=float, default=None,
-                        help="learning rate for Text Encoder / Text Encoderの学習率")
+
+    # step 3. model
+    train_util.add_sd_models_arguments(parser)
     parser.add_argument("--network_weights", type=str, default=None,
                         help="pretrained weights for network / 学習するネットワークの初期重み")
     parser.add_argument("--network_module", type=str, default=None,
                         help="network module to train / 学習対象のネットワークのモジュール")
     parser.add_argument("--network_dim", type=int, default=None,
                         help="network dimensions (depends on each network) / モジュールの次元数（ネットワークにより定義は異なります）")
-    parser.add_argument("--network_alpha",type=float,default=1,
-                        help="alpha for LoRA weight scaling, default 1 (same as network_dim for same behavior as old version)",)
-    parser.add_argument("--network_dropout",type=float,default=None,
-                        help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)",)
+    parser.add_argument("--network_alpha", type=float, default=1,
+                        help="alpha for LoRA weight scaling, default 1 (same as network_dim for same behavior as old version)", )
+    parser.add_argument("--network_dropout", type=float, default=None,
+                        help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
+
+    # step 4. training
+    train_util.add_training_arguments(parser, True)
+    custom_train_functions.add_custom_train_arguments(parser)
+    parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")
+    parser.add_argument("--text_encoder_lr", type=float, default=None,
+                        help="learning rate for Text Encoder / Text Encoderの学習率")
+
+    # step 5. optimizer
+    train_util.add_optimizer_arguments(parser)
+
+    config_util.add_config_arguments(parser)
+
+
+    parser.add_argument("--save_model_as", type=str, default="safetensors",
+                        choices=[None, "ckpt", "pt", "safetensors"],
+                        help="format to save the model (default is .safetensors) / モデル保存時の形式（デフォルトはsafetensors）", )
     parser.add_argument("--network_train_unet_only", action="store_true",
                         help="only training U-Net part / U-Net関連部分のみ学習する")
     parser.add_argument("--network_train_text_encoder_only", action="store_true",
@@ -1098,64 +1066,12 @@ if __name__ == "__main__":
                         help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率",)
     parser.add_argument("--no_half_vae",action="store_true",
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う",)
-    parser.add_argument("--process_title", type=str, default='parksooyeon')
-    parser.add_argument("--wandb_init_name", type=str)
-    parser.add_argument("--wandb_log_template_path", type=str)
-    parser.add_argument("--wandb_key", type=str)
+
     parser.add_argument("--trg_concept", type=str, default='haibara')
     parser.add_argument("--net_key_names", type=str, default='text')
 
     # class_caption
-    parser.add_argument("--class_caption", type=str, default='girl')
-    parser.add_argument("--heatmap_loss", action='store_true')
-    parser.add_argument("--attn_loss_ratio", type=float, default=1.0)
-    parser.add_argument("--mask_dir", type=str)
-
-    # masked_loss
-    parser.add_argument("--masked_loss", action='store_true')
-    parser.add_argument("--only_second_training", action='store_true')
-    parser.add_argument("--only_third_training", action='store_true')
-    parser.add_argument("--first_second_training", action='store_true')
-    parser.add_argument("--second_third_training", action='store_true')
-    parser.add_argument("--first_second_third_training", action='store_true')
-    parser.add_argument("--attn_loss_layers", type=str, default="all", help="attn loss layers, can be splitted with ',', matches regex with given string. default is 'all'")
-    # mask_threshold (0~1, default 1)
-    parser.add_argument("--mask_threshold", type=float, default=1.0, help="Threshold for mask to be used as 1")
-    parser.add_argument("--heatmap_backprop", action = 'store_true')
-    args = parser.parse_args()
-    # overwrite args.attn_loss_layers if only_second_training, only_third_training, second_third_training, first_second_third_training is True
-    if args.only_second_training:
-        args.attn_loss_layers = 'down_blocks_2,up_blocks_1'
-    elif args.only_third_training:
-        args.attn_loss_layers = 'down_blocks_1,up_blocks_2'
-    elif args.first_second_training:
-        args.attn_loss_layers = 'mid,down_blocks_2,up_blocks_1'
-    elif args.second_third_training:
-        args.attn_loss_layers = 'down_blocks_2,up_blocks_1,down_blocks_1,up_blocks_2'
-    elif args.first_second_third_training:
-        args.attn_loss_layers = 'mid,down_blocks_2,up_blocks_1,down_blocks_1,up_blocks_2'
-    else :
-        args.attn_loss_layers = 'all'
-
-
-    # if any of only_second_training, only_third_training, second_third_training, first_second_third_training is True, print message to notify user that args.attn_loss_layers is overwritten
-    if args.only_second_training or args.only_third_training or args.second_third_training or args.first_second_third_training:
-        print(f"args.attn_loss_layers is overwritten to {args.attn_loss_layers} because only_second_training, only_third_training, second_third_training, first_second_third_training is True")
-
-    if args.wandb_init_name is not None:
-        tempfile_new = tempfile.NamedTemporaryFile()
-        print(f"Created temporary file: {tempfile_new.name}")
-        if args.wandb_log_template_path is not None:
-            with open(args.wandb_log_template_path, 'r', encoding='utf-8') as f:
-                lines = f.read()
-        else:
-            lines = '''[wandb]
-    name = "{0}"'''
-        tempfile_path = tempfile_new.name
-        with open(tempfile_path, 'w', encoding='utf-8') as f:
-            # format
-            f.write(lines.format(args.wandb_init_name))
-        args.log_tracker_config = tempfile_path #overwrite
+    args= parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
     trainer.train(args)
