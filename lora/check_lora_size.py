@@ -4,6 +4,7 @@ import re
 import math
 import os
 import sys
+import matplotlib.pyplot as plt
 import tempfile
 from library import model_util
 import library.train_util as train_util
@@ -15,6 +16,9 @@ import torch.nn.functional as F
 from functools import lru_cache
 from attention_store import AttentionStore
 import copy
+import numpy as np
+from safetensors.torch import load_file
+
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -48,17 +52,6 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
             is_cross_attention = False
             if context is not None:
                 is_cross_attention = True
-                #print(f'trg_indexs_list : {trg_indexs_list}')
-                uncon, con = context.chunk(2)
-                if 'down_blocks_2' in layer_name or 'mid' in layer_name or 'up_blocks_1' in layer_name :
-                    # caption net length = trg_indexs_list
-                    print(f'{layer_name} shrinking trigge word and padding token strength')
-                    trg_size = torch.ones(con.shape)
-                    trg_size[:, 0, :] = 1.0
-                    trg_size[:, 1, :] = 0.2
-                    trg_size[:, trg_indexs_list+1:, :] = 0.2
-                    con = con * trg_size.to(con.device)  # class_text_embeddings
-                context = torch.cat([uncon, con])
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
             key = self.to_k(context)
@@ -208,7 +201,6 @@ class NetworkTrainer:
 
     def is_text_encoder_outputs_cached(self, args):
         return False
-
     def cache_text_encoder_outputs_if_needed(self, args, accelerator, unet, vae, tokenizers, text_encoders, data_loader, weight_dtype ):
         for t_enc in text_encoders:
             t_enc.to(accelerator.device)
@@ -240,16 +232,16 @@ class NetworkTrainer:
         noise_pred = unet(noisy_latents, timesteps, text_conds, trg_indexs_list=trg_indexs_list, mask_imgs=mask_imgs, ).sample
         return noise_pred
 
-    def sample_images(self, accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet, efficient=False,
-                      save_folder_name = None):
-        train_util.sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet, efficient=efficient,
-                                 save_folder_name = save_folder_name)
 
-    def sample_images_reg(self, accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet,
-                          sub_text_encoder,efficient=False,save_folder_name=None,) :
-        train_util.sample_images_reg(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet,
-                                     sub_text_encoder, efficient=efficient, save_folder_name=save_folder_name)
 
+    def sample_images(self, accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet,
+                      attention_storer=None,
+                      efficient=False,
+                      save_folder_name=None):
+        train_util.sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet,
+                                 attention_storer=attention_storer,
+                                 efficient=efficient,
+                                 save_folder_name=save_folder_name)
 
     def get_input_ids(self, args, caption, tokenizer):
         tokenizer_max_length = args.max_token_length + 2
@@ -293,59 +285,60 @@ class NetworkTrainer:
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
-        print(" (5.1) model not with lora")
-        _, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
-        text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-
-        print(" (5.2) model with lora")
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
         _, text_encoder_org, vae_org, unet_org = self.load_target_model(args, weight_dtype, accelerator)
-        attention_storer = AttentionStore()
-        register_attention_control(unet_org, attention_storer, mask_threshold=args.mask_threshold)
-
-
         text_encoders_org = text_encoder_org if isinstance(text_encoder_org, list) else [text_encoder_org]
+        # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+        print("\n step 7-1. prepare network")
         sys.path.append(os.path.dirname(__file__))
         accelerator.print("import network module:", args.network_module)
         network_module = importlib.import_module(args.network_module)
+
         pretrained_network_dir = args.output_dir
         network_dirs = os.listdir(pretrained_network_dir)
         for network_dir in network_dirs :
             if 'safetensors' in network_dir and 'last' in network_dir :
                 network_file = os.path.join(pretrained_network_dir, network_dir)
-                #print(f"load network from {network_file}")
                 network_name, ext = os.path.splitext(network_dir)
-                if 'epoch' in network_name :
-                    epoch_info = int(network_name.split('-')[-1])
-                elif 'last' in network_name :
-                    epoch_info = 1000
-                else :
-                    epoch_info = -1
+                #if 'epoch' in network_name :
+                #    epoch_info = int(network_name.split('-')[-1])
+                #elif 'last' in network_name :
+                #    epoch_info = 1000
+                #else :
+                #    epoch_info = -1
                     # learned network state dict
-                from safetensors.torch import load_file
+                print(f'loading network from {network_file}')
                 weights_sd = load_file(network_file)
                 layer_names = weights_sd.keys()
                 efficient_layers = args.efficient_layer.split(",")
-                #unefficient_layers = args.unefficient_layer.split(",")
-                #save_folder_name = 'unefficient_' + '_'.join(efficient_layers)
-                #save_folder_name = 'efficient_' +'_'.join(efficient_layers )
                 save_folder_name = args.save_folder_name
+                """
                 for layer_name in layer_names:
                     score = 0
                     for efficient_layer in efficient_layers:
                         if efficient_layer in layer_name:
                             if 'attn2_to_k' not in layer_name and 'attn2_to_v' not in layer_name:
                                 score += 1
-                    if score == 0:
+                    if score == 0 and 'alpha' not in layer_name:
                         weights_sd[layer_name] = weights_sd[layer_name] * 0
+
+                    if 'alpha' in layer_name:
+                        if 'text' in layer_name or 'attn2_to_k' in layer_name or 'attn2_to_v' in layer_name  :
+                            weights_sd[layer_name] = weights_sd[layer_name] * 1
+                        #if 'text' in layer_name or 'attn2_to_k' in layer_name or 'attn2_to_v' in layer_name or 'attn1_to_k' in layer_name or 'attn1_to_v' in layer_name :
+                        #    weights_sd[layer_name] = weights_sd[layer_name] * 1
+                        else :
+                            weights_sd[layer_name] = weights_sd[layer_name] * 0
+
+                        #print(f'layer_name : {layer_name} , alpha_value : {alpha_value}')
                     # because alpha is np, should be on cpu
                     #else :
                     #    print(f'layer to use : {layer_name}')
                     weights_sd[layer_name] = weights_sd[layer_name].to("cpu")
+                """
                 # ------------------------------------------------------------------------------------------------------
                 # 2) make empty network
                 vae_copy,text_encoder_copy, unet_copy = copy.deepcopy(vae_org), copy.deepcopy(text_encoder_org).to("cpu" ), copy.deepcopy(unet_org)
-                train_util.replace_unet_modules(unet_copy, args.mem_eff_attn, args.xformers, args.sdpa)
                 temp_network, weights_sd = network_module.create_network_from_weights(multiplier=1, file=None,block_wise=None,
                                                                                       vae=vae_copy, text_encoder=text_encoder_copy, unet=unet_copy,
                                                                                       weights_sd=weights_sd,for_inference=False,)
@@ -367,15 +360,70 @@ class NetworkTrainer:
                 unet_copy.to(weight_dtype).to(accelerator.device)
                 text_encoder_copy.to(weight_dtype).to(accelerator.device)
                 # 4) applying to deeplearning network
+
                 temp_network.apply_to(text_encoder_org, unet_org)
+                lora_modules = temp_network.text_encoder_loras + temp_network.unet_loras
 
-                attention_storer = AttentionStore()
-                register_attention_control(unet_copy, attention_storer, mask_threshold=args.mask_threshold)
+                for i, lora_module in enumerate(lora_modules) :
+                    lora_name = lora_module.lora_name
+                    if 'attn2_to_k' in lora_name or 'attn2_to_v' in lora_name :
+                    #if 'text' not in lora_name :
+                        org_sd = lora_module.org_module.state_dict()
+                        org_weight = org_sd["weight"]#.to(torch.float)
 
-                self.sample_images_reg(accelerator, args, epoch_info, 0, accelerator.device, vae_copy, tokenizer,
-                                       text_encoder_copy, unet_copy,
-                                       text_encoder,
-                                       efficient=True, save_folder_name = save_folder_name,)
+                        down_weight = lora_module.lora_down.weight.data
+                        up_weight = lora_module.lora_up.weight.data
+                        # merge weight
+                        if len(org_weight.size()) == 2:
+                            lora_weight = (up_weight @ down_weight) * lora_module.scale
+                        elif down_weight.size()[2:4] == (1, 1):
+                            lora_weight = (up_weight.squeeze(3).squeeze(2) @ down_weight.squeeze(3).squeeze(2)).unsqueeze(2).unsqueeze(3)* lora_module.scale
+                        else:
+                            conved = torch.nn.functional.conv2d(down_weight.permute(1, 0, 2, 3), up_weight).permute(1, 0, 2,3)
+                            lora_weight = conved * lora_module.scale
+
+                        total_weight = lora_weight + org_weight
+                        org_weight = torch.flatten(org_weight).to('cpu')
+                        lora_down_weight = torch.flatten(down_weight).to('cpu')
+                        lora_up_weight = torch.flatten(up_weight).to('cpu')
+                        lora_weight = torch.flatten(lora_weight).to('cpu')
+                        total_weight = torch.flatten(total_weight).to('cpu')
+
+                        org_weight = np.array(org_weight)
+                        lora_down_weight = np.array(lora_down_weight)
+                        lora_up_weight = np.array(lora_up_weight)
+                        lora_weight = np.array(lora_weight)
+                        total_weight = np.array(total_weight)
+                        print(f'lora_name : {lora_name} | lora_module.scale : {lora_module.scale}')
+
+
+                        plt.figure()
+
+                        n, bins, patches = plt.hist(org_weight, bins=100, alpha=args.org_weight_alpha, color='red', label='original', histtype = 'stepfilled')
+                        #for bin, patch in zip(bins,patches) :
+                        #    print(f'patch : {patch.__dict__}')
+                        #    print(f'bin : {bin.__dict__}')
+                        #    print()
+
+                        # Make some labels.
+
+                        plt.hist(lora_down_weight, bins=100, alpha=args.lora_down_weight_alpha, color='red', label='lora_down', histtype='stepfilled')
+                        #plt.hist(lora_up_weight, bins=100, alpha=args.lora_up_weight_alpha, color='blue', label='lora_up', histtype='stepfilled')
+                        plt.hist(lora_weight, bins=100, alpha=args.lora_weight_alpha, color='green', label='lora',
+                             histtype='stepfilled')
+                        plt.hist(total_weight, bins=100, alpha=args.total_weight_alpha, color='green', label='total_weight', histtype='stepfilled')
+                        plt.ylim(0, 200)
+                        plt.title(f'{lora_name}')
+                        plt.legend()
+                        base_folder = os.path.join(args.output_dir, args.histogram_save_folder_name)
+                        os.makedirs(base_folder, exist_ok=True)
+                        save_dir = os.path.join(base_folder, f'histogram_{i+1}.jpg')
+                        plt.savefig(save_dir)
+                        plt.close()
+
+
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -451,6 +499,15 @@ if __name__ == "__main__":
     parser.add_argument("--efficient_layer", type=str)
     parser.add_argument("--unefficient_layer", type=str)
     parser.add_argument("--save_folder_name", type=str)
+    parser.add_argument("--org_weight_alpha", type=float, default=0)
+    parser.add_argument("--lora_weight_alpha", type=float, default=1)
+    parser.add_argument("--lora_down_weight_alpha", type=float, default=1)
+    parser.add_argument("--lora_up_weight_alpha", type=float, default=1)
+
+    parser.add_argument("--total_weight_alpha", type=float, default = 1)
+    parser.add_argument("--histogram_save_folder_name", type=str, default='histogram_selfattntion_only_lora_weight')
+
+
     args = parser.parse_args()
     # overwrite args.attn_loss_layers if only_second_training, only_third_training, second_third_training, first_second_third_training is True
     if args.only_second_training:

@@ -48,17 +48,6 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
             is_cross_attention = False
             if context is not None:
                 is_cross_attention = True
-                #print(f'trg_indexs_list : {trg_indexs_list}')
-                uncon, con = context.chunk(2)
-                if 'down_blocks_2' in layer_name or 'mid' in layer_name or 'up_blocks_1' in layer_name :
-                    # caption net length = trg_indexs_list
-                    print(f'{layer_name} shrinking trigge word and padding token strength')
-                    trg_size = torch.ones(con.shape)
-                    trg_size[:, 0, :] = 1.0
-                    trg_size[:, 1, :] = 0.2
-                    trg_size[:, trg_indexs_list+1:, :] = 0.2
-                    con = con * trg_size.to(con.device)  # class_text_embeddings
-                context = torch.cat([uncon, con])
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
             key = self.to_k(context)
@@ -208,7 +197,6 @@ class NetworkTrainer:
 
     def is_text_encoder_outputs_cached(self, args):
         return False
-
     def cache_text_encoder_outputs_if_needed(self, args, accelerator, unet, vae, tokenizers, text_encoders, data_loader, weight_dtype ):
         for t_enc in text_encoders:
             t_enc.to(accelerator.device)
@@ -240,16 +228,16 @@ class NetworkTrainer:
         noise_pred = unet(noisy_latents, timesteps, text_conds, trg_indexs_list=trg_indexs_list, mask_imgs=mask_imgs, ).sample
         return noise_pred
 
-    def sample_images(self, accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet, efficient=False,
-                      save_folder_name = None):
-        train_util.sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet, efficient=efficient,
-                                 save_folder_name = save_folder_name)
 
-    def sample_images_reg(self, accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet,
-                          sub_text_encoder,efficient=False,save_folder_name=None,) :
-        train_util.sample_images_reg(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet,
-                                     sub_text_encoder, efficient=efficient, save_folder_name=save_folder_name)
 
+    def sample_images(self, accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet,
+                      attention_storer=None,
+                      efficient=False,
+                      save_folder_name=None):
+        train_util.sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet,
+                                 attention_storer=attention_storer,
+                                 efficient=efficient,
+                                 save_folder_name=save_folder_name)
 
     def get_input_ids(self, args, caption, tokenizer):
         tokenizer_max_length = args.max_token_length + 2
@@ -293,21 +281,15 @@ class NetworkTrainer:
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
-        print(" (5.1) model not with lora")
-        _, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
-        text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-
-        print(" (5.2) model with lora")
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
         _, text_encoder_org, vae_org, unet_org = self.load_target_model(args, weight_dtype, accelerator)
-        attention_storer = AttentionStore()
-        register_attention_control(unet_org, attention_storer, mask_threshold=args.mask_threshold)
-
-
         text_encoders_org = text_encoder_org if isinstance(text_encoder_org, list) else [text_encoder_org]
+        # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+        print("\n step 7-1. prepare network")
         sys.path.append(os.path.dirname(__file__))
         accelerator.print("import network module:", args.network_module)
         network_module = importlib.import_module(args.network_module)
+
         pretrained_network_dir = args.output_dir
         network_dirs = os.listdir(pretrained_network_dir)
         for network_dir in network_dirs :
@@ -336,8 +318,18 @@ class NetworkTrainer:
                         if efficient_layer in layer_name:
                             if 'attn2_to_k' not in layer_name and 'attn2_to_v' not in layer_name:
                                 score += 1
-                    if score == 0:
+                    if score == 0 and 'alpha' not in layer_name:
                         weights_sd[layer_name] = weights_sd[layer_name] * 0
+
+                    if 'alpha' in layer_name:
+                        if 'text' in layer_name or 'attn2_to_k' in layer_name or 'attn2_to_v' in layer_name  :
+                            weights_sd[layer_name] = weights_sd[layer_name] * 1
+                        #if 'text' in layer_name or 'attn2_to_k' in layer_name or 'attn2_to_v' in layer_name or 'attn1_to_k' in layer_name or 'attn1_to_v' in layer_name :
+                        #    weights_sd[layer_name] = weights_sd[layer_name] * 1
+                        else :
+                            weights_sd[layer_name] = weights_sd[layer_name] * 0
+
+                        #print(f'layer_name : {layer_name} , alpha_value : {alpha_value}')
                     # because alpha is np, should be on cpu
                     #else :
                     #    print(f'layer to use : {layer_name}')
@@ -345,7 +337,6 @@ class NetworkTrainer:
                 # ------------------------------------------------------------------------------------------------------
                 # 2) make empty network
                 vae_copy,text_encoder_copy, unet_copy = copy.deepcopy(vae_org), copy.deepcopy(text_encoder_org).to("cpu" ), copy.deepcopy(unet_org)
-                train_util.replace_unet_modules(unet_copy, args.mem_eff_attn, args.xformers, args.sdpa)
                 temp_network, weights_sd = network_module.create_network_from_weights(multiplier=1, file=None,block_wise=None,
                                                                                       vae=vae_copy, text_encoder=text_encoder_copy, unet=unet_copy,
                                                                                       weights_sd=weights_sd,for_inference=False,)
@@ -367,15 +358,11 @@ class NetworkTrainer:
                 unet_copy.to(weight_dtype).to(accelerator.device)
                 text_encoder_copy.to(weight_dtype).to(accelerator.device)
                 # 4) applying to deeplearning network
-                temp_network.apply_to(text_encoder_org, unet_org)
 
-                attention_storer = AttentionStore()
-                register_attention_control(unet_copy, attention_storer, mask_threshold=args.mask_threshold)
-
-                self.sample_images_reg(accelerator, args, epoch_info, 0, accelerator.device, vae_copy, tokenizer,
-                                       text_encoder_copy, unet_copy,
-                                       text_encoder,
-                                       efficient=True, save_folder_name = save_folder_name,)
+                temp_network.apply_to(text_encoder_org,
+                                      unet_org)
+                self.sample_images(accelerator, args, epoch_info, 0, accelerator.device, vae_copy, tokenizer,
+                                   text_encoder_copy, unet_copy, efficient=True, save_folder_name = save_folder_name)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

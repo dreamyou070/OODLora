@@ -17,25 +17,27 @@ try:
     import intel_extension_for_pytorch as ipex
 
     if torch.xpu.is_available():
-        from lora.library import ipex_init
+        from library.ipex import ipex_init
 
         ipex_init()
 except Exception:
     pass
 from accelerate.utils import set_seed
 from diffusers import DDPMScheduler
-from lora.library import model_util
+from library import model_util
 
-from lora import library as train_util, library as config_util, library as huggingface_util, \
-    library as custom_train_functions
-from lora.library import (
+import library.train_util as train_util
+from library.train_util import (
     DreamBoothDataset,
 )
-from lora.library import (
+import library.config_util as config_util
+from library.config_util import (
     ConfigSanitizer,
     BlueprintGenerator,
 )
-from lora.library import (
+import library.huggingface_util as huggingface_util
+import library.custom_train_functions as custom_train_functions
+from library.custom_train_functions import (
     apply_snr_weight,
     get_weighted_text_embeddings,
     prepare_scheduler_for_custom_training,

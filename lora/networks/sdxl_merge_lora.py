@@ -6,8 +6,7 @@ import torch
 from safetensors.torch import load_file, save_file
 from tqdm import tqdm
 from library import sai_model_spec, sdxl_model_util, train_util
-import library.model_util as model_util
-import lora
+from lora.networks import lora
 
 
 def load_state_dict(file_name, dtype):
@@ -54,7 +53,7 @@ def merge_to_sd_model(text_encoder1, text_encoder2, unet, models, ratios, merge_
         else:
             prefix = lora.LoRANetwork.LORA_PREFIX_UNET
             target_replace_modules = (
-                lora.LoRANetwork.UNET_TARGET_REPLACE_MODULE + lora.LoRANetwork.UNET_TARGET_REPLACE_MODULE_CONV2D_3X3
+                    lora.LoRANetwork.UNET_TARGET_REPLACE_MODULE + lora.LoRANetwork.UNET_TARGET_REPLACE_MODULE_CONV2D_3X3
             )
 
         for name, module in root_module.named_modules():

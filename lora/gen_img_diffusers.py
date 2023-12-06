@@ -39,14 +39,15 @@ import PIL
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 
-from lora import library as model_util, library as train_util
+import library.model_util as model_util
+import library.train_util as train_util
 from networks.lora import LoRANetwork
 import tools.original_control_net as original_control_net
 from tools.original_control_net import ControlNetInfo
-from lora.library import UNet2DConditionModel
-from lora.library import FlashAttentionFunction
+from library.original_unet import UNet2DConditionModel
+from library.original_unet import FlashAttentionFunction
 
-from XTI_hijack import unet_forward_XTI, downblock_forward_XTI, upblock_forward_XTI
+#from XTI_hijack import unet_forward_XTI, downblock_forward_XTI, upblock_forward_XTI
 
 # scheduler:
 SCHEDULER_LINEAR_START = 0.00085
@@ -2271,7 +2272,7 @@ def main(args):
 
     # custom pipelineをコピったやつを生成する
     if args.vae_slices:
-        from lora.library import SlicingAutoencoderKL
+        from library.slicing_vae import SlicingAutoencoderKL
 
         sli_vae = SlicingAutoencoderKL(
             act_fn="silu",

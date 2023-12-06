@@ -789,19 +789,26 @@ class BasicTransformerBlock(nn.Module):
         self.attn1.set_use_sdpa(sdpa)
         self.attn2.set_use_sdpa(sdpa)
 
-    def forward(self, hidden_states, context=None,
-                timestep=None, trg_indexs_list=None,
+    def forward(self,
+                hidden_states, context=None,
+                timestep=None,
+                trg_indexs_list=None,
                 mask=None) :
+
         # 1. Self-Attention
         norm_hidden_states = self.norm1(hidden_states)
-
         hidden_states = self.attn1(norm_hidden_states,
-                                   trg_indexs_list=trg_indexs_list, mask=mask) + hidden_states
+                                   trg_indexs_list=trg_indexs_list,
+                                   mask=mask,) + hidden_states
+                                   #timestep=timestep) + hidden_states
 
         # 2. Cross-Attention
         norm_hidden_states = self.norm2(hidden_states)
-        hidden_states = self.attn2(norm_hidden_states, context=context,
-                                   trg_indexs_list=trg_indexs_list, mask=mask) + hidden_states
+        hidden_states = self.attn2(norm_hidden_states,
+                                   context=context,
+                                   trg_indexs_list=trg_indexs_list,
+                                   mask=mask,) + hidden_states
+                                   #timestep=timestep) + hidden_states
 
         # 3. Feed-forward
         hidden_states = self.ff(self.norm3(hidden_states)) + hidden_states
@@ -858,7 +865,8 @@ class Transformer2DModel(nn.Module):
         for transformer in self.transformer_blocks:
             transformer.set_use_sdpa(sdpa)
 
-    def forward(self, hidden_states, encoder_hidden_states=None, timestep=None, return_dict: bool = True,
+    def forward(self, hidden_states, encoder_hidden_states=None,
+                timestep=None, return_dict: bool = True,
                 trg_indexs_list=None,
                 mask=None):
         # 1. Input
@@ -866,10 +874,12 @@ class Transformer2DModel(nn.Module):
         residual = hidden_states
 
         hidden_states = self.norm(hidden_states)
+
         if not self.use_linear_projection:
             hidden_states = self.proj_in(hidden_states)
             inner_dim = hidden_states.shape[1]
             hidden_states = hidden_states.permute(0, 2, 3, 1).reshape(batch, height * weight, inner_dim)
+
         else:
             inner_dim = hidden_states.shape[1]
             hidden_states = hidden_states.permute(0, 2, 3, 1).reshape(batch, height * weight, inner_dim)
@@ -877,7 +887,8 @@ class Transformer2DModel(nn.Module):
 
         # 2. Blocks
         for block in self.transformer_blocks:
-            hidden_states = block(hidden_states, context=encoder_hidden_states, timestep=timestep,
+            hidden_states = block(hidden_states, context=encoder_hidden_states,
+                                  timestep=timestep,
                                   trg_indexs_list=trg_indexs_list, mask=mask)
 
         # 3. Output
@@ -943,13 +954,14 @@ class CrossAttnDownBlock2D(nn.Module):
         for attn in self.attentions:
             attn.set_use_sdpa(sdpa)
 
-    def forward(self, hidden_states, temb=None, encoder_hidden_states=None,
+    def forward(self,
+                hidden_states, temb=None,
+                encoder_hidden_states=None,
         trg_indexs_list=None,
         mask=None):
         output_states = ()
         for resnet, attn in zip(self.resnets, self.attentions):
             if self.training and self.gradient_checkpointing:
-
                 def create_custom_forward(module, return_dict=None):
                     def custom_forward(*inputs):
                         if return_dict is not None:
@@ -958,16 +970,18 @@ class CrossAttnDownBlock2D(nn.Module):
                         else:
                             return module(*inputs)
                     return custom_forward
-
                 hidden_states = torch.utils.checkpoint.checkpoint(create_custom_forward(resnet),
-                                                                  hidden_states, temb)
+                                                                  hidden_states,
+                                                                  temb)
                 hidden_states = torch.utils.checkpoint.checkpoint(create_custom_forward(attn, return_dict=False),
                                                                   hidden_states, encoder_hidden_states)[0]
             else:
-                hidden_states = resnet(hidden_states, temb)
+                hidden_states = resnet(hidden_states,
+                                       temb)
                 hidden_states = attn(hidden_states, encoder_hidden_states=encoder_hidden_states,
                                      trg_indexs_list=trg_indexs_list,
-                                     mask=mask,                                     ).sample
+                                     mask=mask,
+                                     timestep=temb).sample
 
             output_states += (hidden_states,)
 
@@ -1055,7 +1069,8 @@ class UNetMidBlock2DCrossAttn(nn.Module):
                 if attn is not None:
                     hidden_states = attn(hidden_states, encoder_hidden_states,
                                          trg_indexs_list=trg_indexs_list,
-                                         mask=mask,).sample
+                                         mask=mask,
+                                         timestep=temb).sample
                 hidden_states = resnet(hidden_states, temb)
 
         return hidden_states
@@ -1259,7 +1274,8 @@ class CrossAttnUpBlock2D(nn.Module):
                 hidden_states = resnet(hidden_states, temb)
                 hidden_states = attn(hidden_states, encoder_hidden_states=encoder_hidden_states,
                                      trg_indexs_list=trg_indexs_list,
-                                     mask=mask,).sample
+                                     mask=mask,
+                                     timestep=temb).sample
 
         if self.upsamplers is not None:
             for upsampler in self.upsamplers:
@@ -1479,7 +1495,7 @@ class UNet2DConditionModel(nn.Module):
             print(module.__class__.__name__, module.gradient_checkpointing, "->", value)
             module.gradient_checkpointing = value
 
-    # endregion
+    # end region
     def forward(
         self,
         sample: torch.FloatTensor,
@@ -1508,6 +1524,7 @@ class UNet2DConditionModel(nn.Module):
         t_emb = t_emb.to(dtype=self.dtype)
         emb = self.time_embedding(t_emb)
 
+
         # ------------------------------------------------------------------------------------------
         # 2. pre-process : sample(4,4,64,64)
         sample = self.conv_in(sample)
@@ -1525,10 +1542,11 @@ class UNet2DConditionModel(nn.Module):
                                                        temb=emb,
                                                        encoder_hidden_states=encoder_hidden_states,
                                                        trg_indexs_list=trg_indexs_list,
-                                                       mask=mask_imgs)
+                                                       mask=mask_imgs,)
             else:
                 sample, res_samples = downsample_block(hidden_states=sample, temb=emb)
             down_block_res_samples += res_samples
+
         # skip connectionにControlNetの出力を追加する
         if down_block_additional_residuals is not None:
             down_block_res_samples = list(down_block_res_samples)
@@ -1538,19 +1556,17 @@ class UNet2DConditionModel(nn.Module):
         #
         # 4. mid
         sample = self.mid_block(sample,
-                                emb,
+                                temb=emb,
                                 encoder_hidden_states=encoder_hidden_states,
                                 trg_indexs_list=trg_indexs_list,
                                 mask=mask_imgs)
         # ControlNetの出力を追加する
         if mid_block_additional_residual is not None:
             sample += mid_block_additional_residual
-        #print(f'after mid block, down_block_res_samples : {len(down_block_res_samples)}')
+
         # 5. up
-        #print(f'right before start of upblock, len of down_block_res_samples (12) : {len(down_block_res_samples)}')
         for i, upsample_block in enumerate(self.up_blocks):
             is_final_block = i == len(self.up_blocks) - 1
-            #print(f'{i} down_block_res_samples : {len(down_block_res_samples)}')
             res_samples = down_block_res_samples[-len(upsample_block.resnets) :]
             down_block_res_samples = down_block_res_samples[: -len(upsample_block.resnets)]  # skip connection
             if not is_final_block and forward_upsample_size:
@@ -1563,7 +1579,7 @@ class UNet2DConditionModel(nn.Module):
                                         encoder_hidden_states=encoder_hidden_states, # text information
                                         upsample_size=upsample_size,
                                         trg_indexs_list=trg_indexs_list,
-                                        mask=mask_imgs)                #
+                                        mask=mask_imgs)
             else:
                 sample = upsample_block(hidden_states=sample,
                                         temb=emb,

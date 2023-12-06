@@ -1041,27 +1041,22 @@ def load_models_from_stable_diffusion_checkpoint(v2, ckpt_path, device="cpu", dt
         # text_model = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14").to(device)
         # logging.set_verbosity_warning()
         # print(f"config: {text_model.config}")
-        cfg = CLIPTextConfig(
-            vocab_size=49408,
-            hidden_size=768,
-            intermediate_size=3072,
-            num_hidden_layers=12,
-            num_attention_heads=12,
-            max_position_embeddings=77,
-            hidden_act="quick_gelu",
-            layer_norm_eps=1e-05,
-            dropout=0.0,
-            attention_dropout=0.0,
-            initializer_range=0.02,
-            initializer_factor=1.0,
-            pad_token_id=1,
-            bos_token_id=0,
-            eos_token_id=2,
-            model_type="clip_text_model",
-            projection_dim=768,
-            torch_dtype="float32",
-        )
+        cfg = CLIPTextConfig(vocab_size=49408,hidden_size=768,intermediate_size=3072,num_hidden_layers=12,
+                             num_attention_heads=12,max_position_embeddings=77,
+                             hidden_act="quick_gelu",layer_norm_eps=1e-05,dropout=0.0,
+                             attention_dropout=0.0,initializer_range=0.02,initializer_factor=1.0,
+                             pad_token_id=1,bos_token_id=0,eos_token_id=2,
+                             model_type="clip_text_model",projection_dim=768,torch_dtype="float32",)
+        # CLIPTextModel
         text_model = CLIPTextModel._from_config(cfg)
+        # CLIPTextModel.load_state_dict
+        #print(f'********************converted_text_encoder_checkpoint')
+        #layer_name = converted_text_encoder_checkpoint.keys()
+        #position_ids = converted_text_encoder_checkpoint['text_model.embeddings.position_ids']
+        #print(position_ids)
+        #import time
+        #time.sleep(10)
+        converted_text_encoder_checkpoint.pop('text_model.embeddings.position_ids')
         info = text_model.load_state_dict(converted_text_encoder_checkpoint)
     print("loading text encoder:", info)
 

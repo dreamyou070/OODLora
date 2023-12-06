@@ -40,12 +40,13 @@ import PIL
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 
-from lora import library as model_util, library as train_util
+import library.model_util as model_util
+import library.train_util as train_util
 from networks.lora import LoRANetwork
 import tools.original_control_net as original_control_net
 from tools.original_control_net import ControlNetInfo
-from lora.library import UNet2DConditionModel
-from lora.library import FlashAttentionFunction
+from library.original_unet import UNet2DConditionModel
+from library.original_unet import FlashAttentionFunction
 
 from XTI_hijack import unet_forward_XTI, downblock_forward_XTI, upblock_forward_XTI
 
@@ -883,16 +884,16 @@ class PipelineLike:
             # predict the noise residual
             if self.control_nets and self.control_net_enabled:
                 noise_pred = original_control_net.call_unet_and_control_net(i,
-                    num_latent_input,
-                    self.unet,
-                    self.control_nets,
-                    guided_hints,
-                    i / len(timesteps),
-                    latent_model_input,
-                    t,
-                    text_embeddings,
-                    text_emb_last,
-                ).sample
+                                                                            num_latent_input,
+                                                                            self.unet,
+                                                                            self.control_nets,
+                                                                            guided_hints,
+                                                                            i / len(timesteps),
+                                                                            latent_model_input,
+                                                                            t,
+                                                                            text_embeddings,
+                                                                            text_emb_last,
+                                                                            ).sample
             else:
                 noise_pred = self.unet(latent_model_input,
                                        t,
@@ -2321,7 +2322,7 @@ def main(args):
 
     # custom pipelineをコピったやつを生成する
     if args.vae_slices:
-        from lora.library import SlicingAutoencoderKL
+        from library.slicing_vae import SlicingAutoencoderKL
 
         sli_vae = SlicingAutoencoderKL(
             act_fn="silu",

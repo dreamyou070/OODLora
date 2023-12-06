@@ -275,8 +275,7 @@ class ConfigSanitizer:
       self.CN_SUBSET_ASCENDABLE_SCHEMA if support_controlnet else {},
       self.DO_SUBSET_ASCENDABLE_SCHEMA if support_dropout else {},)
 
-    self.user_config_validator = Schema({"general": self.general_schema,
-                                         "datasets": [self.dataset_schema],})
+    self.user_config_validator = Schema({"general": self.general_schema,"datasets": [self.dataset_schema],})
 
     self.argparse_schema = self.__merge_dict(
       self.general_schema,
@@ -329,7 +328,6 @@ class BlueprintGenerator:
 
     mask_dir = argparse_namespace.mask_dir
     sanitized_user_config = self.sanitizer.sanitize_user_config(user_config)
-    print(f'sanitized_user_config : {sanitized_user_config}')
     sanitized_argparse_namespace = self.sanitizer.sanitize_argparse_namespace(argparse_namespace)
     optname_map = self.sanitizer.ARGPARSE_OPTNAME_TO_CONFIG_OPTNAME
     argparse_config = {optname_map.get(optname, optname): value for optname, value in vars(sanitized_argparse_namespace).items()}
@@ -362,11 +360,12 @@ class BlueprintGenerator:
                                                     general_config,
                                                     argparse_config,
                                                     runtime_params])
-        print(f'params : {params}')
         subset_blueprints.append(SubsetBlueprint(params))
-
       params = self.generate_params_by_fallbacks(dataset_params_klass,
-                                                 [dataset_config, general_config, argparse_config, runtime_params])
+                                                 [dataset_config,
+                                                  general_config,
+                                                  argparse_config,
+                                                  runtime_params])
       dataset_blueprints.append(DatasetBlueprint(is_dreambooth,
                                                  is_controlnet,
                                                  params,
@@ -382,7 +381,6 @@ class BlueprintGenerator:
     default_params = asdict(param_klass())
     param_names = default_params.keys()
     params = {name: search_value(name_map.get(name, name), fallbacks, default_params.get(name)) for name in param_names}
-    print(f' in generate parmas, params : {params}')
     return param_klass(**params)
 
   @staticmethod
@@ -510,7 +508,6 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
                        "class_tokens": class_tokens,
                        "class_caption": class_caption,}
       subsets_config.append(subset_config)
-
     return subsets_config
 
   subsets_config = []

@@ -1,4 +1,3 @@
-from collections import defaultdict
 import importlib, wandb
 import argparse
 import gc
@@ -15,19 +14,18 @@ from tqdm import tqdm
 import torch
 from accelerate.utils import set_seed
 from diffusers import DDPMScheduler
-from lora.library import model_util
-from lora import library as train_util, library as config_util, library as huggingface_util, \
-    library as custom_train_functions
-from lora.library import (DreamBoothDataset, )
-from lora.library import (ConfigSanitizer, BlueprintGenerator, )
-from lora.library import (apply_snr_weight, get_weighted_text_embeddings, prepare_scheduler_for_custom_training,
-                          scale_v_prediction_loss_like_noise_prediction, add_v_prediction_like_loss, )
+from library import model_util
+import library.train_util as train_util
+from library.train_util import (DreamBoothDataset,)
+import library.config_util as config_util
+from library.config_util import (ConfigSanitizer,BlueprintGenerator,)
+import library.huggingface_util as huggingface_util
+import library.custom_train_functions as custom_train_functions
+from library.custom_train_functions import (apply_snr_weight,get_weighted_text_embeddings,prepare_scheduler_for_custom_training,
+                                            scale_v_prediction_loss_like_noise_prediction,add_v_prediction_like_loss,)
 from setproctitle import *
-from utils import _convert_heat_map_colors
 from PIL import Image
 import numpy as np
-import torch.nn.functional as F
-from utils import auto_autocast
 
 global_stored_masks = {}
 def get_cached_mask(mask_dir:str, trg_size):
@@ -874,7 +872,7 @@ class NetworkTrainer:
                                                                         tokenizers,
                                                                         text_encoders,
                                                                         weight_dtype)
-                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,latents)
+                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
                         # Predict the noise residual
                         with accelerator.autocast():
                             # -----------------------------------------------------------------------------------------------------------------------

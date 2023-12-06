@@ -276,10 +276,34 @@ def get_weighted_text_embeddings(
     no_boseos_middle: Optional[bool] = False,
     skip_parsing: Optional[bool] = False,
     skip_weighting: Optional[bool] = False,
-    clip_skip=None,):
+    clip_skip=None,
+):
+    r"""
+    Prompts can be assigned with local weights using brackets. For example,
+    prompt 'A (very beautiful) masterpiece' highlights the words 'very beautiful',
+    and the embedding tokens corresponding to the words get multiplied by a constant, 1.1.
 
+    Also, to regularize of the embedding, the weighted embedding would be scaled to preserve the original mean.
+
+    Args:
+        pipe (`StableDiffusionPipeline`):
+            Pipe to provide access to the tokenizer and the text encoder.
+        prompt (`str` or `List[str]`):
+            The prompt or prompts to guide the image generation.
+        uncond_prompt (`str` or `List[str]`):
+            The unconditional prompt or prompts for guide the image generation. If unconditional prompt
+            is provided, the embeddings of prompt and uncond_prompt are concatenated.
+        max_embeddings_multiples (`int`, *optional*, defaults to `3`):
+            The max multiple length of prompt embeddings compared to the max output length of text encoder.
+        no_boseos_middle (`bool`, *optional*, defaults to `False`):
+            If the length of text token is multiples of the capacity of text encoder, whether reserve the starting and
+            ending token in each of the chunk in the middle.
+        skip_parsing (`bool`, *optional*, defaults to `False`):
+            Skip the parsing of brackets.
+        skip_weighting (`bool`, *optional*, defaults to `False`):
+            Skip the weighting. When the parsing is skipped, it is forced True.
+    """
     max_length = (pipe.tokenizer.model_max_length - 2) * max_embeddings_multiples + 2
-
     if isinstance(prompt, str):
         prompt = [prompt]
 
@@ -289,16 +313,17 @@ def get_weighted_text_embeddings(
             if isinstance(uncond_prompt, str):
                 uncond_prompt = [uncond_prompt]
             uncond_tokens, uncond_weights = get_prompts_with_weights(pipe, uncond_prompt, max_length - 2)
-
     else:
         prompt_tokens = [token[1:-1] for token in pipe.tokenizer(prompt, max_length=max_length, truncation=True).input_ids]
         prompt_weights = [[1.0] * len(token) for token in prompt_tokens]
         if uncond_prompt is not None:
             if isinstance(uncond_prompt, str):
                 uncond_prompt = [uncond_prompt]
-            uncond_tokens = [token[1:-1] for token in pipe.tokenizer(uncond_prompt, max_length=max_length, truncation=True).input_ids]
+            uncond_tokens = [
+                token[1:-1] for token in pipe.tokenizer(uncond_prompt, max_length=max_length, truncation=True).input_ids
+            ]
             uncond_weights = [[1.0] * len(token) for token in uncond_tokens]
-    print(f'prompt tokens : {prompt_tokens}')
+
     # round up the longest length of tokens to a multiple of (model_max_length - 2)
     max_length = max([len(token) for token in prompt_tokens])
     if uncond_prompt is not None:
@@ -454,36 +479,7 @@ def prepare_controlnet_image(
 
 
 class StableDiffusionLongPromptWeightingPipeline(StableDiffusionPipeline):
-    r"""
-    Pipeline for text-to-image generation using Stable Diffusion without tokens length limit, and support parsing
-    weighting in prompt.
-
-    This model inherits from [`DiffusionPipeline`]. Check the superclass documentation for the generic methods the
-    library implements for all the pipelines (such as downloading or saving, running on a particular device, etc.)
-
-    Args:
-        vae ([`AutoencoderKL`]):
-            Variational Auto-Encoder (VAE) Model to encode and decode images to and from latent representations.
-        text_encoder ([`CLIPTextModel`]):
-            Frozen text-encoder. Stable Diffusion uses the text portion of
-            [CLIP](https://huggingface.co/docs/transformers/model_doc/clip#transformers.CLIPTextModel), specifically
-            the [clip-vit-large-patch14](https://huggingface.co/openai/clip-vit-large-patch14) variant.
-        tokenizer (`CLIPTokenizer`):
-            Tokenizer of class
-            [CLIPTokenizer](https://huggingface.co/docs/transformers/v4.21.0/en/model_doc/clip#transformers.CLIPTokenizer).
-        unet ([`UNet2DConditionModel`]): Conditional U-Net architecture to denoise the encoded image latents.
-        scheduler ([`SchedulerMixin`]):
-            A scheduler to be used in combination with `unet` to denoise the encoded image latents. Can be one of
-            [`DDIMScheduler`], [`LMSDiscreteScheduler`], or [`PNDMScheduler`].
-        safety_checker ([`StableDiffusionSafetyChecker`]):
-            Classification module that estimates whether generated images could be considered offensive or harmful.
-            Please, refer to the [model card](https://huggingface.co/CompVis/stable-diffusion-v1-4) for details.
-        feature_extractor ([`CLIPFeatureExtractor`]):
-            Model that extracts features from generated images to be used as inputs for the `safety_checker`.
-    """
-
     # if version.parse(version.parse(diffusers.__version__).base_version) >= version.parse("0.9.0"):
-
     def __init__(
         self,
         vae: AutoencoderKL,
@@ -491,24 +487,15 @@ class StableDiffusionLongPromptWeightingPipeline(StableDiffusionPipeline):
         tokenizer: CLIPTokenizer,
         unet: UNet2DConditionModel,
         scheduler: SchedulerMixin,
-        # clip_skip: int,
         safety_checker: StableDiffusionSafetyChecker,
         feature_extractor: CLIPFeatureExtractor,
         requires_safety_checker: bool = True,
-        clip_skip: int = 1,
-    ):
-        super().__init__(
-            vae=vae,
-            text_encoder=text_encoder,
-            tokenizer=tokenizer,
-            unet=unet,
-            scheduler=scheduler,
-            safety_checker=safety_checker,
-            feature_extractor=feature_extractor,
-            requires_safety_checker=requires_safety_checker,
-        )
-        self.clip_skip = clip_skip
+        clip_skip: int = 1,):
+        super().__init__(vae=vae,text_encoder=text_encoder,tokenizer=tokenizer,unet=unet,scheduler=scheduler, safety_checker=safety_checker,feature_extractor=feature_extractor,requires_safety_checker=requires_safety_checker,)
+        #self.clip_skip = clip_skip
+
         self.__init__additional__()
+        #self.clip_skip = 1
 
     def __init__additional__(self):
         if not hasattr(self, "vae_scale_factor"):
@@ -577,7 +564,8 @@ class StableDiffusionLongPromptWeightingPipeline(StableDiffusionPipeline):
             prompt=prompt,
             uncond_prompt=negative_prompt if do_classifier_free_guidance else None,
             max_embeddings_multiples=max_embeddings_multiples,
-            clip_skip=self.clip_skip,
+            clip_skip=None,
+            #clip_skip=self.clip_skip,
         )
         bs_embed, seq_len, _ = text_embeddings.shape
         text_embeddings = text_embeddings.repeat(1, num_images_per_prompt, 1)

@@ -6,22 +6,16 @@ import inspect
 import time
 from diffusers.utils import deprecate
 from diffusers.configuration_utils import FrozenDict
-import argparse
-import math
-import os
-import random
-import re
+import argparse, math, os, random, re
 from attention_store import AttentionStore
 import diffusers
 import numpy as np
-import torch
-import torchvision
+import torch,torchvision
 from utils import expand_image, image_overlay_heat_map
 from diffusers import (AutoencoderKL,DDPMScheduler,EulerAncestralDiscreteScheduler,
                        DPMSolverMultistepScheduler,DPMSolverSinglestepScheduler,LMSDiscreteScheduler,
                        PNDMScheduler,DDIMScheduler,EulerDiscreteScheduler,HeunDiscreteScheduler,
-                       KDPM2DiscreteScheduler,KDPM2AncestralDiscreteScheduler,    # UNet2DConditionModel,
-                       StableDiffusionPipeline,)
+                       KDPM2DiscreteScheduler,KDPM2AncestralDiscreteScheduler, StableDiffusionPipeline,)
 from einops import rearrange
 from tqdm import tqdm
 from torchvision import transforms
@@ -29,13 +23,13 @@ from transformers import CLIPTextModel, CLIPTokenizer, CLIPModel
 import PIL
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
-from lora import library as model_util, library as train_util
+import library.model_util as model_util
+import library.train_util as train_util
 from networks.lora import LoRANetwork
 import tools.original_control_net as original_control_net
 from tools.original_control_net import ControlNetInfo
-from lora.library import UNet2DConditionModel
-from lora.library import FlashAttentionFunction
-#from XTI_hijack import unet_forward_XTI, downblock_forward_XTI, upblock_forward_XTI
+from library.original_unet import UNet2DConditionModel
+from library.original_unet import FlashAttentionFunction
 
 # scheduler:
 SCHEDULER_LINEAR_START = 0.00085
@@ -620,14 +614,15 @@ class PipelineLike:
                 " the batch size of `prompt`.")
 
         if not self.token_replacements_XTI:
-            text_embeddings, uncond_embeddings, prompt_tokens = get_weighted_text_embeddings(
-                pipe=self,
-                prompt=prompt,
-                uncond_prompt=negative_prompt if do_classifier_free_guidance else None,
-                max_embeddings_multiples=max_embeddings_multiples,
-                clip_skip=self.clip_skip,
-                **kwargs,
-            )
+            # prompt
+            # uncon_prompt
+            #
+            text_embeddings, uncond_embeddings, prompt_tokens = get_weighted_text_embeddings(pipe=self,
+                                                                                             prompt=prompt,
+                                                                                             uncond_prompt=negative_prompt if do_classifier_free_guidance else None,
+                                                                                             max_embeddings_multiples=max_embeddings_multiples,
+                                                                                             clip_skip=self.clip_skip,
+                                                                                             **kwargs,)
 
         if negative_scale is not None:
             _, real_uncond_embeddings, _ = get_weighted_text_embeddings(
@@ -1606,6 +1601,7 @@ def get_prompts_with_weights(pipe: PipelineLike, prompt: List[str], max_length: 
 
     for text in prompt:
         texts_and_weights = parse_prompt_attention(text)
+        print(f'texts_and_weights : {texts_and_weights}')
         text_token = []
         text_weight = []
         for word, weight in texts_and_weights:
@@ -1782,7 +1778,7 @@ def get_weighted_text_embeddings(
         if uncond_prompt is not None:
             if isinstance(uncond_prompt, str):
                 uncond_prompt = [uncond_prompt]
-            uncond_tokens, uncond_weights = get_prompts_with_weights(pipe, uncond_prompt, max_length - 2, layer=layer)
+            uncond_tokens, uncond_weights = get_prompts_with_weights(pipe, uncond_prompt, max_length - 2, layer=layer) # ----------------------------------------------------------------------------------
     else:
         prompt_tokens = [token[1:-1] for token in
                          pipe.tokenizer(prompt, max_length=max_length, truncation=True).input_ids]
@@ -2086,11 +2082,11 @@ def register_attention_control(unet, controller):
             value = self.reshape_heads_to_batch_dim(value)
             # ----------------------------------------------------------------------------------------------------------------
             # 1) attention score : get_attention_scores
-            attention_scores = torch.baddbmm(
-                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device),
-                query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device),
+                                             query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
+
             # ----------------------------------------------------------------------------------------------------------------
             if not is_cross_attention:
                 self_attn_map = attention_probs.sum(dim=0)
@@ -2099,11 +2095,9 @@ def register_attention_control(unet, controller):
                 heat_map = _convert_heat_map_colors(im)
                 heat_map = heat_map.to('cpu').detach().numpy().copy().astype(np.uint8)
                 heat_map_img = Image.fromarray(heat_map)
-
                 # print(f'{layer_name} : self_attn_map : {self_attn_map.shape}')
                 # heat_map = self_attn_map.to('cpu').detach().numpy().copy().astype(np.uint8)
                 # heat_map_img = Image.fromarray(heat_map)
-                heat_map_img.save(f'{layer_name}.jpg')
 
             if is_cross_attention:
                 attn = controller.store(attention_probs, layer_name)
@@ -2139,7 +2133,11 @@ def register_attention_control(unet, controller):
 def generate_text_embedding(args, prompt, tokenizer, text_encoder, device):
     cls_token = 49406
     pad_token = 49407
-    trg_token = args.trg_token
+    if args.trg_token in prompt :
+        trg_token = args.trg_token
+    else :
+        trg_token = args.class_token
+
     token_input = tokenizer([trg_token], padding="max_length", max_length=tokenizer.model_max_length,
                             truncation=True, return_tensors="pt", )
     token_ids = token_input.input_ids[0]
@@ -2265,6 +2263,7 @@ def main(args):
         scheduler_num_noises_per_step = 2
     if args.v_parameterization:
         sched_init_args["prediction_type"] = "v_prediction"
+
     class NoiseManager:
         def __init__(self):
             self.sampler_noises = None
@@ -2299,6 +2298,7 @@ def main(args):
             if hasattr(torch, item):
                 return getattr(torch, item)
             raise AttributeError("'{}' object has no attribute '{}'".format(type(self).__name__, item))
+
     noise_manager = NoiseManager()
     if scheduler_module is not None:
         scheduler_module.torch = TorchRandReplacer(noise_manager)
@@ -2313,7 +2313,7 @@ def main(args):
     print(f'\n step 8. device and stable diffusion to device')
     device = args.device
     if args.vae_slices:
-        from lora.library import SlicingAutoencoderKL
+        from library.slicing_vae import SlicingAutoencoderKL
         sli_vae = SlicingAutoencoderKL(act_fn="silu",  block_out_channels=(128, 256, 512, 512),
                                        down_block_types=["DownEncoderBlock2D", "DownEncoderBlock2D", "DownEncoderBlock2D", "DownEncoderBlock2D"],
                                        in_channels=3, latent_channels=4, layers_per_block=2, norm_num_groups=32,
@@ -2365,31 +2365,32 @@ def main(args):
                     for layer in weights_sd.keys():
                         if block in layer:
                             block_wise[i] = 1
-                network, weights_sd = imported_module.create_network_from_weights(network_mul, network_weight,block_wise,
+                network, weights_sd = imported_module.create_network_from_weights(network_mul, network_weight,
+                                                                                  block_wise,
                                                                                   vae, text_encoder, unet,
                                                                                   for_inference=True, **net_kwargs)
+
             else:
                 raise ValueError("No weight. Weight is required.")
             if network is None:
                 return
             mergeable = network.is_mergeable()
+
             if args.network_merge and not mergeable:
                 print("network is not mergiable. ignore merge option.")
             if not args.network_merge or not mergeable:
                 print(f'one lora loading ...')
                 network.apply_to(text_encoder, unet)
                 layer_names = weights_sd.keys()
+                efficient_layers = args.efficient_layer.split(",")
+                print(f' ** efficient_layers : {efficient_layers}')
                 for layer_name in layer_names:
-                    # erase self attention
-                    if args.erase_selfattn :
-                        if 'attn1' in layer_name :
-                            print(f'erase self attention ..., layer_name : {layer_name}')
-                            weights_sd[layer_name] = weights_sd[layer_name] * 0
-                    elif args.erase_crossattn :
-                        if 'attn2' in layer_name :
-                            print(f'erase cross attention ..., layer_name : {layer_name}')
-                            weights_sd[layer_name] = weights_sd[layer_name] * 0
-
+                    score = 0
+                    for efficient_layer in efficient_layers:
+                        if efficient_layer in layer_name :
+                            score += 1
+                    if score == 0 :
+                        weights_sd[layer_name] = weights_sd[layer_name] * 0
 
                 info = network.load_state_dict(weights_sd, False)  # network.load_weightsを使うようにするとよい
                 print(f"weights are loaded")
@@ -2402,40 +2403,19 @@ def main(args):
                 networks.append(network)
             else:
                 network.merge_to(text_encoder, unet, weights_sd, dtype, device)
+
     else:
         networks = []
-    org_state_dict = network.state_dict()
-    for layer in org_state_dict.keys():
-        if 'org_weight' not in layer:
-            print(f'layer : {layer}')
-            network.state_dict()[layer] = weights_sd[layer]
+    #org_state_dict = network.state_dict()
+
+
 
     print(f'\n step 10. upscaler')
     upscaler = None
-    if args.highres_fix_upscaler:
-        print("import upscaler module:", args.highres_fix_upscaler)
-        imported_module = importlib.import_module(args.highres_fix_upscaler)
-        us_kwargs = {}
-        if args.highres_fix_upscaler_args:
-            for net_arg in args.highres_fix_upscaler_args.split(";"):
-                key, value = net_arg.split("=")
-                us_kwargs[key] = value
-        upscaler = imported_module.create_upscaler(**us_kwargs)
-        upscaler.to(dtype).to(device)
 
     print(f'\n step 11. ControlNet')
     control_nets: List[ControlNetInfo] = []
-    if args.control_net_models:
-        for i, model in enumerate(args.control_net_models):
-            prep_type = None if not args.control_net_preps or len(args.control_net_preps) <= i else \
-                args.control_net_preps[i]
-            weight = 1.0 if not args.control_net_weights or len(args.control_net_weights) <= i else \
-                args.control_net_weights[i]
-            ratio = 1.0 if not args.control_net_ratios or len(args.control_net_ratios) <= i else \
-                args.control_net_ratios[i]
-            ctrl_unet, ctrl_net = original_control_net.load_control_net(args.v2, unet, model)
-            prep = original_control_net.load_preprocess(prep_type)
-            control_nets.append(ControlNetInfo(ctrl_unet, ctrl_net, prep, weight, ratio))
+
 
     print(f'\n step 12. opt_channels_last')
     if args.opt_channels_last:
@@ -2457,88 +2437,12 @@ def main(args):
     print(f'\n step 13. make pipeline')
     attention_storer = AttentionStore()
     register_attention_control(unet, attention_storer)
-    pipe = PipelineLike(device, vae,text_encoder,tokenizer,unet,scheduler,args.clip_skip,
-                        clip_model, args.clip_guidance_scale, args.clip_image_guidance_scale,
-                        vgg16_model,args.vgg16_guidance_scale,args.vgg16_guidance_layer,)
+    pipe = PipelineLike(device, vae,text_encoder,tokenizer,unet,scheduler,args.clip_skip,clip_model,
+                        args.clip_guidance_scale, args.clip_image_guidance_scale,vgg16_model,args.vgg16_guidance_scale,
+                        args.vgg16_guidance_layer,)
     pipe.set_control_nets(control_nets)
     if args.diffusers_xformers:
         pipe.enable_xformers_memory_efficient_attention()
-    if args.XTI_embeddings:
-        diffusers.models.UNet2DConditionModel.forward = unet_forward_XTI
-        diffusers.models.unet_2d_blocks.CrossAttnDownBlock2D.forward = downblock_forward_XTI
-        diffusers.models.unet_2d_blocks.CrossAttnUpBlock2D.forward = upblock_forward_XTI
-    if args.textual_inversion_embeddings:
-        token_ids_embeds = []
-        for embeds_file in args.textual_inversion_embeddings:
-            if model_util.is_safetensors(embeds_file):
-                from safetensors.torch import load_file
-                data = load_file(embeds_file)
-            else:
-                data = torch.load(embeds_file, map_location="cpu")
-            if "string_to_param" in data:
-                data = data["string_to_param"]
-            embeds = next(iter(data.values()))
-            if type(embeds) != torch.Tensor:
-                raise ValueError(f"weight file does not contains Tensor / 重みファイルのデータがTensorではありません: {embeds_file}")
-            num_vectors_per_token = embeds.size()[0]
-            token_string = os.path.splitext(os.path.basename(embeds_file))[0]
-            token_strings = [token_string] + [f"{token_string}{i + 1}" for i in range(num_vectors_per_token - 1)]
-            # add new word to tokenizer, count is num_vectors_per_token
-            num_added_tokens = tokenizer.add_tokens(token_strings)
-            assert (num_added_tokens == num_vectors_per_token), f"tokenizer has same word to token string (filename). please rename the file / 指定した名前（ファイル名）のトークンが既に存在します。ファイルをリネームしてください: {embeds_file}"
-            token_ids = tokenizer.convert_tokens_to_ids(token_strings)
-            print(f"Textual Inversion embeddings `{token_string}` loaded. Tokens are added: {token_ids}")
-            assert (
-                    min(token_ids) == token_ids[0] and token_ids[-1] == token_ids[0] + len(token_ids) - 1
-            ), f"token ids is not ordered"
-            assert len(tokenizer) - 1 == token_ids[-1], f"token ids is not end of tokenize: {len(tokenizer)}"
-            if num_vectors_per_token > 1:
-                pipe.add_token_replacement(token_ids[0], token_ids)
-            token_ids_embeds.append((token_ids, embeds))
-        text_encoder.resize_token_embeddings(len(tokenizer))
-        token_embeds = text_encoder.get_input_embeddings().weight.data
-        for token_ids, embeds in token_ids_embeds:
-            for token_id, embed in zip(token_ids, embeds):
-                token_embeds[token_id] = embed
-    if args.XTI_embeddings:
-        XTI_layers = ["IN01","IN02","IN04","IN05","IN07","IN08","MID",
-                      "OUT03","OUT04","OUT05","OUT06","OUT07","OUT08","OUT09","OUT10","OUT11",]
-        token_ids_embeds_XTI = []
-        for embeds_file in args.XTI_embeddings:
-            if model_util.is_safetensors(embeds_file):
-                from safetensors.torch import load_file
-                data = load_file(embeds_file)
-            else:
-                data = torch.load(embeds_file, map_location="cpu")
-            if set(data.keys()) != set(XTI_layers):
-                raise ValueError("NOT XTI")
-            embeds = torch.concat(list(data.values()))
-            num_vectors_per_token = data["MID"].size()[0]
-            token_string = os.path.splitext(os.path.basename(embeds_file))[0]
-            token_strings = [token_string] + [f"{token_string}{i + 1}" for i in range(num_vectors_per_token - 1)]
-            # add new word to tokenizer, count is num_vectors_per_token
-            num_added_tokens = tokenizer.add_tokens(token_strings)
-            assert (num_added_tokens == num_vectors_per_token), f"tokenizer has same word to token string (filename). please rename the file / 指定した名前（ファイル名）のトークンが既に存在します。ファイルをリネームしてください: {embeds_file}"
-            token_ids = tokenizer.convert_tokens_to_ids(token_strings)
-            print(f"XTI embeddings `{token_string}` loaded. Tokens are added: {token_ids}")
-            # if num_vectors_per_token > 1:
-            pipe.add_token_replacement(token_ids[0], token_ids)
-            token_strings_XTI = []
-            for layer_name in XTI_layers:
-                token_strings_XTI += [f"{t}_{layer_name}" for t in token_strings]
-            tokenizer.add_tokens(token_strings_XTI)
-            token_ids_XTI = tokenizer.convert_tokens_to_ids(token_strings_XTI)
-            token_ids_embeds_XTI.append((token_ids_XTI, embeds))
-            for t in token_ids:
-                t_XTI_dic = {}
-                for i, layer_name in enumerate(XTI_layers):
-                    t_XTI_dic[layer_name] = t + (i + 1) * num_added_tokens
-                pipe.add_token_replacement_XTI(t, t_XTI_dic)
-            text_encoder.resize_token_embeddings(len(tokenizer))
-            token_embeds = text_encoder.get_input_embeddings().weight.data
-            for token_ids, embeds in token_ids_embeds_XTI:
-                for token_id, embed in zip(token_ids, embeds):
-                    token_embeds[token_id] = embed
 
     print(f'\n step 14. prompt')
     if args.from_file is not None:
@@ -2583,8 +2487,8 @@ def main(args):
         # shuffle prompt list
         if args.shuffle_prompts:
             random.shuffle(prompt_list)
-        def process_batch(batch: List[BatchData], highres_fix, highres_1st=False, save_index=1):
 
+        def process_batch(batch: List[BatchData], highres_fix, highres_1st=False, save_index=1):
             batch_size = len(batch)
             # highres_fixの処理
             if highres_fix and not highres_1st:
@@ -2598,10 +2502,7 @@ def main(args):
                     width_1st = width_1st - width_1st % 32
                     height_1st = height_1st - height_1st % 32
                     strength_1st = ext.strength if args.highres_fix_strength is None else args.highres_fix_strength
-                    ext_1st = BatchDataExt(
-                        width_1st,
-                        height_1st,
-                        args.highres_fix_steps,
+                    ext_1st = BatchDataExt(width_1st, height_1st, args.highres_fix_steps,
                         ext.scale,
                         ext.negative_scale,
                         strength_1st,
@@ -2623,28 +2524,18 @@ def main(args):
                         batch_size
                         if args.vae_batch_size is None
                         else (max(1,
-                                  int(batch_size * args.vae_batch_size)) if args.vae_batch_size < 1 else args.vae_batch_size)
-                    )
+                                  int(batch_size * args.vae_batch_size)) if args.vae_batch_size < 1 else args.vae_batch_size))
                     vae_batch_size = int(vae_batch_size)
-                    images_1st = upscaler.upscale(
-                        vae, lowreso_imgs, lowreso_latents, dtype, width_2nd, height_2nd, batch_size, vae_batch_size
-                    )
+                    images_1st = upscaler.upscale(vae, lowreso_imgs, lowreso_latents, dtype, width_2nd, height_2nd, batch_size, vae_batch_size)
 
                 elif args.highres_fix_latents_upscaling:
-                    # latentを拡大する
                     org_dtype = images_1st.dtype
                     if images_1st.dtype == torch.bfloat16:
                         images_1st = images_1st.to(torch.float)  # interpolateがbf16をサポートしていない
-                    images_1st = torch.nn.functional.interpolate(
-                        images_1st, (batch[0].ext.height // 8, batch[0].ext.width // 8), mode="bilinear"
-                    )  # , antialias=True)
+                    images_1st = torch.nn.functional.interpolate(images_1st, (batch[0].ext.height // 8, batch[0].ext.width // 8), mode="bilinear")
                     images_1st = images_1st.to(org_dtype)
-
                 else:
-                    # 画像をLANCZOSで拡大する
-                    images_1st = [image.resize((width_2nd, height_2nd), resample=PIL.Image.LANCZOS) for image in
-                                  images_1st]
-
+                    images_1st = [image.resize((width_2nd, height_2nd), resample=PIL.Image.LANCZOS) for image in images_1st]
                 batch_2nd = []
                 for i, (bd, image) in enumerate(zip(batch, images_1st)):
                     bd_2nd = BatchData(False, BatchDataBase(*bd.base[0:3], bd.base.seed + 1, image, None, *bd.base[6:]),
@@ -2661,8 +2552,7 @@ def main(args):
             prompts = []
             negative_prompts = []
             start_code = torch.zeros((batch_size, *noise_shape), device=device, dtype=dtype)
-            noises = [torch.zeros((batch_size, *noise_shape), device=device, dtype=dtype)
-                      for _ in range(steps * scheduler_num_noises_per_step)]
+            noises = [torch.zeros((batch_size, *noise_shape), device=device, dtype=dtype) for _ in range(steps * scheduler_num_noises_per_step)]
             seeds = []
             clip_prompts = []
             if init_image is not None:  # img2img?
@@ -2680,17 +2570,16 @@ def main(args):
                 guide_images = []
             else:
                 guide_images = None
+
             all_images_are_same = True
             all_masks_are_same = True
             all_guide_images_are_same = True
             for i, (_, (_, prompt, negative_prompt, seed, init_image, mask_image, clip_prompt, guide_image), _) in enumerate(batch):
                 prompts.append(prompt)
-                negative_prompt = args.negative_prompt
+                #negative_prompt = args.negative_prompt
                 negative_prompts.append(negative_prompt)
                 seeds.append(seed)
                 clip_prompts.append(clip_prompt)
-                print(f'prompt : {prompt}')
-                print(f'negative_prompt : {negative_prompt}')
                 if init_image is not None:
                     init_images.append(init_image)
                     if i > 0 and all_images_are_same:
@@ -2739,7 +2628,8 @@ def main(args):
                     print("pre-calculation... done")
 
             print(' (15.3) generating image')
-            images = pipe(prompts,negative_prompts,init_images,mask_images,height,width,steps,scale,negative_scale,
+            images = pipe(prompts,negative_prompts,
+                          init_images,mask_images,height,width,steps,scale,negative_scale,
                           strength,latents=start_code,output_type="pil",max_embeddings_multiples=max_embeddings_multiples,
                           img2img_noise=i2i_noises,vae_batch_size=args.vae_batch_size,return_latents=return_latents,
                           clip_prompts=clip_prompts,clip_guide_images=guide_images,)[0]
@@ -2755,6 +2645,7 @@ def main(args):
                                                                                          negative_prompts,
                                                                                          seeds,
                                                                                          clip_prompts)):
+                naming = prompt.replace(" ", "_")
                 if highres_fix:
                     seed -= 1  # record original seed
                 metadata = PngInfo()
@@ -2771,30 +2662,48 @@ def main(args):
                     metadata.add_text("clip-prompt", clip_prompt)
                 if args.use_original_file_name and init_images is not None:
                     if type(init_images) is list:
-                        fln = os.path.splitext(os.path.basename(init_images[i % len(init_images)].filename))[0] + ".png"
+                        #fln = os.path.splitext(os.path.basename(init_images[i % len(init_images)].filename))[0] + ".png"
+                        #flt = os.path.splitext(os.path.basename(init_images[i % len(init_images)].filename))[0] + ".txt"
+                        fln = naming + ".png"
+                        flt = naming + ".txt"
                     else:
-                        fln = os.path.splitext(os.path.basename(init_images.filename))[0] + ".png"
+                        #fln = os.path.splitext(os.path.basename(init_images.filename))[0] + ".png"
+                        #flt = os.path.splitext(os.path.basename(init_images.filename))[0] + ".txt"
+                        fln = naming + ".png"
+                        flt = naming + ".txt"
                 elif args.sequential_file_name:
-                    fln = f"im_{highres_prefix}{step_first + i + 1:06d}.png"
+                    #fln = f"im_{highres_prefix}{step_first + i + 1:06d}.png"
+                    #flt = f"im_{highres_prefix}{step_first + i + 1:06d}.txt"
+                    fln = naming + ".png"
+                    flt = naming + ".txt"
                 else:
-                    fln = f"im_{ts_str}_{highres_prefix}{i:03d}_{seed}.png"
+                    #fln = f"im_{ts_str}_{highres_prefix}{i:03d}_{seed}.png"
+                    #flt = f"im_{ts_str}_{highres_prefix}{i:03d}_{seed}.txt"
+                    fln = naming + ".png"
+                    flt = naming + ".txt"
+
                 parent, folder = os.path.split(args.outdir)
                 os.makedirs(parent, exist_ok=True)
-                base_folder = os.path.join(args.outdir, f'{folder}_{save_index}')
-                print(f'base_folder : {base_folder}')
+                n_ = naming.replace(",", "_")
+                base_folder = os.path.join(args.outdir, f'{n_}_{seed}')
                 os.makedirs(base_folder, exist_ok=True)
-                image.save(os.path.join(base_folder, fln), pnginfo=metadata)
-                prompt_save_dir = os.path.join(base_folder, f'prompt.txt')
-                with open(prompt_save_dir, 'w') as f:
+                img_save_dir = os.path.join(base_folder, fln)
+                txt_save_dir = os.path.join(base_folder, flt)
+                image.save(img_save_dir,pnginfo=metadata)
+                with open(txt_save_dir, 'w') as f:
                     f.write(prompt)
+
                 # ------------------------------------------------------------------------------------------------
                 print(f'save attn map')
                 print(f'prompt : {prompt}')
                 text_embeddings, trg_indexs = generate_text_embedding(args, prompt, tokenizer, text_encoder, device)
+                print(f'trg_indexs : {trg_indexs}')
                 atten_collection = attention_storer.step_store
                 attention_storer.step_store = {}
                 layer_names = atten_collection.keys()
                 total_heat_map = []
+                total_layers = []
+
                 for layer_name in layer_names:
                     attn_list = atten_collection[layer_name]  # number is head, each shape = 400 number of [77, H, W]
                     attns = torch.stack(attn_list, dim=0)  # batch, 8*batch, pix_len, sen_len
@@ -2812,6 +2721,7 @@ def main(args):
                         word_map = global_heat_map[word_index, :, :]
                         word_map = expand_image(word_map, 512, 512)
                         all_merges.append(word_map)
+                        total_layers.append(word_map)
                     # --------------------------------------------------------------------------------- #
                     # torch type heat map
                     #
@@ -2819,16 +2729,24 @@ def main(args):
 
                     if heat_map.dim() == 3:
                         heat_map = heat_map.mean(0)  # [:, 0]  # global_heat_map = [77, 64, 64]
-                    print(f'layerwise heat map : {heat_map.shape}')
                     layer_name = layer_name.split('_')[:5]
                     a = '_'.join(layer_name)
                     np_heat_map = heat_map.cpu().numpy()
-                    heat_map_dir = os.path.join(base_folder, f'attention_{a}.npy')
-                    np.save(heat_map_dir, np_heat_map)
-
                     img = image_overlay_heat_map(img=image, heat_map=heat_map)
                     attn_save_dir = os.path.join(base_folder, f'attention_{a}.jpg')
                     img.save(attn_save_dir)
+                
+                total_layers_heat_map = torch.stack(total_layers, dim=0)  # global_heat_map = [sen_len, 512,512]
+
+                if total_layers_heat_map.dim() == 3:
+                    total_layers_heat_map = total_layers_heat_map.mean(0)  # [:, 0]  # global_heat_map = [77, 64, 64]
+                #total_layers_heat_map = total_layers_heat_map.cpu().numpy()
+                img = image_overlay_heat_map(img=image,
+                                             heat_map=total_layers_heat_map)
+
+                total_layers_heat_map_dir = os.path.join(base_folder, f'total_heatmap.jpg')
+                img.save(total_layers_heat_map_dir)
+
             if not args.no_preview and not highres_1st and args.interactive:
                 try:
                     import cv2
@@ -2899,6 +2817,7 @@ def main(args):
                                 print(f"steps: {steps}")
                                 continue
                             m = re.match(r"d ([\d,]+)", parg, re.IGNORECASE)
+
                             if m:  # seed
                                 seeds = [int(d) for d in m.group(1).split(",")]
                                 print(f"seeds: {seeds}")
@@ -2960,15 +2879,21 @@ def main(args):
                 # prepare init image, guide image and mask
                 init_image = mask_image = guide_image = None
                 num_sub_prompts = None
-                b1 = BatchData(False,BatchDataBase(global_step, prompt, negative_prompt, seed, init_image, mask_image,clip_prompt, guide_image),
-                               BatchDataExt(width, height, steps, scale, negative_scale, strength, tuple(network_muls) if network_muls else None, num_sub_prompts, ), )
+                print(f'before making b1, negative_prompt : {negative_prompt}')
+                b1 = BatchData(False,
+                               BatchDataBase(global_step,prompt,negative_prompt, seed, init_image, mask_image,clip_prompt, guide_image),
+                               BatchDataExt(width, height, steps, scale, negative_scale, strength, tuple(network_muls) if network_muls else None, num_sub_prompts, ),)
+
                 if len(batch_data) > 0 and batch_data[-1].ext != b1.ext :
                     process_batch(batch_data, highres_fix)
                     batch_data.clear()
                 batch_data.append(b1)
+
                 if len(batch_data) == args.batch_size:
                     print(f' {unique_index} : process batch *** ')
-                    prev_image = process_batch(batch_data, highres_fix, save_index = unique_index )[0]
+                    prev_image = process_batch(batch_data,
+                                               highres_fix,
+                                               save_index = unique_index )[0]
                     batch_data.clear()
                 global_step += 1
             prompt_index += 1
@@ -3099,9 +3024,10 @@ if __name__ == "__main__":
                         nargs="*",help="ControlNet guidance ratio for steps / ControlNetでガイドするステップ比率",)
     parser.add_argument("--device", default='cuda')
     parser.add_argument("--trg_token", type=str)
+    parser.add_argument("--class_token", type=str)
     parser.add_argument("--negative_prompt", type=str)
     parser.add_argument("--erase_selfattn",  action = 'store_true')
     parser.add_argument("--erase_crossattn", action = 'store_true' )
-
+    parser.add_argument("--efficient_layer", type=str)
     args = parser.parse_args()
     main(args)

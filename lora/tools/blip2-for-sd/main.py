@@ -1,4 +1,4 @@
-import requests, torch, sys, os
+import torch, os
 import argparse
 
 from importlib import reload
