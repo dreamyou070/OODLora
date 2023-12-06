@@ -939,8 +939,11 @@ class BaseDataset(torch.utils.data.Dataset):
         image = Image.open(image_path)
         return image.size
 
-    def load_image_with_face_info(self, subset: BaseSubset, image_path: str):
-        img = load_image(image_path)
+    def load_image_with_face_info(self, subset: BaseSubset, image_path: str, is_resize = False, trg_h=None, trg_w = None):
+        if is_resize :
+            load_image(image_path, trg_h, trg_w)
+        else :
+            img = load_image(image_path)
         face_cx = face_cy = face_w = face_h = 0
         if subset.face_crop_aug_range is not None:
             tokens = os.path.splitext(os.path.basename(image_path))[0].split("_")
@@ -1069,13 +1072,10 @@ class BaseDataset(torch.utils.data.Dataset):
                 latents = torch.FloatTensor(latents)
                 image = None
             else:
-                # 画像を読み込み、必要ならcropする
-                img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset, image_info.absolute_path)
-
-                # image resizing
-                resized_img = img.resize((self.width, self.height), Image.LANCZOS)
-
-
+                # 画像を読み込み、必要ならcropする and resizing
+                img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset, image_info.absolute_path,
+                                                                                       is_resize = True,
+                                                                                       trg_h = self.height, trg_w = self.width)
                 im_h, im_w = img.shape[0:2]
                 if self.enable_bucket:
                     img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
@@ -2144,10 +2144,12 @@ def load_arbitrary_dataset(args, tokenizer) -> MinimalDataset:
     return train_dataset_group
 
 
-def load_image(image_path):
+def load_image(image_path, trg_h, trg_w):
     image = Image.open(image_path)
     if not image.mode == "RGB":
         image = image.convert("RGB")
+    if trg_h and trg_w :
+        image = image.resize((trg_w, trg_h), Image.BICUBIC)
     img = np.array(image, np.uint8)
     return img
 
