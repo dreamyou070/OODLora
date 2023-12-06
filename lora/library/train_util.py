@@ -1071,6 +1071,11 @@ class BaseDataset(torch.utils.data.Dataset):
             else:
                 # 画像を読み込み、必要ならcropする
                 img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset, image_info.absolute_path)
+
+                # image resizing
+                resized_img = img.resize((self.width, self.height), Image.LANCZOS)
+
+
                 im_h, im_w = img.shape[0:2]
                 if self.enable_bucket:
                     img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)

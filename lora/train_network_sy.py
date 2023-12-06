@@ -258,26 +258,22 @@ class NetworkTrainer:
         train_util.sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet)
 
     def train(self, args):
-        if args.process_title :
-            setproctitle(args.process_title)
-        else :
-            setproctitle('parksooyeon')
 
+        print(f'\n step 1. setting')
+        if args.process_title : setproctitle(args.process_title)
+        else : setproctitle('parksooyeon')
         session_id = random.randint(0, 2**32)
         training_started_at = time.time()
         train_util.verify_training_args(args)
         train_util.prepare_dataset_args(args, True)
-
         cache_latents = args.cache_latents
         use_dreambooth_method = args.in_json is None
         use_user_config = args.dataset_config is not None
         use_class_caption = args.class_caption is not None # if class_caption is provided, for subsets, add key 'class_caption' to each subset
-
-        if args.seed is None:
-            args.seed = random.randint(0, 2**32)
+        if args.seed is None: args.seed = random.randint(0, 2**32)
         set_seed(args.seed)
 
-        # tokenizerは単体またはリスト、tokenizersは必ずリスト：既存のコードとの互換性のため
+        print(f'\n step 2. loading tokenizer')
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
 
