@@ -883,6 +883,7 @@ class NetworkTrainer:
                     attention_losses["loss/task_loss"] = loss
 
                     # ------------------------------------------------------------------------------------
+                    """
                     if args.heatmap_loss :
                         layer_names = atten_collection.keys()
                         assert len(layer_names) > 0, "Cannot find any layer names in attention_storer. check your model."
@@ -897,7 +898,8 @@ class NetworkTrainer:
                         if args.heatmap_backprop :
                             loss = task_loss + args.attn_loss_ratio * attn_loss
                     else:
-                        attention_losses = {}
+                    """
+                    attention_losses = {}
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
