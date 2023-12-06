@@ -168,11 +168,11 @@ def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dic
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
 
-            if not is_cross_attention:
+            #if not is_cross_attention:
                 #query = self_query_dict[trg_indexs_list][layer_name].to(query.device)
-                if trg_indexs_list > 920 :
-                    key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
-                    value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
+                #if trg_indexs_list > 920 :
+                 #   key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
+                  #  value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
 
             if self.upcast_attention:
                 query = query.float()
