@@ -12,6 +12,7 @@ from attention_store import AttentionStore
 import wandb
 import numpy as np
 from PIL import Image
+import sys, importlib
 from typing import Union
 from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
 try:
@@ -277,7 +278,29 @@ def main(args) :
                                                                                           unet_use_linear_projection_in_v2=False, )
     text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
 
-    print(f' (1.3) register attention storer')
+    print(f' (1.3) network')
+    sys.path.append(os.path.dirname(__file__))
+    network_module = importlib.import_module(args.network_module)
+    print(f' (1.3.1) merging weights')
+    net_kwargs = {}
+    if args.network_args is not None:
+        for net_arg in args.network_args:
+            key, value = net_arg.split("=")
+            net_kwargs[key] = value
+    print(f' (1.3.3) make network')
+    if args.dim_from_weights:
+        network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
+                                                                **net_kwargs)
+    else:
+        network = network_module.create_network(1.0,
+                                                args.network_dim, args.network_alpha, vae,
+                                                text_encoder, unet, neuron_dropout=args.network_dropout, **net_kwargs, )
+    print(f' (1.3.4) apply trained state dict')
+    network.apply_to(text_encoder, unet, True, True)
+    if args.network_weights is not None:
+        info = network.load_weights(args.network_weights)
+
+    print(f' (1.3.5) register attention storer')
     attention_storer = AttentionStore()
     register_attention_control(unet, attention_storer)
 
@@ -318,7 +341,7 @@ def main(args) :
     else:
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
-
+    """
     print(f' \n step 2. ground-truth image preparing')
     print(f' (2.1) prompt condition')
     prompt = args.prompt
@@ -540,7 +563,8 @@ def main(args) :
             prompt_save_name = prompt.replace(' ','_')
             image_save_dir = os.path.join(args.output_dir, f'{prompt_save_name}_from_{str(args.min_value)}_selfcontroll_{str(self_input_time)}_times.jpg')
             image.save(image_save_dir)
-
+    """
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     train_util.add_sd_models_arguments(parser)
@@ -553,6 +577,19 @@ if __name__ == "__main__":
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--process_title", type=str, default='parksooyeon')
+    parser.add_argument("--network_module", type=str, default=None,
+                        help="network module to train / 学習対象のネットワークのモジュール")
+    parser.add_argument("--base_weights", type=str, default=None, nargs="*",
+                        help="network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みファイル", )
+    parser.add_argument("--base_weights_multiplier", type=float, default=None, nargs="*",
+                        help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率", )
+    parser.add_argument("--network_args", type=str, default=None, nargs="*",
+                        help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
+    parser.add_argument("--dim_from_weights", action="store_true",
+                        help="automatically determine dim (rank) from network_weights / dim (rank)をnetwork_weightsで指定した重みから自動で決定する", )
+    parser.add_argument("--network_weights", type=str, default=None,
+                        help="pretrained weights for network / 学習するネットワークの初期重み")
+
     parser.add_argument("--concept_image", type=str,
                         default = '/data7/sooyeon/MyData/perfusion_dataset/td_100/100_td/td_1.jpg')
     parser.add_argument("--prompt", type=str,
