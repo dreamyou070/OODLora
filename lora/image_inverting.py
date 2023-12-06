@@ -206,7 +206,9 @@ def ddim_loop(latent, context, NUM_DDIM_STEPS, scheduler, unet):
     time_steps = []
     latent = latent.clone().detach()
     for i in range(NUM_DDIM_STEPS):
+        # i = 0
         t = scheduler.timesteps[len(scheduler.timesteps) - i - 1]
+        print(f't : {t}')
         time_steps.append(t)
         noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
         latent = next_step(noise_pred, t, latent, scheduler)
@@ -343,15 +345,14 @@ def main(args) :
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
     network.to(device)
+
     print(f' \n step 2. ground-truth image preparing')
     print(f' (2.1) prompt condition')
     prompt = args.prompt
     context = init_prompt(tokenizer, text_encoder, device, prompt)
-    """
-    
-
     print(f' (2.2) image condition')
     concept_img_dirs = os.listdir(args.concept_image_folder)
+    print(f' (2.3) inverting as saving self k&v')
     self_q, self_k, self_v, cross_q, cross_k, cross_v = {}, {}, {}, {}, {}, {}
     for concept_img in concept_img_dirs :
         concept_img_dir = os.path.join(args.concept_image_folder, concept_img)
@@ -359,6 +360,8 @@ def main(args) :
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         scheduler.set_timesteps(args.num_ddim_steps)
         ddim_latents, time_steps = ddim_loop(latent, context, args.num_ddim_steps, scheduler, unet)
+        break
+
 
 
 
@@ -420,6 +423,7 @@ def main(args) :
         cross_k[concept_img_name] = cross_key_dict
         cross_v[concept_img_name] = cross_value_dict
         attention_storer.reset()
+    """
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     global_self_k_dict, global_self_v_dict = {},{}
     img_variants = self_k.keys()
@@ -450,7 +454,8 @@ def main(args) :
                     else :
                         global_self_k_dict[timestep_elem][layer_elem].append(self_k_dict[timestep_elem][layer_elem])
                         global_self_v_dict[timestep_elem][layer_elem].append(self_v_dict[timestep_elem][layer_elem])
-
+    """
+    """
     g_self_k_dict, g_self_v_dict = {},{}
     total_times = global_self_k_dict.keys()
     for t_ in total_times :
@@ -479,6 +484,8 @@ def main(args) :
     pipeline = StableDiffusionLongPromptWeightingPipeline(text_encoder=text_encoder, vae=vae, unet=unet, tokenizer=tokenizer,scheduler=scheduler,
                                                           safety_checker=None, feature_extractor=None,
                                                           requires_safety_checker=False,clip_skip=args.clip_skip, )
+    """
+    """
     pipeline.to(device)
     unregister_attention_control(unet, attention_storer)
     for m in range(args.max_self_input_time):
@@ -605,12 +612,16 @@ if __name__ == "__main__":
                         default = 'teddy bear, wearing like a super hero')
     parser.add_argument("--negative_prompt", type=str,
                         default = 'low quality, worst quality, bad anatomy,bad composition, poor, low effort')
+    parser.add_argument("--concept_image_folder", type=str)
     parser.add_argument("--num_ddim_steps", type=int, default=30)
+    
+    
+
     parser.add_argument("--max_self_input_time", type=int, default=10)
     parser.add_argument("--min_value", type=int, default=3)
     parser.add_argument("--guidance_scale", type=float, default=7.5)
     parser.add_argument("--self_key_control", action='store_true')
-    parser.add_argument("--concept_image_folder", type=str)
+    
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
