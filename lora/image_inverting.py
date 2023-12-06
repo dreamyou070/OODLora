@@ -59,7 +59,7 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
 
             if not is_cross_attention:
                 # when self attention
-                query, key, value = controller.self_query_key_value_caching(query_value=query.detach().cpu(),
+                controller.self_query_key_value_caching(query_value=query.detach().cpu(),
                                                                             key_value=key.detach().cpu(),
                                                                             value_value=value.detach().cpu(),
                                                                             layer_name=layer_name)
