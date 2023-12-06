@@ -382,28 +382,7 @@ def main(args) :
                                                                                           unet_use_linear_projection_in_v2=False, )
     text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
 
-    print(f' (1.3) network')
-    sys.path.append(os.path.dirname(__file__))
-    network_module = importlib.import_module(args.network_module)
-    print(f' (1.3.1) merging weights')
-    net_kwargs = {}
-    if args.network_args is not None:
-        for net_arg in args.network_args:
-            key, value = net_arg.split("=")
-            net_kwargs[key] = value
-    print(f' (1.3.3) make network')
-    if args.dim_from_weights:
-        network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
-                                                                **net_kwargs)
-    else:
-        network = network_module.create_network(1.0,
-                                                args.network_dim,
-                                                args.network_alpha,
-                                                vae, text_encoder, unet, neuron_dropout=args.network_dropout, **net_kwargs, )
-    print(f' (1.3.4) apply trained state dict')
-    network.apply_to(text_encoder, unet, True, True)
-    if args.network_weights is not None:
-        info = network.load_weights(args.network_weights)
+
 
     print(f' (1.3.5) register attention storer')
 
@@ -460,7 +439,7 @@ def main(args) :
     else:
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
-    network.to(device)
+
 
     print(f' \n step 2. ground-truth image preparing')
     print(f' (2.1) prompt condition')
@@ -541,6 +520,30 @@ def main(args) :
         #cross_v[concept_img_name] = cross_value_dict
         attention_storer.reset()
         print(f' (2.3.2) reconstruction with correcting')
+        print(f' (1.3) network')
+        sys.path.append(os.path.dirname(__file__))
+        network_module = importlib.import_module(args.network_module)
+        print(f' (1.3.1) merging weights')
+        net_kwargs = {}
+        if args.network_args is not None:
+            for net_arg in args.network_args:
+                key, value = net_arg.split("=")
+                net_kwargs[key] = value
+        print(f' (1.3.3) make network')
+        if args.dim_from_weights:
+            network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
+                                                                    **net_kwargs)
+        else:
+            network = network_module.create_network(1.0,
+                                                    args.network_dim,
+                                                    args.network_alpha,
+                                                    vae, text_encoder, unet, neuron_dropout=args.network_dropout,
+                                                    **net_kwargs, )
+        print(f' (1.3.4) apply trained state dict')
+        network.apply_to(text_encoder, unet, True, True)
+        if args.network_weights is not None:
+            info = network.load_weights(args.network_weights)
+        network.to(device)
         unregister_attention_control(unet, attention_storer)
         start_latent = ddim_latents[-1]
         ddim_latents, time_steps, pil_images = recon_loop(start_latent,
