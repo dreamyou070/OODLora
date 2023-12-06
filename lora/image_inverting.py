@@ -62,11 +62,13 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
                                                                             key_value=key,
                                                                             value_value=value,
                                                                             layer_name=layer_name)
+            """
             else :
                 query, key, value = controller.cross_query_key_value_caching(query_value=query,
                                                                              key_value=key,
                                                                              value_value=value,
                                                                              layer_name=layer_name)
+            """
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -474,18 +476,19 @@ def main(args) :
         self_key_collection = attention_storer.self_key_store
         self_value_collection = attention_storer.self_value_store
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
-        cross_query_dict, cross_key_dict, cross_value_dict = {}, {}, {}
+        #cross_query_dict, cross_key_dict, cross_value_dict = {}, {}, {}
         for layer in layer_names:
             self_query_list = attention_storer.self_query_store[layer]
             self_key_list = attention_storer.self_key_store[layer]
             self_value_list = attention_storer.self_value_store[layer]
-            cross_layer = layer.replace('attn1', 'attn2')
-            cross_query_list = attention_storer.cross_query_store[cross_layer]
-            cross_key_list = attention_storer.cross_key_store[cross_layer]
-            cross_value_list = attention_storer.cross_value_store[cross_layer]
+            #cross_layer = layer.replace('attn1', 'attn2')
+            #cross_query_list = attention_storer.cross_query_store[cross_layer]
+            #cross_key_list = attention_storer.cross_key_store[cross_layer]
+            #cross_value_list = attention_storer.cross_value_store[cross_layer]
             i = 0
-            for self_query, self_key, self_value, cross_query, cross_key, cross_value in zip(self_query_list, self_key_list, self_value_list,
-                                                                                             cross_query_list,cross_key_list,cross_value_list,) :
+            #for self_query, self_key, self_value, cross_query, cross_key, cross_value in zip(self_query_list, self_key_list, self_value_list,
+            #                                                                                 cross_query_list,cross_key_list,cross_value_list,) :
+            for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list) :
                 time_step = time_steps[i]
                 if time_step not in self_query_dict.keys() :
                     self_query_dict[time_step] = {}
@@ -504,7 +507,7 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
                 else :
                     self_value_dict[time_step][layer] = self_value
-
+                """
                 if time_step not in cross_query_dict.keys() :
                     cross_query_dict[time_step] = {}
                     cross_query_dict[time_step][layer] = cross_query
@@ -520,14 +523,15 @@ def main(args) :
                     cross_value_dict[time_step][layer] = cross_value
                 else :
                     cross_value_dict[time_step][layer] = cross_value
+                """
                 i += 1
         concept_img_name = os.path.splitext(concept_img)[0]
         self_q[concept_img_name] = self_query_dict
         self_k[concept_img_name] = self_key_dict
         self_v[concept_img_name] = self_value_dict
-        cross_q[concept_img_name] = cross_query_dict
-        cross_k[concept_img_name] = cross_key_dict
-        cross_v[concept_img_name] = cross_value_dict
+        #cross_q[concept_img_name] = cross_query_dict
+        #cross_k[concept_img_name] = cross_key_dict
+        #cross_v[concept_img_name] = cross_value_dict
         attention_storer.reset()
 
         print(f' (2.3.2) reconstruction with correcting')
