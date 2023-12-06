@@ -168,11 +168,11 @@ def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dic
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
 
-            #if not is_cross_attention:
+            if not is_cross_attention:
                 #query = self_query_dict[trg_indexs_list][layer_name].to(query.device)
-                #if trg_indexs_list > 920 :
-                 #   key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
-                  #  value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
+                if trg_indexs_list > args.threshold_time :
+                    key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
+                    value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
 
             if self.upcast_attention:
                 query = query.float()
@@ -365,7 +365,8 @@ def main(args) :
     os.makedirs(record_save_dir, exist_ok=True)
     with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
         json.dump(vars(args), f, indent=4)
-    base_folder_dir = os.path.join(args.folder_name)
+
+    base_folder_dir = f'../infertest/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
@@ -597,7 +598,7 @@ if __name__ == "__main__":
     parser.add_argument("--folder_name", type=str)
     parser.add_argument("--guidance_scale", type=float, default=7.5)
     parser.add_argument("--self_key_control", action='store_true')
-    
+    parser.add_argument("--threshold_time", type=int, default = 900)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
