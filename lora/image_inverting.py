@@ -148,6 +148,60 @@ def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
+
+def register_self_condition_giver(unet: nn.Module, self_key_dict,self_value_dict):
+    def ca_forward(self, layer_name):
+        def forward(hidden_states, context=None):
+            is_cross_attention = False
+            if context is not None:
+                is_cross_attention = True
+            query = self.to_q(hidden_states)
+            context = context if context is not None else hidden_states
+            key = self.to_k(context)
+            value = self.to_v(context)
+
+            query = self.reshape_heads_to_batch_dim(query)
+            key = self.reshape_heads_to_batch_dim(key)
+            value = self.reshape_heads_to_batch_dim(value)
+
+            if not is_cross_attention:
+                # when self attention
+                print(f'when generating, layer_name : {layer_name}')
+                key = self_key_dict[layer_name]
+                value = self_value_dict[layer_name]
+
+            if self.upcast_attention:
+                query = query.float()
+                key = key.float()
+            attention_scores = torch.baddbmm(
+                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                            device=query.device),
+                query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            attention_probs = attention_scores.softmax(dim=-1)
+            attention_probs = attention_probs.to(value.dtype)
+            hidden_states = torch.bmm(attention_probs, value)
+            hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
+            hidden_states = self.to_out[0](hidden_states)
+            return hidden_states
+        return forward
+
+    def register_recr(net_, count, layer_name):
+        if net_.__class__.__name__ == 'CrossAttention':
+            net_.forward = ca_forward(net_, layer_name)
+            return count + 1
+        elif hasattr(net_, 'children'):
+            for name__, net__ in net_.named_children():
+                full_name = f'{layer_name}_{name__}'
+                count = register_recr(net__, count, full_name)
+        return count
+    cross_att_count = 0
+    for net in unet.named_children():
+        if "down" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+        elif "up" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+        elif "mid" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
 def load_512(image_path, left=0, right=0, top=0, bottom=0):
     if type(image_path) is str:
         image = np.array(Image.open(image_path))[:, :, :3]
@@ -197,6 +251,18 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
+def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
+              timestep: int,
+              sample: Union[torch.FloatTensor, np.ndarray],
+              scheduler):
+    timestep, prev_timestep = timestep, max( timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 0)
+    alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
+    alpha_prod_t_prev = scheduler.alphas_cumprod[prev_timestep]
+    beta_prod_t = 1 - alpha_prod_t
+    prev_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+    prev_sample_direction = (1 - alpha_prod_t_prev) ** 0.5 * model_output
+    prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
+    return prev_sample
 @torch.no_grad()
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae):
     uncond_embeddings, cond_embeddings = context.chunk(2)
@@ -204,19 +270,44 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae):
     time_steps = []
     latent = latent.clone().detach()
     latent_dict = {}
+    pil_images = []
     for t in torch.flip(inference_times, dims=[0]):
         latent_dict[t.item()] = latent
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
-        pil_img.save(f'./inversion_{t.item()}.png')
+        pil_images.append(pil_img)
+        #pil_img.save(f'./inversion_{t.item()}.png')
         # ----------------------------------------------------------------------------
         time_steps.append(t.item())
         noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
         latent = next_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
-    return all_latent, time_steps
+    return all_latent, time_steps, pil_images
 
+def recon_loop(latent,context,inference_times,scheduler, unet, vae,self_key_dict,self_value_dict) :
+    register_self_condition_giver(unet, self_key_dict,self_value_dict)
+
+
+    uncond_embeddings, cond_embeddings = context.chunk(2)
+    all_latent = [latent]
+    time_steps = []
+    latent_dict = {}
+    pil_images = []
+    for t in inference_times:
+        inference_time = t.item()
+        latent_dict[inference_time] = latent
+        with torch.no_grad():
+            np_img = latent2image(latent, vae, return_type='np')
+        pil_img = Image.fromarray(np_img)
+        pil_images.append(pil_img)
+        pil_img.save(f'../gen_test/recon_{t.item()}.png')
+        # ----------------------------------------------------------------------------
+        time_steps.append(inference_time)
+        noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
+        latent = prev_step(noise_pred, t.item(), latent, scheduler)
+        all_latent.append(latent)
+    return all_latent, time_steps, pil_images
 @torch.no_grad()
 def latent2image(latents, vae, return_type='np'):
     latents = 1 / 0.18215 * latents.detach()
@@ -306,8 +397,7 @@ def main(args) :
         info = network.load_weights(args.network_weights)
 
     print(f' (1.3.5) register attention storer')
-    attention_storer = AttentionStore()
-    register_attention_control(unet, attention_storer)
+
 
     print(f' (1.4) scheduler')
     sched_init_args = {}
@@ -372,12 +462,13 @@ def main(args) :
     print(f' (2.3) inverting as saving self k&v')
     self_q, self_k, self_v, cross_q, cross_k, cross_v = {}, {}, {}, {}, {}, {}
     for concept_img in concept_img_dirs :
+        print(f' (2.3.1) inversion')
+        attention_storer = AttentionStore()
+        register_attention_control(unet, attention_storer)
         concept_img_dir = os.path.join(args.concept_image_folder, concept_img)
         image_gt_np = load_512(concept_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        ddim_latents, time_steps = ddim_loop(latent, context, inference_times, scheduler, unet, vae)
-
-
+        ddim_latents, time_steps, pil_images = ddim_loop(latent, context, inference_times, scheduler, unet, vae)
         layer_names = attention_storer.self_query_store.keys()
         self_query_collection = attention_storer.self_query_store
         self_key_collection = attention_storer.self_key_store
@@ -401,16 +492,19 @@ def main(args) :
                     self_query_dict[time_step][layer] = self_query
                 else :
                     self_query_dict[time_step][layer] = self_query
+
                 if time_step not in self_key_dict.keys() :
                     self_key_dict[time_step] = {}
                     self_key_dict[time_step][layer] = self_key
                 else :
                     self_key_dict[time_step][layer] = self_key
+
                 if time_step not in self_value_dict.keys() :
                     self_value_dict[time_step] = {}
                     self_value_dict[time_step][layer] = self_value
                 else :
                     self_value_dict[time_step][layer] = self_value
+
                 if time_step not in cross_query_dict.keys() :
                     cross_query_dict[time_step] = {}
                     cross_query_dict[time_step][layer] = cross_query
@@ -435,6 +529,17 @@ def main(args) :
         cross_k[concept_img_name] = cross_key_dict
         cross_v[concept_img_name] = cross_value_dict
         attention_storer.reset()
+
+        print(f' (2.3.2) reconstruction with correcting')
+        unregister_attention_control(unet, attention_storer)
+        start_latent = ddim_latents[-1]
+        ddim_latents, time_steps, pil_images = recon_loop(start_latent,
+                                                          context,
+                                                          inference_times,
+                                                          scheduler, unet, vae,
+                                                          self_key_dict,
+                                                          self_value_dict)
+
     """
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     global_self_k_dict, global_self_v_dict = {},{}
