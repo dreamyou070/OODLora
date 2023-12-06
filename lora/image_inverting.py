@@ -227,13 +227,13 @@ def init_prompt(tokenizer, text_encoder, device, prompt: str):
     uncond_input = tokenizer([""],
                              padding="max_length", max_length=tokenizer.model_max_length,
                              return_tensors="pt")
-    uncond_embeddings = text_encoder.to(device)(uncond_input.input_ids.to(device))[0]
+    uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
     text_input = tokenizer([prompt],
                            padding="max_length",
                            max_length=tokenizer.model_max_length,
                            truncation=True,
                            return_tensors="pt",)
-    text_embeddings = text_encoder.to(device)(text_input.input_ids.to(device))[0]
+    text_embeddings = text_encoder(text_input.input_ids.to(device))[0]
     context = torch.cat([uncond_embeddings, text_embeddings])
     return context
 
@@ -342,7 +342,7 @@ def main(args) :
     else:
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
-
+    network.to(device)
     print(f' \n step 2. ground-truth image preparing')
     print(f' (2.1) prompt condition')
     prompt = args.prompt
