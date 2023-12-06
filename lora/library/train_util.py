@@ -941,7 +941,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
     def load_image_with_face_info(self, subset: BaseSubset, image_path: str, is_resize = False, trg_h=None, trg_w = None):
         if is_resize :
-            load_image(image_path, trg_h, trg_w)
+            img = load_image(image_path, trg_h, trg_w)
         else :
             img = load_image(image_path)
         face_cx = face_cy = face_w = face_h = 0
