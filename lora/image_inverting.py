@@ -152,8 +152,10 @@ def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
     controller.num_att_layers = cross_att_count
 
 def register_self_condition_giver(unet: nn.Module, self_key_dict,self_value_dict):
+    
     def ca_forward(self, layer_name):
-        def forward(hidden_states, context=None):
+
+        def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
             is_cross_attention = False
             if context is not None:
                 is_cross_attention = True
@@ -237,7 +239,8 @@ def image2latent(image, vae, device, weight_dtype):
             latents = latents * 0.18215
     return latents
 def call_unet(unet, noisy_latents, timesteps, text_conds, trg_indexs_list, mask_imgs):
-    noise_pred = unet(noisy_latents, timesteps, text_conds, trg_indexs_list=trg_indexs_list,
+    noise_pred = unet(noisy_latents, timesteps, text_conds,
+                      trg_indexs_list=trg_indexs_list,
                       mask_imgs=mask_imgs, ).sample
     return noise_pred
 def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
