@@ -170,7 +170,7 @@ def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dic
 
             if not is_cross_attention:
                 #query = self_query_dict[trg_indexs_list][layer_name].to(query.device)
-                if trg_indexs_list > 800 :
+                if trg_indexs_list > 920 :
                     key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
                     value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
 
