@@ -268,7 +268,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
 @torch.no_grad()
-def ddim_loop(latent, context, inference_times, scheduler, unet, vae):
+def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir):
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
@@ -281,7 +281,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae):
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(f'../gen_test_300_iter/with_con_with_self_qkv_inversion_{t.item()}.png')
+        pil_img.save(os.path.join(base_folder_dir, f'with_con_with_self_qkv_inversion_{t.item()}.png'))
         # ----------------------------------------------------------------------------
         time_steps.append(t.item())
         noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
@@ -291,7 +291,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae):
 
 @torch.no_grad()
 def recon_loop(latent,context,inference_times,scheduler, unet, vae,
-               self_query_dict, self_key_dict,self_value_dict) :
+               self_query_dict, self_key_dict,self_value_dict, base_folder_dir) :
     register_self_condition_giver(unet, self_query_dict, self_key_dict,self_value_dict)
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
@@ -305,7 +305,7 @@ def recon_loop(latent,context,inference_times,scheduler, unet, vae,
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(f'../gen_test_300_iter/with_con_with_self_qkv_recon_{t.item()}.png')
+        pil_img.save(os.path.join(base_folder_dir, f'with_con_with_self_qkv_recon_{t.item()}.png'))
         # ----------------------------------------------------------------------------
         time_steps.append(inference_time)
         noise_pred = call_unet(unet, latent, t, cond_embeddings, t.item(), None)
@@ -363,6 +363,8 @@ def main(args) :
     os.makedirs(record_save_dir, exist_ok=True)
     with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
         json.dump(vars(args), f, indent=4)
+    base_folder_dir = os.path.join(args.folder_name)
+    os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
     weight_dtype, save_dtype = train_util.prepare_dtype(args)
@@ -473,7 +475,7 @@ def main(args) :
         concept_img_dir = os.path.join(args.concept_image_folder, concept_img)
         image_gt_np = load_512(concept_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        ddim_latents, time_steps, pil_images = ddim_loop(latent, context, inference_times, scheduler, unet, vae)
+        ddim_latents, time_steps, pil_images = ddim_loop(latent, context, inference_times, scheduler, unet, vae,base_folder_dir)
         layer_names = attention_storer.self_query_store.keys()
         self_query_collection = attention_storer.self_query_store
         self_key_collection = attention_storer.self_key_store
@@ -545,7 +547,8 @@ def main(args) :
                                                           scheduler, unet, vae,
                                                           self_query_dict,
                                                           self_key_dict,
-                                                          self_value_dict)
+                                                          self_value_dict,
+                                                          base_folder_dir)
         break
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -586,6 +589,8 @@ if __name__ == "__main__":
                         default = 'low quality, worst quality, bad anatomy,bad composition, poor, low effort')
     parser.add_argument("--concept_image_folder", type=str)
     parser.add_argument("--num_ddim_steps", type=int, default=30)
+    parser.add_argument("--folder_name", type=str)
+    
     
     
 
