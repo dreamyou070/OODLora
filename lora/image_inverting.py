@@ -341,6 +341,7 @@ def main(args) :
     else:
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
+        
     """
     print(f' \n step 2. ground-truth image preparing')
     print(f' (2.1) prompt condition')
@@ -564,7 +565,7 @@ def main(args) :
             image_save_dir = os.path.join(args.output_dir, f'{prompt_save_name}_from_{str(args.min_value)}_selfcontroll_{str(self_input_time)}_times.jpg')
             image.save(image_save_dir)
     """
-    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     train_util.add_sd_models_arguments(parser)
