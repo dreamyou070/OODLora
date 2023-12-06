@@ -551,11 +551,11 @@ class NetworkTrainer:
         num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
         if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
             args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
-        if args.heatmap_loss:
-            attention_storer = AttentionStore()
-            register_attention_control(unet, attention_storer, mask_threshold=args.mask_threshold)
-        else:
-            attention_storer = None
+        #if args.heatmap_loss:
+        #    attention_storer = AttentionStore()
+        #    register_attention_control(unet, attention_storer, mask_threshold=args.mask_threshold)
+        #else:
+        attention_storer = None
 
         # 学習する
         # TODO: find a way to handle total batch size when there are multiple datasets
