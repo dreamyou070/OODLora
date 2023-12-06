@@ -30,6 +30,7 @@ from diffusers import (DDPMScheduler,EulerAncestralDiscreteScheduler,DPMSolverMu
                        LMSDiscreteScheduler,PNDMScheduler,DDIMScheduler,EulerDiscreteScheduler,HeunDiscreteScheduler,
                        KDPM2DiscreteScheduler,KDPM2AncestralDiscreteScheduler)
 
+
 def register_attention_control(unet : nn.Module, controller:AttentionStore) :
     """ Register cross attention layers to controller. """
     def ca_forward(self, layer_name):
@@ -152,9 +153,8 @@ def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
     controller.num_att_layers = cross_att_count
 
 def register_self_condition_giver(unet: nn.Module, self_key_dict,self_value_dict):
-    
-    def ca_forward(self, layer_name):
 
+    def ca_forward(self, layer_name):
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
             is_cross_attention = False
             if context is not None:
@@ -171,8 +171,8 @@ def register_self_condition_giver(unet: nn.Module, self_key_dict,self_value_dict
             if not is_cross_attention:
                 # when self attention
                 print(f'when generating, layer_name : {layer_name}')
-                key = self_key_dict[layer_name]
-                value = self_value_dict[layer_name]
+                key = self_key_dict[trg_indexs_list][layer_name]
+                value = self_value_dict[trg_indexs_list][layer_name]
 
             if self.upcast_attention:
                 query = query.float()
@@ -309,7 +309,7 @@ def recon_loop(latent,context,inference_times,scheduler, unet, vae,self_key_dict
         pil_img.save(f'../gen_test/recon_{t.item()}.png')
         # ----------------------------------------------------------------------------
         time_steps.append(inference_time)
-        noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
+        noise_pred = call_unet(unet, latent, t, cond_embeddings, t.item(), None)
         latent = prev_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
     return all_latent, time_steps, pil_images
