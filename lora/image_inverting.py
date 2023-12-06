@@ -92,7 +92,6 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
-
 def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
     """ Register cross attention layers to controller. """
     def ca_forward(self, layer_name):
@@ -149,7 +148,6 @@ def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
-
 def load_512(image_path, left=0, right=0, top=0, bottom=0):
     if type(image_path) is str:
         image = np.array(Image.open(image_path))[:, :, :3]
@@ -170,7 +168,6 @@ def load_512(image_path, left=0, right=0, top=0, bottom=0):
         image = image[offset:offset + w]
     image = np.array(Image.fromarray(image).resize((512, 512)))
     return image
-
 def image2latent(image, vae, device, weight_dtype):
     with torch.no_grad():
         if type(image) is Image:
@@ -183,12 +180,10 @@ def image2latent(image, vae, device, weight_dtype):
             latents = vae.encode(image)['latent_dist'].mean
             latents = latents * 0.18215
     return latents
-
 def call_unet(unet, noisy_latents, timesteps, text_conds, trg_indexs_list, mask_imgs):
     noise_pred = unet(noisy_latents, timesteps, text_conds, trg_indexs_list=trg_indexs_list,
                       mask_imgs=mask_imgs, ).sample
     return noise_pred
-
 def next_step(model_output: Union[torch.FloatTensor, np.ndarray],timestep: int, sample: Union[torch.FloatTensor, np.ndarray],scheduler):
     timestep, next_timestep = min( timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999), timestep
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
@@ -200,15 +195,13 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],timestep: int, 
     return next_sample
 
 @torch.no_grad()
-def ddim_loop(latent, context, NUM_DDIM_STEPS, scheduler, unet):
+def ddim_loop(latent, context, inference_times, scheduler, unet):
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
     latent = latent.clone().detach()
-    for i in range(NUM_DDIM_STEPS):
-        # i = 0
-        t = scheduler.timesteps[len(scheduler.timesteps) - i - 1]
-        print(f't : {t}')
+    for i in range(len(inference_times)):
+        t = inference_times[len(inference_times) - i - 1]
         time_steps.append(t)
         noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
         latent = next_step(noise_pred, t, latent, scheduler)
@@ -309,22 +302,35 @@ def main(args) :
 
     print(f' (1.4) scheduler')
     sched_init_args = {}
-    if args.sample_sampler == "ddim": scheduler_cls = DDIMScheduler
-    elif args.sample_sampler == "ddpm": scheduler_cls = DDPMScheduler
-    elif args.sample_sampler == "pndm": scheduler_cls = PNDMScheduler
-    elif args.sample_sampler == "lms" or args.sample_sampler == "k_lms": scheduler_cls = LMSDiscreteScheduler
-    elif args.sample_sampler == "euler" or args.sample_sampler == "k_euler": scheduler_cls = EulerDiscreteScheduler
-    elif args.sample_sampler == "euler_a" or args.sample_sampler == "k_euler_a": scheduler_cls = EulerAncestralDiscreteScheduler
+    if args.sample_sampler == "ddim":
+        scheduler_cls = DDIMScheduler
+    elif args.sample_sampler == "ddpm":
+        scheduler_cls = DDPMScheduler
+    elif args.sample_sampler == "pndm" :
+        scheduler_cls = PNDMScheduler
+    elif args.sample_sampler == "lms" or args.sample_sampler == "k_lms" :
+        scheduler_cls = LMSDiscreteScheduler
+    elif args.sample_sampler == "euler" or args.sample_sampler == "k_euler":
+        scheduler_cls = EulerDiscreteScheduler
+    elif args.sample_sampler == "euler_a" or args.sample_sampler == "k_euler_a":
+        scheduler_cls = EulerAncestralDiscreteScheduler
     elif args.sample_sampler == "dpmsolver" or args.sample_sampler == "dpmsolver++":
         scheduler_cls = DPMSolverMultistepScheduler
         sched_init_args["algorithm_type"] = args.sample_sampler
-    elif args.sample_sampler == "dpmsingle": scheduler_cls = DPMSolverSinglestepScheduler
-    elif args.sample_sampler == "heun": scheduler_cls = HeunDiscreteScheduler
-    elif args.sample_sampler == "dpm_2" or args.sample_sampler == "k_dpm_2": scheduler_cls = KDPM2DiscreteScheduler
-    elif args.sample_sampler == "dpm_2_a" or args.sample_sampler == "k_dpm_2_a": scheduler_cls = KDPM2AncestralDiscreteScheduler
-    else: scheduler_cls = DDIMScheduler
+    elif args.sample_sampler == "dpmsingle":
+        scheduler_cls = DPMSolverSinglestepScheduler
+    elif args.sample_sampler == "heun":
+        scheduler_cls = HeunDiscreteScheduler
+    elif args.sample_sampler == "dpm_2" or args.sample_sampler == "k_dpm_2":
+        scheduler_cls = KDPM2DiscreteScheduler
+    elif args.sample_sampler == "dpm_2_a" or args.sample_sampler == "k_dpm_2_a":
+        scheduler_cls = KDPM2AncestralDiscreteScheduler
+    else :
+        scheduler_cls = DDIMScheduler
+
     if args.v_parameterization:
         sched_init_args["prediction_type"] = "v_prediction "
+
     # scheduler:
     SCHEDULER_LINEAR_START = 0.00085
     SCHEDULER_LINEAR_END = 0.0120
@@ -334,6 +340,9 @@ def main(args) :
                               beta_start=SCHEDULER_LINEAR_START,
                               beta_end=SCHEDULER_LINEAR_END,
                               beta_schedule=SCHEDLER_SCHEDULE,)
+    scheduler.set_timesteps(args.num_ddim_steps)
+    inference_times = scheduler.timesteps
+    print(f'inference_times: {inference_times}')
 
     print(f' (1.4) model to accelerator device')
     device = args.device
@@ -358,8 +367,8 @@ def main(args) :
         concept_img_dir = os.path.join(args.concept_image_folder, concept_img)
         image_gt_np = load_512(concept_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        scheduler.set_timesteps(args.num_ddim_steps)
-        ddim_latents, time_steps = ddim_loop(latent, context, args.num_ddim_steps, scheduler, unet)
+
+        ddim_latents, time_steps = ddim_loop(latent, context, inference_times, scheduler, unet)
         break
 
 
