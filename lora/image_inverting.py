@@ -184,8 +184,11 @@ def call_unet(unet, noisy_latents, timesteps, text_conds, trg_indexs_list, mask_
     noise_pred = unet(noisy_latents, timesteps, text_conds, trg_indexs_list=trg_indexs_list,
                       mask_imgs=mask_imgs, ).sample
     return noise_pred
-def next_step(model_output: Union[torch.FloatTensor, np.ndarray],timestep: int, sample: Union[torch.FloatTensor, np.ndarray],scheduler):
-    timestep, next_timestep = min( timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999), timestep
+def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
+              timestep: int,
+              sample: Union[torch.FloatTensor, np.ndarray],
+              scheduler):
+    timestep, next_timestep = timestep, min( timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
     alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
     beta_prod_t = 1 - alpha_prod_t
@@ -200,11 +203,13 @@ def ddim_loop(latent, context, inference_times, scheduler, unet):
     all_latent = [latent]
     time_steps = []
     latent = latent.clone().detach()
-    for i in range(len(inference_times)):
-        t = inference_times[len(inference_times) - i - 1]
-        time_steps.append(t)
+    latent_dict = {}
+    for t in torch.flip(inference_times, dims=[0]):
+        latent_dict[t.item()] = latent
+        # ----------------------------------------------------------------------------
+        time_steps.append(t.item())
         noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
-        latent = next_step(noise_pred, t, latent, scheduler)
+        latent = next_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
     return all_latent, time_steps
 
@@ -342,7 +347,6 @@ def main(args) :
                               beta_schedule=SCHEDLER_SCHEDULE,)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
-    print(f'inference_times: {inference_times}')
 
     print(f' (1.4) model to accelerator device')
     device = args.device
@@ -367,11 +371,7 @@ def main(args) :
         concept_img_dir = os.path.join(args.concept_image_folder, concept_img)
         image_gt_np = load_512(concept_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-
         ddim_latents, time_steps = ddim_loop(latent, context, inference_times, scheduler, unet)
-        break
-
-
 
 
         layer_names = attention_storer.self_query_store.keys()
@@ -389,10 +389,9 @@ def main(args) :
             cross_key_list = attention_storer.cross_key_store[cross_layer]
             cross_value_list = attention_storer.cross_value_store[cross_layer]
             i = 0
-            for self_query, self_key, self_value, cross_query, cross_key, cross_value in zip(self_query_list,self_key_list,self_value_list,cross_query_list,cross_key_list,cross_value_list,) :
+            for self_query, self_key, self_value, cross_query, cross_key, cross_value in zip(self_query_list, self_key_list, self_value_list,
+                                                                                             cross_query_list,cross_key_list,cross_value_list,) :
                 time_step = time_steps[i]
-                if type(time_step) == torch.Tensor :
-                    time_step = int(time_step.item())
                 if time_step not in self_query_dict.keys() :
                     self_query_dict[time_step] = {}
                     self_query_dict[time_step][layer] = self_query
