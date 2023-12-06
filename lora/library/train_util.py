@@ -1120,7 +1120,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
             # captionとtext encoder outputを処理する
             caption = image_info.caption  # default
-            print(f'caption : {caption}')
+            #print(f'caption : {caption}')
             trg_concept = image_info.trg_concept
             class_caption = image_info.class_caption
             if class_caption is None:
