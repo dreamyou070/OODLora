@@ -282,6 +282,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     noise_pred_dict = {}
     pil_images = []
     for t in torch.flip(inference_times, dims=[0]):
+        print(f'in ddim loop function, t : {t.item()}')
         latent_dict[t.item()] = latent
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
@@ -295,7 +296,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         noise_pred_dict[t.item()] = noise_pred
         latent = next_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
-    return all_latent, time_steps, pil_images, noise_pred_dict
+    return all_latent, time_steps, pil_images#, noise_pred_dict
 
 
 
@@ -488,7 +489,7 @@ def main(args) :
         register_attention_control(unet, attention_storer)
         image_gt_np = load_512(concept_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        ddim_latents, time_steps, pil_images, noise_pred_dict = ddim_loop(latent, context, inference_times,
+        ddim_latents, time_steps, pil_images = ddim_loop(latent, context, inference_times,
                                                                           scheduler, unet, vae,
                                                                           base_folder_dir)
         """
