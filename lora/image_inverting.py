@@ -62,9 +62,9 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
             if not is_cross_attention:
                 # when self attention
                 controller.self_query_key_value_caching(query_value=query.detach().cpu(),
-                                                                            key_value=key.detach().cpu(),
-                                                                            value_value=value.detach().cpu(),
-                                                                            layer_name=layer_name)
+                                                        key_value=key.detach().cpu(),
+                                                        value_value=value.detach().cpu(),
+                                                        layer_name=layer_name)
             """
             else :
                 query, key, value = controller.cross_query_key_value_caching(query_value=query,
@@ -260,6 +260,13 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
+def scheduling_latent(original_sample, model_output, timestep, scheduler) :
+    current_timestep, next_timestep = timestep, min( timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
+    alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
+    next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
+    next_sample = alpha_prod_t_next ** 0.5 * original_sample + next_sample_direction
+    return next_sample
+
 def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
@@ -276,6 +283,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir):
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
+    original_sample = latent.clone().detach()
     time_steps = []
     latent = latent.clone().detach()
     latent_dict = {}
@@ -293,7 +301,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         #noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
         noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
         noise_pred_dict[t.item()] = noise_pred
-        latent = next_step(noise_pred, t.item(), latent, scheduler)
+        #latent = next_step(noise_pred, t.item(), latent, scheduler)
+        latent = scheduling_latent(original_sample, noise_pred, t.item(), scheduler)
         all_latent.append(latent)
     return all_latent, time_steps, pil_images#, noise_pred_dict
 
@@ -376,7 +385,7 @@ def main(args) :
         json.dump(vars(args), f, indent=4)
 
     #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
-    base_folder_dir = f'../infer_test/inverting_with_pure_gaussian'
+    base_folder_dir = f'../infer_test/inverting_with_original_sample'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
