@@ -264,8 +264,6 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
               scheduler):
-    if args.inversion_experiment:
-        model_output = torch.randn_like(model_output)
     timestep, next_timestep = timestep, min( timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
     alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
