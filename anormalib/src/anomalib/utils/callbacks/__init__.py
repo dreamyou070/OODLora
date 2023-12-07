@@ -15,7 +15,12 @@ from jsonargparse.namespace import Namespace
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from pytorch_lightning.callbacks import Callback, ModelCheckpoint
 
-from anormalib import ExportMode
+
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+sys.path.append(os.path.dirname(__file__))
+
+from anomalib.deploy import ExportMode
 
 from .cdf_normalization import CdfNormalizationCallback
 from .graph import GraphLogger
