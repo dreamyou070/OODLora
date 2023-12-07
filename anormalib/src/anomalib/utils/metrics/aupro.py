@@ -16,11 +16,9 @@ from torchmetrics.functional.classification.roc import binary_roc
 from torchmetrics.utilities.data import dim_zero_cat
 
 import sys, os
-a = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
-print(a)
-sys.path.append(a)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 #from anormalib import (connected_components_cpu,connected_components_gpu,)
-from utils.metrics import connected_components_cpu,connected_components_gpu
+import connected_components_cpu,connected_components_gpu
 
 from .binning import thresholds_between_0_and_1, thresholds_between_min_and_max
 from .plotting_utils import plot_figure
