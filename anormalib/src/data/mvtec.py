@@ -74,9 +74,9 @@ CATEGORIES = (
 )
 
 
-def make_mvtec_dataset(
-    root: str | Path, split: str | Split | None = None, extensions: Sequence[str] | None = None
-) -> DataFrame:
+def make_mvtec_dataset(root: str | Path,
+                       split: str | Split | None = None,
+                       extensions: Sequence[str] | None = None) -> DataFrame:
     """Create MVTec AD samples by parsing the MVTec AD data file structure.
 
     The files are expected to follow the structure:
@@ -191,7 +191,12 @@ class MVTecDataset(AnomalibDataset):
         self.split = split
 
     def _setup(self) -> None:
-        self.samples = make_mvtec_dataset(self.root_category, split=self.split, extensions=IMG_EXTENSIONS)
+        print(' Let set ')
+        print(f'root_category : {self.root_category}')
+        
+        self.samples = make_mvtec_dataset(self.root_category,
+                                          split=self.split,
+                                          extensions=IMG_EXTENSIONS)
 
 
 class MVTec(AnomalibDataModule):
@@ -279,7 +284,6 @@ class MVTec(AnomalibDataModule):
         """Download the dataset if not available."""
         if (self.root / self.category).is_dir():
             logger.info("Found the dataset.")
-            print(f'found the dataset')
         else:
             download_and_extract(self.root,
                                  DOWNLOAD_INFO)
