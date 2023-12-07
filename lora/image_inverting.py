@@ -270,6 +270,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     prev_sample_direction = (1 - alpha_prod_t_prev) ** 0.5 * model_output
     prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
+
 @torch.no_grad()
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
     uncond_embeddings, cond_embeddings = context.chunk(2)
@@ -280,21 +281,26 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     latent_dict = {}
     noise_pred_dict = {}
     pil_images = []
-    random_noise = torch.randn_like(latent)
+    with torch.no_grad():
+        np_img = latent2image(latent, vae, return_type='np')
+    pil_img = Image.fromarray(np_img)
+    pil_images.append(pil_img)
+    pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
+
     for t in torch.flip(inference_times, dims=[0]):
         latent_dict[t.item()] = latent
-        with torch.no_grad():
-            np_img = latent2image(latent, vae, return_type='np')
-        pil_img = Image.fromarray(np_img)
-        pil_images.append(pil_img)
-        pil_img.save(os.path.join(base_folder_dir, f'with_uncon_inversion_{t.item()}.png'))
         # ----------------------------------------------------------------------------
         time_steps.append(t.item())
         noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
         noise_pred_dict[t.item()] = noise_pred
         latent = next_step(noise_pred, t.item(), latent, scheduler)
+        with torch.no_grad():
+            np_img = latent2image(latent, vae, return_type='np')
+        pil_img = Image.fromarray(np_img)
+        pil_images.append(pil_img)
+        pil_img.save(os.path.join(base_folder_dir, f'inversion_{t.item()}.png'))
         all_latent.append(latent)
-    return all_latent, time_steps, pil_images  # , noise_pred_dict
+    return all_latent, time_steps, pil_images
 
 
 
@@ -322,6 +328,11 @@ def recon_loop(latent,context,inference_times,scheduler, unet, vae,
         #noise_pred = call_unet(unet, latent, t, uncond_embeddings, t.item(), None)
         latent = prev_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
+    with torch.no_grad():
+        np_img = latent2image(latent, vae, return_type='np')
+    pil_img = Image.fromarray(np_img)
+    pil_images.append(pil_img)
+    pil_img.save(os.path.join(base_folder_dir, f'final_recon_{t.item()}.png'))
     return all_latent, time_steps, pil_images
 @torch.no_grad()
 def latent2image(latents, vae, return_type='np'):

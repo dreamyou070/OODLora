@@ -271,6 +271,8 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     prev_sample_direction = (1 - alpha_prod_t_prev) ** 0.5 * model_output
     prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
+
+
 @torch.no_grad()
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
     uncond_embeddings, cond_embeddings = context.chunk(2)
@@ -281,40 +283,39 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     latent_dict = {}
     noise_pred_dict = {}
     pil_images = []
-    random_noise = torch.randn_like(latent)
+    with torch.no_grad():
+        np_img = latent2image(latent, vae, return_type='np')
+    pil_img = Image.fromarray(np_img)
+    pil_images.append(pil_img)
+    pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
+
     for t in torch.flip(inference_times, dims=[0]):
         latent_dict[t.item()] = latent
-        with torch.no_grad():
-            np_img = latent2image(latent, vae, return_type='np')
-        pil_img = Image.fromarray(np_img)
-        pil_images.append(pil_img)
-        pil_img.save(os.path.join(base_folder_dir, f'with_uncon_inversion_{t.item()}.png'))
         # ----------------------------------------------------------------------------
         time_steps.append(t.item())
         noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
         noise_pred_dict[t.item()] = noise_pred
         latent = next_step(noise_pred, t.item(), latent, scheduler)
+        with torch.no_grad():
+            np_img = latent2image(latent, vae, return_type='np')
+        pil_img = Image.fromarray(np_img)
+        pil_images.append(pil_img)
+        pil_img.save(os.path.join(base_folder_dir, f'inversion_{t.item()}.png'))
         all_latent.append(latent)
-    with torch.no_grad():
-        np_img = latent2image(latent, vae, return_type='np')
-    pil_img = Image.fromarray(np_img)
-    pil_images.append(pil_img)
-    pil_img.save(os.path.join(base_folder_dir, f'with_uncon_inversion_{t.item()}.png'))
-    return all_latent, time_steps, pil_images  # , noise_pred_dict
-
+    return all_latent, time_steps, pil_images
 
 
 @torch.no_grad()
-def recon_loop(latent,context,inference_times,scheduler, unet, vae,
+def recon_loop(latent, context, inference_times, scheduler, unet, vae,
                self_query_dict, self_key_dict, self_value_dict,
-               base_folder_dir) :
-    register_self_condition_giver(unet, self_query_dict, self_key_dict,self_value_dict)
+               base_folder_dir):
+    register_self_condition_giver(unet, self_query_dict, self_key_dict, self_value_dict)
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
     latent_dict = {}
     pil_images = []
-    for t in inference_times:
+    for t in inference_times[1:]:
         inference_time = t.item()
         latent_dict[inference_time] = latent
         with torch.no_grad():
@@ -325,10 +326,16 @@ def recon_loop(latent,context,inference_times,scheduler, unet, vae,
         # ----------------------------------------------------------------------------
         time_steps.append(inference_time)
         noise_pred = call_unet(unet, latent, t, cond_embeddings, t.item(), None)
-        #noise_pred = call_unet(unet, latent, t, uncond_embeddings, t.item(), None)
+        # noise_pred = call_unet(unet, latent, t, uncond_embeddings, t.item(), None)
         latent = prev_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
+    with torch.no_grad():
+        np_img = latent2image(latent, vae, return_type='np')
+    pil_img = Image.fromarray(np_img)
+    pil_images.append(pil_img)
+    pil_img.save(os.path.join(base_folder_dir, f'final_recon_{t.item()}.png'))
     return all_latent, time_steps, pil_images
+
 @torch.no_grad()
 def latent2image(latents, vae, return_type='np'):
     latents = 1 / 0.18215 * latents.detach()
@@ -536,7 +543,7 @@ def main(args) :
             info = network.load_weights(args.network_weights)
         network.to(device)
         unregister_attention_control(unet, attention_storer)
-        start_latent = ddim_latents[-1]
+        start_latent = ddim_latents[-2]
         ddim_latents, time_steps, pil_images = recon_loop(start_latent,
                                                           context,
                                                           inference_times,
