@@ -469,7 +469,7 @@ def main(args) :
         for t in times :
             noise_pred = noise_pred_dict[t]
             # make histogram
-            noise_pred = noise_pred.reshape(-1)
+            noise_pred = noise_pred.reshape(-1).detach().cpu()
             mean = noise_pred.mean()
             plt.hist(noise_pred, bins=25, density=True, alpha=0.6, color='b')
             plt.axvline(mean, color='b', linestyle='dashed', linewidth=1)
