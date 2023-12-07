@@ -7,6 +7,7 @@ import time
 import numpy as np
 from scipy.ndimage import gaussian_filter
 import cv2
+import argparse
 import torch.nn as nn
 from models.Recon_subnetwork import UNetModel, update_ema_params
 from models.Seg_subnetwork import SegmentationSubNetwork
@@ -347,37 +348,54 @@ def testing(testing_dataset_loader, args,unet_model,seg_model,data_len,sub_class
    
 
 
-def main():
+def main(args):
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mvtec_classes = ['carpet', 'grid', 'leather', 'tile', 'wood', 'bottle', 'cable', 'capsule', 'hazelnut', 'metal_nut', 'pill', 'screw',
-     'toothbrush', 'transistor', 'zipper']
-    mpdd_classes = ['bracket_black', 'bracket_brown', 'bracket_white', 'connector', 'metal_plate', 'tubes'] 
-    visa_classes = ['candle', 'capsules', 'cashew', 'chewinggum', 'fryum', 'macaroni1', 'macaroni2', 'pcb1', 'pcb2',
-             'pcb3', 'pcb4', 'pipe_fryum']
+    print(f'\n step 1. set device')
+    device = args.device
 
+    print(f'\n step 2. set classes')
+    mvtec_classes = ['carpet', 'grid', 'leather', 'tile', 'wood', 'bottle',
+                     'cable', 'capsule', 'hazelnut', 'metal_nut', 'pill', 'screw',
+                     'toothbrush', 'transistor', 'zipper']
+    mpdd_classes = ['bracket_black', 'bracket_brown', 'bracket_white',
+                    'connector', 'metal_plate', 'tubes']
+    visa_classes = ['candle', 'capsules', 'cashew', 'chewinggum', 'fryum',
+                    'macaroni1', 'macaroni2', 'pcb1', 'pcb2','pcb3', 'pcb4', 'pipe_fryum']
     dagm_class = ['Class1', 'Class2', 'Class3', 'Class4', 'Class5',
                  'Class6', 'Class7', 'Class8', 'Class9', 'Class10']
     
     current_classes=mvtec_classes
     checkpoint_type='best'
 
+    print(f'\n step 3. load parameter')
     for sub_class in current_classes:
-        args, output = load_parameters(device,sub_class,checkpoint_type)
+        args, output = load_parameters(device,
+                                       sub_class,
+                                       checkpoint_type)
+        print(f' (3.3) load segmentation model')
+
         print(f"args{args['arg_num']}")
         print("class",sub_class)
-        
         in_channels = args["channels"]
-
-        unet_model = UNetModel(args['img_size'][0], args['base_channels'], channel_mults=args['channel_mults'], dropout=args[
-                    "dropout"], n_heads=args["num_heads"], n_head_channels=args["num_head_channels"],
-                in_channels=in_channels
-                ).to(device)
-
-
-
+        print(f' (3.1) load unet model')
+        img_size = args['img_size'][0]
+        print(f'img_size : {img_size}')
+        print(f'base_channels : {args["base_channels"]}')
+        print(f'channel_mults : {args["channel_mults"]}')
+        print(f'dropout : {args["dropout"]}')
+        print(f'num_heads : {args["num_heads"]}')
+        print(f'num_head_channels : {args["num_head_channels"]}')
+        unet_model = UNetModel(args['img_size'][0],
+                               args['base_channels'],
+                               channel_mults=args['channel_mults'],
+                               dropout=args["dropout"],
+                               n_heads=args["num_heads"],
+                               n_head_channels=args["num_head_channels"],
+                               in_channels=in_channels).to(device)
+        print(f' (3.2) load segmentation model')
         seg_model=SegmentationSubNetwork(in_channels=6, out_channels=1).to(device)
 
+        print(f' output : {output}')
         unet_model.load_state_dict(output["unet_model_state_dict"])
         unet_model.to(device)
         unet_model.eval()
@@ -434,5 +452,8 @@ def main():
 
 
 if __name__ == '__main__':
-    
-    main()
+
+    parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
+    parser.add_argument('--device', type=str, default = 'cuda:0')
+    args = parser.parse_args()
+    main(args)
