@@ -324,7 +324,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         current_timestep = i.item()
         next_timestep = min(current_timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
         try :
-            next_inter_sample = latent_dict[next_timestep]
+            print('next sample from dict')
+            next_inter_sample = latent_dict[next_timestep.item()]
         except :
             next_inter_sample = torch.randn_like(latent)
         noise_pred = call_unet(unet, next_inter_sample, next_timestep, uncond_embeddings, None, None)
@@ -332,7 +333,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         all_latent2.append(latent)
 
     return all_latent2, time_steps, pil_images#, noise_pred_dict
-    #return all_latent, time_steps, pil_images  # , noise_pred_dict
+    #   return all_latent, time_steps, pil_images  # , noise_pred_dict
 
 
 
