@@ -289,6 +289,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     latent_dict = {}
     noise_pred_dict = {}
     pil_images = []
+    random_noise = torch.randn_like(latent)
     for t in torch.flip(inference_times, dims=[0]):
         latent_dict[t.item()] = latent
         with torch.no_grad():
@@ -301,8 +302,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         #noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
         noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
         noise_pred_dict[t.item()] = noise_pred
-        #latent = next_step(noise_pred, t.item(), latent, scheduler)
-        latent = scheduling_latent(original_sample, noise_pred, t.item(), scheduler)
+        latent = next_step(noise_pred, t.item(), latent, scheduler)
+        latent = scheduling_latent(original_sample, random_noise, t.item(), scheduler)
         all_latent.append(latent)
     return all_latent, time_steps, pil_images#, noise_pred_dict
 
@@ -385,7 +386,7 @@ def main(args) :
         json.dump(vars(args), f, indent=4)
 
     #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
-    base_folder_dir = f'../infer_test/inverting_with_original_sample'
+    base_folder_dir = f'../infer_test/inverting_with_original_sample_std_gaussian'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
