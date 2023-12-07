@@ -14,11 +14,12 @@ import numpy as np
 import torch
 from omegaconf import DictConfig
 from torch import Tensor, nn
-
-from anormalib import TaskType
-from anormalib import masks_to_boxes
-
-from .base_inferencer import Inferencer
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+sys.path.append(os.path.dirname(__file__))
+from data import TaskType
+from data.utils.boxes import masks_to_boxes
+from base_inferencer import Inferencer
 
 
 class TorchInferencer(Inferencer):

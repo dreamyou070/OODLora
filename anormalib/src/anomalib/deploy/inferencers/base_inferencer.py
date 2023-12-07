@@ -15,12 +15,15 @@ from omegaconf import DictConfig, OmegaConf
 from skimage.morphology import dilation
 from skimage.segmentation import find_boundaries
 from torch import Tensor
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+sys.path.append(os.path.dirname(__file__))
 
-from anormalib import read_image
-from anormalib import ImageResult, compute_mask
-from anormalib import normalize as normalize_cdf
-from anormalib import standardize
-from anormalib import normalize as normalize_min_max
+from data.utils import read_image
+from post_processing import ImageResult, compute_mask
+from post_processing.normalization.cdf import normalize as normalize_cdf
+from post_processing.normalization.cdf import standardize
+from post_processing.normalization.min_max import normalize as normalize_min_max
 
 
 class Inferencer(ABC):
