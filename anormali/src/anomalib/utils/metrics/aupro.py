@@ -12,8 +12,7 @@ from matplotlib.figure import Figure
 from torch import Tensor
 from torchmetrics import Metric
 from torchmetrics.functional import auc
-from torchmetrics.functional.classification import BinaryROC as binary_roc
-
+from torchmetrics.functional.classification.roc import binary_roc
 from torchmetrics.utilities.data import dim_zero_cat
 
 from anormali import (
