@@ -15,8 +15,8 @@ from torchmetrics.functional import auc
 from torchmetrics.functional.classification.roc import binary_roc
 from torchmetrics.utilities.data import dim_zero_cat
 
-import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+#import sys, os
+#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 #from anormalib import (connected_components_cpu,connected_components_gpu,)
 from . import connected_components_cpu,connected_components_gpu
 
