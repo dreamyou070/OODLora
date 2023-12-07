@@ -82,19 +82,16 @@ def main(args) :
     trainer.callbacks.insert(0, load_model_callback)
     test_results = trainer.test(model=model, datamodule=datamodule)
 
-    print(f'\n step 7. Load the OpenVINO Model')
+    print(f'\n step 7. save directory')
     config.project.path = args.experiment_dir
     output_path = Path(config.project.path)
-    print(output_path)
 
-    """
     print(f'\n step 8. inference')
-    inferencer = OpenVINOInferencer(
-        path=openvino_model_path,  # Path to the OpenVINO IR model.
-        metadata=metadata,  # Path to the metadata file.
+    inferencer = OpenVINOInferencer(path=openvino_model_path,  # Path to the OpenVINO IR model.
+                                    metadata=metadata,  # Path to the metadata file.
         device="CPU",  # We would like to run it on an Intel CPU.
     )
-    """
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()

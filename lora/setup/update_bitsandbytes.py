@@ -28,7 +28,7 @@ def sync_bits_and_bytes_files():
             source_file_path = os.path.join(source_dir, file)
 
             # Decide the destination directory based on file name
-            if file in ("main.py", "paths.py"):
+            if file in ("padim_model.py", "paths.py"):
                 dest_dir = os.path.join(dest_dir_base, "cuda_setup")
             else:
                 dest_dir = dest_dir_base
