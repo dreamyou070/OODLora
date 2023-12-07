@@ -21,12 +21,24 @@ def main(args) :
     print(f'\n step 1. set directory')
     current_directory = Path.cwd()
 
-    print(f'\n step 2. set directory')
+    print(f'\n step 2. get model (with configuration)')
     MODEL = args.model
     CONFIG_PATH = f"./src/models/{MODEL}/config.yaml"
     with open(file=CONFIG_PATH, mode="r", encoding="utf-8") as file:
         print(file.read())
 
+
+    print(f'\n step 3. get dataset')
+    config = get_configurable_parameters(config_path=CONFIG_PATH)
+    print(f' - dataconfig : {config}')
+    datamodule = get_datamodule(config = config)
+    print(f' (3.1) download dataset')
+    print(f' (3.1.1) check where to save data')
+    datamodule.root = r'/data7/sooyeon/MyData/anomaly_detection'
+    datamodule.prepare_data()
+    datamodule.setup()  # Create train/val/test/prediction sets.
+    #i, data = next(enumerate(datamodule.val_dataloader()))
+    #print(data.keys())
 
 if __name__ == '__main__':
 

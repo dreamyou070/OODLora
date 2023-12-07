@@ -282,4 +282,5 @@ class MVTec(AnomalibDataModule):
         if (self.root / self.category).is_dir():
             logger.info("Found the dataset.")
         else:
-            download_and_extract(self.root, DOWNLOAD_INFO)
+            download_and_extract(self.root,
+                                 DOWNLOAD_INFO)

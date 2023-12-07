@@ -50,32 +50,27 @@ def get_datamodule(config: DictConfig | ListConfig) -> AnomalibDataModule:
         PyTorch Lightning DataModule
     """
     logger.info("Loading the datamodule")
-
     datamodule: AnomalibDataModule
-
     # convert center crop to tuple
     center_crop = config.dataset.get("center_crop")
     if center_crop is not None:
         center_crop = (center_crop[0], center_crop[1])
-
     if config.dataset.format.lower() == DataFormat.MVTEC:
-        datamodule = MVTec(
-            root=config.dataset.path,
-            category=config.dataset.category,
-            image_size=(config.dataset.image_size[0], config.dataset.image_size[1]),
-            center_crop=center_crop,
-            normalization=config.dataset.normalization,
-            train_batch_size=config.dataset.train_batch_size,
-            eval_batch_size=config.dataset.eval_batch_size,
-            num_workers=config.dataset.num_workers,
-            task=config.dataset.task,
-            transform_config_train=config.dataset.transform_config.train,
-            transform_config_eval=config.dataset.transform_config.eval,
-            test_split_mode=config.dataset.test_split_mode,
-            test_split_ratio=config.dataset.test_split_ratio,
-            val_split_mode=config.dataset.val_split_mode,
-            val_split_ratio=config.dataset.val_split_ratio,
-        )
+        datamodule = MVTec(root=config.dataset.path,
+                           category=config.dataset.category,
+                            image_size=(config.dataset.image_size[0], config.dataset.image_size[1]),
+                            center_crop=center_crop,
+                            normalization=config.dataset.normalization,
+                            train_batch_size=config.dataset.train_batch_size,
+                            eval_batch_size=config.dataset.eval_batch_size,
+                            num_workers=config.dataset.num_workers,
+                            task=config.dataset.task,
+                            transform_config_train=config.dataset.transform_config.train,
+                            transform_config_eval=config.dataset.transform_config.eval,
+                            test_split_mode=config.dataset.test_split_mode,
+                            test_split_ratio=config.dataset.test_split_ratio,
+                            val_split_mode=config.dataset.val_split_mode,
+                            val_split_ratio=config.dataset.val_split_ratio,)
     elif config.dataset.format.lower() == DataFormat.MVTEC_3D:
         datamodule = MVTec3D(
             root=config.dataset.path,
@@ -92,8 +87,7 @@ def get_datamodule(config: DictConfig | ListConfig) -> AnomalibDataModule:
             test_split_mode=config.dataset.test_split_mode,
             test_split_ratio=config.dataset.test_split_ratio,
             val_split_mode=config.dataset.val_split_mode,
-            val_split_ratio=config.dataset.val_split_ratio,
-        )
+            val_split_ratio=config.dataset.val_split_ratio,)
     elif config.dataset.format.lower() == DataFormat.BTECH:
         datamodule = BTech(
             root=config.dataset.path,
@@ -240,7 +234,6 @@ def get_datamodule(config: DictConfig | ListConfig) -> AnomalibDataModule:
             "If you use a custom dataset make sure you initialize it in"
             "`get_datamodule` in `anomalib.data.__init__.py"
         )
-
     return datamodule
 
 
