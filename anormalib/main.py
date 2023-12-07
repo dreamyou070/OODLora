@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 from pathlib import Path
+import argparse
 from typing import Any
 import numpy as np
 from matplotlib import pyplot as plt
@@ -15,22 +16,22 @@ from src.models import get_model
 from src.pre_processing.transforms import Denormalize
 from src.utils.callbacks import LoadModelCallback, get_callbacks
 
-def main() :
+def main(args) :
 
     print(f'\n step 1. set directory')
     current_directory = Path.cwd()
-    if current_directory.name == "000_getting_started":
-        root_directory = current_directory.parent.parent
-    elif current_directory.name == "anomalib":
-        root_directory = current_directory
-    os.chdir(root_directory)
 
     print(f'\n step 2. set directory')
-    #MODEL = "padim"  # 'padim', 'cflow', 'stfpm', 'ganomaly', 'dfkde', 'patchcore'
-    #CONFIG_PATH = root_directory / f"src/anomalib/models/{MODEL}/config.yaml"
-    #with open(file=CONFIG_PATH, mode="r", encoding="utf-8") as file:
-    #    print(file.read())
+    MODEL = args.model
+    CONFIG_PATH = f"./src/models/{MODEL}/config.yaml"
+    with open(file=CONFIG_PATH, mode="r", encoding="utf-8") as file:
+        print(file.read())
 
 
 if __name__ == '__main__':
-    main()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model', default = 'padim',
+                        choices = ['padim', 'cflow', 'stfpm', 'ganomaly', 'dfkde', 'patchcore'])
+    args = parser.parse_args()
+    main(args)
