@@ -19,6 +19,7 @@ from torchmetrics.utilities.data import dim_zero_cat
 #sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 #from anormalib import (connected_components_cpu,connected_components_gpu,)
 import connected_components_cpu,connected_components_gpu
+from .pro  import (connected_components_cpu,connected_components_gpu,)
 
 from .binning import thresholds_between_0_and_1, thresholds_between_min_and_max
 from .plotting_utils import plot_figure
