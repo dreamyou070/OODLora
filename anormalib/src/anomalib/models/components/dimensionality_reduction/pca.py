@@ -9,7 +9,9 @@ import torch
 from torch import Tensor
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-sys.path.append(os.path.join(os.path.dirname(__file__))
+a = os.path.dirname(__file__)
+print(a)
+sys.path.append(os.path.dirname(__file__))
 #from anormalib import DynamicBufferModule
 from models.components import DynamicBufferModule
 #from anomalib.models.components import (
