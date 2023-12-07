@@ -31,10 +31,11 @@ def main(args) :
     print(f'\n step 3. get dataset')
     config = get_configurable_parameters(config_path=CONFIG_PATH)
     print(f' - dataconfig : {config}')
-    datamodule = get_datamodule(config = config)
+
     print(f' (3.1) download dataset')
     print(f' (3.1.1) check where to save data')
-    datamodule.root = r'/data7/sooyeon/MyData/anomaly_detection'
+    config['dataset']['path'] = r'/data7/sooyeon/MyData/anomaly_detection'
+    datamodule = get_datamodule(config=config)
     datamodule.prepare_data()
     datamodule.setup()  # Create train/val/test/prediction sets.
     #i, data = next(enumerate(datamodule.val_dataloader()))
