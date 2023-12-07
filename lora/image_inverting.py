@@ -249,6 +249,8 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
               scheduler):
+    if args.inversion_experiment:
+        model_output = torch.randn_like(model_output)
     timestep, next_timestep = timestep, min( timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
     alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
@@ -373,7 +375,7 @@ def main(args) :
         json.dump(vars(args), f, indent=4)
 
     #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
-    base_folder_dir = f'../noise_pred/pretrained_model'
+    base_folder_dir = f'../infer_test/inverting_with_pure_gaussian'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
@@ -492,6 +494,7 @@ def main(args) :
         image_gt_np = load_512(concept_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         ddim_latents, time_steps, pil_images, noise_pred_dict = ddim_loop(latent, context, inference_times, scheduler, unet, vae,base_folder_dir)
+        """
         times = noise_pred_dict.keys()
         for t in times :
             noise_pred = noise_pred_dict[t]
@@ -540,7 +543,7 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
                 else :
                     self_value_dict[time_step][layer] = self_value
-        """
+
         """
                 if time_step not in cross_query_dict.keys() :
                     cross_query_dict[time_step] = {}
@@ -569,6 +572,7 @@ def main(args) :
         #cross_v[concept_img_name] = cross_value_dict
         attention_storer.reset()
         print(f' (2.3.2) reconstruction with correcting')
+        """
         print(f' (1.3) network')
         sys.path.append(os.path.dirname(__file__))
         network_module = importlib.import_module(args.network_module)
@@ -603,7 +607,6 @@ def main(args) :
                                                           self_key_dict,
                                                           self_value_dict,
                                                           base_folder_dir)
-        """
         break
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -648,6 +651,7 @@ if __name__ == "__main__":
     parser.add_argument("--guidance_scale", type=float, default=7.5)
     parser.add_argument("--self_key_control", action='store_true')
     parser.add_argument("--threshold_time", type=int, default = 900)
+    parser.add_argument("--inversion_experiment", action="store_true",)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
