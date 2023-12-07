@@ -302,7 +302,6 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
 def recon_loop(latent, context, inference_times, scheduler, unet, vae,
                self_query_dict, self_key_dict, self_value_dict,
                base_folder_dir):
-    register_self_condition_giver(unet, self_query_dict, self_key_dict, self_value_dict)
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
@@ -508,9 +507,12 @@ def main(args) :
                 else :
                     self_value_dict[time_step][layer] = self_value
         start_latent = ddim_latents[-2]
-        # inference_times
-        recon_loop(start_latent, context, inference_times, scheduler, unet, vae, self_query_dict,
-                   self_key_dict, self_value_dict, base_folder)
+        register_self_condition_giver(unet, self_query_dict, self_key_dict, self_value_dict)
+        recon_loop(start_latent, context, inference_times, scheduler, unet, vae,
+                   self_query_dict, self_key_dict, self_value_dict,
+                   base_folder)
+        attention_storer.reset()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
