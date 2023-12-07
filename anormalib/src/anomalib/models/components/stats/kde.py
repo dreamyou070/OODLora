@@ -9,9 +9,10 @@ import math
 
 import torch
 from torch import Tensor
-
-from anormalib import DynamicBufferModule
-
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+sys.path.append(os.path.dirname(__file__))
+from models.components.base import DynamicBufferModule
 
 class GaussianKDE(DynamicBufferModule):
     """Gaussian Kernel Density Estimation.
