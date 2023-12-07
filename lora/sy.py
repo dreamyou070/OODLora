@@ -288,10 +288,12 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
-
-    for t in torch.flip(inference_times, dims=[0]):
+    inference_times = torch.cat([torch.Tensor([1000]), inference_times])
+    flip_times = torch.flip(inference_times, dims=[0])
+    for i, t in enumerate(flip_times[:-1]):
+        # 0,20,..., 980, 1000
+        next_time = flip_times[i+1].item()
         latent_dict[t.item()] = latent
-        # ----------------------------------------------------------------------------
         time_steps.append(t.item())
         noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
         noise_pred_dict[t.item()] = noise_pred
@@ -300,7 +302,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(os.path.join(base_folder_dir, f'inversion_{t.item()}.png'))
+        pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
         all_latent.append(latent)
     return all_latent, time_steps, pil_images
 
@@ -315,25 +317,20 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
     time_steps = []
     latent_dict = {}
     pil_images = []
-    for t in inference_times[1:]:
-        inference_time = t.item()
-        latent_dict[inference_time] = latent
+    for i, t in enumerate(inference_times[:-1]):
+        current_time = t.item()
+        prev_time = inference_times[i+1].item()
+        latent_dict[current_time] = latent
+        time_steps.append(current_time)
+        noise_pred = call_unet(unet, latent, t, cond_embeddings, prev_time, None)
+        latent = prev_step(noise_pred, t.item(), latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(os.path.join(base_folder_dir, f'with_con_with_self_kv_recon_{t.item()}.png'))
+        pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
         # ----------------------------------------------------------------------------
-        time_steps.append(inference_time)
-        noise_pred = call_unet(unet, latent, t, cond_embeddings, t.item(), None)
-        # noise_pred = call_unet(unet, latent, t, uncond_embeddings, t.item(), None)
-        latent = prev_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
-    with torch.no_grad():
-        np_img = latent2image(latent, vae, return_type='np')
-    pil_img = Image.fromarray(np_img)
-    pil_images.append(pil_img)
-    pil_img.save(os.path.join(base_folder_dir, f'final_recon_{t.item()}.png'))
     return all_latent, time_steps, pil_images
 
 @torch.no_grad()
@@ -478,19 +475,7 @@ def main(args) :
                                                          scheduler, unet, vae,
                                                          base_folder_dir,
                                                          attention_storer)
-        """
-        times = noise_pred_dict.keys()
-        for t in times :
-            noise_pred = noise_pred_dict[t]
-            # make histogram
-            noise_pred = noise_pred.reshape(-1).detach().cpu()
-            mean = noise_pred.mean()
-            plt.hist(noise_pred, bins=25, density=True, alpha=0.6, color='b')
-            plt.axvline(mean, color='b', linestyle='dashed', linewidth=1)
-            save_name = os.path.join(base_folder_dir, f'noise_pred_time_{t}.png')
-            plt.savefig(save_name)
-            plt.close()
-        """
+
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
