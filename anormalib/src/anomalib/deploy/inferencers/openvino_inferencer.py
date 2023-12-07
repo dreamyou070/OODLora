@@ -14,11 +14,11 @@ import albumentations as A
 import cv2
 import numpy as np
 from omegaconf import DictConfig
-
-from anormalib import TaskType
-
-from .base_inferencer import Inferencer
-
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+sys.path.append(os.path.dirname(__file__))
+from data import TaskType
+from base_inferencer import Inferencer
 logger = logging.getLogger("anomalib")
 
 if find_spec("openvino") is not None:
