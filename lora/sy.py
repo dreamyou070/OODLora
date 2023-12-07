@@ -29,8 +29,9 @@ try:
 except Exception:
     pass
 from diffusers import (DDPMScheduler,EulerAncestralDiscreteScheduler,DPMSolverMultistepScheduler,DPMSolverSinglestepScheduler,
-                       LMSDiscreteScheduler,PNDMScheduler,DDIMScheduler,EulerDiscreteScheduler,HeunDiscreteScheduler,
+                       LMSDiscreteScheduler,PNDMScheduler,EulerDiscreteScheduler,HeunDiscreteScheduler,
                        KDPM2DiscreteScheduler,KDPM2AncestralDiscreteScheduler)
+from schedulers import DDIMScheduler
 
 
 def register_attention_control(unet : nn.Module, controller:AttentionStore) :
@@ -375,7 +376,7 @@ def main(args) :
         json.dump(vars(args), f, indent=4)
 
     #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
-    base_folder_dir = f'../infer_traindata/full_inference_zero_snr'
+    base_folder_dir = f'../infer_traindata/50_inference_zero_snr'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
@@ -430,15 +431,11 @@ def main(args) :
     SCHEDULER_TIMESTEPS = 1000
     SCHEDLER_SCHEDULE = "scaled_linear"
     scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,
-                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,
-                              rescale_betas_zero_snr=True)
+                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
-    print(f'inference_times : {inference_times}')
-    org_betas = scheduler.betas
-    print(f'org_betas : {org_betas}')
-    print(f'org_betas : {len(org_betas)}')
-    """
+    scheduler.reset_schedulers()
+
     print(f' (1.4) model to accelerator device')
     device = args.device
     if len(text_encoders) > 1:
@@ -469,8 +466,19 @@ def main(args) :
                                                          scheduler, unet, vae,
                                                          base_folder_dir,
                                                          attention_storer)
-        
-        
+        """
+        times = noise_pred_dict.keys()
+        for t in times :
+            noise_pred = noise_pred_dict[t]
+            # make histogram
+            noise_pred = noise_pred.reshape(-1).detach().cpu()
+            mean = noise_pred.mean()
+            plt.hist(noise_pred, bins=25, density=True, alpha=0.6, color='b')
+            plt.axvline(mean, color='b', linestyle='dashed', linewidth=1)
+            save_name = os.path.join(base_folder_dir, f'noise_pred_time_{t}.png')
+            plt.savefig(save_name)
+            plt.close()
+        """
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
@@ -524,7 +532,6 @@ def main(args) :
         network.to(device)
         unregister_attention_control(unet, attention_storer)
         start_latent = ddim_latents[-1]
-
         ddim_latents, time_steps, pil_images = recon_loop(start_latent,
                                                           context,
                                                           inference_times,
@@ -534,8 +541,6 @@ def main(args) :
                                                           self_value_dict,
                                                           base_folder_dir)
         break
-    """
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     train_util.add_sd_models_arguments(parser)
