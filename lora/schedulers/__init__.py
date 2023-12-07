@@ -108,7 +108,6 @@ def rescale_zero_terminal_snr(betas):
 
     return betas
 
-set_timesteps(args.num_ddim_steps)
 class DDIMScheduler(SchedulerMixin, ConfigMixin):
     _compatibles = [e.name for e in KarrasDiffusionSchedulers]
     order = 1
