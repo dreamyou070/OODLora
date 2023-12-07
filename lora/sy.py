@@ -435,6 +435,9 @@ def main(args) :
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
     print(f'inference_times : {inference_times}')
+    org_betas = scheduler.betas
+    print(f'org_betas : {org_betas}')
+    print(f'org_betas : {len(org_betas)}')
     """
     print(f' (1.4) model to accelerator device')
     device = args.device
