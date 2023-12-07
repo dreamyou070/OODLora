@@ -57,7 +57,7 @@ def main(args) :
     # 'auto_lr_find': False, 'replace_sampler_ddp': True, 'detect_anomaly': False, 'auto_scale_batch_size': False, 'plugins': None,
     # 'move_metrics_to_cpu': False, 'multiple_trainloader_mode': 'max_size_cycle'}}
     print(f' (3.1) download dataset (check where to save data')
-    config.dataset.path = r'/data7/sooyeon/MyData/anomaly_detection'
+    config.dataset.path = r'/data7/sooyeon/MyData/anomaly_detection/MVTec'
     datamodule = get_datamodule(config=config)
     datamodule.prepare_data()
     datamodule.setup()  # Create train/val/test/prediction sets.
