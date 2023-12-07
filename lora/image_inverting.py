@@ -494,13 +494,14 @@ def main(args) :
         times = noise_pred_dict.keys()
         for t in times :
             noise_pred = noise_pred_dict[t]
-            # make histogram
+            # make histogram 
             noise_pred = noise_pred.reshape(-1).detach().cpu()
             mean = noise_pred.mean()
             plt.hist(noise_pred, bins=25, density=True, alpha=0.6, color='b')
             plt.axvline(mean, color='b', linestyle='dashed', linewidth=1)
             save_name = os.path.join(base_folder_dir, f'noise_pred_time_{t}.png')
             plt.savefig(save_name)
+            plt.close()
         """
         layer_names = attention_storer.self_query_store.keys()
         self_query_collection = attention_storer.self_query_store
