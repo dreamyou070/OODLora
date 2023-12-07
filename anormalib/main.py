@@ -69,7 +69,7 @@ def main(args) :
 
     print(f'\n step 4. prepare model and callbacks')
     # Set the export-mode to OpenVINO to create the OpenVINO IR model.
-    config.optimization.export_mode = "openvino"
+    #config.optimization.export_mode = "openvino"
     model = get_model(config)
     callbacks = get_callbacks(config)
 
@@ -83,7 +83,8 @@ def main(args) :
     test_results = trainer.test(model=model, datamodule=datamodule)
 
     print(f'\n step 7. Load the OpenVINO Model')
-    output_path = Path(config["project"]["path"])
+    config.project.path = args.experiment_dir
+    output_path = Path(config.project.path)
     print(output_path)
 
     """
@@ -99,5 +100,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', default = 'padim',
                         choices = ['padim', 'cflow', 'stfpm', 'ganomaly', 'dfkde', 'patchcore'])
+    parser.add_argument('--experiment_dir', type=str,
+                        default= r'/data7/sooyeon/Lora/OODLora/result',)
     args = parser.parse_args()
     main(args)
