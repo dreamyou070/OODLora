@@ -322,7 +322,7 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
         prev_time = inference_times[i+1].item()
         latent_dict[current_time] = latent
         time_steps.append(current_time)
-        noise_pred = call_unet(unet, latent, t, cond_embeddings, prev_time, None)
+        noise_pred = call_unet(unet, latent, t, cond_embeddings, current_time, None)
         latent = prev_step(noise_pred, t.item(), latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
@@ -385,7 +385,7 @@ def main(args) :
         json.dump(vars(args), f, indent=4)
 
     #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
-    base_folder_dir = f'../infer_traindata/new_scheduler_time_correcting_50_inference'
+    base_folder_dir = f'../infer_traindata/new_scheduler_time_correcting_50_inference_change_self_condition'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
