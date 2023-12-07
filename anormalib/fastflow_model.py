@@ -36,6 +36,22 @@ def main(args) :
     i, data = next(enumerate(datamodule.test_dataloader()))
     print(f'Image Shape: {data["image"].shape} Mask Shape: {data["mask"].shape}')
 
+    print(f'\n step 3. model')
+    model = Fastflow(input_size=(256, 256),
+                     backbone="resnet18",
+                     flow_steps=8)
+
+    print(f' (3.1) training mode')
+    model.training = True
+    train_output = model(data["image"])
+    hidden_variables, log_jacobian = train_output
+    print(f"Hidden Variable Shape: {hidden_variables[0].shape}")
+
+    print(f' (3.2) test mode')
+    model.model.training = False
+    anomaly_map = model(data["image"])
+    print(f"Anomaly Map Shape: {anomaly_map.shape}")
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
