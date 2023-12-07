@@ -10,11 +10,8 @@ from torch import Tensor
 from torchmetrics import Metric
 from torchmetrics.functional import recall
 from torchmetrics.utilities.data import dim_zero_cat
-
-#from anomalib.utils.cv import connected_components_cpu, connected_components_gpu
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-#from utils.cv import connected_components_cpu, connected_components_gpu
 from cv import connected_components_cpu, connected_components_gpu
 class PRO(Metric):
     """Per-Region Overlap (PRO) Score."""

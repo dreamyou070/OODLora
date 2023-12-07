@@ -7,9 +7,15 @@ from __future__ import annotations
 
 import torch
 from torch import Tensor
-
-from anormalib import DynamicBufferModule
-
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+sys.path.append(os.path.join(os.path.dirname(__file__))
+#from anormalib import DynamicBufferModule
+from models.components import DynamicBufferModule
+#from anomalib.models.components import (
+#    DynamicBufferModule,
+#    FeatureExtractor,
+#    KCenterGreedy,)
 
 class PCA(DynamicBufferModule):
     """Principle Component Analysis (PCA).
