@@ -17,30 +17,24 @@ from typing import Union
 from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
 import numpy as np
 import matplotlib.pyplot as plt
-
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
 try:
     import intel_extension_for_pytorch as ipex
-
     if torch.xpu.is_available():
         from library.ipex import ipex_init
-
         ipex_init()
 except Exception:
     pass
-from diffusers import (DDPMScheduler, EulerAncestralDiscreteScheduler, DPMSolverMultistepScheduler,
-                       DPMSolverSinglestepScheduler,
-                       LMSDiscreteScheduler, PNDMScheduler, DDIMScheduler, EulerDiscreteScheduler,
-                       HeunDiscreteScheduler,
-                       KDPM2DiscreteScheduler, KDPM2AncestralDiscreteScheduler)
+from diffusers import (DDPMScheduler,EulerAncestralDiscreteScheduler,DPMSolverMultistepScheduler,DPMSolverSinglestepScheduler,
+                       LMSDiscreteScheduler,PNDMScheduler,DDIMScheduler,EulerDiscreteScheduler,HeunDiscreteScheduler,
+                       KDPM2DiscreteScheduler,KDPM2AncestralDiscreteScheduler)
 
 
-def register_attention_control(unet: nn.Module, controller: AttentionStore):
+def register_attention_control(unet : nn.Module, controller:AttentionStore) :
     """ Register cross attention layers to controller. """
-
     def ca_forward(self, layer_name):
 
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
@@ -59,10 +53,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore):
             if self.upcast_attention:
                 query = query.float()
                 key = key.float()
-            attention_scores = torch.baddbmm(
-                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                            device=query.device),
-                query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                                                         device=query.device),
+                                             query,key.transpose(-1, -2),beta=0,alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
 
@@ -83,7 +76,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore):
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
             return hidden_states
-
         return forward
 
     def register_recr(net_, count, layer_name):
@@ -105,11 +97,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore):
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
-
-
-def unregister_attention_control(unet: nn.Module, controller: AttentionStore):
+def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
     """ Register cross attention layers to controller. """
-
     def ca_forward(self, layer_name):
 
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
@@ -124,7 +113,7 @@ def unregister_attention_control(unet: nn.Module, controller: AttentionStore):
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if not is_cross_attention and mask is not None:
-                if args.self_key_control:
+                if args.self_key_control :
                     unkey, con_key = key.chunk(2)
                     key = torch.cat([unkey, mask[0][layer_name]], dim=0)
                 unvalue, con_value = value.chunk(2)
@@ -133,10 +122,9 @@ def unregister_attention_control(unet: nn.Module, controller: AttentionStore):
             if self.upcast_attention:
                 query = query.float()
                 key = key.float()
-            attention_scores = torch.baddbmm(
-                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                            device=query.device),
-                query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                                                         device=query.device),
+                                             query,key.transpose(-1, -2),beta=0,alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
 
@@ -144,7 +132,6 @@ def unregister_attention_control(unet: nn.Module, controller: AttentionStore):
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
             return hidden_states
-
         return forward
 
     def register_recr(net_, count, layer_name):
@@ -167,8 +154,8 @@ def unregister_attention_control(unet: nn.Module, controller: AttentionStore):
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
 
+def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dict,self_value_dict):
 
-def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dict, self_value_dict):
     def ca_forward(self, layer_name):
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
             is_cross_attention = False
@@ -184,8 +171,8 @@ def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dic
             value = self.reshape_heads_to_batch_dim(value)
 
             if not is_cross_attention:
-                # query = self_query_dict[trg_indexs_list][layer_name].to(query.device)
-                if trg_indexs_list > args.threshold_time:
+                #query = self_query_dict[trg_indexs_list][layer_name].to(query.device)
+                if trg_indexs_list > args.threshold_time :
                     key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
                     value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
 
@@ -202,7 +189,6 @@ def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dic
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
             return hidden_states
-
         return forward
 
     def register_recr(net_, count, layer_name):
@@ -214,7 +200,6 @@ def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dic
                 full_name = f'{layer_name}_{name__}'
                 count = register_recr(net__, count, full_name)
         return count
-
     cross_att_count = 0
     for net in unet.named_children():
         if "down" in net[0]:
@@ -223,19 +208,17 @@ def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dic
             cross_att_count += register_recr(net[1], 0, net[0])
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
-
-
 def load_512(image_path, left=0, right=0, top=0, bottom=0):
     if type(image_path) is str:
         image = np.array(Image.open(image_path))[:, :, :3]
     else:
         image = image_path
     h, w, c = image.shape
-    left = min(left, w - 1)
+    left = min(left, w-1)
     right = min(right, w - left - 1)
     top = min(top, h - left - 1)
     bottom = min(bottom, h - top - 1)
-    image = image[top:h - bottom, left:w - right]
+    image = image[top:h-bottom, left:w-right]
     h, w, c = image.shape
     if h < w:
         offset = (w - h) // 2
@@ -245,8 +228,6 @@ def load_512(image_path, left=0, right=0, top=0, bottom=0):
         image = image[offset:offset + w]
     image = np.array(Image.fromarray(image).resize((512, 512)))
     return image
-
-
 def image2latent(image, vae, device, weight_dtype):
     with torch.no_grad():
         if type(image) is Image:
@@ -259,39 +240,16 @@ def image2latent(image, vae, device, weight_dtype):
             latents = vae.encode(image)['latent_dist'].mean
             latents = latents * 0.18215
     return latents
-
-
 def call_unet(unet, noisy_latents, timesteps, text_conds, trg_indexs_list, mask_imgs):
     noise_pred = unet(noisy_latents, timesteps, text_conds,
                       trg_indexs_list=trg_indexs_list,
                       mask_imgs=mask_imgs, ).sample
     return noise_pred
-
-
-# latent = next_step(noise_pred, current_timestep, latent, scheduler)
-def next_step2(model_output: Union[torch.FloatTensor, np.ndarray],
-               timestep: int,
-               sample: Union[torch.FloatTensor, np.ndarray],
-               scheduler):
-    if args.inversion_experiment:
-        model_output = torch.randn_like(model_output)
-    timestep, next_timestep = timestep, min(
-        timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
-    alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
-    alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
-    beta_prod_t = 1 - alpha_prod_t
-    model_output_coeff = (beta_prod_t ** 0.5) - ((alpha_prod_t / alpha_prod_t_next) * (1 - alpha_prod_t_next)) ** 0.5
-    next_original_sample = sample - (model_output_coeff) * model_output
-    next_sample = next_original_sample * ((alpha_prod_t_next / alpha_prod_t) ** 0.5)
-    return next_sample
-
-
 def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
               scheduler):
-    timestep, next_timestep = timestep, min(
-        timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
+    timestep, next_timestep = timestep, min( timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
     alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
     beta_prod_t = 1 - alpha_prod_t
@@ -300,22 +258,11 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
-
-def scheduling_latent(original_sample, model_output, timestep, scheduler):
-    current_timestep, next_timestep = timestep, min(
-        timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
-    alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
-    next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
-    next_sample = alpha_prod_t_next ** 0.5 * original_sample + next_sample_direction
-    return next_sample
-
-
 def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
               scheduler):
-    timestep, prev_timestep = timestep, max(
-        timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 0)
+    timestep, prev_timestep = timestep, max( timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 0)
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
     alpha_prod_t_prev = scheduler.alphas_cumprod[prev_timestep]
     beta_prod_t = 1 - alpha_prod_t
@@ -323,8 +270,6 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     prev_sample_direction = (1 - alpha_prod_t_prev) ** 0.5 * model_output
     prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
-
-
 @torch.no_grad()
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
     uncond_embeddings, cond_embeddings = context.chunk(2)
@@ -349,32 +294,15 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         noise_pred_dict[t.item()] = noise_pred
         latent = next_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
+    return all_latent, time_steps, pil_images  # , noise_pred_dict
 
-    latent = original_sample
-    all_latent2 = [latent]
-    attention_storer.reset()
-    for i in torch.flip(inference_times, dims=[0]):
-        current_timestep = i.item()
-        next_timestep = min(current_timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps,
-                            999)
-        try:
-            print('next sample from dict')
-            next_inter_sample = latent_dict[next_timestep.item()]
-        except:
-            next_inter_sample = torch.randn_like(latent)
-        noise_pred = call_unet(unet, next_inter_sample, next_timestep, uncond_embeddings, None, None)
-        latent = next_step2(noise_pred, current_timestep, latent, scheduler)
-        all_latent2.append(latent)
-
-    return all_latent2, time_steps, pil_images  # , noise_pred_dict
-    #   return all_latent, time_steps, pil_images  # , noise_pred_dict
 
 
 @torch.no_grad()
-def recon_loop(latent, context, inference_times, scheduler, unet, vae,
+def recon_loop(latent,context,inference_times,scheduler, unet, vae,
                self_query_dict, self_key_dict, self_value_dict,
-               base_folder_dir):
-    register_self_condition_giver(unet, self_query_dict, self_key_dict, self_value_dict)
+               base_folder_dir) :
+    register_self_condition_giver(unet, self_query_dict, self_key_dict,self_value_dict)
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
@@ -391,12 +319,10 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
         # ----------------------------------------------------------------------------
         time_steps.append(inference_time)
         noise_pred = call_unet(unet, latent, t, cond_embeddings, t.item(), None)
-        # noise_pred = call_unet(unet, latent, t, uncond_embeddings, t.item(), None)
+        #noise_pred = call_unet(unet, latent, t, uncond_embeddings, t.item(), None)
         latent = prev_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
     return all_latent, time_steps, pil_images
-
-
 @torch.no_grad()
 def latent2image(latents, vae, return_type='np'):
     latents = 1 / 0.18215 * latents.detach()
@@ -407,7 +333,6 @@ def latent2image(latents, vae, return_type='np'):
         image = (image * 255).astype(np.uint8)
     return image
 
-
 def init_prompt(tokenizer, text_encoder, device, prompt: str):
     uncond_input = tokenizer([""],
                              padding="max_length", max_length=tokenizer.model_max_length,
@@ -417,17 +342,13 @@ def init_prompt(tokenizer, text_encoder, device, prompt: str):
                            padding="max_length",
                            max_length=tokenizer.model_max_length,
                            truncation=True,
-                           return_tensors="pt", )
+                           return_tensors="pt",)
     text_embeddings = text_encoder(text_input.input_ids.to(device))[0]
     context = torch.cat([uncond_embeddings, text_embeddings])
     return context
 
+def main(args) :
 
-
-
-
-
-def main(args):
     print(f' \n step 1. make stable diffusion model')
     if args.process_title:
         setproctitle(args.process_title)
@@ -442,7 +363,7 @@ def main(args):
     set_seed(args.seed)
 
     print(f" (1.0.1) logging")
-    if args.log_with == 'wandb':
+    if args.log_with == 'wandb' :
         wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
 
     print(f" (1.0.2) save directory and save config")
@@ -453,8 +374,8 @@ def main(args):
     with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
         json.dump(vars(args), f, indent=4)
 
-    # base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
-    base_folder_dir = f'../infer_test/inverting_with_original_sample_std_gaussian_twice'
+    #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
+    base_folder_dir = f'../infer_traindata/full_inference_zero_snr'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
@@ -478,9 +399,9 @@ def main(args):
         scheduler_cls = DDIMScheduler
     elif args.sample_sampler == "ddpm":
         scheduler_cls = DDPMScheduler
-    elif args.sample_sampler == "pndm":
+    elif args.sample_sampler == "pndm" :
         scheduler_cls = PNDMScheduler
-    elif args.sample_sampler == "lms" or args.sample_sampler == "k_lms":
+    elif args.sample_sampler == "lms" or args.sample_sampler == "k_lms" :
         scheduler_cls = LMSDiscreteScheduler
     elif args.sample_sampler == "euler" or args.sample_sampler == "k_euler":
         scheduler_cls = EulerDiscreteScheduler
@@ -497,7 +418,7 @@ def main(args):
         scheduler_cls = KDPM2DiscreteScheduler
     elif args.sample_sampler == "dpm_2_a" or args.sample_sampler == "k_dpm_2_a":
         scheduler_cls = KDPM2AncestralDiscreteScheduler
-    else:
+    else :
         scheduler_cls = DDIMScheduler
 
     if args.v_parameterization:
@@ -509,32 +430,108 @@ def main(args):
     SCHEDULER_TIMESTEPS = 1000
     SCHEDLER_SCHEDULE = "scaled_linear"
     scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,
-                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE, )
+                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,
+                              rescale_betas_zero_snr=True)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
+    print(f'inference_times : {inference_times}')
+    """
+    print(f' (1.4) model to accelerator device')
+    device = args.device
+    if len(text_encoders) > 1:
+        unet, t_enc1, t_enc2 = unet.to(device), text_encoders[0].to(device), text_encoders[1].to(device)
+        text_encoder = text_encoders = [t_enc1, t_enc2]
+        del t_enc1, t_enc2
+    else:
+        unet, text_encoder = unet.to(device), text_encoder.to(device)
+        text_encoders = [text_encoder]
 
 
-    original_betas = scheduler.betas
-    original_alphas = 1 - original_betas
-    original_alphas_bar = original_alphas.cumprod(0)
-    print(f' original_alphas : {original_alphas}')
-    print(f' original_alphas_bar : {original_alphas_bar}')
+    print(f' \n step 2. ground-truth image preparing')
+    print(f' (2.1) prompt condition')
+    prompt = args.prompt
+    context = init_prompt(tokenizer, text_encoder, device, prompt)
+    print(f' (2.2) image condition')
+    concept_img_dirs = os.listdir(args.concept_image_folder)
+    print(f' (2.3) inverting as saving self k&v')
+    for concept_img in concept_img_dirs :
+        concept_img_dir = os.path.join(args.concept_image_folder, concept_img)
 
+        print(f' (2.3.1) inversion')
+        attention_storer = AttentionStore()
+        register_attention_control(unet, attention_storer)
+        image_gt_np = load_512(concept_img_dir)
+        latent = image2latent(image_gt_np, vae, device, weight_dtype)
+        ddim_latents, time_steps, pil_images = ddim_loop(latent, context, inference_times,
+                                                         scheduler, unet, vae,
+                                                         base_folder_dir,
+                                                         attention_storer)
+        
+        
+        layer_names = attention_storer.self_query_store.keys()
+        self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
+        for layer in layer_names:
+            self_query_list = attention_storer.self_query_store[layer]
+            self_key_list = attention_storer.self_key_store[layer]
+            self_value_list = attention_storer.self_value_store[layer]
+            i = 0
+            for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list) :
+                time_step = time_steps[i]
+                i += 1
+                if time_step not in self_query_dict.keys() :
+                    self_query_dict[time_step] = {}
+                    self_query_dict[time_step][layer] = self_query
+                else :
+                    self_query_dict[time_step][layer] = self_query
 
-    def compare_alpha(betas):
-        # Calculate alpha-bar-sqrt
-        alphas = 1 - betas
-        alphas_bar = alphas.cumprod(0)
-        alphas_bar_sqrt = alphas_bar.sqrt()
-        # Store old values.
-        alphas_bar_sqrt_0 = alphas_bar_sqrt[0].clone()
-        alphas_bar_sqrt_T = alphas_bar_sqrt[-1].clone()
+                if time_step not in self_key_dict.keys() :
+                    self_key_dict[time_step] = {}
+                    self_key_dict[time_step][layer] = self_key
+                else :
+                    self_key_dict[time_step][layer] = self_key
 
-        # Shift so the last timestep is zero.
-        alphas_bar_sqrt -= alphas_bar_sqrt_T
-        # Scale so the first timestep is back to the old value.
-        alphas_bar_sqrt *= alphas_bar_sqrt_0 / (alphas_bar_sqrt_0 - alphas_bar_sqrt_T)
-        new_betas = alphas_bar_sqrt
+                if time_step not in self_value_dict.keys() :
+                    self_value_dict[time_step] = {}
+                    self_value_dict[time_step][layer] = self_value
+                else :
+                    self_value_dict[time_step][layer] = self_value
+        print(f' (1.3) network')
+        sys.path.append(os.path.dirname(__file__))
+        network_module = importlib.import_module(args.network_module)
+        print(f' (1.3.1) merging weights')
+        net_kwargs = {}
+        if args.network_args is not None:
+            for net_arg in args.network_args:
+                key, value = net_arg.split("=")
+                net_kwargs[key] = value
+        print(f' (1.3.3) make network')
+        if args.dim_from_weights:
+            network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
+                                                                    **net_kwargs)
+        else:
+            network = network_module.create_network(1.0,
+                                                    args.network_dim,
+                                                    args.network_alpha,
+                                                    vae, text_encoder, unet, neuron_dropout=args.network_dropout,
+                                                    **net_kwargs, )
+        print(f' (1.3.4) apply trained state dict')
+        network.apply_to(text_encoder, unet, True, True)
+        if args.network_weights is not None:
+            info = network.load_weights(args.network_weights)
+        network.to(device)
+        unregister_attention_control(unet, attention_storer)
+        start_latent = ddim_latents[-1]
+
+        ddim_latents, time_steps, pil_images = recon_loop(start_latent,
+                                                          context,
+                                                          inference_times,
+                                                          scheduler, unet, vae,
+                                                          self_query_dict,
+                                                          self_key_dict,
+                                                          self_value_dict,
+                                                          base_folder_dir)
+        break
+    """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -568,19 +565,18 @@ if __name__ == "__main__":
                         help="pretrained weights for network / 学習するネットワークの初期重み")
 
     parser.add_argument("--concept_image", type=str,
-                        default='/data7/sooyeon/MyData/perfusion_dataset/td_100/100_td/td_1.jpg')
+                        default = '/data7/sooyeon/MyData/perfusion_dataset/td_100/100_td/td_1.jpg')
     parser.add_argument("--prompt", type=str,
-                        default='teddy bear, wearing like a super hero')
+                        default = 'teddy bear, wearing like a super hero')
     parser.add_argument("--negative_prompt", type=str,
-                        default='low quality, worst quality, bad anatomy,bad composition, poor, low effort')
+                        default = 'low quality, worst quality, bad anatomy,bad composition, poor, low effort')
     parser.add_argument("--concept_image_folder", type=str)
     parser.add_argument("--num_ddim_steps", type=int, default=30)
     parser.add_argument("--folder_name", type=str)
     parser.add_argument("--guidance_scale", type=float, default=7.5)
     parser.add_argument("--self_key_control", action='store_true')
-    parser.add_argument("--threshold_time", type=int, default=900)
-    parser.add_argument("--inversion_experiment", action="store_true", )
+    parser.add_argument("--threshold_time", type=int, default = 900)
+    parser.add_argument("--inversion_experiment", action="store_true",)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
-
