@@ -245,6 +245,21 @@ def call_unet(unet, noisy_latents, timesteps, text_conds, trg_indexs_list, mask_
                       trg_indexs_list=trg_indexs_list,
                       mask_imgs=mask_imgs, ).sample
     return noise_pred
+# latent = next_step(noise_pred, current_timestep, latent, scheduler)
+def next_step2(model_output: Union[torch.FloatTensor, np.ndarray],
+              timestep: int,
+              sample: Union[torch.FloatTensor, np.ndarray],
+              scheduler):
+    if args.inversion_experiment:
+        model_output = torch.randn_like(model_output)
+    timestep, next_timestep = timestep, min( timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
+    alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
+    alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
+    beta_prod_t = 1 - alpha_prod_t
+    model_output_coeff = (beta_prod_t ** 0.5 ) - ((alpha_prod_t/alpha_prod_t_next) * (1-alpha_prod_t_next))**0.5
+    next_original_sample = sample - (model_output_coeff) * model_output
+    next_sample = next_original_sample * ((alpha_prod_t_next/alpha_prod_t) ** 0.5)
+    return next_sample
 def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
@@ -280,7 +295,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
 @torch.no_grad()
-def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir):
+def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     original_sample = latent.clone().detach()
@@ -303,9 +318,23 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
         noise_pred_dict[t.item()] = noise_pred
         latent = next_step(noise_pred, t.item(), latent, scheduler)
-        latent = scheduling_latent(original_sample, random_noise, t.item(), scheduler)
+        #latent = scheduling_latent(original_sample, random_noise, t.item(), scheduler)
         all_latent.append(latent)
-    return all_latent, time_steps, pil_images#, noise_pred_dict
+    latent = original_sample
+    all_latent2 = [latent]
+    attention_storer.reset()
+    for i in torch.flip(inference_times, dims=[0]):
+        current_timestep = i.item()
+        next_timestep = min(current_timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
+        try :
+            next_inter_sample = latent_dict[next_timestep]
+        except :
+            next_inter_sample = torch.randn_like(latent)
+        noise_pred = call_unet(unet, next_inter_sample, next_timestep, uncond_embeddings, None, None)
+        latent = next_step2(noise_pred, current_timestep, latent, scheduler)
+        all_latent2.append(latent)
+
+    return all_latent2, time_steps, pil_images#, noise_pred_dict
 
 
 
@@ -386,7 +415,7 @@ def main(args) :
         json.dump(vars(args), f, indent=4)
 
     #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
-    base_folder_dir = f'../infer_test/inverting_with_original_sample_std_gaussian'
+    base_folder_dir = f'../infer_test/inverting_with_original_sample_std_gaussian_twice'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
@@ -500,7 +529,7 @@ def main(args) :
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         ddim_latents, time_steps, pil_images = ddim_loop(latent, context, inference_times,
                                                                           scheduler, unet, vae,
-                                                                          base_folder_dir)
+                                                                          base_folder_dir,attention_storer)
         """
         times = noise_pred_dict.keys()
         for t in times :
