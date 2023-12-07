@@ -373,7 +373,7 @@ def main(args) :
         json.dump(vars(args), f, indent=4)
 
     #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
-    base_folder_dir = f'../noise_pred/lora_model'
+    base_folder_dir = f'../noise_pred/pretrained_model'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
@@ -447,7 +447,7 @@ def main(args) :
     else:
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
-
+    """
     print(f' (2.3.2) reconstruction with correcting')
     print(f' (1.3) network')
     sys.path.append(os.path.dirname(__file__))
@@ -473,6 +473,7 @@ def main(args) :
     if args.network_weights is not None:
         info = network.load_weights(args.network_weights)
     network.to(device)
+    """
 
 
     print(f' \n step 2. ground-truth image preparing')
@@ -494,7 +495,7 @@ def main(args) :
         times = noise_pred_dict.keys()
         for t in times :
             noise_pred = noise_pred_dict[t]
-            # make histogram 
+            # make histogram
             noise_pred = noise_pred.reshape(-1).detach().cpu()
             mean = noise_pred.mean()
             plt.hist(noise_pred, bins=25, density=True, alpha=0.6, color='b')
