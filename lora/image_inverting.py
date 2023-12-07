@@ -375,7 +375,7 @@ def main(args) :
         json.dump(vars(args), f, indent=4)
 
     #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
-    base_folder_dir = f'../infer_traindata/full_inference_zero_snr'
+    base_folder_dir = f'../infer_traindata/50_inference_zero_snr'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
@@ -531,7 +531,6 @@ def main(args) :
         network.to(device)
         unregister_attention_control(unet, attention_storer)
         start_latent = ddim_latents[-1]
-
         ddim_latents, time_steps, pil_images = recon_loop(start_latent,
                                                           context,
                                                           inference_times,
