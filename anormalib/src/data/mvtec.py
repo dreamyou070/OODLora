@@ -191,9 +191,6 @@ class MVTecDataset(AnomalibDataset):
         self.split = split
 
     def _setup(self) -> None:
-        print(' Let set ')
-        print(f'root_category : {self.root_category}')
-
         self.samples = make_mvtec_dataset(self.root_category,
                                           split=self.split,
                                           extensions=IMG_EXTENSIONS)
