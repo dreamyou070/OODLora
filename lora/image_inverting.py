@@ -524,6 +524,7 @@ def main(args) :
             #                                                                                 cross_query_list,cross_key_list,cross_value_list,) :
             for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list) :
                 time_step = time_steps[i]
+                i += 1
                 print(f'saving value got when inverting, timestep : {time_step}')
                 if time_step not in self_query_dict.keys() :
                     self_query_dict[time_step] = {}
@@ -561,7 +562,7 @@ def main(args) :
                     cross_value_dict[time_step][layer] = cross_value
         """
         """
-                i += 1
+                
         concept_img_name = os.path.splitext(concept_img)[0]
         self_q[concept_img_name] = self_query_dict
         self_k[concept_img_name] = self_key_dict
