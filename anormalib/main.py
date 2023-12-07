@@ -7,13 +7,13 @@ from matplotlib import pyplot as plt
 from PIL import Image
 #from pytorch_lightning import Trainer
 from torchvision.transforms import ToPILImage
-from src.anomalib.config import get_configurable_parameters
-from src.anomalib.data import get_datamodule
-from src.anomalib.data.utils import read_image
-from src.anomalib.deploy import OpenVINOInferencer
-from src.anomalib.models import get_model
-from src.anomalib.pre_processing.transforms import Denormalize
-from src.anomalib.utils.callbacks import LoadModelCallback, get_callbacks
+from src.config import get_configurable_parameters
+from src.data import get_datamodule
+from src.data.utils import read_image
+from src.deploy import OpenVINOInferencer
+from src.models import get_model
+from src.pre_processing.transforms import Denormalize
+from src.utils.callbacks import LoadModelCallback, get_callbacks
 
 def main() :
 
