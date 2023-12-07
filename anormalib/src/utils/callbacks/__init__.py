@@ -46,54 +46,42 @@ logger = logging.getLogger(__name__)
 
 def get_callbacks(config: DictConfig | ListConfig) -> list[Callback]:
     """Return base callbacks for all the lightning models.
-
     Args:
         config (DictConfig): Model config
-
     Return:
         (list[Callback]): List of callbacks.
     """
     logger.info("Loading the callbacks")
-
     callbacks: list[Callback] = []
-
+    # ------------------------------------------------------------------------------------------------------------
+    # 1) what kind of metric
     monitor_metric = None if "early_stopping" not in config.model.keys() else config.model.early_stopping.metric
+    # ------------------------------------------------------------------------------------------------------------
+    # 2) what is monitor mode
     monitor_mode = "max" if "early_stopping" not in config.model.keys() else config.model.early_stopping.mode
-
-    checkpoint = ModelCheckpoint(
-        dirpath=os.path.join(config.project.path, "weights", "lightning"),
-        filename="model",
-        monitor=monitor_metric,
-        mode=monitor_mode,
-        auto_insert_metric_name=False,
-    )
-
+    checkpoint = ModelCheckpoint(dirpath=os.path.join(config.project.path, "weights", "lightning"),
+                                 filename="model",
+                                 monitor=monitor_metric,
+                                 mode=monitor_mode,
+                                 auto_insert_metric_name=False,)
     callbacks.extend([checkpoint, TimerCallback()])
-
     if "resume_from_checkpoint" in config.trainer.keys() and config.trainer.resume_from_checkpoint is not None:
         load_model = LoadModelCallback(config.trainer.resume_from_checkpoint)
         callbacks.append(load_model)
 
-    # Add post-processing configurations to AnomalyModule.
-    image_threshold = (
-        config.metrics.threshold.manual_image if "manual_image" in config.metrics.threshold.keys() else None
-    )
-    pixel_threshold = (
-        config.metrics.threshold.manual_pixel if "manual_pixel" in config.metrics.threshold.keys() else None
-    )
-    post_processing_callback = PostProcessingConfigurationCallback(
-        threshold_method=config.metrics.threshold.method,
-        manual_image_threshold=image_threshold,
-        manual_pixel_threshold=pixel_threshold,
-    )
+    # ------------------------------------------------------------------------------------------------------------
+    # 3) set threshold for anomal
+    image_threshold = (config.metrics.threshold.manual_image if "manual_image" in config.metrics.threshold.keys() else None)
+    pixel_threshold = (config.metrics.threshold.manual_pixel if "manual_pixel" in config.metrics.threshold.keys() else None)
+    post_processing_callback = PostProcessingConfigurationCallback(threshold_method=config.metrics.threshold.method,
+                                                                   manual_image_threshold=image_threshold,
+                                                                   manual_pixel_threshold=pixel_threshold,)
     callbacks.append(post_processing_callback)
 
     # Add metric configuration to the model via MetricsConfigurationCallback
-    metrics_callback = MetricsConfigurationCallback(
-        config.dataset.task,
-        config.metrics.get("image", None),
-        config.metrics.get("pixel", None),
-    )
+    metrics_callback = MetricsConfigurationCallback(config.dataset.task,
+                                                    config.metrics.get("image", None),
+                                                    config.metrics.get("pixel", None),)
     callbacks.append(metrics_callback)
 
     if "normalization_method" in config.model.keys() and not config.model.normalization_method == "none":

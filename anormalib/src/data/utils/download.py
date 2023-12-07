@@ -234,7 +234,11 @@ def safe_extract(tar_file: TarFile, root: Path, members: list[TarInfo]) -> None:
 
     """
     for member in members:
+        print(f'member : {member} | root : {root}')
+        print(f'tar_file : {tar_file}')
+        print(f'tar_file : {tar_file.__class__.__name__}')
         tar_file.extract(member, root)
+        # from tarfile import TarFile, TarInfo
 
 
 def hash_check(file_path: Path, expected_hash: str) -> None:
@@ -272,7 +276,7 @@ def extract(file_name: Path, root: Path) -> None:
         with tarfile.open(file_name) as tar_file:
             members = tar_file.getmembers()
             safe_members = [member for member in members if not is_file_potentially_dangerous(member.name)]
-            safe_extract(tar_file, root, safe_members)
+            safe_extract(tar_file, root, safe_members) ################
 
     else:
         raise ValueError(f"Unrecognized file format: {file_name}")
