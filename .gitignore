@@ -4,33 +4,25 @@ __pycache__
 *.egg-info
 build
 wd14_tagger_model
-
 # IDE and Editor specific
 ../lora/.vscode
-
 # CUDNN for Windows
 cudnn_windows
-
 # Cache and temporary files
 ../lora/.cache
 .DS_Store
-
 # Scripts and executables
 locon
 gui-user.bat
 gui-user.ps1
-
 # Version control
 SmilingWolf
 wandb
-
 # Setup and logs
 setup.log
 logs
-
 # Miscellaneous
 uninstall.txt
-
 # Test files
 ../lora/test/output
 ../lora/test/log*
