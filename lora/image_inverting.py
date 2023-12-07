@@ -311,15 +311,14 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(os.path.join(base_folder_dir, f'with_con_with_self_qkv_inversion_{t.item()}.png'))
+        pil_img.save(os.path.join(base_folder_dir, f'with_uncon_inversion_{t.item()}.png'))
         # ----------------------------------------------------------------------------
         time_steps.append(t.item())
-        #noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
         noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
         noise_pred_dict[t.item()] = noise_pred
         latent = next_step(noise_pred, t.item(), latent, scheduler)
-        #latent = scheduling_latent(original_sample, random_noise, t.item(), scheduler)
         all_latent.append(latent)
+    """
     latent = original_sample
     all_latent2 = [latent]
     attention_storer.reset()
@@ -333,8 +332,9 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         noise_pred = call_unet(unet, next_inter_sample, next_timestep, uncond_embeddings, None, None)
         latent = next_step2(noise_pred, current_timestep, latent, scheduler)
         all_latent2.append(latent)
-
-    return all_latent2, time_steps, pil_images#, noise_pred_dict
+    """
+    #return all_latent2, time_steps, pil_images#, noise_pred_dict
+    return all_latent, time_steps, pil_images  # , noise_pred_dict
 
 
 
