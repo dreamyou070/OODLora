@@ -245,21 +245,6 @@ def call_unet(unet, noisy_latents, timesteps, text_conds, trg_indexs_list, mask_
                       trg_indexs_list=trg_indexs_list,
                       mask_imgs=mask_imgs, ).sample
     return noise_pred
-# latent = next_step(noise_pred, current_timestep, latent, scheduler)
-def next_step2(model_output: Union[torch.FloatTensor, np.ndarray],
-              timestep: int,
-              sample: Union[torch.FloatTensor, np.ndarray],
-              scheduler):
-    if args.inversion_experiment:
-        model_output = torch.randn_like(model_output)
-    timestep, next_timestep = timestep, min( timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
-    alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
-    alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
-    beta_prod_t = 1 - alpha_prod_t
-    model_output_coeff = (beta_prod_t ** 0.5 ) - ((alpha_prod_t/alpha_prod_t_next) * (1-alpha_prod_t_next))**0.5
-    next_original_sample = sample - (model_output_coeff) * model_output
-    next_sample = next_original_sample * ((alpha_prod_t_next/alpha_prod_t) ** 0.5)
-    return next_sample
 def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
@@ -271,13 +256,6 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
     next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
     next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
-    return next_sample
-
-def scheduling_latent(original_sample, model_output, timestep, scheduler) :
-    current_timestep, next_timestep = timestep, min( timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
-    alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
-    next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
-    next_sample = alpha_prod_t_next ** 0.5 * original_sample + next_sample_direction
     return next_sample
 
 def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
@@ -316,24 +294,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         noise_pred_dict[t.item()] = noise_pred
         latent = next_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
-
-    latent = original_sample
-    all_latent2 = [latent]
-    attention_storer.reset()
-    for i in torch.flip(inference_times, dims=[0]):
-        current_timestep = i.item()
-        next_timestep = min(current_timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
-        try :
-            print('next sample from dict')
-            next_inter_sample = latent_dict[next_timestep.item()]
-        except :
-            next_inter_sample = torch.randn_like(latent)
-        noise_pred = call_unet(unet, next_inter_sample, next_timestep, uncond_embeddings, None, None)
-        latent = next_step2(noise_pred, current_timestep, latent, scheduler)
-        all_latent2.append(latent)
-
-    return all_latent2, time_steps, pil_images#, noise_pred_dict
-    #   return all_latent, time_steps, pil_images  # , noise_pred_dict
+    return all_latent, time_steps, pil_images  # , noise_pred_dict
 
 
 
@@ -414,7 +375,7 @@ def main(args) :
         json.dump(vars(args), f, indent=4)
 
     #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
-    base_folder_dir = f'../infer_test/inverting_with_original_sample_std_gaussian_twice'
+    base_folder_dir = f'../infer_test/zero_snr'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
@@ -469,7 +430,8 @@ def main(args) :
     SCHEDULER_TIMESTEPS = 1000
     SCHEDLER_SCHEDULE = "scaled_linear"
     scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,
-                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,)
+                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,
+                              rescale_betas_zero_snr=True)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
 
@@ -482,33 +444,6 @@ def main(args) :
     else:
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
-    """
-    print(f' (2.3.2) reconstruction with correcting')
-    print(f' (1.3) network')
-    sys.path.append(os.path.dirname(__file__))
-    network_module = importlib.import_module(args.network_module)
-    print(f' (1.3.1) merging weights')
-    net_kwargs = {}
-    if args.network_args is not None:
-        for net_arg in args.network_args:
-            key, value = net_arg.split("=")
-            net_kwargs[key] = value
-    print(f' (1.3.3) make network')
-    if args.dim_from_weights:
-        network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
-                                                                **net_kwargs)
-    else:
-        network = network_module.create_network(1.0,
-                                                args.network_dim,
-                                                args.network_alpha,
-                                                vae, text_encoder, unet, neuron_dropout=args.network_dropout,
-                                                **net_kwargs, )
-    print(f' (1.3.4) apply trained state dict')
-    network.apply_to(text_encoder, unet, True, True)
-    if args.network_weights is not None:
-        info = network.load_weights(args.network_weights)
-    network.to(device)
-    """
 
 
     print(f' \n step 2. ground-truth image preparing')
@@ -527,8 +462,9 @@ def main(args) :
         image_gt_np = load_512(concept_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         ddim_latents, time_steps, pil_images = ddim_loop(latent, context, inference_times,
-                                                                          scheduler, unet, vae,
-                                                                          base_folder_dir,attention_storer)
+                                                         scheduler, unet, vae,
+                                                         base_folder_dir,
+                                                         attention_storer)
         """
         times = noise_pred_dict.keys()
         for t in times :
@@ -543,22 +479,12 @@ def main(args) :
             plt.close()
         """
         layer_names = attention_storer.self_query_store.keys()
-        #self_query_collection = attention_storer.self_query_store
-        #self_key_collection = attention_storer.self_key_store
-        #self_value_collection = attention_storer.self_value_store
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
-        #cross_query_dict, cross_key_dict, cross_value_dict = {}, {}, {}
         for layer in layer_names:
             self_query_list = attention_storer.self_query_store[layer]
             self_key_list = attention_storer.self_key_store[layer]
             self_value_list = attention_storer.self_value_store[layer]
-            #cross_layer = layer.replace('attn1', 'attn2')
-            #cross_query_list = attention_storer.cross_query_store[cross_layer]
-            #cross_key_list = attention_storer.cross_key_store[cross_layer]
-            #cross_value_list = attention_storer.cross_value_store[cross_layer]
             i = 0
-            #for self_query, self_key, self_value, cross_query, cross_key, cross_value in zip(self_query_list, self_key_list, self_value_list,
-            #                                                                                 cross_query_list,cross_key_list,cross_value_list,) :
             for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list) :
                 time_step = time_steps[i]
                 i += 1
@@ -579,36 +505,6 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
                 else :
                     self_value_dict[time_step][layer] = self_value
-
-        """
-                if time_step not in cross_query_dict.keys() :
-                    cross_query_dict[time_step] = {}
-                    cross_query_dict[time_step][layer] = cross_query
-                else :
-                    cross_query_dict[time_step][layer] = cross_query
-                if time_step not in cross_key_dict.keys() :
-                    cross_key_dict[time_step] = {}
-                    cross_key_dict[time_step][layer] = cross_key
-                else :
-                    cross_key_dict[time_step][layer] = cross_key
-                if time_step not in cross_value_dict.keys() :
-                    cross_value_dict[time_step] = {}
-                    cross_value_dict[time_step][layer] = cross_value
-                else :
-                    cross_value_dict[time_step][layer] = cross_value
-        """
-        """
-                
-        concept_img_name = os.path.splitext(concept_img)[0]
-        self_q[concept_img_name] = self_query_dict
-        self_k[concept_img_name] = self_key_dict
-        self_v[concept_img_name] = self_value_dict
-        #cross_q[concept_img_name] = cross_query_dict
-        #cross_k[concept_img_name] = cross_key_dict
-        #cross_v[concept_img_name] = cross_value_dict
-        attention_storer.reset()
-        print(f' (2.3.2) reconstruction with correcting')
-        """
         print(f' (1.3) network')
         sys.path.append(os.path.dirname(__file__))
         network_module = importlib.import_module(args.network_module)
