@@ -295,6 +295,11 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         noise_pred_dict[t.item()] = noise_pred
         latent = next_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
+    with torch.no_grad():
+        np_img = latent2image(latent, vae, return_type='np')
+    pil_img = Image.fromarray(np_img)
+    pil_images.append(pil_img)
+    pil_img.save(os.path.join(base_folder_dir, f'with_uncon_inversion_{t.item()}.png'))
     return all_latent, time_steps, pil_images  # , noise_pred_dict
 
 
