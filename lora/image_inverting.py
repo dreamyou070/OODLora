@@ -15,6 +15,8 @@ from PIL import Image
 import sys, importlib
 from typing import Union
 from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
+import numpy as np
+import matplotlib.pyplot as plt
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -275,6 +277,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     time_steps = []
     latent = latent.clone().detach()
     latent_dict = {}
+    noise_pred_dict = {}
     pil_images = []
     for t in torch.flip(inference_times, dims=[0]):
         latent_dict[t.item()] = latent
@@ -287,9 +290,12 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         time_steps.append(t.item())
         #noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
         noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
+        noise_pred_dict[t.item()] = noise_pred
         latent = next_step(noise_pred, t.item(), latent, scheduler)
         all_latent.append(latent)
-    return all_latent, time_steps, pil_images
+    return all_latent, time_steps, pil_images, noise_pred_dict
+
+
 
 @torch.no_grad()
 def recon_loop(latent,context,inference_times,scheduler, unet, vae,
@@ -366,7 +372,8 @@ def main(args) :
     with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
         json.dump(vars(args), f, indent=4)
 
-    base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
+    #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
+    base_folder_dir = f'../noise_pred/pretrained_model'
     os.makedirs(base_folder_dir, exist_ok=True)
 
     print(f" (1.0.3) save directory and save config")
@@ -457,7 +464,18 @@ def main(args) :
         concept_img_dir = os.path.join(args.concept_image_folder, concept_img)
         image_gt_np = load_512(concept_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        ddim_latents, time_steps, pil_images = ddim_loop(latent, context, inference_times, scheduler, unet, vae,base_folder_dir)
+        ddim_latents, time_steps, pil_images, noise_pred_dict = ddim_loop(latent, context, inference_times, scheduler, unet, vae,base_folder_dir)
+        times = noise_pred_dict.keys()
+        for t in times :
+            noise_pred = noise_pred_dict[t]
+            # make histogram
+            noise_pred = noise_pred.reshape(-1)
+            mean = noise_pred.mean()
+            plt.hist(noise_pred, bins=25, density=True, alpha=0.6, color='b')
+            plt.axvline(mean, color='b', linestyle='dashed', linewidth=1)
+            save_name = os.path.join(base_folder_dir, f'noise_pred_time_{t}.png')
+            plt.savefig(save_name)
+        """
         layer_names = attention_storer.self_query_store.keys()
         self_query_collection = attention_storer.self_query_store
         self_key_collection = attention_storer.self_key_store
@@ -494,7 +512,8 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
                 else :
                     self_value_dict[time_step][layer] = self_value
-                """
+        """
+        """
                 if time_step not in cross_query_dict.keys() :
                     cross_query_dict[time_step] = {}
                     cross_query_dict[time_step][layer] = cross_query
@@ -510,7 +529,8 @@ def main(args) :
                     cross_value_dict[time_step][layer] = cross_value
                 else :
                     cross_value_dict[time_step][layer] = cross_value
-                """
+        """
+        """
                 i += 1
         concept_img_name = os.path.splitext(concept_img)[0]
         self_q[concept_img_name] = self_query_dict
@@ -555,6 +575,7 @@ def main(args) :
                                                           self_key_dict,
                                                           self_value_dict,
                                                           base_folder_dir)
+        """
         break
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
