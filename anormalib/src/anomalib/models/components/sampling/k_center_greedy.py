@@ -11,8 +11,10 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 from tqdm import tqdm
-
-from anormalib import SparseRandomProjection
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+sys.path.append(os.path.dirname(__file__))
+from models.components.dimensionality_reduction import SparseRandomProjection
 
 
 class KCenterGreedy:
