@@ -1,7 +1,6 @@
 import argparse
 import os
 import random
-import json
 from accelerate.utils import set_seed
 import library.train_util as train_util
 import library.config_util as config_util
@@ -9,14 +8,10 @@ import library.custom_train_functions as custom_train_functions
 import torch
 from torch import nn
 from attention_store import AttentionStore
-import wandb
-import numpy as np
 from PIL import Image
 import sys, importlib
 from typing import Union
-from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
 import numpy as np
-import matplotlib.pyplot as plt
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -31,7 +26,6 @@ except Exception:
 from diffusers import (DDPMScheduler,EulerAncestralDiscreteScheduler,DPMSolverMultistepScheduler,DPMSolverSinglestepScheduler,
                        LMSDiscreteScheduler,PNDMScheduler,EulerDiscreteScheduler,HeunDiscreteScheduler,
                        KDPM2DiscreteScheduler,KDPM2AncestralDiscreteScheduler)
-#from schedulers import DDIMScheduler
 from diffusers import DDIMScheduler
 
 def register_attention_control(unet : nn.Module, controller:AttentionStore) :
@@ -154,7 +148,6 @@ def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
-
 def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dict,self_value_dict):
 
     def ca_forward(self, layer_name):
@@ -272,7 +265,6 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
 
-
 @torch.no_grad()
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
     uncond_embeddings, cond_embeddings = context.chunk(2)
@@ -306,7 +298,6 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
         all_latent.append(latent)
     return all_latent, time_steps, pil_images
 
-
 @torch.no_grad()
 def recon_loop(latent, context, inference_times, scheduler, unet, vae,
                self_query_dict, self_key_dict, self_value_dict,
@@ -317,13 +308,12 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
     time_steps = []
     latent_dict = {}
     pil_images = []
+    # 980, ..., 20
     for i, t in enumerate(inference_times[:-1]):
         current_time = t.item()
         prev_time = inference_times[i+1].item()
-        latent_dict[current_time] = latent
-        time_steps.append(current_time)
-        noise_pred = call_unet(unet, latent, t, cond_embeddings, current_time, None)
-        latent = prev_step(noise_pred, t.item(), latent, scheduler)
+        noise_pred = call_unet(unet, latent, t, cond_embeddings, int(current_time), None)
+        latent = prev_step(noise_pred, current_time, latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
@@ -359,51 +349,38 @@ def init_prompt(tokenizer, text_encoder, device, prompt: str):
 
 def main(args) :
 
-    print(f' \n step 1. make stable diffusion model')
+    print(f' \n step 1. setting')
     if args.process_title:
         setproctitle(args.process_title)
     else:
         setproctitle('parksooyeon')
-
     train_util.verify_training_args(args)
     train_util.prepare_dataset_args(args, True)
-
     if args.seed is None:
         args.seed = random.randint(0, 2 ** 32)
     set_seed(args.seed)
 
-    print(f" (1.0.1) logging")
-    if args.log_with == 'wandb' :
-        wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
-
-    print(f" (1.0.2) save directory and save config")
-    save_base_dir = args.output_dir
-    _, folder_name = os.path.split(save_base_dir)
-    record_save_dir = os.path.join(args.output_dir, "record")
-    os.makedirs(record_save_dir, exist_ok=True)
-    with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
-        json.dump(vars(args), f, indent=4)
-
-    #base_folder_dir = f'../infer_traindata/thredshold_time_{args.threshold_time}_inference_time_{args.num_ddim_steps}_selfattn_cond_kv'
-    base_folder_dir = f'../infer_traindata/new_scheduler_time_correcting_50_inference_without_zero_snr'
-    os.makedirs(base_folder_dir, exist_ok=True)
-
-    print(f" (1.0.3) save directory and save config")
+    print(f" (1.2) save directory and save config")
     weight_dtype, save_dtype = train_util.prepare_dtype(args)
     vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
 
-    print(f' (1.1) tokenizer')
+    print(f" (1.3) save dir")
+    output_dir = args.output_dir
+    os.makedirs(output_dir, exist_ok=True)
+
+    print(f' \n step 2. make stable diffusion model')
+    device = args.device
+    print(f' (2.1) tokenizer')
     tokenizer = train_util.load_tokenizer(args)
     tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
-
-    print(f' (1.2) SD')
-    text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype,
-                                                                                          args.device,
+    print(f' (2.2) SD')
+    invers_text_encoder, vae, invers_unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype,device,
+                                                                                                        unet_use_linear_projection_in_v2=False, )
+    invers_text_encoders = invers_text_encoder if isinstance(invers_text_encoder, list) else [invers_text_encoder]
+    text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
                                                                                           unet_use_linear_projection_in_v2=False, )
     text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-
-    print(f' (1.3.5) register attention storer')
-    print(f' (1.4) scheduler')
+    print(f' (2.3) scheduler')
     sched_init_args = {}
     if args.sample_sampler == "ddim":
         scheduler_cls = DDIMScheduler
@@ -430,53 +407,80 @@ def main(args) :
         scheduler_cls = KDPM2AncestralDiscreteScheduler
     else :
         scheduler_cls = DDIMScheduler
-
     if args.v_parameterization:
         sched_init_args["prediction_type"] = "v_prediction "
-
-    # scheduler:
     SCHEDULER_LINEAR_START = 0.00085
     SCHEDULER_LINEAR_END = 0.0120
     SCHEDULER_TIMESTEPS = 1000
     SCHEDLER_SCHEDULE = "scaled_linear"
     scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,
                               beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,)
-                              #rescale_betas_zero_snr=True)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
-    #scheduler.reset_schedulers()
 
-    print(f' (1.4) model to accelerator device')
+    print(f' (2.4) model to accelerator device')
     device = args.device
-    if len(text_encoders) > 1:
+    if len(invers_text_encoders) > 1:
+        invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device),invers_text_encoders[1].to(device)
+        invers_text_encoder = [invers_t_enc1, invers_t_enc2]
+        del invers_t_enc1, invers_t_enc2
         unet, t_enc1, t_enc2 = unet.to(device), text_encoders[0].to(device), text_encoders[1].to(device)
-        text_encoder = text_encoders = [t_enc1, t_enc2]
+        text_encoder = [t_enc1, t_enc2]
         del t_enc1, t_enc2
     else:
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
+        invers_unet, invers_text_encoder = invers_unet.to(device), invers_text_encoder.to(device)
+        invers_text_encoders = [invers_text_encoder]
+    attention_storer = AttentionStore()
+    register_attention_control(invers_unet, attention_storer)
 
+    print(f' (2.5) network')
+    sys.path.append(os.path.dirname(__file__))
+    network_module = importlib.import_module(args.network_module)
+    print(f' (1.3.1) merging weights')
+    net_kwargs = {}
+    if args.network_args is not None:
+        for net_arg in args.network_args:
+            key, value = net_arg.split("=")
+            net_kwargs[key] = value
+    print(f' (1.3.3) make network')
+    if args.dim_from_weights:
+        network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
+                                                                **net_kwargs)
+    else:
+        network = network_module.create_network(1.0,
+                                                args.network_dim,
+                                                args.network_alpha,
+                                                vae, text_encoder, unet, neuron_dropout=args.network_dropout,
+                                                **net_kwargs, )
+    print(f' (1.3.4) apply trained state dict')
+    network.apply_to(text_encoder, unet, True, True)
+    if args.network_weights is not None:
+        info = network.load_weights(args.network_weights)
+    network.to(device)
 
-    print(f' \n step 2. ground-truth image preparing')
-    print(f' (2.1) prompt condition')
+    print(f' \n step 3. ground-truth image preparing')
+    print(f' (3.1) prompt condition')
     prompt = args.prompt
+    invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
     context = init_prompt(tokenizer, text_encoder, device, prompt)
-    print(f' (2.2) image condition')
+    print(f' (3.2) image condition')
     concept_img_dirs = os.listdir(args.concept_image_folder)
-    print(f' (2.3) inverting as saving self k&v')
+    print(f' (3.3) inverting as saving self k&v')
     for concept_img in concept_img_dirs :
         concept_img_dir = os.path.join(args.concept_image_folder, concept_img)
-
+        concept_name = concept_img.split('.')[0]
         print(f' (2.3.1) inversion')
-        attention_storer = AttentionStore()
-        register_attention_control(unet, attention_storer)
         image_gt_np = load_512(concept_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        ddim_latents, time_steps, pil_images = ddim_loop(latent, context, inference_times,
-                                                         scheduler, unet, vae,
-                                                         base_folder_dir,
+        base_folder = os.path.join(output_dir, concept_name)
+        os.makedirs(base_folder, exist_ok=True)
+        # time_steps = 0,20,..., 980
+        ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context,
+                                                         inference_times,
+                                                         scheduler, invers_unet, vae, base_folder,
                                                          attention_storer)
-
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
@@ -492,7 +496,6 @@ def main(args) :
                     self_query_dict[time_step][layer] = self_query
                 else :
                     self_query_dict[time_step][layer] = self_query
-
                 if time_step not in self_key_dict.keys() :
                     self_key_dict[time_step] = {}
                     self_key_dict[time_step][layer] = self_key
@@ -504,53 +507,26 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
                 else :
                     self_value_dict[time_step][layer] = self_value
-        print(f' (1.3) network')
-        sys.path.append(os.path.dirname(__file__))
-        network_module = importlib.import_module(args.network_module)
-        print(f' (1.3.1) merging weights')
-        net_kwargs = {}
-        if args.network_args is not None:
-            for net_arg in args.network_args:
-                key, value = net_arg.split("=")
-                net_kwargs[key] = value
-        print(f' (1.3.3) make network')
-        if args.dim_from_weights:
-            network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
-                                                                    **net_kwargs)
-        else:
-            network = network_module.create_network(1.0,
-                                                    args.network_dim,
-                                                    args.network_alpha,
-                                                    vae, text_encoder, unet, neuron_dropout=args.network_dropout,
-                                                    **net_kwargs, )
-        print(f' (1.3.4) apply trained state dict')
-        network.apply_to(text_encoder, unet, True, True)
-        if args.network_weights is not None:
-            info = network.load_weights(args.network_weights)
-        network.to(device)
-        unregister_attention_control(unet, attention_storer)
         start_latent = ddim_latents[-2]
-        ddim_latents, time_steps, pil_images = recon_loop(start_latent,
-                                                          context,
-                                                          inference_times,
-                                                          scheduler, unet, vae,
-                                                          self_query_dict,
-                                                          self_key_dict,
-                                                          self_value_dict,
-                                                          base_folder_dir)
-        break
+        # inference_times
+        recon_loop(start_latent, context, inference_times, scheduler, unet, vae, self_query_dict,
+                   self_key_dict, self_value_dict, base_folder)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    # step 1. setting
+    parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argument("--process_title", type=str, default='parksooyeon')
     train_util.add_sd_models_arguments(parser)
     train_util.add_dataset_arguments(parser, True, True, True)
     train_util.add_training_arguments(parser, True)
     train_util.add_optimizer_arguments(parser)
     config_util.add_config_arguments(parser)
     custom_train_functions.add_custom_train_arguments(parser)
+    # step 2. model
+
     parser.add_argument("--no_half_vae", action="store_true",
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
-    parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--process_title", type=str, default='parksooyeon')
     parser.add_argument("--network_module", type=str, default=None,
                         help="network module to train / 学習対象のネットワークのモジュール")
     parser.add_argument("--base_weights", type=str, default=None, nargs="*",
