@@ -282,7 +282,6 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     noise_pred_dict = {}
     pil_images = []
     for t in torch.flip(inference_times, dims=[0]):
-        print(f'in ddim loop function, t : {t.item()}')
         latent_dict[t.item()] = latent
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
@@ -525,7 +524,6 @@ def main(args) :
             for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list) :
                 time_step = time_steps[i]
                 i += 1
-                print(f'saving value got when inverting, timestep : {time_step}')
                 if time_step not in self_query_dict.keys() :
                     self_query_dict[time_step] = {}
                     self_query_dict[time_step][layer] = self_query
