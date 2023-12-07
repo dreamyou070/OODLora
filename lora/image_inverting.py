@@ -301,7 +301,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
 
 @torch.no_grad()
 def recon_loop(latent,context,inference_times,scheduler, unet, vae,
-               self_query_dict, self_key_dict,self_value_dict, base_folder_dir) :
+               self_query_dict, self_key_dict, self_value_dict,
+               base_folder_dir) :
     register_self_condition_giver(unet, self_query_dict, self_key_dict,self_value_dict)
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
@@ -392,11 +393,7 @@ def main(args) :
                                                                                           unet_use_linear_projection_in_v2=False, )
     text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
 
-
-
     print(f' (1.3.5) register attention storer')
-
-
     print(f' (1.4) scheduler')
     sched_init_args = {}
     if args.sample_sampler == "ddim":
@@ -433,10 +430,8 @@ def main(args) :
     SCHEDULER_LINEAR_END = 0.0120
     SCHEDULER_TIMESTEPS = 1000
     SCHEDLER_SCHEDULE = "scaled_linear"
-    scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS,
-                              beta_start=SCHEDULER_LINEAR_START,
-                              beta_end=SCHEDULER_LINEAR_END,
-                              beta_schedule=SCHEDLER_SCHEDULE,)
+    scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,
+                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
 
@@ -485,15 +480,17 @@ def main(args) :
     print(f' (2.2) image condition')
     concept_img_dirs = os.listdir(args.concept_image_folder)
     print(f' (2.3) inverting as saving self k&v')
-    self_q, self_k, self_v, cross_q, cross_k, cross_v = {}, {}, {}, {}, {}, {}
     for concept_img in concept_img_dirs :
+        concept_img_dir = os.path.join(args.concept_image_folder, concept_img)
+
         print(f' (2.3.1) inversion')
         attention_storer = AttentionStore()
         register_attention_control(unet, attention_storer)
-        concept_img_dir = os.path.join(args.concept_image_folder, concept_img)
         image_gt_np = load_512(concept_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        ddim_latents, time_steps, pil_images, noise_pred_dict = ddim_loop(latent, context, inference_times, scheduler, unet, vae,base_folder_dir)
+        ddim_latents, time_steps, pil_images, noise_pred_dict = ddim_loop(latent, context, inference_times,
+                                                                          scheduler, unet, vae,
+                                                                          base_folder_dir)
         """
         times = noise_pred_dict.keys()
         for t in times :
@@ -508,9 +505,9 @@ def main(args) :
             plt.close()
         """
         layer_names = attention_storer.self_query_store.keys()
-        self_query_collection = attention_storer.self_query_store
-        self_key_collection = attention_storer.self_key_store
-        self_value_collection = attention_storer.self_value_store
+        #self_query_collection = attention_storer.self_query_store
+        #self_key_collection = attention_storer.self_key_store
+        #self_value_collection = attention_storer.self_value_store
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         #cross_query_dict, cross_key_dict, cross_value_dict = {}, {}, {}
         for layer in layer_names:
@@ -526,6 +523,7 @@ def main(args) :
             #                                                                                 cross_query_list,cross_key_list,cross_value_list,) :
             for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list) :
                 time_step = time_steps[i]
+                print(f'saving value got when inverting, timestep : {time_step}')
                 if time_step not in self_query_dict.keys() :
                     self_query_dict[time_step] = {}
                     self_query_dict[time_step][layer] = self_query
