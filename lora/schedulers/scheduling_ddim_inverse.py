@@ -58,43 +58,7 @@ def betas_for_alpha_bar(num_diffusion_timesteps, max_beta=0.999) -> torch.Tensor
 
 
 class DDIMInverseScheduler(SchedulerMixin, ConfigMixin):
-    """
-    DDIMInverseScheduler is the reverse scheduler of [`DDIMScheduler`].
-
-    [`~ConfigMixin`] takes care of storing all config attributes that are passed in the scheduler's `__init__`
-    function, such as `num_train_timesteps`. They can be accessed via `scheduler.config.num_train_timesteps`.
-    [`SchedulerMixin`] provides general loading and saving functionality via the [`SchedulerMixin.save_pretrained`] and
-    [`~SchedulerMixin.from_pretrained`] functions.
-
-    For more details, see the original paper: https://arxiv.org/abs/2010.02502
-
-    Args:
-        num_train_timesteps (`int`): number of diffusion steps used to train the model.
-        beta_start (`float`): the starting `beta` value of inference.
-        beta_end (`float`): the final `beta` value.
-        beta_schedule (`str`):
-            the beta schedule, a mapping from a beta range to a sequence of betas for stepping the model. Choose from
-            `linear`, `scaled_linear`, or `squaredcos_cap_v2`.
-        trained_betas (`np.ndarray`, optional):
-            option to pass an array of betas directly to the constructor to bypass `beta_start`, `beta_end` etc.
-        clip_sample (`bool`, default `True`):
-            option to clip predicted sample between -1 and 1 for numerical stability.
-        set_alpha_to_one (`bool`, default `True`):
-            each diffusion step uses the value of alphas product at that step and at the previous one. For the final
-            step there is no previous alpha. When this option is `True` the previous alpha product is fixed to `1`,
-            otherwise it uses the value of alpha at step 0.
-        steps_offset (`int`, default `0`):
-            an offset added to the inference steps. You can use a combination of `offset=1` and
-            `set_alpha_to_one=False`, to make the last step use step 0 for the previous alpha product, as done in
-            stable diffusion.
-        prediction_type (`str`, default `epsilon`, optional):
-            prediction type of the scheduler function, one of `epsilon` (predicting the noise of the diffusion
-            process), `sample` (directly predicting the noisy sample`) or `v_prediction` (see section 2.4
-            https://imagen.research.google/video/paper.pdf)
-    """
-
     order = 1
-
     @register_to_config
     def __init__(
         self,
@@ -154,32 +118,18 @@ class DDIMInverseScheduler(SchedulerMixin, ConfigMixin):
         return sample
 
     def set_timesteps(self, num_inference_steps: int, device: Union[str, torch.device] = None):
-        """
-        Sets the discrete timesteps used for the diffusion chain. Supporting function to be run before inference.
-
-        Args:
-            num_inference_steps (`int`):
-                the number of diffusion steps used when generating samples with a pre-trained model.
-        """
-
         if num_inference_steps > self.config.num_train_timesteps:
             raise ValueError(
                 f"`num_inference_steps`: {num_inference_steps} cannot be larger than `self.config.train_timesteps`:"
                 f" {self.config.num_train_timesteps} as the unet model trained with this scheduler can only handle"
-                f" maximal {self.config.num_train_timesteps} timesteps."
-            )
-
+                f" maximal {self.config.num_train_timesteps} timesteps.")
         self.num_inference_steps = num_inference_steps
         step_ratio = self.config.num_train_timesteps // self.num_inference_steps
-        # creates integer timesteps by multiplying by ratio
-        # casting to int to avoid issues when num_inference_step is power of 3
         timesteps = (np.arange(0, num_inference_steps) * step_ratio).round().copy().astype(np.int64)
         self.timesteps = torch.from_numpy(timesteps).to(device)
         self.timesteps += self.config.steps_offset
 
-    def step(
-        self,
-        model_output: torch.FloatTensor,
+    def step(self,model_output: torch.FloatTensor,
         timestep: int,
         sample: torch.FloatTensor,
         eta: float = 0.0,
@@ -188,22 +138,15 @@ class DDIMInverseScheduler(SchedulerMixin, ConfigMixin):
         return_dict: bool = True,
     ) -> Union[DDIMSchedulerOutput, Tuple]:
         e_t = model_output
-
         x = sample
         prev_timestep = timestep + self.config.num_train_timesteps // self.num_inference_steps
-
-        a_t = self.alphas_cumprod[timestep - 1]
-        a_prev = self.alphas_cumprod[prev_timestep - 1] if prev_timestep >= 0 else self.final_alpha_cumprod
-
+        a_t = self.alphas_cumprod[timestep]
+        a_prev = self.alphas_cumprod[prev_timestep] if prev_timestep >= 0 else self.final_alpha_cumprod
         pred_x0 = (x - (1 - a_t) ** 0.5 * e_t) / a_t.sqrt()
-
         dir_xt = (1.0 - a_prev).sqrt() * e_t
-
         prev_sample = a_prev.sqrt() * pred_x0 + dir_xt
-
         if not return_dict:
             return (prev_sample, pred_x0)
         return DDIMSchedulerOutput(prev_sample=prev_sample, pred_original_sample=pred_x0)
-
     def __len__(self):
         return self.config.num_train_timesteps

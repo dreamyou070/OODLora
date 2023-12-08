@@ -370,27 +370,12 @@ class DDIMScheduler(SchedulerMixin, ConfigMixin):
             raise ValueError(
                 "Number of inference steps is 'None', you need to run 'set_timesteps' after creating the scheduler"
             )
-
-        # See formulas (12) and (16) of DDIM paper https://arxiv.org/pdf/2010.02502.pdf
-        # Ideally, read DDIM paper in-detail understanding
-
-        # Notation (<variable name> -> <name in paper>
-        # - pred_noise_t -> e_theta(x_t, t)
-        # - pred_original_sample -> f_theta(x_t, t) or x_0
-        # - std_dev_t -> sigma_t
-        # - eta -> η
-        # - pred_sample_direction -> "direction pointing to x_t"
-        # - pred_prev_sample -> "x_t-1"
-
         # 1. get previous step value (=t-1)
         prev_timestep = timestep - self.config.num_train_timesteps // self.num_inference_steps
-
         # 2. compute alphas, betas
         alpha_prod_t = self.alphas_cumprod[timestep]
         alpha_prod_t_prev = self.alphas_cumprod[prev_timestep] if prev_timestep >= 0 else self.final_alpha_cumprod
-
         beta_prod_t = 1 - alpha_prod_t
-
         # 3. compute predicted original sample from predicted noise also called
         # "predicted x_0" of formula (12) from https://arxiv.org/pdf/2010.02502.pdf
         if self.config.prediction_type == "epsilon":
