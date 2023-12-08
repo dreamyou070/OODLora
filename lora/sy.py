@@ -172,14 +172,17 @@ def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dic
                     key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
                     value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
 
+
+
             if self.upcast_attention:
                 query = query.float()
                 key = key.float()
-            attention_scores = torch.baddbmm(
-                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                            device=query.device),
-                query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                                                         device=query.device),
+                                             query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
+            if mask == 0:
+                print(f'attention_probs : {attention_probs.shape}')
             attention_probs = attention_probs.to(value.dtype)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -313,7 +316,7 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
     for i, t in enumerate(inference_times[:-1]):
         current_time = t.item()
         prev_time = inference_times[i+1].item()
-        noise_pred = call_unet(unet, latent, t, cond_embeddings, int(current_time), None)
+        noise_pred = call_unet(unet, latent, t, cond_embeddings, int(current_time), prev_time)
         latent = prev_step(noise_pred, current_time, latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')

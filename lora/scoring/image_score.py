@@ -3,6 +3,7 @@ import os, sys
 import random
 from accelerate.utils import set_seed
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from attention_store import AttentionStore
 import library.train_util as train_util
 import library.config_util as config_util
 import library.custom_train_functions as custom_train_functions
@@ -88,6 +89,70 @@ def image2latent(image, vae, device, weight_dtype):
 def cvt2heatmap(gray):
     heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
     return heatmap
+def register_attention_control(unet : nn.Module, controller:AttentionStore) :
+    """ Register cross attention layers to controller. """
+    def ca_forward(self, layer_name):
+
+        def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
+            is_cross_attention = False
+            if context is not None:
+                is_cross_attention = True
+            query = self.to_q(hidden_states)
+            context = context if context is not None else hidden_states
+            key = self.to_k(context)
+            value = self.to_v(context)
+
+            query = self.reshape_heads_to_batch_dim(query)
+            key = self.reshape_heads_to_batch_dim(key)
+            value = self.reshape_heads_to_batch_dim(value)
+
+            if self.upcast_attention:
+                query = query.float()
+                key = key.float()
+            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                                                         device=query.device),
+                                             query,key.transpose(-1, -2),beta=0,alpha=self.scale, )
+            attention_probs = attention_scores.softmax(dim=-1)
+            attention_probs = attention_probs.to(value.dtype)
+
+            if not is_cross_attention:
+                # when self attention
+                controller.self_query_key_value_caching(query_value=query.detach().cpu(),
+                                                        key_value=key.detach().cpu(),
+                                                        value_value=value.detach().cpu(),
+                                                        layer_name=layer_name)
+            """
+            else :
+                query, key, value = controller.cross_query_key_value_caching(query_value=query,
+                                                                             key_value=key,
+                                                                             value_value=value,
+                                                                             layer_name=layer_name)
+            """
+            hidden_states = torch.bmm(attention_probs, value)
+            hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
+            hidden_states = self.to_out[0](hidden_states)
+            return hidden_states
+        return forward
+
+    def register_recr(net_, count, layer_name):
+        if net_.__class__.__name__ == 'CrossAttention':
+            net_.forward = ca_forward(net_, layer_name)
+            return count + 1
+        elif hasattr(net_, 'children'):
+            for name__, net__ in net_.named_children():
+                full_name = f'{layer_name}_{name__}'
+                count = register_recr(net__, count, full_name)
+        return count
+
+    cross_att_count = 0
+    for net in unet.named_children():
+        if "down" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+        elif "up" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+        elif "mid" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+    controller.num_att_layers = cross_att_count
 
 def main(args) :
 
@@ -196,6 +261,53 @@ def main(args) :
     orgin_img_dir = '../examples/013_origin.png'
     orgin_np = load_512(orgin_img_dir)
     orgin_latent = image2latent(orgin_np, vae, device, weight_dtype)  # 1,4,64,64
+
+    attention_storer = AttentionStore()
+    register_attention_control(unet, attention_storer)
+    noise_pred = call_unet(unet, latent, 0, uncond_embeddings, None, None)
+
+
+
+    ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context,
+                                                     inference_times,
+                                                     scheduler, invers_unet, vae, base_folder,
+                                                     attention_storer)
+    uncond_embeddings, cond_embeddings = context.chunk(2)
+    all_latent = [latent]
+    original_sample = latent.clone().detach()
+    time_steps = []
+    latent = latent.clone().detach()
+    latent_dict = {}
+    noise_pred_dict = {}
+    pil_images = []
+    with torch.no_grad():
+        np_img = latent2image(latent, vae, return_type='np')
+    pil_img = Image.fromarray(np_img)
+    pil_images.append(pil_img)
+    pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
+    inference_times = torch.cat([torch.Tensor([1000]), inference_times])
+    flip_times = torch.flip(inference_times, dims=[0])
+    for i, t in enumerate(flip_times[:-1]):
+        # 0,20,..., 980, 1000
+        next_time = flip_times[i + 1].item()
+        latent_dict[t.item()] = latent
+        time_steps.append(t.item())
+
+        noise_pred_dict[t.item()] = noise_pred
+        latent = next_step(noise_pred, int(t.item()), latent, scheduler)
+        with torch.no_grad():
+            np_img = latent2image(latent, vae, return_type='np')
+        pil_img = Image.fromarray(np_img)
+        pil_images.append(pil_img)
+        pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
+        all_latent.append(latent)
+    return all_latent, time_steps, pil_images
+
+
+
+
+
+
     #orgin_latent = torch.flatten(orgin_latent, start_dim=1)
     #orgin_latent_np = orgin_latent.detach().cpu().numpy()
 
