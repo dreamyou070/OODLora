@@ -57,17 +57,11 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
 
             if not is_cross_attention:
                 # when self attention
+                print('caching self cond')
                 controller.self_query_key_value_caching(query_value=query.detach().cpu(),
                                                         key_value=key.detach().cpu(),
                                                         value_value=value.detach().cpu(),
                                                         layer_name=layer_name)
-            """
-            else :
-                query, key, value = controller.cross_query_key_value_caching(query_value=query,
-                                                                             key_value=key,
-                                                                             value_value=value,
-                                                                             layer_name=layer_name)
-            """
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)

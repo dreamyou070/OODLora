@@ -54,6 +54,7 @@ class AttentionStore :
         return key_value
 
     def self_query_key_value_caching(self,query_value, key_value, value_value, layer_name):
+
         if layer_name not in self.self_query_store.keys() :
             self.self_query_store[layer_name] = []
             self.self_key_store[layer_name] = []
