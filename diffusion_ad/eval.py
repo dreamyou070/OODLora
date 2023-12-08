@@ -396,14 +396,13 @@ def main(args):
         seg_model=SegmentationSubNetwork(in_channels=6, out_channels=1).to(device)
 
         print(f' output : {output}')
-        unet_model.load_state_dict(output["unet_model_state_dict"])
+        #unet_model.load_state_dict(output["unet_model_state_dict"])
         unet_model.to(device)
         unet_model.eval()
 
-        seg_model.load_state_dict(output["seg_model_state_dict"])
+        #seg_model.load_state_dict(output["seg_model_state_dict"])
         seg_model.to(device)
         seg_model.eval()
-
         print("EPOCH:",output['n_epoch'])
 
         if sub_class in visa_classes:

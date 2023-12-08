@@ -66,23 +66,21 @@ def train(training_dataset_loader, testing_dataset_loader, args, data_len,sub_cl
 
     betas = get_beta_schedule(args['T'], args['beta_schedule'])
 
-    ddpm_sample =  GaussianDiffusionModel(
-            args['img_size'], betas, loss_weight=args['loss_weight'],
-            loss_type=args['loss-type'], noise=args["noise_fn"], img_channels=in_channels
-            )
-
+    ddpm_sample =  GaussianDiffusionModel(args['img_size'], betas,
+                                          loss_weight=args['loss_weight'],
+                                          loss_type=args['loss-type'],
+                                          noise=args["noise_fn"],
+                                          img_channels=in_channels)
+    # learning the segmentation model
     seg_model=SegmentationSubNetwork(in_channels=6, out_channels=1).to(device)
-
-
     optimizer_ddpm = optim.Adam( unet_model.parameters(), lr=args['diffusion_lr'],weight_decay=args['weight_decay'])
-    
     optimizer_seg = optim.Adam(seg_model.parameters(),lr=args['seg_lr'],weight_decay=args['weight_decay'])
-    
-    
 
+    # two losses
+    # 1) focal loss
     loss_focal = BinaryFocalLoss().to(device)
+    # 2) smooth L1 loss
     loss_smL1= nn.SmoothL1Loss().to(device)
-    
 
     tqdm_epoch = range(0, args['EPOCHS'] )
     scheduler_seg =optim.lr_scheduler.CosineAnnealingLR(optimizer_seg, T_max=10, eta_min=0, last_epoch=- 1, verbose=False)
@@ -114,7 +112,8 @@ def train(training_dataset_loader, testing_dataset_loader, args, data_len,sub_cl
             anomaly_mask = sample["anomaly_mask"].to(device)
             anomaly_label = sample["has_anomaly"].to(device).squeeze()
 
-            noise_loss, pred_x0,normal_t,x_normal_t,x_noiser_t = ddpm_sample.norm_guided_one_step_denoising(unet_model, aug_image, anomaly_label,args)
+            noise_loss, pred_x0,normal_t,x_normal_t,x_noiser_t = ddpm_sample.norm_guided_one_step_denoising(unet_model,
+                                                                                                            aug_image, anomaly_label,args)
             pred_mask = seg_model(torch.cat((aug_image, pred_x0), dim=1)) 
 
             #loss
@@ -159,15 +158,17 @@ def train(training_dataset_loader, testing_dataset_loader, args, data_len,sub_cl
                     best_epoch = epoch
                 
             
-    save(unet_model,seg_model, args=args,final='last',epoch=args['EPOCHS'],sub_class=sub_class)
-
+    save(unet_model,
+         seg_model,
+         args=args,
+         final='last',
+         epoch=args['EPOCHS'],sub_class=sub_class)
 
 
     temp = {"classname":[sub_class],"Image-AUROC": [best_image_auroc],"Pixel-AUROC":[best_pixel_auroc],"epoch":best_epoch}
     df_class = pd.DataFrame(temp)
     df_class.to_csv(f"{args['output_path']}/metrics/ARGS={args['arg_num']}/{args['eval_normal_t']}_{args['eval_noisier_t']}t_{args['condition_w']}_{class_type}_image_pixel_auroc_train.csv", mode='a',header=False,index=False)
    
-    
 
 def eval(testing_dataset_loader,args,unet_model,seg_model,data_len,sub_class,device):
     unet_model.eval()
@@ -175,11 +176,12 @@ def eval(testing_dataset_loader,args,unet_model,seg_model,data_len,sub_class,dev
     os.makedirs(f'{args["output_path"]}/metrics/ARGS={args["arg_num"]}/{sub_class}/', exist_ok=True)
     in_channels = args["channels"]
     betas = get_beta_schedule(args['T'], args['beta_schedule'])
-
-    ddpm_sample =  GaussianDiffusionModel(
-            args['img_size'], betas, loss_weight=args['loss_weight'],
-            loss_type=args['loss-type'], noise=args["noise_fn"], img_channels=in_channels
-            )
+    ddpm_sample =  GaussianDiffusionModel(args['img_size'],
+                                          betas,
+                                          loss_weight=args['loss_weight'],
+                                          loss_type=args['loss-type'],
+                                          noise=args["noise_fn"],
+                                          img_channels=in_channels)
     
     print("data_len",data_len)
     total_image_pred = np.array([])
@@ -191,29 +193,30 @@ def eval(testing_dataset_loader,args,unet_model,seg_model,data_len,sub_class,dev
         image = sample["image"].to(device)
         target=sample['has_anomaly'].to(device)
         gt_mask = sample["mask"].to(device)
-
         normal_t_tensor = torch.tensor([args["eval_normal_t"]], device=image.device).repeat(image.shape[0])
         noiser_t_tensor = torch.tensor([args["eval_noisier_t"]], device=image.device).repeat(image.shape[0])
-        loss,pred_x_0_condition,pred_x_0_normal,pred_x_0_noisier,x_normal_t,x_noiser_t,pred_x_t_noisier = ddpm_sample.norm_guided_one_step_denoising_eval(unet_model, image, normal_t_tensor,noiser_t_tensor,args)
-        pred_mask = seg_model(torch.cat((image, pred_x_0_condition), dim=1)) 
-
+        loss,pred_x_0_condition,pred_x_0_normal,pred_x_0_noisier,x_normal_t,x_noiser_t,pred_x_t_noisier = ddpm_sample.norm_guided_one_step_denoising_eval(unet_model,
+                                                                                                                                                          image,
+                                                                                                                                                          normal_t_tensor,
+                                                                                                                                                          noiser_t_tensor,
+                                                                                                                                                          args)
+        # (1) get anomaly mask from segmentation model
+        pred_mask = seg_model(torch.cat((image, pred_x_0_condition), # concat image as a input to the segmentation model
+                                        dim=1))
         out_mask = pred_mask
-
         topk_out_mask = torch.flatten(out_mask[0], start_dim=1)
         topk_out_mask = torch.topk(topk_out_mask, 50, dim=1, largest=True)[0]
         image_score = torch.mean(topk_out_mask)
-        
         total_image_pred=np.append(total_image_pred,image_score.detach().cpu().numpy())
         total_image_gt=np.append(total_image_gt,target[0].detach().cpu().numpy())
-
 
         flatten_pred_mask=out_mask[0].flatten().detach().cpu().numpy()
         flatten_gt_mask =gt_mask[0].flatten().detach().cpu().numpy().astype(int)
             
         total_pixel_gt=np.append(total_pixel_gt,flatten_gt_mask)
         total_pixel_pred=np.append(total_pixel_pred,flatten_pred_mask)
-        
-        
+
+    # (2) get ROC-AUC score
     print(sub_class)
     auroc_image = round(roc_auc_score(total_image_gt,total_image_pred),3)*100
     print("Image AUC-ROC: " ,auroc_image)
@@ -227,8 +230,7 @@ def eval(testing_dataset_loader,args,unet_model,seg_model,data_len,sub_class,dev
 def save(unet_model,seg_model, args,final,epoch,sub_class):
     
     if final=='last':
-        torch.save(
-            {
+        torch.save({
                 'n_epoch':              epoch,
                 'unet_model_state_dict': unet_model.state_dict(),
                 'seg_model_state_dict':  seg_model.state_dict(),
@@ -249,76 +251,50 @@ def save(unet_model,seg_model, args,final,epoch,sub_class):
     
 
 def main():
+
+    print(f'\n step 1. experiment setting')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # read file from argument
     file = "args1.json"
-    # load the json args
     with open(f'args/{file}', 'r') as f:
         args = json.load(f)
     args['arg_num'] = file[4:-5]
     args = defaultdict_from_json(args)
 
-
-    mvtec_classes = ['carpet', 'grid', 'leather', 'tile', 'wood', 'bottle', 'cable', 'capsule', 'hazelnut', 'metal_nut', 'pill', 'screw',
-            'toothbrush', 'transistor', 'zipper']
-    
+    print(f'\n step 2. check data')
+    mvtec_classes = ['carpet', 'grid', 'leather', 'tile', 'wood', 'bottle', 'cable', 'capsule', 'hazelnut', 'metal_nut', 'pill', 'screw','toothbrush', 'transistor', 'zipper']
     visa_classes = ['candle', 'capsules', 'cashew', 'chewinggum', 'fryum', 'macaroni1', 'macaroni2', 'pcb1', 'pcb2',
-             'pcb3', 'pcb4', 'pipe_fryum']
-    
+                    'pcb3', 'pcb4', 'pipe_fryum']
     mpdd_classes = ['bracket_black', 'bracket_brown', 'bracket_white', 'connector', 'metal_plate', 'tubes'] 
     dagm_class = ['Class1', 'Class2', 'Class3', 'Class4', 'Class5','Class6', 'Class7', 'Class8', 'Class9', 'Class10']
-
-
     current_classes = mvtec_classes
-
     class_type = ''
     for sub_class in current_classes:    
         print("class",sub_class)
         if sub_class in visa_classes:
             subclass_path = os.path.join(args["visa_root_path"],sub_class)
             print(subclass_path)
-            training_dataset = VisATrainDataset(
-                subclass_path,sub_class,img_size=args["img_size"],args=args
-                )
-            testing_dataset = VisATestDataset(
-                subclass_path,sub_class,img_size=args["img_size"],
-                )
+            training_dataset = VisATrainDataset(subclass_path,sub_class,img_size=args["img_size"],args=args)
+            testing_dataset = VisATestDataset(subclass_path,sub_class,img_size=args["img_size"],)
             class_type='VisA'
         elif sub_class in mpdd_classes:
             subclass_path = os.path.join(args["mpdd_root_path"],sub_class)
-            training_dataset = MPDDTrainDataset(
-                subclass_path,sub_class,img_size=args["img_size"],args=args
-                )
-            testing_dataset = MPDDTestDataset(
-                subclass_path,sub_class,img_size=args["img_size"],
-                )
+            training_dataset = MPDDTrainDataset(subclass_path,sub_class,img_size=args["img_size"],args=args)
+            testing_dataset = MPDDTestDataset(subclass_path,sub_class,img_size=args["img_size"],)
             class_type='MPDD'
         elif sub_class in mvtec_classes:
             subclass_path = os.path.join(args["mvtec_root_path"],sub_class)
-            training_dataset = MVTecTrainDataset(
-                subclass_path,sub_class,img_size=args["img_size"],args=args
-                )
-            testing_dataset = MVTecTestDataset(
-                subclass_path,sub_class,img_size=args["img_size"],
-                )
+            training_dataset = MVTecTrainDataset(subclass_path,sub_class,img_size=args["img_size"],args=args)
+            testing_dataset = MVTecTestDataset(subclass_path,sub_class,img_size=args["img_size"],)
             class_type='MVTec'
         elif sub_class in dagm_class:
             subclass_path = os.path.join(args["dagm_root_path"],sub_class)
-            training_dataset = DAGMTrainDataset(
-                subclass_path,sub_class,img_size=args["img_size"],args=args
-                )
-            testing_dataset =DAGMTestDataset(
-                subclass_path,sub_class,img_size=args["img_size"],
-                )
+            training_dataset = DAGMTrainDataset(subclass_path,sub_class,img_size=args["img_size"],args=args)
+            testing_dataset =DAGMTestDataset(subclass_path,sub_class,img_size=args["img_size"],)
             class_type='DAGM'
-        
-
-        print(file, args)     
-
-        data_len = len(testing_dataset) 
+        print(file, args)
+        data_len = len(testing_dataset)
         training_dataset_loader = DataLoader(training_dataset, batch_size=args['Batch_Size'],shuffle=True,num_workers=8,pin_memory=True,drop_last=True)
         test_loader = DataLoader(testing_dataset, batch_size=1,shuffle=False, num_workers=4)
-
         # make arg specific directories
         for i in [f'{args["output_path"]}/model/diff-params-ARGS={args["arg_num"]}/{sub_class}',
                 f'{args["output_path"]}/diffusion-training-images/ARGS={args["arg_num"]}/{sub_class}']:
@@ -326,9 +302,8 @@ def main():
                 os.makedirs(i)
             except OSError:
                 pass
-
-    
         train(training_dataset_loader, test_loader, args, data_len,sub_class,class_type,device )
+        break
 
 if __name__ == '__main__':
     

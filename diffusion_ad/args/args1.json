@@ -18,7 +18,7 @@
   "num_head_channels":-1,
   "noise_fn":"gauss",
   "channels":3,
-  "mvtec_root_path":"",
+  "mvtec_root_path":"/data7/sooyeon/MyData/anomaly_detection/MVTec",
   "visa_root_path":"",
   "dagm_root_path":"",
   "mpdd_root_path":"",
@@ -28,6 +28,5 @@
   "condition_w":1,
   "eval_normal_t":200,
   "eval_noisier_t":400,
-  "output_path":""
-
+  "output_path":"/data7/sooyeon/Lora/OODLora/result/MVTec"
 }
