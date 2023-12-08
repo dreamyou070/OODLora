@@ -191,6 +191,8 @@ if __name__ == "__main__":
 
     # step 2. model
     train_util.add_sd_models_arguments(parser)
+    parser.add_argument("--vae", type=str, default=None,
+                        help="path to checkpoint of vae to replace / VAEを入れ替える場合、VAEのcheckpointファイルまたはディレクトリ")
     parser.add_argument("--network_module", type=str, default=None,
                         help="network module to train / 学習対象のネットワークのモジュール")
     parser.add_argument("--base_weights", type=str, default=None, nargs="*",

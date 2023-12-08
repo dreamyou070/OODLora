@@ -2516,21 +2516,17 @@ def get_sai_model_spec(
 def add_sd_models_arguments(parser: argparse.ArgumentParser):
     # for pretrained models
     parser.add_argument("--v2", action="store_true", help="load Stable Diffusion v2.0 model / Stable Diffusion 2.0のモデルを読み込む")
-    parser.add_argument(
-        "--v_parameterization", action="store_true", help="enable v-parameterization training / v-parameterization学習を有効にする"
+    parser.add_argument("--v_parameterization", action="store_true", help="enable v-parameterization training / v-parameterization学習を有効にする"
     )
-    parser.add_argument(
-        "--pretrained_model_name_or_path",
+    parser.add_argument("--pretrained_model_name_or_path",
         type=str,
         default=None,
         help="pretrained model to train, directory to Diffusers model or StableDiffusion checkpoint / 学習元モデル、Diffusers形式モデルのディレクトリまたはStableDiffusionのckptファイル",
     )
-    parser.add_argument(
-        "--tokenizer_cache_dir",
+    parser.add_argument("--tokenizer_cache_dir",
         type=str,
         default=None,
-        help="directory for caching Tokenizer (for offline training) / Tokenizerをキャッシュするディレクトリ（ネット接続なしでの学習のため）",
-    )
+        help="directory for caching Tokenizer (for offline training) / Tokenizerをキャッシュするディレクトリ（ネット接続なしでの学習のため）",)
 
 
 def add_optimizer_arguments(parser: argparse.ArgumentParser):
