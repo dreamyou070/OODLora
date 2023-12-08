@@ -333,8 +333,6 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             latent_diff_dict[guidance_scale] = latent_diff.mean()
             latent_dictionary[guidance_scale] = inter_noise_pred
         best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
-        print(f'latent_diff_dict : {latent_diff_dict}')
-        print(f'best guidance scale is {best_guidance_scale}')
         noise_pred = latent_dictionary[best_guidance_scale]
         latent = prev_step(noise_pred, int(t), latent, scheduler)
         with torch.no_grad():
@@ -549,6 +547,31 @@ def main(args) :
                                       time_steps,
                                       scheduler,unet, vae,base_folder)
         attention_storer.reset()
+
+        with open(os.path.join(base_folder, 'config.json'), 'w') as f:
+            json.dump(vars(args), f, indent=4)
+
+        print(f' (2.3.3) heatmap checking')
+        org_img_dir = os.path.join(args.concept_image_folder, concept_img)
+        orgin_latent = image2latent(load_512(org_img_dir), vae, device, weight_dtype)
+        recon_latent = all_latent[-1]
+        input_latent = torch.cat([orgin_latent, recon_latent])
+        query_storer = AttentionStore()
+        register_attention_control(unet, query_storer)
+        un, _ = context.chunk(2)
+        call_unet(unet,input_latent,torch.cat([un] * 2),scheduler, vae, device, weight_dtype)
+        query_storer = query_storer.self_query_store
+        layer_names = query_storer.keys()
+        for layer_name in layer_names :
+            query_value_list = query_storer[layer_name]
+            query_collecting = query_value_list[0]
+            org_query, recon_query = query_collecting.chunk(2)
+            print(f'len(query_value_list) : {len(query_value_list)}')
+            #query_value = torch.mean(query_value_list[0], dim=1)
+            #query_storer.self_query_store[layer_name] = query_value
+
+        """
+        origin_image = latent2image(latent, vae, device, weight_dtype)
         attn_prob_storer = collector.step_store
         layer_names = attn_prob_storer.keys()
 
@@ -581,9 +604,8 @@ def main(args) :
             pil_image = Image.fromarray(heatmap).resize((512, 512))
             heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
             pil_image.save(heatmap_save_dir)
+        """
 
-        with open(os.path.join(base_folder, 'config.json'), 'w') as f:
-            json.dump(vars(args), f, indent=4)
         break
 
 
