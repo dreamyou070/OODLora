@@ -57,7 +57,6 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
 
             if not is_cross_attention:
                 # when self attention
-                print('caching values ...')
                 controller.self_query_key_value_caching(query_value=query.detach().cpu(),
                                                         key_value=key.detach().cpu(),
                                                         value_value=value.detach().cpu(),
@@ -288,7 +287,6 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     repeat_time = 0
     for i, t in enumerate(flip_times[:-1]):
         if repeat_time < args.repeat_time :
-        # 0,20,..., 980, 1000
             next_time = flip_times[i+1].item()
             latent_dict[t.item()] = latent
             time_steps.append(t.item())
@@ -496,9 +494,6 @@ def main(args) :
         base_folder = os.path.join(base_folder, f'using_correcting_recon_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
         os.makedirs(base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
-
-
-
         ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context,
                                                          inference_times,
                                                          scheduler,

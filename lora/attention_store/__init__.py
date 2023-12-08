@@ -67,6 +67,7 @@ class AttentionStore :
             self.self_key_store[layer_name].append(key_value)
             self.self_value_store[layer_name].append(value_value)
             self.repeat += 1
+        print(f'self.repeat : {self.repeat}')
 
     def cross_query_key_value_caching(self, query_value, key_value, value_value, layer_name):
         if layer_name not in self.cross_query_store.keys() :
