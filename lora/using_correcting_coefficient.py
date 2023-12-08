@@ -261,7 +261,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
 
 @torch.no_grad()
 def ddim_loop(latent, context, scheduler, unet, vae, base_folder_dir, attention_storer):
-    inference_times, = scheduler.inference_times
+    inference_times, = scheduler.timesteps
     print(f'Inference times : {inference_times}')
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
@@ -285,7 +285,7 @@ def ddim_loop(latent, context, scheduler, unet, vae, base_folder_dir, attention_
             time_steps.append(t.item())
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[t.item()] = noise_pred
-            latent = next_step(noise_pred, int(t.item()), latent, scheduler)
+            latent = scheduler.step(model_output = noise_pred,timestep = int(t.item()),sample = latent,).prev_sample
             with torch.no_grad():
                 np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
