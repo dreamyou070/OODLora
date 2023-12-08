@@ -321,35 +321,32 @@ def recon_loop(latents, context, inference_times, scheduler, unet, vae, base_fol
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
-    repeat_time = 0
-    for i, t in enumerate(inference_times):
-        if repeat_time < args.repeat_time:
-            prev_time = inference_times[i+1].item()
-            time_steps.append(t.item())
-            input_latent = torch.cat([latent] * 2)
-            trg_latent = latents[-(i + 2)]
-            noise_pred = call_unet(unet, input_latent, t, context, None, None)
-            guidance_scales = [1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10]
-            latent_diff_dict = {}
-            latent_dict = {}
-            for guidance_scale in guidance_scales:
-                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-                latent = prev_step(noise_pred, int(t.item()), latent, scheduler)
-                latent_diff = torch.nn.functional.mse_loss(latent.float(), trg_latent.float(), reduction='none')
-                latent_diff_dict[guidance_scale] = latent_diff.mean()
-                latent_dict[guidance_scale] = noise_pred
-            best_guidance_scale = min(latent_dict, key=latent_dict.get)
-            noise_pred = latent_dict[best_guidance_scale]
-            latent = next_step(noise_pred, int(t.item()), latent, scheduler)
-            with torch.no_grad():
-                np_img = latent2image(latent, vae, return_type='np')
-            pil_img = Image.fromarray(np_img)
-            pil_images.append(pil_img)
-            pil_img.save(os.path.join(base_folder_dir, f'recon_{next_time}.png'))
-            repeat_time += 1
-            all_latent.append(latent)
-    time_steps.append(next_time)
+    for i, t in enumerate(inference_times[:-1]):
+        prev_time = inference_times[i+1].item()
+        time_steps.append(t.item())
+        input_latent = torch.cat([latent] * 2)
+        trg_latent = latents[-(i + 2)]
+        noise_pred = call_unet(unet, input_latent, t, context, None, None)
+        guidance_scales = [1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10]
+        latent_diff_dict = {}
+        latent_dict = {}
+        for guidance_scale in guidance_scales:
+            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+            inter_noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+            latent_diff = torch.nn.functional.mse_loss(prev_step(noise_pred, int(t.item()), latent, scheduler).float(),
+                                                       trg_latent.float(), reduction='none')
+            latent_diff_dict[guidance_scale] = latent_diff.mean()
+            latent_dict[guidance_scale] = inter_noise_pred
+        best_guidance_scale = min(latent_dict, key=latent_dict.get)
+        noise_pred = latent_dict[best_guidance_scale]
+        latent = next_step(noise_pred, int(t.item()), latent, scheduler)
+        with torch.no_grad():
+            np_img = latent2image(latent, vae, return_type='np')
+        pil_img = Image.fromarray(np_img)
+        pil_images.append(pil_img)
+        pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+        all_latent.append(latent)
+    time_steps.append(prev_time)
     return all_latent, time_steps, pil_images
 
 
@@ -511,8 +508,12 @@ def main(args) :
         base_folder = os.path.join(base_folder, f'test_recon_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
         os.makedirs(base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
-        ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context, inference_times,
-                                                         scheduler, invers_unet, vae, base_folder, attention_storer)
+        ddim_latents, time_steps, pil_images = ddim_loop(latent,
+                                                         invers_context,
+                                                         inference_times,
+                                                         scheduler,
+                                                         invers_unet, vae, base_folder, attention_storer)
+
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
@@ -547,7 +548,7 @@ def main(args) :
         time_steps.reverse()
         all_latent, _, _ = recon_loop(ddim_latents,
                                       context,
-                                      time_steps.reverse(),
+                                      time_steps,
                                       scheduler,unet, vae,base_folder)
         attention_storer.reset()
         attn_prob_storer = collector.step_store
