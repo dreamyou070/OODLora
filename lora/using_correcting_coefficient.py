@@ -260,8 +260,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     return prev_sample
 
 @torch.no_grad()
-def ddim_loop(latent, context, scheduler, unet, vae, base_folder_dir, attention_storer):
-    inference_times = scheduler.timesteps
+def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
     print(f'Inference times : {inference_times}')
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
@@ -486,6 +485,7 @@ def main(args) :
         os.makedirs(base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
         inference_times = scheduler.timesteps
+
         ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context,
                                                          inference_times,
                                                          scheduler, invers_unet, vae, base_folder,
