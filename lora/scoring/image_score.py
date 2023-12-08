@@ -49,6 +49,28 @@ def load_512(image_path, left=0, right=0, top=0, bottom=0):
     image = np.array(Image.fromarray(image).resize((512, 512)))
     return image
 
+
+def load_64(image_path, left=0, right=0, top=0, bottom=0):
+    if type(image_path) is str:
+        image = np.array(Image.open(image_path))[:,:]
+    else:
+        image = image_path
+    h, w = image.shape
+    left = min(left, w-1)
+    right = min(right, w - left - 1)
+    top = min(top, h - left - 1)
+    bottom = min(bottom, h - top - 1)
+    image = image[top:h-bottom, left:w-right]
+    h, w= image.shape
+    if h < w:
+        offset = (w - h) // 2
+        image = image[:, offset:offset + h]
+    elif w < h:
+        offset = (h - w) // 2
+        image = image[offset:offset + w]
+    new_pil = Image.fromarray(image).resize((64,64))
+    image = np.array(new_pil)
+    return image
 def image2latent(image, vae, device, weight_dtype):
     with torch.no_grad():
         if type(image) is Image:
@@ -166,23 +188,25 @@ def main(args) :
     network.to(device)
 
     print(f' \n step 3. image scoring')
-    orgin_img_dir = '../examples/original_sample.png'
+    orgin_img_dir = '../examples/013_origin.png'
     orgin_np = load_512(orgin_img_dir)
     orgin_latent = image2latent(orgin_np, vae, device, weight_dtype)  # 1,4,64,64
-    orgin_latent = torch.flatten(orgin_latent, start_dim=1)
+    #orgin_latent = torch.flatten(orgin_latent, start_dim=1)
     #orgin_latent_np = orgin_latent.detach().cpu().numpy()
 
-    recon_img_dir = '../examples/recon_0.png'
+    recon_img_dir = '../examples/013_recon.png'
     recon_np = load_512(recon_img_dir)
     recon_latent = image2latent(recon_np, vae, device, weight_dtype)
-    recon_latent = torch.flatten(recon_latent, start_dim=1)
+    #recon_latent = torch.flatten(recon_latent, start_dim=1)
     #recon_latent_np = recon_latent.detach().cpu().numpy()
 
     diff_latent = torch.nn.functional.mse_loss(orgin_latent, recon_latent, reduction='none')
-    diff_latent_np = diff_latent.detach().cpu().numpy()
-    trg_latent = np.zeros_like(diff_latent_np)
-    auroc_image = round(roc_auc_score(diff_latent_np,trg_latent), 3) * 100  # calculate score (not 0 ~ 1)
-    print(f' (3.1) image score : {auroc_image}')
+    batch_size, h, w = diff_latent.shape[0],diff_latent.shape[-2],diff_latent.shape[-1]
+    anomal_map = torch.sum(diff_latent, dim=1)
+    anomal_vector = torch.flatten(anomal_map, start_dim=1)
+    max_value = torch.max(anomal_vector, dim=1)[0].unsqueeze(1)
+    normalized_anomal_vector = anomal_vector / max_value
+    normalized_anomal_map = normalized_anomal_vector.view(batch_size, 1, h, w)
 
 
 
