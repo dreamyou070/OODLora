@@ -323,7 +323,7 @@ def recon_loop(latents, context, inference_times, scheduler, unet, vae, base_fol
     pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i+1])
-        time_steps.append(t.item())
+        time_steps.append(int(t))
         input_latent = torch.cat([latent] * 2)
         trg_latent = latents[-(i + 2)]
         noise_pred = call_unet(unet, input_latent, t, context, None, None)
@@ -333,13 +333,13 @@ def recon_loop(latents, context, inference_times, scheduler, unet, vae, base_fol
         for guidance_scale in guidance_scales:
             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
             inter_noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-            latent_diff = torch.nn.functional.mse_loss(prev_step(noise_pred, int(t.item()), latent, scheduler).float(),
+            latent_diff = torch.nn.functional.mse_loss(prev_step(noise_pred, int(t), latent, scheduler).float(),
                                                        trg_latent.float(), reduction='none')
             latent_diff_dict[guidance_scale] = latent_diff.mean()
             latent_dict[guidance_scale] = inter_noise_pred
         best_guidance_scale = min(latent_dict, key=latent_dict.get)
         noise_pred = latent_dict[best_guidance_scale]
-        latent = next_step(noise_pred, int(t.item()), latent, scheduler)
+        latent = next_step(noise_pred, int(t), latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
@@ -505,7 +505,7 @@ def main(args) :
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         base_folder = os.path.join(output_dir, concept_name)
         os.makedirs(base_folder, exist_ok=True)
-        base_folder = os.path.join(base_folder, f'test_recon_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
+        base_folder = os.path.join(base_folder, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
         os.makedirs(base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
         ddim_latents, time_steps, pil_images = ddim_loop(latent,
