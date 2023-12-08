@@ -503,17 +503,18 @@ def main(args) :
                                                          scheduler, invers_unet, vae, base_folder,
                                                          attention_storer)
         print(f' (2.3.0) set coefficient')
-        standard_noise = torch.randn_like(latent)
-        uncond_embeddings, cond_embeddings = context.chunk(2)
-        noise_pred = invers_unet(standard_noise, 999, uncond_embeddings).sample
+        with torch.no_grad() :
+            standard_noise = torch.randn_like(latent)
+            uncond_embeddings, cond_embeddings = context.chunk(2)
+            noise_pred = invers_unet(standard_noise, 999, uncond_embeddings).sample
 
-        inference_timesteps = scheduler.timesteps
-        noise_coeff_dict = {}
-        for i in inference_timesteps :
-            # make noise latent
-            noise_latent = scheduler.add_noise(original_samples = latent,noise = standard_noise,timesteps = i)
-            model_output = invers_unet(noise_latent, i, uncond_embeddings).sample
-            noise_coeff_dict[i] = noise_pred - model_output
+            inference_timesteps = scheduler.timesteps
+            noise_coeff_dict = {}
+            for i in inference_timesteps :
+                # make noise latent
+                noise_latent = scheduler.add_noise(original_samples = latent,noise = standard_noise,timesteps = i)
+                model_output = invers_unet(noise_latent, i, uncond_embeddings).sample
+                noise_coeff_dict[i] = noise_pred - model_output
 
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
