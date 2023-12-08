@@ -62,6 +62,9 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
                                                         key_value=key.detach().cpu(),
                                                         value_value=value.detach().cpu(),
                                                         layer_name=layer_name)
+            if is_cross_attention :
+                controller.cross_key_caching(key_value=query.detach().cpu(),)
+
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -560,8 +563,9 @@ def main(args) :
         register_attention_control(unet, query_storer)
         un, _ = context.chunk(2)
         call_unet(unet,input_latent, 0, torch.cat([un] * 2),None, None)
-        query_storer = query_storer.self_query_store
-        layer_names = query_storer.keys()
+        query_storing = query_storer.cross_key_store
+        layer_names = query_storing.keys()
+        query_storer.reset()
         org_query_dict, recon_query_dict = {}, {}
         for layer_name in layer_names :
             query_value_list = query_storer[layer_name]
