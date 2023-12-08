@@ -28,5 +28,4 @@
   "condition_w":1,
   "eval_normal_t":200,
   "eval_noisier_t":400,
-  "output_path":"/data7/sooyeon/Lora/OODLora/result/MVTec/carpet"
-}
+  "output_path":"/data7/sooyeon/Lora/OODLora/result/MVTec/carpet"}

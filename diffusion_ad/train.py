@@ -292,8 +292,12 @@ def main():
         elif sub_class in mvtec_classes:
             subclass_path = os.path.join(args["mvtec_root_path"],sub_class)
             print(f'subclass_path : {subclass_path}')
-            training_dataset = MVTecTrainDataset(subclass_path,sub_class,img_size=args["img_size"],args=args)
-            testing_dataset = MVTecTestDataset(subclass_path,sub_class,img_size=args["img_size"],)
+            training_dataset = MVTecTrainDataset(subclass_path,sub_class,
+                                                 img_size=args["img_size"],
+                                                 args=args)
+            testing_dataset = MVTecTestDataset(subclass_path,
+                                               sub_class,
+                                               img_size=args["img_size"],)
             class_type='MVTec'
         elif sub_class in dagm_class:
             subclass_path = os.path.join(args["dagm_root_path"],sub_class)
@@ -302,7 +306,10 @@ def main():
             class_type='DAGM'
         print(file, args)
         data_len = len(testing_dataset)
-        training_dataset_loader = DataLoader(training_dataset, batch_size=args['Batch_Size'],shuffle=True,num_workers=8,pin_memory=True,drop_last=True)
+        print(f'data_len : {data_len}')
+        training_dataset_loader = DataLoader(training_dataset,
+                                             batch_size=args['Batch_Size'],
+                                             shuffle=True,num_workers=8,pin_memory=True,drop_last=True)
         test_loader = DataLoader(testing_dataset, batch_size=1,shuffle=False, num_workers=4)
         # make arg specific directories
         for i in [f'{args["output_path"]}/model/diff-params-ARGS={args["arg_num"]}/{sub_class}',
