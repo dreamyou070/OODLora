@@ -18,6 +18,7 @@ print(total_image_pred)
 """
 from PIL import Image
 
-pil_img = Image.open(r'lora/examples/original_sample.png')
-image_gt_np = np.array(pil_img.resize((512, 512)))
-image_gt = image_gt_np.flatten()
+orgin_latent = torch.randn((3,4,64,64))
+orgin_latent = torch.flatten(orgin_latent, start_dim=1)
+orgin_latent_np = orgin_latent.detach().cpu().numpy()
+print(orgin_latent_np.shape)
