@@ -18,7 +18,7 @@
   "num_head_channels":-1,
   "noise_fn":"gauss",
   "channels":3,
-  "mvtec_root_path":"/data7/sooyeon/MyData/anomaly_detection/MVTec",
+  "mvtec_root_path":"/data7/sooyeon/MyData/anomaly_detection/MVTec_threshold",
   "visa_root_path":"",
   "dagm_root_path":"",
   "mpdd_root_path":"",
