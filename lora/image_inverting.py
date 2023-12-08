@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import random
 from accelerate.utils import set_seed
@@ -172,8 +173,10 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
                     if hidden_states.shape[0] == 2 :
                         uncon_key, con_key = key.chunk(2)
                         uncon_value, con_value = value.chunk(2)
-                        key = torch.cat([uncon_key, self_key_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
-                        value = torch.cat([uncon_value, self_value_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
+                        key = torch.cat([self_key_dict[trg_indexs_list][layer_name].to(query.device),
+                                         self_key_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
+                        value = torch.cat([self_value_dict[trg_indexs_list][layer_name].to(query.device),
+                                           self_value_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
                     else :
                         key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
                         value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
@@ -505,8 +508,10 @@ def main(args) :
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         base_folder = os.path.join(output_dir, concept_name)
         os.makedirs(base_folder, exist_ok=True)
-        base_folder = os.path.join(base_folder, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
+        base_folder = os.path.join(base_folder, f'double_con_uncon_dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
         os.makedirs(base_folder, exist_ok=True)
+
+
         # time_steps = 0,20,..., 980
         latent_dict, time_steps, pil_images = ddim_loop(latent,
                                                          invers_context,
@@ -583,7 +588,16 @@ def main(args) :
             heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
             pil_image.save(heatmap_save_dir)
 
-        break
+            base_folder = os.path.join(base_folder,
+                                       f'double_con_uncon_dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
+            os.makedirs(base_folder, exist_ok=True)
+            # save config
+
+
+            with open(os.path.join(base_folder, 'config.json'), 'w') as f:
+                json.dump(vars(args), f, indent=4)
+
+    break
 
 
 if __name__ == "__main__":
