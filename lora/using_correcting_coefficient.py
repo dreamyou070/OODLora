@@ -326,7 +326,6 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
     time_steps.append(prev_time)
     return all_latent, time_steps, pil_images
 
-
 @torch.no_grad()
 def latent2image(latents, vae, return_type='np'):
     latents = 1 / 0.18215 * latents.detach()
