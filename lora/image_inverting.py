@@ -521,7 +521,7 @@ def main(args) :
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         base_folder = os.path.join(output_dir, concept_name)
         os.makedirs(base_folder, exist_ok=True)
-        base_folder = os.path.join(base_folder, f'test_recon_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
+        base_folder = os.path.join(base_folder, f'dynamic_guidance_scale_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
         os.makedirs(base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
         ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context, inference_times,
