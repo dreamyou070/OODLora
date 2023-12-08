@@ -293,7 +293,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     for i, t in enumerate(flip_times[:-1]):
         if repeat_time < args.repeat_time :
             next_time = flip_times[i+1].item()
-            print(f'inverting : {t.item()} to latent_dict')
+            print(f'inverting : {int(t.item())} to latent_dict')
             latent_dict[t.item()] = latent
             time_steps.append(t.item())
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
@@ -306,7 +306,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
             repeat_time += 1
     time_steps.append(next_time)
-    latent_dict[next_time] = latent
+    latent_dict[int(next_time)] = latent
+    print(f'latent_dict keys : {latent_dict.keys()}')
     return latent_dict, time_steps, pil_images
 
 @torch.no_grad()
