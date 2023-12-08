@@ -7,6 +7,7 @@ import library.train_util as train_util
 import library.config_util as config_util
 import library.custom_train_functions as custom_train_functions
 import torch
+import cv2
 from attention_store import AttentionStore
 import sys, importlib
 import numpy as np
@@ -83,6 +84,10 @@ def image2latent(image, vae, device, weight_dtype):
             latents = vae.encode(image)['latent_dist'].mean
             latents = latents * 0.18215
     return latents
+
+def cvt2heatmap(gray):
+    heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
+    return heatmap
 
 def main(args) :
 
@@ -207,6 +212,10 @@ def main(args) :
     max_value = torch.max(anomal_vector, dim=1)[0].unsqueeze(1)
     normalized_anomal_vector = anomal_vector / max_value
     normalized_anomal_map = normalized_anomal_vector.view(batch_size, 1, h, w)
+    for index in batch_size :
+        anomal_map = normalized_anomal_map[index]
+        ano_map = cvt2heatmap(anomal_map * 255.0)
+        print(f'ano_map : {ano_map}')
 
 
 
