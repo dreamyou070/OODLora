@@ -559,15 +559,9 @@ def main(args) :
             import cv2
             heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
             pil_image = Image.fromarray(heatmap).resize((512, 512))
-            pil_image.save(f'heatmap_res_{height}.png')
+            heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
+            pil_image.save(heatmap_save_dir)
 
-        #store(attention_probs, layer_name)
-        #image_gt = image_gt_np.flatten()
-        #image_pred = latent2image(all_latent[-1], vae, return_type='np')
-        #auroc_image = round(roc_auc_score(image_gt, image_pred), 3) * 100
-        #print("Image AUC-ROC: ", auroc_image)
-
-        #
         break
 
 
