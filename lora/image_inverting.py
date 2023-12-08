@@ -277,7 +277,6 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
 @torch.no_grad()
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
     uncond_embeddings, cond_embeddings = context.chunk(2)
-    all_latent = [latent]
     time_steps = []
     latent = latent.clone().detach()
     latent_dict = {}
@@ -304,14 +303,14 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
-            all_latent.append(latent)
             repeat_time += 1
     time_steps.append(next_time)
-    return all_latent, time_steps, pil_images
+    latent_dict[next_time] = latent
+    return latent_dict, time_steps, pil_images
 
 @torch.no_grad()
-def recon_loop(latents, context, inference_times, scheduler, unet, vae, base_folder_dir):
-    latent = latents[-1]
+def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir):
+    latent = latent_dict[inference_times[0]]
     all_latent = []
     all_latent.append(latent)
     time_steps = []
@@ -325,7 +324,7 @@ def recon_loop(latents, context, inference_times, scheduler, unet, vae, base_fol
         prev_time = int(inference_times[i+1])
         time_steps.append(int(t))
         input_latent = torch.cat([latent] * 2)
-        trg_latent = latents[-(i + 2)]
+        trg_latent = latent_dict[prev_time]
         noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
         guidance_scales = [1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10]
         latent_diff_dict = {}
@@ -508,7 +507,7 @@ def main(args) :
         base_folder = os.path.join(base_folder, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
         os.makedirs(base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
-        ddim_latents, time_steps, pil_images = ddim_loop(latent,
+        latent_dict, time_steps, pil_images = ddim_loop(latent,
                                                          invers_context,
                                                          inference_times,
                                                          scheduler,
@@ -540,13 +539,12 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
                 else :
                     self_value_dict[time_step][layer] = self_value
-
                 i += 1
-
         collector = AttentionStore()
         register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
         time_steps.reverse()
-        all_latent, _, _ = recon_loop(ddim_latents,
+        print(f' (2.3.2) recon')
+        all_latent, _, _ = recon_loop(latent_dict,
                                       context,
                                       time_steps,
                                       scheduler,unet, vae,base_folder)
