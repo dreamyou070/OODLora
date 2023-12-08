@@ -141,7 +141,7 @@ class DDIMInverseScheduler(SchedulerMixin, ConfigMixin):
         x = sample
         prev_timestep = timestep + self.config.num_train_timesteps // self.num_inference_steps
         a_t = self.alphas_cumprod[timestep]
-        a_prev = self.alphas_cumprod[prev_timestep] if prev_timestep >= 0 else self.final_alpha_cumprod
+        a_prev = self.alphas_cumprod[prev_timestep] if prev_timestep < 1000 else self.alphas_cumprod[-1]
         pred_x0 = (x - (1 - a_t) ** 0.5 * e_t) / a_t.sqrt()
         dir_xt = (1.0 - a_prev).sqrt() * e_t
         prev_sample = a_prev.sqrt() * pred_x0 + dir_xt
