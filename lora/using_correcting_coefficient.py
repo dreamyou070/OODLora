@@ -300,7 +300,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
 @torch.no_grad()
 def recon_loop(latent, context, inference_times, scheduler, unet, vae,
                self_query_dict, self_key_dict, self_value_dict,
-               base_folder_dir,noise_coeff_dict):
+               base_folder_dir):
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
@@ -312,9 +312,7 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
         time_steps.append(current_time)
         prev_time = inference_times[i+1] #.item()
         noise_pred = call_unet(unet, latent, t, cond_embeddings, int(current_time), prev_time)
-        noise_pred = noise_pred * (noise_coeff_dict[int(prev_time)] / noise_coeff_dict[int(current_time)])
         latent = scheduler.step(noise_pred, int(current_time), sample=latent, return_dict = True).prev_sample
-        #latent = pred_original_sample
         """
         latent = prev_step(noise_pred, int(current_time), latent, scheduler)
         """
@@ -323,7 +321,6 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
         pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
-        #pil_img.save(os.path.join(base_folder_dir, f'onestep_recon.png'))
         # ----------------------------------------------------------------------------
         all_latent.append(latent)
     time_steps.append(prev_time)
@@ -517,18 +514,6 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
                 i += 1
         attention_storer.reset()
-        print(f' (2.3.0) set coefficient')
-        with torch.no_grad():
-            standard_noise = torch.randn_like(latent)
-            uncond_embeddings, cond_embeddings = context.chunk(2)
-            standard_noise_pred = invers_unet(standard_noise, 999, uncond_embeddings).sample
-            noise_coeff_dict = {}
-            for ii in scheduler.timesteps:
-                # make noise latent
-                noise_latent = scheduler.add_noise(original_samples=latent, noise=standard_noise, timesteps=ii)
-                attention_storer.reset()
-                model_output = invers_unet(noise_latent, ii, uncond_embeddings).sample
-                noise_coeff_dict[int(ii)] = model_output.mean() / standard_noise_pred.mean()
 
         #start_latent = ddim_latents[-2]
         start_latent = ddim_latents[-1]
@@ -540,7 +525,7 @@ def main(args) :
                                       time_steps,
                                       scheduler, unet, vae,
                                       self_query_dict, self_key_dict, self_value_dict,
-                                      base_folder, noise_coeff_dict)
+                                      base_folder)
         attention_storer.reset()
         attn_prob_storer = collector.step_store
         layer_names = attn_prob_storer.keys()
