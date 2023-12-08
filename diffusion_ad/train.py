@@ -105,16 +105,19 @@ def train(training_dataset_loader, testing_dataset_loader, args, data_len,sub_cl
         train_focal_loss=0.0
         train_smL1_loss = 0.0
         train_noise_loss = 0.0
-        tbar = tqdm(training_dataset_loader)
-        for i, sample in enumerate(tbar):
-            
+        #tbar = tqdm(training_dataset_loader)
+        #for i, sample in enumerate(tbar):
+        for i, sample in enumerate(training_dataset_loader):
+
             aug_image=sample['augmented_image'].to(device)
             anomaly_mask = sample["anomaly_mask"].to(device)
             anomaly_label = sample["has_anomaly"].to(device).squeeze()
 
             noise_loss, pred_x0,normal_t,x_normal_t,x_noiser_t = ddpm_sample.norm_guided_one_step_denoising(unet_model,
-                                                                                                            aug_image, anomaly_label,args)
-            pred_mask = seg_model(torch.cat((aug_image, pred_x0), dim=1)) 
+                                                                                                            aug_image,
+                                                                                                            anomaly_label,args)
+            pred_mask = seg_model(torch.cat((aug_image, pred_x0), dim=1))
+            print(f'pred_mask shape: {pred_mask.shape}')
 
             #loss
             focal_loss = loss_focal(pred_mask,anomaly_mask)
