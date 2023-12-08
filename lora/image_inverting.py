@@ -328,7 +328,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         for guidance_scale in guidance_scales:
             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
             inter_noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-            latent_diff = torch.nn.functional.mse_loss(prev_step(noise_pred, int(t), latent, scheduler).float(),
+            latent_diff = torch.nn.functional.mse_loss(prev_step(inter_noise_pred, int(t), latent, scheduler).float(),
                                                        trg_latent.float(), reduction='none')
             latent_diff_dict[guidance_scale] = latent_diff.mean()
             latent_dictionary[guidance_scale] = inter_noise_pred
