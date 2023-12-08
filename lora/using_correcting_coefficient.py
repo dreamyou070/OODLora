@@ -577,7 +577,6 @@ def main(args) :
             pil_image.save(heatmap_save_dir)
 
         break
-    """
 
 
 if __name__ == "__main__":
