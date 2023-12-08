@@ -326,7 +326,7 @@ def recon_loop(latents, context, inference_times, scheduler, unet, vae, base_fol
         time_steps.append(int(t))
         input_latent = torch.cat([latent] * 2)
         trg_latent = latents[-(i + 2)]
-        noise_pred = call_unet(unet, input_latent, t, context, None, None)
+        noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
         guidance_scales = [1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10]
         latent_diff_dict = {}
         latent_dict = {}
