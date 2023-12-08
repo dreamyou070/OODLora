@@ -285,20 +285,24 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
     inference_times = torch.cat([torch.Tensor([1000]), inference_times])
     flip_times = torch.flip(inference_times, dims=[0])
+    repeat_time = 0
     for i, t in enumerate(flip_times[:-1]):
+        if repeat_time < args.repeat_time :
         # 0,20,..., 980, 1000
-        next_time = flip_times[i+1].item()
-        latent_dict[t.item()] = latent
-        time_steps.append(t.item())
-        noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
-        noise_pred_dict[t.item()] = noise_pred
-        latent = next_step(noise_pred, int(t.item()), latent, scheduler)
-        with torch.no_grad():
-            np_img = latent2image(latent, vae, return_type='np')
-        pil_img = Image.fromarray(np_img)
-        pil_images.append(pil_img)
-        pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
-        all_latent.append(latent)
+            next_time = flip_times[i+1].item()
+            latent_dict[t.item()] = latent
+            time_steps.append(t.item())
+            noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
+            noise_pred_dict[t.item()] = noise_pred
+            latent = next_step(noise_pred, int(t.item()), latent, scheduler)
+            with torch.no_grad():
+                np_img = latent2image(latent, vae, return_type='np')
+            pil_img = Image.fromarray(np_img)
+            pil_images.append(pil_img)
+            pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
+            all_latent.append(latent)
+            repeat_time += 1
+    time_steps.append(next_time)
     return all_latent, time_steps, pil_images
 
 @torch.no_grad()
@@ -483,6 +487,7 @@ def main(args) :
                                                          inference_times,
                                                          scheduler, invers_unet, vae, base_folder,
                                                          attention_storer)
+        time_steps.reverse()
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
@@ -509,10 +514,14 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
                 else :
                     self_value_dict[time_step][layer] = self_value
-        start_latent = ddim_latents[-2]
+        #start_latent = ddim_latents[-2]
+        start_latent = ddim_latents[-1]
         collector = AttentionStore()
         register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-        all_latent, _, _ = recon_loop(start_latent, context, inference_times, scheduler, unet, vae,
+        all_latent, _, _ = recon_loop(start_latent, context,
+                                      #inference_times,
+                                      time_steps,
+                                      scheduler, unet, vae,
                    self_query_dict, self_key_dict, self_value_dict,
                    base_folder)
         attention_storer.reset()
@@ -548,12 +557,6 @@ def main(args) :
             pil_image = Image.fromarray(heatmap).resize((512, 512))
             pil_image.save(f'heatmap_res_{height}.png')
 
-
-
-
-
-
-
         #store(attention_probs, layer_name)
         #image_gt = image_gt_np.flatten()
         #image_pred = latent2image(all_latent[-1], vae, return_type='np')
@@ -561,6 +564,7 @@ def main(args) :
         #print("Image AUC-ROC: ", auroc_image)
 
         #
+        break
 
 
 if __name__ == "__main__":
@@ -610,6 +614,8 @@ if __name__ == "__main__":
     parser.add_argument("--self_key_control", action='store_true')
     parser.add_argument("--threshold_time", type=int, default = 900)
     parser.add_argument("--inversion_experiment", action="store_true",)
+    parser.add_argument("--repeat_time", type=int, default=1)
+
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
