@@ -12,6 +12,7 @@ from PIL import Image
 import sys, importlib
 from typing import Union
 import numpy as np
+from sklearn.metrics import roc_auc_score,auc,average_precision_score
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -92,6 +93,7 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
+
 def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
     """ Register cross attention layers to controller. """
     def ca_forward(self, layer_name):
@@ -508,10 +510,15 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
         start_latent = ddim_latents[-2]
         register_self_condition_giver(unet, self_query_dict, self_key_dict, self_value_dict)
-        recon_loop(start_latent, context, inference_times, scheduler, unet, vae,
+        all_latent, _, _ = recon_loop(start_latent, context, inference_times, scheduler, unet, vae,
                    self_query_dict, self_key_dict, self_value_dict,
                    base_folder)
         attention_storer.reset()
+
+        image_gt = image_gt_np.flatten()
+        image_pred = latent2image(all_latent[-1], vae, return_type='np')
+        auroc_image = round(roc_auc_score(image_gt, image_pred), 3) * 100
+        print("Image AUC-ROC: ", auroc_image)
 
 
 if __name__ == "__main__":

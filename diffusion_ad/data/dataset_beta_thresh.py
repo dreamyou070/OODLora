@@ -75,11 +75,14 @@ class MVTecTrainDataset(Dataset):
     def __init__(self, data_path,classname,img_size,args):
 
         self.classname=classname
+        # ------------------------------------------------------------------------------------------------------------
+        # 1) traing data
         self.root_dir = os.path.join(data_path,'train','good')
+        self.image_paths = sorted(glob.glob(self.root_dir + "/*.png"))
         self.resize_shape = [img_size[0], img_size[1]]
+        # ------------------------------------------------------------------------------------------------------------
+        # 2) anomaly source path (?)
         self.anomaly_source_path = args["anomaly_source_path"]
-
-        self.image_paths = sorted(glob.glob(self.root_dir+"/*.png"))
         self.anomaly_source_paths = sorted(glob.glob(self.anomaly_source_path+"/images/*/*.jpg"))
 
         self.augmenters = [iaa.GammaContrast((0.5, 2.0), per_channel=True),
@@ -114,7 +117,6 @@ class MVTecTrainDataset(Dataset):
                            iaa.Affine(translate_percent={"x": (-0.5, 0.5), "y": (-0.5, 0.5)}),]
         
         self.rot = iaa.Sequential([iaa.Affine(rotate=(-90, 90))])
-        
 
         #foreground path of textural classes
         foreground_path = os.path.join(args["mvtec_root_path"],'carpet')
@@ -127,6 +129,7 @@ class MVTecTrainDataset(Dataset):
         return len(self.image_paths)
 
     def random_choice_foreground_path(self):
+        print(f'len(self.textural_foreground_path):{len(self.textural_foreground_path)}')
         foreground_path_id = torch.randint(0, len(self.textural_foreground_path), (1,)).item()
         foreground_path = self.textural_foreground_path[foreground_path_id]
         return foreground_path

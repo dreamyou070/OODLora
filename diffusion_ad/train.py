@@ -56,27 +56,22 @@ class BinaryFocalLoss(nn.Module):
             return F_loss
 
 def train(training_dataset_loader, testing_dataset_loader, args, data_len,sub_class,class_type,device ):
-   
+
+    print(f' [1.1] make stable diffusion unet model')
     in_channels = args["channels"]
-    unet_model = UNetModel(args['img_size'][0], args['base_channels'], channel_mults=args['channel_mults'], dropout=args[
-                "dropout"], n_heads=args["num_heads"], n_head_channels=args["num_head_channels"],
-            in_channels=in_channels
-            ).to(device)
-
-
+    unet_model = UNetModel(args['img_size'][0], args['base_channels'], channel_mults=args['channel_mults'],
+                           dropout=args["dropout"], n_heads=args["num_heads"],
+                           n_head_channels=args["num_head_channels"],in_channels=in_channels).to(device)
+    print(f' [1.2] scheduler')
     betas = get_beta_schedule(args['T'], args['beta_schedule'])
-
-    ddpm_sample =  GaussianDiffusionModel(args['img_size'], betas,
-                                          loss_weight=args['loss_weight'],
-                                          loss_type=args['loss-type'],
-                                          noise=args["noise_fn"],
-                                          img_channels=in_channels)
-    # learning the segmentation model
+    ddpm_sample =  GaussianDiffusionModel(args['img_size'], betas,loss_weight=args['loss_weight'],
+                                          loss_type=args['loss-type'],noise=args["noise_fn"],img_channels=in_channels)
+    print(f' [1.3] segmentation model')
     seg_model=SegmentationSubNetwork(in_channels=6, out_channels=1).to(device)
     optimizer_ddpm = optim.Adam( unet_model.parameters(), lr=args['diffusion_lr'],weight_decay=args['weight_decay'])
     optimizer_seg = optim.Adam(seg_model.parameters(),lr=args['seg_lr'],weight_decay=args['weight_decay'])
 
-    # two losses
+    print(f' [2] two losses')
     # 1) focal loss
     loss_focal = BinaryFocalLoss().to(device)
     # 2) smooth L1 loss
@@ -105,14 +100,12 @@ def train(training_dataset_loader, testing_dataset_loader, args, data_len,sub_cl
         train_focal_loss=0.0
         train_smL1_loss = 0.0
         train_noise_loss = 0.0
-        #tbar = tqdm(training_dataset_loader)
-        #for i, sample in enumerate(tbar):
-        for i, sample in enumerate(training_dataset_loader):
+        tbar = tqdm(training_dataset_loader)
+        for i, sample in enumerate(tbar):
 
             aug_image=sample['augmented_image'].to(device)
             anomaly_mask = sample["anomaly_mask"].to(device)
             anomaly_label = sample["has_anomaly"].to(device).squeeze()
-
             noise_loss, pred_x0,normal_t,x_normal_t,x_noiser_t = ddpm_sample.norm_guided_one_step_denoising(unet_model,
                                                                                                             aug_image,
                                                                                                             anomaly_label,args)
@@ -138,18 +131,24 @@ def train(training_dataset_loader, testing_dataset_loader, args, data_len,sub_cl
             train_smL1_loss += smL1_loss.item()
             train_focal_loss+=5*focal_loss.item()
             train_noise_loss+=noise_loss.item()
-            
 
+        # --------------------------------------------------------------------------------------------------------------
+        # logging loss
         if epoch % 10 ==0  and epoch > 0:
             train_loss_list.append(round(train_loss,3))
             train_smL1_loss_list.append(round(train_smL1_loss,3))
             train_focal_loss_list.append(round(train_focal_loss,3))
             train_noise_loss_list.append(round(train_noise_loss,3))
             loss_x_list.append(int(epoch))
-
-
+        # --------------------------------------------------------------------------------------------------------------
+        # evaluation (1) image AU-ROC (2) pixel AU-ROC
         if (epoch+1) % 50==0 and epoch > 0:
-            temp_image_auroc,temp_pixel_auroc= eval(testing_dataset_loader,args,unet_model,seg_model,data_len,sub_class,device)
+            temp_image_auroc, temp_pixel_auroc= eval(testing_dataset_loader,
+                                                     args,unet_model,
+                                                     seg_model,
+                                                     data_len,
+                                                     sub_class,
+                                                     device)
             image_auroc_list.append(temp_image_auroc)
             pixel_auroc_list.append(temp_pixel_auroc)
             performance_x_list.append(int(epoch))
@@ -174,10 +173,12 @@ def train(training_dataset_loader, testing_dataset_loader, args, data_len,sub_cl
    
 
 def eval(testing_dataset_loader,args,unet_model,seg_model,data_len,sub_class,device):
+
     unet_model.eval()
     seg_model.eval()
     os.makedirs(f'{args["output_path"]}/metrics/ARGS={args["arg_num"]}/{sub_class}/', exist_ok=True)
     in_channels = args["channels"]
+    print(f' [eval 1] make scheduler')
     betas = get_beta_schedule(args['T'], args['beta_schedule'])
     ddpm_sample =  GaussianDiffusionModel(args['img_size'],
                                           betas,
@@ -198,30 +199,36 @@ def eval(testing_dataset_loader,args,unet_model,seg_model,data_len,sub_class,dev
         gt_mask = sample["mask"].to(device)
         normal_t_tensor = torch.tensor([args["eval_normal_t"]], device=image.device).repeat(image.shape[0])
         noiser_t_tensor = torch.tensor([args["eval_noisier_t"]], device=image.device).repeat(image.shape[0])
-        loss,pred_x_0_condition,pred_x_0_normal,pred_x_0_noisier,x_normal_t,x_noiser_t,pred_x_t_noisier = ddpm_sample.norm_guided_one_step_denoising_eval(unet_model,
+        loss, pred_x_0_condition, pred_x_0_normal, pred_x_0_noisier, x_normal_t, x_noiser_t, pred_x_t_noisier = ddpm_sample.norm_guided_one_step_denoising_eval(unet_model,
                                                                                                                                                           image,
                                                                                                                                                           normal_t_tensor,
                                                                                                                                                           noiser_t_tensor,
                                                                                                                                                           args)
         # (1) get anomaly mask from segmentation model
-        pred_mask = seg_model(torch.cat((image, pred_x_0_condition), # concat image as a input to the segmentation model
-                                        dim=1))
+        # think pred_mask
+        pred_mask = seg_model(torch.cat((image, pred_x_0_condition), dim=1))
+        # pred_mask = torch.randn((Batch, 1, H, W)), flatten all images
         out_mask = pred_mask
         topk_out_mask = torch.flatten(out_mask[0], start_dim=1)
         topk_out_mask = torch.topk(topk_out_mask, 50, dim=1, largest=True)[0]
         image_score = torch.mean(topk_out_mask)
-        total_image_pred=np.append(total_image_pred,image_score.detach().cpu().numpy())
-        total_image_gt=np.append(total_image_gt,target[0].detach().cpu().numpy())
 
-        flatten_pred_mask=out_mask[0].flatten().detach().cpu().numpy()
-        flatten_gt_mask =gt_mask[0].flatten().detach().cpu().numpy().astype(int)
-            
-        total_pixel_gt=np.append(total_pixel_gt,flatten_gt_mask)
-        total_pixel_pred=np.append(total_pixel_pred,flatten_pred_mask)
+
+        # total image pred changed
+        # image score = total image
+        total_image_pred = np.append(total_image_pred, image_score.detach().cpu().numpy())
+        total_image_gt =   np.append(total_image_gt,     target[0].detach().cpu().numpy())
+
+        flatten_pred_mask = out_mask[0].flatten().detach().cpu().numpy()
+        flatten_gt_mask = gt_mask[0].flatten().detach().cpu().numpy().astype(int)
+
+        total_pixel_gt = np.append(total_pixel_gt, flatten_gt_mask)
+        total_pixel_pred = np.append(total_pixel_pred, flatten_pred_mask)
 
     # (2) get ROC-AUC score
-    print(sub_class)
-    auroc_image = round(roc_auc_score(total_image_gt,total_image_pred),3)*100
+    print(sub_class) # just fifty number of scores
+    auroc_image = round(roc_auc_score(total_image_gt,
+                                      total_image_pred),3)*100 # calculate score (not 0 ~ 1)
     print("Image AUC-ROC: " ,auroc_image)
     
     auroc_pixel =  round(roc_auc_score(total_pixel_gt, total_pixel_pred),3)*100
@@ -250,8 +257,6 @@ def save(unet_model,seg_model, args,final,epoch,sub_class):
                     "args":                 args
                     }, f'{args["output_path"]}/model/diff-params-ARGS={args["arg_num"]}/{sub_class}/params-{final}.pt'
                 )
-    
-    
 
 def main():
 
@@ -286,6 +291,7 @@ def main():
             class_type='MPDD'
         elif sub_class in mvtec_classes:
             subclass_path = os.path.join(args["mvtec_root_path"],sub_class)
+            print(f'subclass_path : {subclass_path}')
             training_dataset = MVTecTrainDataset(subclass_path,sub_class,img_size=args["img_size"],args=args)
             testing_dataset = MVTecTestDataset(subclass_path,sub_class,img_size=args["img_size"],)
             class_type='MVTec'
