@@ -319,16 +319,23 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
         time_steps.append(current_time)
         prev_time = inference_times[i+1] #.item()
         noise_pred = call_unet(unet, latent, t, cond_embeddings, int(current_time), prev_time)
+        pred_original_sample=scheduler.step(noise_pred, int(current_time), sample=latent, return_dict = True). pred_original_sample
+        latent = pred_original_sample
+        """
         latent = prev_step(noise_pred, int(current_time), latent, scheduler)
+        """
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+        #pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+        pil_img.save(os.path.join(base_folder_dir, f'onestep_recon.png'))
         # ----------------------------------------------------------------------------
         all_latent.append(latent)
+        break
     time_steps.append(prev_time)
     return all_latent, time_steps, pil_images
+
 
 @torch.no_grad()
 def latent2image(latents, vae, return_type='np'):
