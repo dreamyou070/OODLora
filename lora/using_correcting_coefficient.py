@@ -312,7 +312,7 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
         time_steps.append(current_time)
         prev_time = inference_times[i+1] #.item()
         noise_pred = call_unet(unet, latent, t, cond_embeddings, int(current_time), prev_time)
-        noise_pred = noise_pred + noise_coeff_dict[int(prev_time)] - noise_coeff_dict[int(current_time)]
+        noise_pred = noise_pred * (noise_coeff_dict[int(prev_time)] / noise_coeff_dict[int(current_time)])
         latent = scheduler.step(noise_pred, int(current_time), sample=latent, return_dict = True).prev_sample
         #latent = pred_original_sample
         """
@@ -484,7 +484,7 @@ def main(args) :
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         base_folder = os.path.join(output_dir, concept_name)
         os.makedirs(base_folder, exist_ok=True)
-        base_folder = os.path.join(base_folder, f'using_correcting_recon_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
+        base_folder = os.path.join(base_folder, f'multiply_correcting_recon_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
         os.makedirs(base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
         ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context,
@@ -524,14 +524,14 @@ def main(args) :
         with torch.no_grad():
             standard_noise = torch.randn_like(latent)
             uncond_embeddings, cond_embeddings = context.chunk(2)
-            noise_pred = invers_unet(standard_noise, 999, uncond_embeddings).sample
+            standard_noise_pred = invers_unet(standard_noise, 999, uncond_embeddings).sample
             noise_coeff_dict = {}
             for ii in scheduler.timesteps:
                 # make noise latent
                 noise_latent = scheduler.add_noise(original_samples=latent, noise=standard_noise, timesteps=ii)
                 attention_storer.reset()
                 model_output = invers_unet(noise_latent, ii, uncond_embeddings).sample
-                noise_coeff_dict[int(ii)] = noise_pred - model_output
+                noise_coeff_dict[int(ii)] = model_output.mean() / standard_noise_pred.mean()
 
         #start_latent = ddim_latents[-2]
         start_latent = ddim_latents[-1]
