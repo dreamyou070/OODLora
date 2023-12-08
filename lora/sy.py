@@ -319,7 +319,7 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
         time_steps.append(current_time)
         prev_time = inference_times[i+1] #.item()
         noise_pred = call_unet(unet, latent, t, cond_embeddings, int(current_time), prev_time)
-        latent = prev_step(noise_pred, current_time, latent, scheduler)
+        latent = prev_step(noise_pred, int(current_time), latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
