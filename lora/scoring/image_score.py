@@ -181,6 +181,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
     parser.add_argument("--process_title", type=str, default='parksooyeon')
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--mixed_precision", type=str, choices = ["fp16", "bf16"], default = 'fp16')
     parser.add_argument("--save_precision", type=str, choices=["fp16", "bf16", 'float'], default = 'fp16')
     parser.add_argument("--no_half_vae", action="store_true",
