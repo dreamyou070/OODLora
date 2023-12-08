@@ -520,7 +520,7 @@ def main(args) :
                 else :
                     self_value_dict[time_step][layer] = self_value
                 i += 1
-        attention_storer.clear()
+        attention_storer.reset()
         print(f' (2.3.0) set coefficient')
         with torch.no_grad():
             standard_noise = torch.randn_like(latent)
@@ -530,7 +530,7 @@ def main(args) :
             for ii in scheduler.timesteps:
                 # make noise latent
                 noise_latent = scheduler.add_noise(original_samples=latent, noise=standard_noise, timesteps=ii)
-                attention_storer.clear()
+                attention_storer.reset()
                 model_output = invers_unet(noise_latent, ii, uncond_embeddings).sample
                 noise_coeff_dict[ii] = noise_pred - model_output
 
