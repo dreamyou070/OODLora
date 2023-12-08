@@ -587,58 +587,22 @@ def main(args) :
             recon_query = torch.stack(recon_query_list, dim=0)
             org_query = torch.mean(org_query, dim=0)
             recon_query = torch.mean(recon_query, dim=0)
-            print(f'height : {height} | org_query (num,pix2,dim): {org_query.shape} | recon_query : {recon_query.shape}')
             cross_attn_map = torch.matmul(org_query, recon_query.transpose(-1, -2))
+            print(f'[cross_attn_map] height : {height} | cross_attn_map (pix2,pix2) : {cross_attn_map.shape}')
+
             cross_attn_map = torch.softmax(cross_attn_map, dim=-1)
             diagonal_mask = torch.eye(height*height)
             normal_map = cross_attn_map * diagonal_mask
-            normal_vector = normal_map.sum(-1)
-            print(f'normal_vector : {normal_vector.shape}')
-            normal_vector = normal_vector.reshape(height, height)
-            anomal_map = 1 - normal_map
+            sim_vector = normal_map.sum(-1)
+            print(f'sim_vector : {sim_vector.shape}')
+            sim_map = sim_vector.reshape(height, height)
+            anomal_map = 1 - sim_map
             gray = anomal_map * 255.0
             import cv2
             heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
             pil_image = Image.fromarray(heatmap).resize((512, 512))
             heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
             pil_image.save(heatmap_save_dir)
-
-
-        """
-        origin_image = latent2image(latent, vae, device, weight_dtype)
-        attn_prob_storer = collector.step_store
-        layer_names = attn_prob_storer.keys()
-
-        attn_prob_storer_dict = {}
-        for layer_name in layer_names :
-            attention_probs_list = attn_prob_storer[layer_name]
-            attention_probs = torch.mean(attention_probs_list[0], dim=0)
-            pix_num = attention_probs.shape[-1]
-            height = int(pix_num ** 0.5)
-            if height not in attn_prob_storer_dict.keys() :
-                attn_prob_storer_dict[height] = []
-                attn_prob_storer_dict[height].append(attention_probs)
-            else :
-                attn_prob_storer_dict[height].append(attention_probs)
-        heights = attn_prob_storer_dict.keys()
-        for height in heights :
-            prob_list = attn_prob_storer_dict[height]
-            prob_map = torch.mean(torch.stack(prob_list, dim=0), dim=0).to('cpu')
-            pix_num = height ** 2
-            diagonal_mask = torch.eye(pix_num)
-            normal_score = prob_map * (diagonal_mask)
-            normal_score_vector = torch.sum(normal_score, dim=-1)
-            normal_map = normal_score_vector.reshape(height, height)
-            max_value = torch.max(normal_map)
-            normal_map = normal_map / max_value
-            anomal_map = 1 - normal_map # torch map
-            gray = anomal_map * 255.0
-            import cv2
-            heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
-            pil_image = Image.fromarray(heatmap).resize((512, 512))
-            heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
-            pil_image.save(heatmap_save_dir)
-        """
 
         break
 
