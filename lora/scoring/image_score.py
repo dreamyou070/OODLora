@@ -170,15 +170,18 @@ def main(args) :
     orgin_np = load_512(orgin_img_dir)
     orgin_latent = image2latent(orgin_np, vae, device, weight_dtype)  # 1,4,64,64
     orgin_latent = torch.flatten(orgin_latent, start_dim=1)
-    orgin_latent_np = orgin_latent.detach().cpu().numpy()
+    #orgin_latent_np = orgin_latent.detach().cpu().numpy()
 
     recon_img_dir = '../examples/recon_0.png'
     recon_np = load_512(recon_img_dir)
     recon_latent = image2latent(recon_np, vae, device, weight_dtype)
     recon_latent = torch.flatten(recon_latent, start_dim=1)
-    recon_latent_np = recon_latent.detach().cpu().numpy()
+    #recon_latent_np = recon_latent.detach().cpu().numpy()
 
-    auroc_image = round(roc_auc_score(orgin_latent_np,recon_latent_np), 3) * 100  # calculate score (not 0 ~ 1)
+    diff_latent = torch.nn.functional.mse_loss(orgin_latent, recon_latent, reduction='none')
+    diff_latent_np = diff_latent.detach().cpu().numpy()
+    trg_latent = np.zeros_like(diff_latent_np)
+    auroc_image = round(roc_auc_score(diff_latent_np,trg_latent), 3) * 100  # calculate score (not 0 ~ 1)
     print(f' (3.1) image score : {auroc_image}')
 
 
