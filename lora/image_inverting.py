@@ -562,13 +562,33 @@ def main(args) :
         call_unet(unet,input_latent, 0, torch.cat([un] * 2),None, None)
         query_storer = query_storer.self_query_store
         layer_names = query_storer.keys()
+        org_query_dict, recon_query_dict = {}, {}
         for layer_name in layer_names :
             query_value_list = query_storer[layer_name]
             query_collecting = query_value_list[0]
             org_query, recon_query = query_collecting.chunk(2)
-            print(f'len(query_value_list) : {len(query_value_list)}')
-            #query_value = torch.mean(query_value_list[0], dim=1)
-            #query_storer.self_query_store[layer_name] = query_value
+            # org_query = [8, pix_2, pix_2]
+            org_query = torch.mean(org_query, dim=0)
+            recon_query = torch.mean(recon_query, dim=0)
+            pix_num = org_query.shape[-1]
+            height = int(pix_num ** 0.5)
+            if height not in org_query_dict.keys():
+                org_query_dict[height] = []
+                org_query_dict[height].append(org_query)
+                recon_query_dict[height] = []
+                recon_query_dict[height].append(recon_query)
+            else:
+                org_query_dict[height].append(org_query)
+                recon_query_dict[height].append(recon_query)
+        heights = org_query_dict.keys()
+        for height in heights:
+            org_query_list = org_query_dict[height]
+            recon_query_list = recon_query_dict[height]
+            org_query = torch.stack(org_query_list, dim=0)
+            recon_query = torch.stack(recon_query_list, dim=0)
+            org_query = torch.mean(org_query, dim=0)
+            recon_query = torch.mean(recon_query, dim=0)
+            print(f'height : {height} | org_query : {org_query.shape} | recon_query : {recon_query.shape}')
 
         """
         origin_image = latent2image(latent, vae, device, weight_dtype)
