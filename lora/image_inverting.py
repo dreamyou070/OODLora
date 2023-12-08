@@ -306,14 +306,10 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
-    print(f'latent_dict keys : {latent_dict.keys()}')
-    check = latent_dict[260]
-    print(f'check : {check}')
     return latent_dict, time_steps, pil_images
 
 @torch.no_grad()
 def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir):
-    print(f'lantent_dict keys : {latent_dict.keys()}')
     latent = latent_dict[inference_times[0]]
     all_latent = []
     all_latent.append(latent)
@@ -332,16 +328,16 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
         guidance_scales = [1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10]
         latent_diff_dict = {}
-        latent_dict = {}
+        latent_dictionary = {}
         for guidance_scale in guidance_scales:
             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
             inter_noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
             latent_diff = torch.nn.functional.mse_loss(prev_step(noise_pred, int(t), latent, scheduler).float(),
                                                        trg_latent.float(), reduction='none')
             latent_diff_dict[guidance_scale] = latent_diff.mean()
-            latent_dict[guidance_scale] = inter_noise_pred
-        best_guidance_scale = min(latent_dict, key=latent_diff_dict.get)
-        noise_pred = latent_dict[best_guidance_scale]
+            latent_dictionary[guidance_scale] = inter_noise_pred
+        best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
+        noise_pred = latent_dictionary[best_guidance_scale]
         latent = next_step(noise_pred, int(t), latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
