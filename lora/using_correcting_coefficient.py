@@ -241,9 +241,9 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
     alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
     beta_prod_t = 1 - alpha_prod_t
-    next_original_sample = (sample + beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+    next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
     next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
-    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample - next_sample_direction
+    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
 def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
