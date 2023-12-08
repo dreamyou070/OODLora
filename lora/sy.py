@@ -533,7 +533,7 @@ def main(args) :
         heights = attn_prob_storer_dict.keys()
         for height in heights :
             prob_list = attn_prob_storer_dict[height]
-            prob_map = torch.mean(torch.stack(prob_list, dim=0), dim=0)
+            prob_map = torch.mean(torch.stack(prob_list, dim=0), dim=0).to('cpu')
             pix_num = height ** 2
             diagonal_mask = torch.eye(pix_num)
             normal_score = prob_map * (diagonal_mask)
