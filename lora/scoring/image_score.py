@@ -213,8 +213,12 @@ def main(args) :
     normalized_anomal_vector = anomal_vector / max_value
     normalized_anomal_map = normalized_anomal_vector.view(batch_size, 1, h, w)
     for index in range(batch_size) :
-        anomal_map = normalized_anomal_map[index].detach().cpu()
-        ano_map = cvt2heatmap(anomal_map * 255.0)
+        anomal_map = normalized_anomal_map[index].detach().cpu().squeeze()
+        gray = anomal_map * 255.0
+        print(f'torch gray : {gray}')
+        np_gray = np.uint8(gray)
+        print(f'np gray : {np_gray}')
+        ano_map = cvt2heatmap(gray)
         print(f'ano_map : {ano_map}')
 
 

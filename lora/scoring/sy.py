@@ -85,3 +85,14 @@ normalized_anomal_vector = anomal_vector / max_value
 normalized_anomal_map = normalized_anomal_vector.view(3,1,64,64)
 #
 #print(f'diff_latent : {diff_latent.shape}')
+import cv2
+def cvt2heatmap(gray):
+    heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
+    return heatmap
+
+anomal_map = torch.randn((64,64)).detach().cpu()
+gray = anomal_map * 255.0
+print(f'ano_map : {gray}')
+np_gray = np.uint8(gray)
+print(f'np_gray : {np_gray}')
+ano_map = cvt2heatmap(gray)
