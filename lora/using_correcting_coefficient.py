@@ -241,9 +241,9 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
     alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
     beta_prod_t = 1 - alpha_prod_t
-    next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+    next_original_sample = (sample + beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
     next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
-    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
+    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample - next_sample_direction
     return next_sample
 
 def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
@@ -285,7 +285,7 @@ def ddim_loop(latent, context, scheduler, unet, vae, base_folder_dir, attention_
             time_steps.append(t.item())
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[t.item()] = noise_pred
-            latent = scheduler.step(model_output = noise_pred,timestep = int(t.item()),sample = latent,).prev_sample
+            latent = next_step(noise_pred, int(t.item()), latent, scheduler)
             with torch.no_grad():
                 np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
@@ -424,9 +424,6 @@ def main(args) :
     scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,rescale_betas_zero_snr=True)
     scheduler.set_timesteps(args.num_ddim_steps)
 
-    inverse_scheduler = DDIMInverseScheduler()
-    inverse_scheduler.set_timesteps(args.num_ddim_steps)
-
     print(f' (2.4) model to accelerator device')
     device = args.device
     if len(invers_text_encoders) > 1:
@@ -485,11 +482,14 @@ def main(args) :
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         base_folder = os.path.join(output_dir, concept_name)
         os.makedirs(base_folder, exist_ok=True)
-        base_folder = os.path.join(base_folder, f'multiply_correcting_recon_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
+        base_folder = os.path.join(base_folder, f'change_next_function__recon_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
         os.makedirs(base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
-        ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context,inverse_scheduler,
-                                                         invers_unet, vae, base_folder, attention_storer)
+        inference_times = scheduler.timesteps
+        ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context,
+                                                         inference_times,
+                                                         scheduler, invers_unet, vae, base_folder,
+                                                         attention_storer)
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
