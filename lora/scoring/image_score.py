@@ -193,6 +193,10 @@ if __name__ == "__main__":
     train_util.add_sd_models_arguments(parser)
     parser.add_argument("--vae", type=str, default=None,
                         help="path to checkpoint of vae to replace / VAEを入れ替える場合、VAEのcheckpointファイルまたはディレクトリ")
+    parser.add_argument("--sample_sampler",type=str,default="ddim",
+                        choices=["ddim","pndm","lms","euler","euler_a","heun","dpm_2","dpm_2_a","dpmsolver",
+                                 "dpmsolver++","dpmsingle","k_lms","k_euler","k_euler_a","k_dpm_2","k_dpm_2_a",],
+                        help=f"sampler (scheduler) type for sample images / サンプル出力時のサンプラー（スケジューラ）の種類",)
     parser.add_argument("--network_module", type=str, default=None,
                         help="network module to train / 学習対象のネットワークのモジュール")
     parser.add_argument("--base_weights", type=str, default=None, nargs="*",
