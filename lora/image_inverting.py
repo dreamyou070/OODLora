@@ -322,7 +322,7 @@ def recon_loop(latents, context, inference_times, scheduler, unet, vae, base_fol
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
     for i, t in enumerate(inference_times[:-1]):
-        prev_time = inference_times[i+1].item()
+        prev_time = int(inference_times[i+1])
         time_steps.append(t.item())
         input_latent = torch.cat([latent] * 2)
         trg_latent = latents[-(i + 2)]
