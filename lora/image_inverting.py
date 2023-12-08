@@ -293,8 +293,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     for i, t in enumerate(flip_times[:-1]):
         if repeat_time < args.repeat_time :
             next_time = flip_times[i+1].item()
-            print(f'inverting : {int(t.item())} to latent_dict')
-            latent_dict[t.item()] = latent
+            latent_dict[int(t.item())] = latent
             time_steps.append(t.item())
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[int(t.item())] = noise_pred
