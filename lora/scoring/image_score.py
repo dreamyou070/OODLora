@@ -209,5 +209,4 @@ if __name__ == "__main__":
     parser.add_argument("--network_weights", type=str, default=None,
                         help="pretrained weights for network / 学習するネットワークの初期重み")
     args = parser.parse_args()
-    args = train_util.read_config_from_file(args, parser)
     main(args)
