@@ -559,7 +559,7 @@ def main(args) :
         query_storer = AttentionStore()
         register_attention_control(unet, query_storer)
         un, _ = context.chunk(2)
-        call_unet(unet,input_latent, 0, torch.cat([un] * 2),)
+        call_unet(unet,input_latent, 0, torch.cat([un] * 2),None, None)
         query_storer = query_storer.self_query_store
         layer_names = query_storer.keys()
         for layer_name in layer_names :
