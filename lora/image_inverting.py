@@ -528,6 +528,7 @@ def main(args) :
         current_time = time_steps[-1]
         prev_time = time_steps[-2]
         noise_pred = call_unet(unet, latent_model_input, current_time, context, int(current_time), prev_time)
+        print(f'noise_pred : {noise_pred.shape}')
         guidance_scales = [1,2,3,4,5]
         guidance_dict = {}
         for guidance_scale in guidance_scales :
@@ -537,9 +538,10 @@ def main(args) :
             latent = prev_step(noise_pred, int(current_time), start_latent, scheduler)
             latent_diff = torch.nn.functional.mse_loss(latent.float(),next_latent.float(), reduction='none')
             guidance_dict[guidance_scale] = latent_diff.mean()
+
         best_guidance_scale = min(guidance_dict, key=guidance_dict.get)
         print(f' (2.3.3) best guidance scale is {best_guidance_scale}')
-        
+
 
 
         """
