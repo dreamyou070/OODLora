@@ -169,8 +169,14 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             if not is_cross_attention:
                 #query = self_query_dict[trg_indexs_list][layer_name].to(query.device)
                 if trg_indexs_list > args.threshold_time or mask == 0 :
-                    key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
-                    value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
+                    if hidden_states.shape[0] == 2 :
+                        uncon_key, con_key = key.chunk(2)
+                        uncon_value, con_value = value.chunk(2)
+                        key = torch.cat([uncon_key, self_key_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
+                        value = torch.cat([uncon_value, self_value_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
+                    else :
+                        key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
+                        value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
 
             if self.upcast_attention:
                 query = query.float()
@@ -513,6 +519,30 @@ def main(args) :
 
                 i += 1
         start_latent = ddim_latents[-1]
+
+        # ------------------------------------------------------------------------------------------------------
+        # local finding best guidance
+        next_latent = ddim_latents[-2]
+        uncond_embeddings, cond_embeddings = context.chunk(2)
+        latent_model_input = torch.cat([start_latent] * 2)
+        current_time = time_steps[-1]
+        prev_time = time_steps[-2]
+        noise_pred = call_unet(unet, latent_model_input, current_time, context, int(current_time), prev_time)
+        guidance_scales = [1,2,3,4,5]
+        guidance_dict = {}
+        for guidance_scale in guidance_scales :
+            print(f' (2.3.2) finding best guidance')
+            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+            noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+            latent = prev_step(noise_pred, int(current_time), start_latent, scheduler)
+            latent_diff = torch.nn.functional.mse_loss(latent.float(),next_latent.float(), reduction='none')
+            guidance_dict[guidance_scale] = latent_diff.mean()
+        best_guidance_scale = min(guidance_dict, key=guidance_dict.get)
+        print(f' (2.3.3) best guidance scale is {best_guidance_scale}')
+        
+
+
+        """
         collector = AttentionStore()
         register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
         time_steps.reverse()
@@ -553,6 +583,7 @@ def main(args) :
             pil_image.save(heatmap_save_dir)
 
         break
+        """
 
 
 if __name__ == "__main__":
