@@ -261,7 +261,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
 
 @torch.no_grad()
 def ddim_loop(latent, context, scheduler, unet, vae, base_folder_dir, attention_storer):
-    inference_times, = scheduler.timesteps
+    inference_times = scheduler.timesteps
     print(f'Inference times : {inference_times}')
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
