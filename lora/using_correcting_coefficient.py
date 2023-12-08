@@ -57,6 +57,7 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
 
             if not is_cross_attention:
                 # when self attention
+                print('caching values ...')
                 controller.self_query_key_value_caching(query_value=query.detach().cpu(),
                                                         key_value=key.detach().cpu(),
                                                         value_value=value.detach().cpu(),
@@ -291,7 +292,6 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             next_time = flip_times[i+1].item()
             latent_dict[t.item()] = latent
             time_steps.append(t.item())
-            print(f'unet calling on {t.item()}')
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[t.item()] = noise_pred
             latent = next_step(noise_pred, int(t.item()), latent, scheduler)
@@ -501,8 +501,11 @@ def main(args) :
 
         ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context,
                                                          inference_times,
-                                                         scheduler, invers_unet, vae, base_folder,
+                                                         scheduler,
+                                                         invers_unet,
+                                                         vae, base_folder,
                                                          attention_storer)
+        print(f'number of repeating : {attention_storer.repeat}')
         print(f'time_steps : {time_steps }')
         print(f' (2.3.0) set coefficient')
         with torch.no_grad() :
@@ -520,11 +523,12 @@ def main(args) :
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
+            print()
             self_query_list = attention_storer.self_query_store[layer]
             self_key_list = attention_storer.self_key_store[layer]
             self_value_list = attention_storer.self_value_store[layer]
             i = 1
-            print(f'len of self_query_list : {len(self_query_list)}')
+            print(f'len of self_query_list : {len(self_query_list)} | self_key_list : {len(self_key_list)}  | self_value_list : {len(self_value_list)}')
             for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list) :
                 time_step = time_steps[i]
                 print(f'timestep : {time_step}')
