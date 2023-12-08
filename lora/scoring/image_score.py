@@ -217,7 +217,7 @@ def main(args) :
         gray = anomal_map * 255.0
         np_gray = np.uint8(gray)
         ano_map = cvt2heatmap(gray)
-        pil_image = np.array(Image.fromarray(ano_map).resize((512, 512)))
+        pil_image = Image.fromarray(ano_map).resize((512, 512))
         pil_image.save('../examples/heatmap.png')
 
 
