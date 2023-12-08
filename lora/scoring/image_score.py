@@ -215,11 +215,10 @@ def main(args) :
     for index in range(batch_size) :
         anomal_map = normalized_anomal_map[index].detach().cpu().squeeze()
         gray = anomal_map * 255.0
-        print(f'torch gray : {gray}')
         np_gray = np.uint8(gray)
-        print(f'np gray : {np_gray}')
         ano_map = cvt2heatmap(gray)
-        print(f'ano_map : {ano_map}')
+        pil_image = np.array(Image.fromarray(ano_map).resize((512, 512)))
+        pil_image.save('../examples/heatmap.png')
 
 
 
