@@ -523,6 +523,7 @@ def main(args) :
             self_key_list = attention_storer.self_key_store[layer]
             self_value_list = attention_storer.self_value_store[layer]
             i = 1
+            print(f'len of self_query_list : {len(self_query_list)}')
             for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list) :
                 time_step = time_steps[i]
                 print(f'timestep : {time_step}')
