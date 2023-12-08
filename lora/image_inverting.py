@@ -339,7 +339,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
         print(f'best guidance scale is {best_guidance_scale}')
         noise_pred = latent_dictionary[best_guidance_scale]
-        latent = next_step(noise_pred, int(t), latent, scheduler)
+        latent = prev_step(noise_pred, int(t), latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
