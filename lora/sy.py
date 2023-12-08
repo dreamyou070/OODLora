@@ -150,7 +150,7 @@ def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
-def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dict,self_value_dict):
+def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, self_key_dict,self_value_dict):
 
     def ca_forward(self, layer_name):
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
@@ -168,11 +168,9 @@ def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dic
 
             if not is_cross_attention:
                 #query = self_query_dict[trg_indexs_list][layer_name].to(query.device)
-                if trg_indexs_list > args.threshold_time :
+                if trg_indexs_list > args.threshold_time or mask == 0 :
                     key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
                     value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
-
-
 
             if self.upcast_attention:
                 query = query.float()
@@ -181,8 +179,8 @@ def register_self_condition_giver(unet: nn.Module, self_query_dict, self_key_dic
                                                          device=query.device),
                                              query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
-            if mask == 0:
-                print(f'attention_probs : {attention_probs.shape}')
+            if mask == 0 and not is_cross_attention :
+                collector.store(attention_probs, layer_name)
             attention_probs = attention_probs.to(value.dtype)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -512,16 +510,57 @@ def main(args) :
                 else :
                     self_value_dict[time_step][layer] = self_value
         start_latent = ddim_latents[-2]
-        register_self_condition_giver(unet, self_query_dict, self_key_dict, self_value_dict)
+        collector = AttentionStore()
+        register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
         all_latent, _, _ = recon_loop(start_latent, context, inference_times, scheduler, unet, vae,
                    self_query_dict, self_key_dict, self_value_dict,
                    base_folder)
         attention_storer.reset()
+        attn_prob_storer = collector.step_store
+        layer_names = attn_prob_storer.keys()
 
-        image_gt = image_gt_np.flatten()
-        image_pred = latent2image(all_latent[-1], vae, return_type='np')
-        auroc_image = round(roc_auc_score(image_gt, image_pred), 3) * 100
-        print("Image AUC-ROC: ", auroc_image)
+        attn_prob_storer_dict = {}
+        for layer_name in layer_names :
+            attention_probs = attn_prob_storer[layer_name]
+            attention_probs = torch.sum(attention_probs, dim=0)
+            pix_num = attention_probs.shape[0]
+            height = int(pix_num ** 0.5)
+            if height not in attn_prob_storer_dict.keys() :
+                attn_prob_storer_dict[height] = []
+                attn_prob_storer_dict[height].append(attention_probs)
+            else :
+                attn_prob_storer_dict[height].append(attention_probs)
+        heights = attn_prob_storer_dict.keys()
+        for height in heights :
+            prob_list = attn_prob_storer_dict[height]
+            prob_map = torch.mean(torch.stack(prob_list, dim=0), dim=0)
+            pix_num = height ** 2
+            diagonal_mask = torch.eye(pix_num)
+            normal_score = prob_map * (diagonal_mask)
+            normal_score_vector = torch.sum(normal_score, dim=-1)
+            normal_map = normal_score_vector.reshape(height, height)
+            max_value = torch.max(normal_map)
+            normal_map = normal_map / max_value
+            anomal_map = 1 - normal_map # torch map
+            gray = anomal_map * 255.0
+            import cv2
+            heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
+            pil_image = Image.fromarray(heatmap).resize((512, 512))
+            pil_image.save(f'heatmap_res_{height}.png')
+            
+
+
+
+
+
+
+        #store(attention_probs, layer_name)
+        #image_gt = image_gt_np.flatten()
+        #image_pred = latent2image(all_latent[-1], vae, return_type='np')
+        #auroc_image = round(roc_auc_score(image_gt, image_pred), 3) * 100
+        #print("Image AUC-ROC: ", auroc_image)
+
+        #
 
 
 if __name__ == "__main__":

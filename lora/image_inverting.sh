@@ -5,5 +5,5 @@ python sy.py --device cuda:1 \
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 \
   --network_weights '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/1_first_experiment/last.safetensors' \
-  --prompt 'normal' --concept_image_folder /data7/sooyeon/medical_image/experiment_data/MV/bagel/test/contamination/rgb \
+  --prompt 'normal' --concept_image_folder /data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel/test/contamination/rgb \
   --inversion_experiment --sample_sampler ddim --num_ddim_steps 50 --threshold_time 500
