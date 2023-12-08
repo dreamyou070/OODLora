@@ -567,10 +567,12 @@ def main(args) :
             query_value_list = query_storer[layer_name]
             query_collecting = query_value_list[0]
             org_query, recon_query = query_collecting.chunk(2)
-            # org_query = [8, pix_2, pix_2]
             org_query = torch.mean(org_query, dim=0)
             recon_query = torch.mean(recon_query, dim=0)
-            pix_num = org_query.shape[-1]
+            print(f'org_query shape : {org_query.shape}')
+
+
+            pix_num = org_query.shape[-2]
             height = int(pix_num ** 0.5)
             if height not in org_query_dict.keys():
                 org_query_dict[height] = []
