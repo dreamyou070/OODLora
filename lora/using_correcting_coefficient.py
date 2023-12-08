@@ -27,7 +27,7 @@ except Exception:
 from diffusers import (DDPMScheduler,EulerAncestralDiscreteScheduler,DPMSolverMultistepScheduler,DPMSolverSinglestepScheduler,
                        LMSDiscreteScheduler,PNDMScheduler,EulerDiscreteScheduler,HeunDiscreteScheduler,
                        KDPM2DiscreteScheduler,KDPM2AncestralDiscreteScheduler)
-from diffusers import DDIMScheduler
+from schedulers import DDIMScheduler, DDIMInverseScheduler
 
 def register_attention_control(unet : nn.Module, controller:AttentionStore) :
     """ Register cross attention layers to controller. """
@@ -261,7 +261,9 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     return prev_sample
 
 @torch.no_grad()
-def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
+def ddim_loop(latent, context, scheduler, unet, vae, base_folder_dir, attention_storer):
+    inference_times, = scheduler.inference_times
+    print(f'Inference times : {inference_times}')
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
@@ -420,11 +422,11 @@ def main(args) :
     SCHEDULER_LINEAR_END = 0.0120
     SCHEDULER_TIMESTEPS = 1000
     SCHEDLER_SCHEDULE = "scaled_linear"
-    scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,
-                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,
-                              rescale_betas_zero_snr=True)
+    scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,rescale_betas_zero_snr=True)
     scheduler.set_timesteps(args.num_ddim_steps)
-    inference_times = scheduler.timesteps
+
+    inverse_scheduler = DDIMInverseScheduler()
+    inverse_scheduler.set_timesteps(args.num_ddim_steps)
 
     print(f' (2.4) model to accelerator device')
     device = args.device
@@ -487,12 +489,8 @@ def main(args) :
         base_folder = os.path.join(base_folder, f'multiply_correcting_recon_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
         os.makedirs(base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
-        ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context,
-                                                         inference_times,
-                                                         scheduler,
-                                                         invers_unet,
-                                                         vae, base_folder,
-                                                         attention_storer)
+        ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context,inverse_scheduler,
+                                                         invers_unet, vae, base_folder, attention_storer)
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
@@ -579,6 +577,7 @@ def main(args) :
             pil_image.save(heatmap_save_dir)
 
         break
+    """
 
 
 if __name__ == "__main__":
