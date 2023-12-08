@@ -272,7 +272,6 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
-    original_sample = latent.clone().detach()
     time_steps = []
     latent = latent.clone().detach()
     latent_dict = {}
@@ -316,8 +315,9 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
     pil_images = []
     # 980, ..., 20
     for i, t in enumerate(inference_times[:-1]):
-        current_time = t.item()
-        prev_time = inference_times[i+1].item()
+        current_time = t   #.item()
+        time_steps.append(current_time)
+        prev_time = inference_times[i+1] #.item()
         noise_pred = call_unet(unet, latent, t, cond_embeddings, int(current_time), prev_time)
         latent = prev_step(noise_pred, current_time, latent, scheduler)
         with torch.no_grad():
@@ -327,6 +327,7 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
         pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
         # ----------------------------------------------------------------------------
         all_latent.append(latent)
+    time_steps.append(prev_time)
     return all_latent, time_steps, pil_images
 
 @torch.no_grad()
@@ -487,7 +488,7 @@ def main(args) :
                                                          inference_times,
                                                          scheduler, invers_unet, vae, base_folder,
                                                          attention_storer)
-        time_steps.reverse()
+
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
@@ -518,6 +519,7 @@ def main(args) :
         start_latent = ddim_latents[-1]
         collector = AttentionStore()
         register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+        time_steps.reverse()
         all_latent, _, _ = recon_loop(start_latent, context,
                                       #inference_times,
                                       time_steps,
