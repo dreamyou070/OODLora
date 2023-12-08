@@ -7,4 +7,4 @@ python image_inverting.py --device cuda:1 \
   --prompt 'normal' --inversion_experiment --sample_sampler ddim --num_ddim_steps 50 \
   --output_dir '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/1_first_experiment/train_experience/1_experiment' \
   --concept_image_folder /data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel/test/contamination/rgb \
-  --repeat_time 15 --threshold_time 0
+  --repeat_time 50 --threshold_time 200
