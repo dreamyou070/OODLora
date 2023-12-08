@@ -569,7 +569,7 @@ def main(args) :
         query_storer.reset()
         org_query_dict, recon_query_dict = {}, {}
         for layer_name in layer_names :
-            query_value_list = query_storer[layer_name]
+            query_value_list = query_storing[layer_name]
             query_collecting = query_value_list[0]
             org_query, recon_query = query_collecting.chunk(2)
             org_query = torch.mean(org_query, dim=0)
