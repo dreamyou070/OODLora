@@ -326,7 +326,6 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
         #pil_img.save(os.path.join(base_folder_dir, f'onestep_recon.png'))
         # ----------------------------------------------------------------------------
         all_latent.append(latent)
-        break
     time_steps.append(prev_time)
     return all_latent, time_steps, pil_images
 
