@@ -182,7 +182,8 @@ if __name__ == "__main__":
     # step 1. setting
     parser.add_argument("--process_title", type=str, default='parksooyeon')
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--mixed_precision", type=str, choices = ["fp16", "bf16"], default = 'fp16')
+    parser.add_argument("--mixed_precision", type=str, default="no", choices=["no", "fp16", "bf16"],
+                        help="use mixed precision / 混合精度を使う場合、その精度")
     parser.add_argument("--save_precision", type=str, choices=["fp16", "bf16", 'float'], default = 'fp16')
     parser.add_argument("--no_half_vae", action="store_true",
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
