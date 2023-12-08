@@ -522,8 +522,8 @@ def main(args) :
         attn_prob_storer_dict = {}
         for layer_name in layer_names :
             attention_probs_list = attn_prob_storer[layer_name]
-            attention_probs = torch.mean(torch.stack(attention_probs_list, dim=0), dim=0)
-            pix_num = attention_probs.shape[0]
+            attention_probs = torch.mean(attention_probs_list[0], dim=0)
+            pix_num = attention_probs.shape[-1]
             height = int(pix_num ** 0.5)
             if height not in attn_prob_storer_dict.keys() :
                 attn_prob_storer_dict[height] = []
