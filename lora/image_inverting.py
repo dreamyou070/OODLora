@@ -497,10 +497,9 @@ def main(args) :
             self_query_list = attention_storer.self_query_store[layer]
             self_key_list = attention_storer.self_key_store[layer]
             self_value_list = attention_storer.self_value_store[layer]
-            i = 0
+            i = 1
             for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list) :
                 time_step = time_steps[i]
-                i += 1
                 if time_step not in self_query_dict.keys() :
                     self_query_dict[time_step] = {}
                     self_query_dict[time_step][layer] = self_query
@@ -517,6 +516,7 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
                 else :
                     self_value_dict[time_step][layer] = self_value
+                i += 1
         #start_latent = ddim_latents[-2]
         start_latent = ddim_latents[-1]
         collector = AttentionStore()
