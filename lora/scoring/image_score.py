@@ -197,6 +197,7 @@ if __name__ == "__main__":
                         choices=["ddim","pndm","lms","euler","euler_a","heun","dpm_2","dpm_2_a","dpmsolver",
                                  "dpmsolver++","dpmsingle","k_lms","k_euler","k_euler_a","k_dpm_2","k_dpm_2_a",],
                         help=f"sampler (scheduler) type for sample images / サンプル出力時のサンプラー（スケジューラ）の種類",)
+    parser.add_argument("--num_ddim_steps", type=int, default=30)
     parser.add_argument("--network_module", type=str, default=None,
                         help="network module to train / 学習対象のネットワークのモジュール")
     parser.add_argument("--base_weights", type=str, default=None, nargs="*",
