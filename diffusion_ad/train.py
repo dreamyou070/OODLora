@@ -236,7 +236,6 @@ def eval(testing_dataset_loader,args,unet_model,seg_model,data_len,sub_class,dev
    
     return auroc_image,auroc_pixel
 
-
 def save(unet_model,seg_model, args,final,epoch,sub_class):
     
     if final=='last':
@@ -269,7 +268,8 @@ def main():
     args = defaultdict_from_json(args)
 
     print(f'\n step 2. check data')
-    mvtec_classes = ['carpet', 'grid', 'leather', 'tile', 'wood', 'bottle', 'cable', 'capsule', 'hazelnut', 'metal_nut', 'pill', 'screw','toothbrush', 'transistor', 'zipper']
+    mvtec_classes = ['carpet',]
+    #'grid', 'leather', 'tile', 'wood', 'bottle', 'cable','capsule', 'hazelnut', 'metal_nut','pill', 'screw','toothbrush', 'transistor', 'zipper']
     visa_classes = ['candle', 'capsules', 'cashew', 'chewinggum', 'fryum', 'macaroni1', 'macaroni2', 'pcb1', 'pcb2',
                     'pcb3', 'pcb4', 'pipe_fryum']
     mpdd_classes = ['bracket_black', 'bracket_brown', 'bracket_white', 'connector', 'metal_plate', 'tubes'] 
@@ -277,7 +277,7 @@ def main():
     current_classes = mvtec_classes
     class_type = ''
     for sub_class in current_classes:    
-        print("class",sub_class)
+        print("class : ",sub_class)
         if sub_class in visa_classes:
             subclass_path = os.path.join(args["visa_root_path"],sub_class)
             print(subclass_path)
