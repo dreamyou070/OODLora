@@ -507,14 +507,14 @@ def main(args) :
             standard_noise = torch.randn_like(latent)
             uncond_embeddings, cond_embeddings = context.chunk(2)
             noise_pred = invers_unet(standard_noise, 999, uncond_embeddings).sample
-
             inference_timesteps = scheduler.timesteps
             noise_coeff_dict = {}
-            for i in inference_timesteps :
+            for ii in inference_timesteps :
+                print(f'set coefficient timestep : {ii}')
                 # make noise latent
-                noise_latent = scheduler.add_noise(original_samples = latent,noise = standard_noise,timesteps = i)
-                model_output = invers_unet(noise_latent, i, uncond_embeddings).sample
-                noise_coeff_dict[i] = noise_pred - model_output
+                noise_latent = scheduler.add_noise(original_samples = latent,noise = standard_noise,timesteps = ii)
+                model_output = invers_unet(noise_latent, ii, uncond_embeddings).sample
+                noise_coeff_dict[ii] = noise_pred - model_output
 
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
