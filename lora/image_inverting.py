@@ -591,19 +591,10 @@ def main(args) :
             print(f'[cross_attn_map] height : {height} | cross_attn_map (pix2,pix2) : {cross_attn_map.shape}')
 
             cross_attn_map = torch.softmax(cross_attn_map, dim=-1)
-            max_index = torch.max(cross_attn_map, dim=-1)[1]
-            print(f'[max_index] height : {height} | max_index : {max_index}')
-
-
-
-
-
-
-
             diagonal_mask = torch.eye(height*height)
             normal_map = cross_attn_map * diagonal_mask
             sim_vector = normal_map.sum(-1)
-            print(f'sim_vector : {sim_vector.shape}')
+            print(f'sim_vector : {sim_vector}')
             sim_map = sim_vector.reshape(height, height)
             anomal_map = 1 - sim_map
             gray = anomal_map * 255.0
