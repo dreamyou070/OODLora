@@ -307,6 +307,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
     print(f'latent_dict keys : {latent_dict.keys()}')
+    check = latent_dict[260]
+    print(f'check : {check}')
     return latent_dict, time_steps, pil_images
 
 @torch.no_grad()
