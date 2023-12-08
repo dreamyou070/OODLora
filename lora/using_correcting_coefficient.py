@@ -294,6 +294,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             repeat_time += 1
     # 31 number of timesteps
     time_steps.append(next_time)
+
     return all_latent, time_steps, pil_images
 
 @torch.no_grad()
@@ -493,18 +494,6 @@ def main(args) :
                                                          invers_unet,
                                                          vae, base_folder,
                                                          attention_storer)
-        print(f' (2.3.0) set coefficient')
-        with torch.no_grad() :
-            standard_noise = torch.randn_like(latent)
-            uncond_embeddings, cond_embeddings = context.chunk(2)
-            noise_pred = invers_unet(standard_noise, 999, uncond_embeddings).sample
-            noise_coeff_dict = {}
-            for ii in scheduler.timesteps :
-                # make noise latent
-                noise_latent = scheduler.add_noise(original_samples = latent,noise = standard_noise,timesteps = ii)
-                model_output = invers_unet(noise_latent, ii, uncond_embeddings).sample
-                noise_coeff_dict[ii] = noise_pred - model_output
-
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
@@ -512,10 +501,8 @@ def main(args) :
             self_key_list = attention_storer.self_key_store[layer]
             self_value_list = attention_storer.self_value_store[layer]
             i = 1
-            print(f'len of self_query_list : {len(self_query_list)} | self_key_list : {len(self_key_list)}  | self_value_list : {len(self_value_list)}')
             for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list) :
                 time_step = time_steps[i]
-                print(f'timestep : {time_step}')
                 if time_step not in self_query_dict.keys() :
                     self_query_dict[time_step] = {}
                     self_query_dict[time_step][layer] = self_query
@@ -533,6 +520,20 @@ def main(args) :
                 else :
                     self_value_dict[time_step][layer] = self_value
                 i += 1
+        attention_storer.clear()
+        print(f' (2.3.0) set coefficient')
+        with torch.no_grad():
+            standard_noise = torch.randn_like(latent)
+            uncond_embeddings, cond_embeddings = context.chunk(2)
+            noise_pred = invers_unet(standard_noise, 999, uncond_embeddings).sample
+            noise_coeff_dict = {}
+            for ii in scheduler.timesteps:
+                # make noise latent
+                noise_latent = scheduler.add_noise(original_samples=latent, noise=standard_noise, timesteps=ii)
+                attention_storer.clear()
+                model_output = invers_unet(noise_latent, ii, uncond_embeddings).sample
+                noise_coeff_dict[ii] = noise_pred - model_output
+
         #start_latent = ddim_latents[-2]
         start_latent = ddim_latents[-1]
         collector = AttentionStore()
