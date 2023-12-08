@@ -320,7 +320,7 @@ def recon_loop(latents, context, inference_times, scheduler, unet, vae, base_fol
         np_img = latent2image(latent, vae, return_type='np')
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
-    pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
+    pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i+1])
         time_steps.append(int(t))
@@ -337,7 +337,7 @@ def recon_loop(latents, context, inference_times, scheduler, unet, vae, base_fol
                                                        trg_latent.float(), reduction='none')
             latent_diff_dict[guidance_scale] = latent_diff.mean()
             latent_dict[guidance_scale] = inter_noise_pred
-        best_guidance_scale = min(latent_dict, key=latent_dict.get)
+        best_guidance_scale = min(latent_dict, key=latent_diff_dict.get)
         noise_pred = latent_dict[best_guidance_scale]
         latent = next_step(noise_pred, int(t), latent, scheduler)
         with torch.no_grad():
