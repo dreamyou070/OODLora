@@ -594,6 +594,14 @@ def main(args) :
             normal_map = cross_attn_map * diagonal_mask
             normal_vector = normal_map.sum(-1)
             print(f'normal_vector : {normal_vector.shape}')
+            normal_vector = normal_vector.reshape(height, height)
+            anomal_map = 1 - normal_map
+            gray = anomal_map * 255.0
+            import cv2
+            heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
+            pil_image = Image.fromarray(heatmap).resize((512, 512))
+            heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
+            pil_image.save(heatmap_save_dir)
 
 
         """
