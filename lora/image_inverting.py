@@ -311,6 +311,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
 
 @torch.no_grad()
 def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir):
+    print(f'lantent_dict keys : {latent_dict.keys()}')
     latent = latent_dict[inference_times[0]]
     all_latent = []
     all_latent.append(latent)
