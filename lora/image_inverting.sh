@@ -1,4 +1,4 @@
-python using_correcting_coefficient.py --device cuda:1 \
+python image_inverting.py --device cuda:1 \
   --process_title parksooyeon \
   --pretrained_model_name_or_path /data7/sooyeon/pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora \

@@ -287,7 +287,6 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     repeat_time = 0
     for i, t in enumerate(flip_times[:-1]):
         if repeat_time < args.repeat_time :
-        # 0,20,..., 980, 1000
             next_time = flip_times[i+1].item()
             latent_dict[t.item()] = latent
             time_steps.append(t.item())
@@ -305,34 +304,24 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     return all_latent, time_steps, pil_images
 
 @torch.no_grad()
-def recon_loop(latent, context, inference_times, scheduler, unet, vae,
-               self_query_dict, self_key_dict, self_value_dict,
-               base_folder_dir):
+def recon_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir):
     uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
-    latent_dict = {}
     pil_images = []
     # 980, ..., 20
     for i, t in enumerate(inference_times[:-1]):
-        current_time = t   #.item()
+        current_time = t
         time_steps.append(current_time)
         prev_time = inference_times[i+1] #.item()
         noise_pred = call_unet(unet, latent, t, cond_embeddings, int(current_time), prev_time)
-        pred_original_sample=scheduler.step(noise_pred, int(current_time), sample=latent, return_dict = True). pred_original_sample
-        latent = pred_original_sample
-        """
         latent = prev_step(noise_pred, int(current_time), latent, scheduler)
-        """
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        #pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
-        pil_img.save(os.path.join(base_folder_dir, f'onestep_recon.png'))
-        # ----------------------------------------------------------------------------
+        pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
         all_latent.append(latent)
-        break
     time_steps.append(prev_time)
     return all_latent, time_steps, pil_images
 
@@ -428,8 +417,7 @@ def main(args) :
     SCHEDULER_TIMESTEPS = 1000
     SCHEDLER_SCHEDULE = "scaled_linear"
     scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,
-                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,
-                              rescale_betas_zero_snr=True)
+                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
 
@@ -491,14 +479,11 @@ def main(args) :
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         base_folder = os.path.join(output_dir, concept_name)
         os.makedirs(base_folder, exist_ok=True)
-        base_folder = os.path.join(base_folder, f'recon_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
+        base_folder = os.path.join(base_folder, f'test_recon_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
         os.makedirs(base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
-        ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context,
-                                                         inference_times,
-                                                         scheduler, invers_unet, vae, base_folder,
-                                                         attention_storer)
-
+        ddim_latents, time_steps, pil_images = ddim_loop(latent, invers_context, inference_times,
+                                                         scheduler, invers_unet, vae, base_folder, attention_storer)
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
@@ -513,6 +498,7 @@ def main(args) :
                     self_query_dict[time_step][layer] = self_query
                 else :
                     self_query_dict[time_step][layer] = self_query
+
                 if time_step not in self_key_dict.keys() :
                     self_key_dict[time_step] = {}
                     self_key_dict[time_step][layer] = self_key
@@ -524,18 +510,14 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
                 else :
                     self_value_dict[time_step][layer] = self_value
+
                 i += 1
-        #start_latent = ddim_latents[-2]
         start_latent = ddim_latents[-1]
         collector = AttentionStore()
         register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
         time_steps.reverse()
-        all_latent, _, _ = recon_loop(start_latent, context,
-                                      #inference_times,
-                                      time_steps,
-                                      scheduler, unet, vae,
-                   self_query_dict, self_key_dict, self_value_dict,
-                   base_folder)
+        all_latent, _, _ = recon_loop(start_latent, context,time_steps,
+                                      scheduler, unet, vae,base_folder)
         attention_storer.reset()
         attn_prob_storer = collector.step_store
         layer_names = attn_prob_storer.keys()
