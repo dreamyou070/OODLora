@@ -591,6 +591,15 @@ def main(args) :
             print(f'[cross_attn_map] height : {height} | cross_attn_map (pix2,pix2) : {cross_attn_map.shape}')
 
             cross_attn_map = torch.softmax(cross_attn_map, dim=-1)
+            max_index = torch.max(cross_attn_map, dim=-1)[1]
+            print(f'[max_index] height : {height} | max_index : {max_index}')
+
+
+
+
+
+
+
             diagonal_mask = torch.eye(height*height)
             normal_map = cross_attn_map * diagonal_mask
             sim_vector = normal_map.sum(-1)
