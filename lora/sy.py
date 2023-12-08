@@ -521,8 +521,8 @@ def main(args) :
 
         attn_prob_storer_dict = {}
         for layer_name in layer_names :
-            attention_probs = attn_prob_storer[layer_name]
-            attention_probs = torch.sum(attention_probs, dim=0)
+            attention_probs_list = attn_prob_storer[layer_name]
+            attention_probs = torch.mean(torch.stack(attention_probs_list, dim=0), dim=0)
             pix_num = attention_probs.shape[0]
             height = int(pix_num ** 0.5)
             if height not in attn_prob_storer_dict.keys() :
@@ -547,7 +547,7 @@ def main(args) :
             heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
             pil_image = Image.fromarray(heatmap).resize((512, 512))
             pil_image.save(f'heatmap_res_{height}.png')
-            
+
 
 
 
