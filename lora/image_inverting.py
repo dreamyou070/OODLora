@@ -538,7 +538,6 @@ def main(args) :
         guidance_scales = [1,2,3,4,5, 6, 7, 7.5, 8, 9, 10]
         guidance_dict = {}
         for guidance_scale in guidance_scales :
-            print(f' (2.3.2) finding best guidance')
             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
             inter_noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
             latent = prev_step(inter_noise_pred, int(current_time), start_latent, scheduler)
@@ -546,6 +545,7 @@ def main(args) :
             guidance_dict[guidance_scale] = latent_diff.mean()
 
         best_guidance_scale = min(guidance_dict, key=guidance_dict.get)
+        print(f'best guidance sclae : {best_guidance_scale}')
         collector = AttentionStore()
         register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
         time_steps.reverse()
