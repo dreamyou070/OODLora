@@ -1,7 +1,8 @@
 import argparse
-import os
+import os, sys
 import random
 from accelerate.utils import set_seed
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import library.train_util as train_util
 import library.config_util as config_util
 import library.custom_train_functions as custom_train_functions
@@ -172,7 +173,7 @@ def main(args) :
     recon_np = load_512(recon_img_dir)
     recon_latent = image2latent(recon_np, vae, device, weight_dtype)
 
-    
+
 
 
 if __name__ == "__main__":
