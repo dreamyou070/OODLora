@@ -22,7 +22,7 @@
   "visa_root_path":"",
   "dagm_root_path":"",
   "mpdd_root_path":"",
-  "anomaly_source_path":"",
+  "anomaly_source_path":"/data7/sooyeon/MyData/anomaly_detection/MVTec_threshold",
   "noisier_t_range":600,
   "less_t_range":300,
   "condition_w":1,

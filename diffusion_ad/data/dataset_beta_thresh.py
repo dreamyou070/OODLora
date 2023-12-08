@@ -119,12 +119,11 @@ class MVTecTrainDataset(Dataset):
         self.rot = iaa.Sequential([iaa.Affine(rotate=(-90, 90))])
 
         #foreground path of textural classes
-        foreground_path = os.path.join(args["mvtec_root_path"],'carpet')
+        foreground_path = os.path.join(args["mvtec_root_path"],classname)
         self.textural_foreground_path = sorted(glob.glob(foreground_path +"/thresh/*.png"))
+        print(f'self.textural_foreground_path : {self.textural_foreground_path}')
 
-        
 
-    
     def __len__(self):
         return len(self.image_paths)
 
@@ -260,31 +259,34 @@ class MVTecTrainDataset(Dataset):
 
 
     def __getitem__(self, idx):
+
+        # 1) get image
         idx = torch.randint(0, len(self.image_paths), (1,)).item()
         image_path = self.image_paths[idx]
         image = cv2.cvtColor(cv2.imread(image_path),cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, dsize=(self.resize_shape[1], self.resize_shape[0]))
         cv2_image=image
+
+        # 2) thresh path
         thresh_path = self.get_foreground_mvtec(image_path)
         thresh=cv2.imread(thresh_path,0)
         thresh = cv2.resize(thresh,dsize=(self.resize_shape[1], self.resize_shape[0]))
-
-        thresh = np.array(thresh).astype(np.float32)/255.0 
+        thresh = np.array(thresh).astype(np.float32)/255.0
         image = np.array(image).astype(np.float32)/255.0
 
-
-        
-        anomaly_source_idx = torch.randint(0, len(self.anomaly_source_paths), (1,)).item()
-        anomaly_path = self.anomaly_source_paths[anomaly_source_idx]
-        augmented_image, anomaly_mask, has_anomaly  = self.perlin_synthetic(image,thresh,anomaly_path,cv2_image,thresh_path)
-        
-        augmented_image = np.transpose(augmented_image, (2, 0, 1))
+        # 3) anomaly image
+        #anomaly_source_idx = torch.randint(0, len(self.anomaly_source_paths), (1,)).item()
+        #anomaly_path = self.anomaly_source_paths[anomaly_source_idx]
+        #augmented_image, anomaly_mask, has_anomaly = self.perlin_synthetic(image,thresh,anomaly_path,cv2_image,thresh_path)
+        #augmented_image = np.transpose(augmented_image, (2, 0, 1))
         image = np.transpose(image, (2, 0, 1))
-        anomaly_mask = np.transpose(anomaly_mask, (2, 0, 1))
+        #anomaly_mask = np.transpose(anomaly_mask, (2, 0, 1))
 
-
-        sample = {'image': image, "anomaly_mask": anomaly_mask,
-                  'augmented_image': augmented_image, 'has_anomaly': has_anomaly, 'idx': idx}
+        sample = {'image': image,
+                  "anomaly_mask": anomaly_mask,
+                  'augmented_image': augmented_image,
+                  'has_anomaly': has_anomaly,
+                  'idx': idx}
 
         return sample
 

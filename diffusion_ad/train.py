@@ -292,7 +292,8 @@ def main():
         elif sub_class in mvtec_classes:
             subclass_path = os.path.join(args["mvtec_root_path"],sub_class)
             print(f'subclass_path : {subclass_path}')
-            training_dataset = MVTecTrainDataset(subclass_path,sub_class,
+            training_dataset = MVTecTrainDataset(subclass_path,
+                                                 sub_class,
                                                  img_size=args["img_size"],
                                                  args=args)
             testing_dataset = MVTecTestDataset(subclass_path,
