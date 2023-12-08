@@ -568,10 +568,7 @@ def main(args) :
             query_collecting = query_value_list[0]
             org_query, recon_query = query_collecting.chunk(2)
             org_query = torch.mean(org_query, dim=0)
-            recon_query = torch.mean(recon_query, dim=0)
-            print(f'org_query shape : {org_query.shape}')
-
-
+            recon_query = torch.mean(recon_query, dim=0) # [pix_2, dim]
             pix_num = org_query.shape[-2]
             height = int(pix_num ** 0.5)
             if height not in org_query_dict.keys():
@@ -590,7 +587,14 @@ def main(args) :
             recon_query = torch.stack(recon_query_list, dim=0)
             org_query = torch.mean(org_query, dim=0)
             recon_query = torch.mean(recon_query, dim=0)
-            print(f'height : {height} | org_query : {org_query.shape} | recon_query : {recon_query.shape}')
+            print(f'height : {height} | org_query (num,pix2,dim): {org_query.shape} | recon_query : {recon_query.shape}')
+            cross_attn_map = torch.matmul(org_query, recon_query.transpose(-1, -2))
+            cross_attn_map = torch.softmax(cross_attn_map, dim=-1)
+            diagonal_mask = torch.eye(height*height)
+            normal_map = cross_attn_map * diagonal_mask
+            normal_vector = normal_map.sum(-1)
+            print(f'normal_vector : {normal_vector.shape}')
+
 
         """
         origin_image = latent2image(latent, vae, device, weight_dtype)
