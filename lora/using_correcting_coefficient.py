@@ -282,7 +282,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
-    inference_times = torch.cat([torch.Tensor([1000]), inference_times])
+    inference_times = torch.cat([torch.Tensor([999]), inference_times])
     flip_times = torch.flip(inference_times, dims=[0])
     repeat_time = 0
     for i, t in enumerate(flip_times[:-1]):
@@ -502,6 +502,7 @@ def main(args) :
                                                          inference_times,
                                                          scheduler, invers_unet, vae, base_folder,
                                                          attention_storer)
+        print(f'time_steps : {time_steps }')
         print(f' (2.3.0) set coefficient')
         with torch.no_grad() :
             standard_noise = torch.randn_like(latent)
