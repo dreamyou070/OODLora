@@ -310,8 +310,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     return all_latent, time_steps, pil_images
 
 @torch.no_grad()
-def recon_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir):
-    uncond_embeddings, cond_embeddings = context.chunk(2)
+def recon_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, guidance_scale):
+    #uncond_embeddings, cond_embeddings = context.chunk(2)
     all_latent = [latent]
     time_steps = []
     pil_images = []
@@ -320,7 +320,13 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae, base_fold
         current_time = t
         time_steps.append(current_time)
         prev_time = inference_times[i+1] #.item()
-        noise_pred = call_unet(unet, latent, t, cond_embeddings, int(current_time), prev_time)
+        noise_pred = call_unet(unet,
+                               torch.cat([latent]*2),
+                               t,
+                               context,
+                               int(current_time), prev_time)
+        noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+        noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
         latent = prev_step(noise_pred, int(current_time), latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
@@ -529,7 +535,7 @@ def main(args) :
         prev_time = time_steps[-2]
         with torch.no_grad():
             noise_pred = call_unet(unet, latent_model_input, current_time, context, int(current_time), prev_time)
-        guidance_scales = [1,2,3,4,5, 6, 7]
+        guidance_scales = [1,2,3,4,5, 6, 7, 7.5, 8, 9, 10]
         guidance_dict = {}
         for guidance_scale in guidance_scales :
             print(f' (2.3.2) finding best guidance')
@@ -540,16 +546,11 @@ def main(args) :
             guidance_dict[guidance_scale] = latent_diff.mean()
 
         best_guidance_scale = min(guidance_dict, key=guidance_dict.get)
-        print(f' (2.3.3) best guidance scale is {best_guidance_scale}')
-
-
-
-        """
         collector = AttentionStore()
         register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
         time_steps.reverse()
         all_latent, _, _ = recon_loop(start_latent, context,time_steps,
-                                      scheduler, unet, vae,base_folder)
+                                      scheduler, unet, vae,base_folder, guidance_scale)
         attention_storer.reset()
         attn_prob_storer = collector.step_store
         layer_names = attn_prob_storer.keys()
