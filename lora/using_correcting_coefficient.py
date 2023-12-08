@@ -312,7 +312,7 @@ def recon_loop(latent, context, inference_times, scheduler, unet, vae,
         time_steps.append(current_time)
         prev_time = inference_times[i+1] #.item()
         noise_pred = call_unet(unet, latent, t, cond_embeddings, int(current_time), prev_time)
-        noise_pred = noise_pred + noise_coeff_dict[prev_time] - noise_coeff_dict[current_time]
+        noise_pred = noise_pred + noise_coeff_dict[int(prev_time)] - noise_coeff_dict[int(current_time)]
         pred_original_sample=scheduler.step(noise_pred, int(current_time), sample=latent, return_dict = True). pred_original_sample
         latent = pred_original_sample
         """
@@ -532,7 +532,7 @@ def main(args) :
                 noise_latent = scheduler.add_noise(original_samples=latent, noise=standard_noise, timesteps=ii)
                 attention_storer.reset()
                 model_output = invers_unet(noise_latent, ii, uncond_embeddings).sample
-                noise_coeff_dict[ii] = noise_pred - model_output
+                noise_coeff_dict[int(ii)] = noise_pred - model_output
 
         #start_latent = ddim_latents[-2]
         start_latent = ddim_latents[-1]
