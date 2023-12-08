@@ -56,8 +56,6 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
             attention_probs = attention_probs.to(value.dtype)
 
             if not is_cross_attention:
-                # when self attention
-                print('caching self cond')
                 controller.self_query_key_value_caching(query_value=query.detach().cpu(),
                                                         key_value=key.detach().cpu(),
                                                         value_value=value.detach().cpu(),
@@ -294,6 +292,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
             all_latent.append(latent)
             repeat_time += 1
+    # 31 number of timesteps
     time_steps.append(next_time)
     return all_latent, time_steps, pil_images
 
@@ -494,8 +493,6 @@ def main(args) :
                                                          invers_unet,
                                                          vae, base_folder,
                                                          attention_storer)
-        print(f'number of repeating : {attention_storer.repeat}')
-        print(f'time_steps : {time_steps }')
         print(f' (2.3.0) set coefficient')
         with torch.no_grad() :
             standard_noise = torch.randn_like(latent)
@@ -503,7 +500,6 @@ def main(args) :
             noise_pred = invers_unet(standard_noise, 999, uncond_embeddings).sample
             noise_coeff_dict = {}
             for ii in scheduler.timesteps :
-                print(f'set coefficient timestep : {ii}')
                 # make noise latent
                 noise_latent = scheduler.add_noise(original_samples = latent,noise = standard_noise,timesteps = ii)
                 model_output = invers_unet(noise_latent, ii, uncond_embeddings).sample
@@ -512,7 +508,6 @@ def main(args) :
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
-            print()
             self_query_list = attention_storer.self_query_store[layer]
             self_key_list = attention_storer.self_key_store[layer]
             self_value_list = attention_storer.self_value_store[layer]
