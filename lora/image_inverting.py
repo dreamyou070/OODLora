@@ -582,16 +582,9 @@ def main(args) :
             heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
             pil_image.save(heatmap_save_dir)
 
-            base_folder = os.path.join(base_folder,
-                                       f'double_con_uncon_dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
-            os.makedirs(base_folder, exist_ok=True)
-            # save config
-
-
-            with open(os.path.join(base_folder, 'config.json'), 'w') as f:
-                json.dump(vars(args), f, indent=4)
-
-    break
+        with open(os.path.join(base_folder, 'config.json'), 'w') as f:
+            json.dump(vars(args), f, indent=4)
+        break
 
 
 if __name__ == "__main__":
