@@ -503,7 +503,7 @@ def main(args) :
         print(f' (2.3.1) inversion')
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        base_folder = os.path.join(output_dir, concept_name)
+        base_folder = os.path.join(output_dir, f'train/{concept_name}')
         os.makedirs(base_folder, exist_ok=True)
         train_base_folder = os.path.join(base_folder,
                                    f'train/dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
