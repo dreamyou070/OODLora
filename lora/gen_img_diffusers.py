@@ -2285,8 +2285,7 @@ def main(args):
             out_channels=3,
             sample_size=512,
             up_block_types=["UpDecoderBlock2D", "UpDecoderBlock2D", "UpDecoderBlock2D", "UpDecoderBlock2D"],
-            num_slices=args.vae_slices,
-        )
+            num_slices=args.vae_slices, )
         sli_vae.load_state_dict(vae.state_dict())  # vaeのパラメータをコピーする
         vae = sli_vae
         del sli_vae
@@ -2304,7 +2303,6 @@ def main(args):
         networks = []
         network_default_muls = []
         network_pre_calc = args.network_pre_calc
-
         for i, network_module in enumerate(args.network_module):
             imported_module = importlib.import_module(network_module)
             network_mul = 1.0 if args.network_mul is None or len(args.network_mul) <= i else args.network_mul[i]
@@ -2352,10 +2350,6 @@ def main(args):
 
             if not args.network_merge or not mergeable:
                 print(f'one lora loading ...')
-                # 1) original network
-                # Check weights_sd
-                #for layer in weights_sd.keys():
-                #    print(f'[{layer}] : {weights_sd[layer].shape}')
                 network.apply_to(text_encoder, unet)
                 # 2) loaded network
                 info = network.load_state_dict(weights_sd, False)  # network.load_weightsを使うようにするとよい
@@ -2374,7 +2368,6 @@ def main(args):
     org_state_dict = network.state_dict()
     for layer in org_state_dict.keys() :
         if 'org_weight' not in layer :
-            print(f'layer : {layer}')
             network.state_dict()[layer] = weights_sd[layer]
 
 
@@ -2719,12 +2712,10 @@ def main(args):
         # バッチ処理の関数
         def process_batch(batch: List[BatchData], highres_fix, highres_1st=False):
             batch_size = len(batch)
-
             # highres_fixの処理
             if highres_fix and not highres_1st:
                 # 1st stageのバッチを作成して呼び出す：サイズを小さくして呼び出す
                 is_1st_latent = upscaler.support_latents() if upscaler else args.highres_fix_latents_upscaling
-
                 print("process 1st stage")
                 batch_1st = []
                 for _, base, ext in batch:
@@ -2795,23 +2786,17 @@ def main(args):
                     pipe.set_enable_control_net(False)  # オプション指定時、2nd stageではControlNetを無効にする
 
             # このバッチの情報を取り出す
-            (
-                return_latents,
+            (return_latents,
                 (step_first, _, _, _, init_image, mask_image, _, guide_image),
-                (width, height, steps, scale, negative_scale, strength, network_muls, num_sub_prompts),
-            ) = batch[0]
+                (width, height, steps, scale, negative_scale, strength, network_muls, num_sub_prompts),) = batch[0]
             noise_shape = (LATENT_CHANNELS, height // DOWNSAMPLING_FACTOR, width // DOWNSAMPLING_FACTOR)
-
             prompts = []
             negative_prompts = []
             start_code = torch.zeros((batch_size, *noise_shape), device=device, dtype=dtype)
-            noises = [
-                torch.zeros((batch_size, *noise_shape), device=device, dtype=dtype)
-                for _ in range(steps * scheduler_num_noises_per_step)
-            ]
+            noises = [torch.zeros((batch_size, *noise_shape), device=device, dtype=dtype)
+                      for _ in range(steps * scheduler_num_noises_per_step)]
             seeds = []
             clip_prompts = []
-
             if init_image is not None:  # img2img?
                 i2i_noises = torch.zeros((batch_size, *noise_shape), device=device, dtype=dtype)
                 init_images = []
@@ -2903,7 +2888,7 @@ def main(args):
                     for n in networks:
                         n.pre_calculation()
                     print("pre-calculation... done")
-
+            print(f'the scale to pipe : {scale}')
             images = pipe(
                 prompts,
                 negative_prompts,
@@ -2922,8 +2907,7 @@ def main(args):
                 vae_batch_size=args.vae_batch_size,
                 return_latents=return_latents,
                 clip_prompts=clip_prompts,
-                clip_guide_images=guide_images,
-            )[0]
+                clip_guide_images=guide_images,)[0]
             if highres_1st and not args.highres_fix_save_1st:  # return images or latents
                 return images
 
@@ -3000,7 +2984,6 @@ def main(args):
             # repeat prompt
             for pi in range(args.images_per_prompt if len(raw_prompts) == 1 else len(raw_prompts)):
                 raw_prompt = raw_prompts[pi] if len(raw_prompts) > 1 else raw_prompts[0]
-
                 if pi == 0 or len(raw_prompts) > 1:
                     # parse prompt: if prompt is not changed, skip parsing
                     width = args.W
@@ -3014,7 +2997,6 @@ def main(args):
                     negative_prompt = ""
                     clip_prompt = None
                     network_muls = None
-
                     prompt_args = raw_prompt.strip().split(" --")
                     prompt = prompt_args[0]
                     print(f"prompt {prompt_index+1}/{len(prompt_list)}: {prompt}")
