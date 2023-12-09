@@ -501,7 +501,7 @@ def main(args) :
     print(f' (3.1) prompt condition')
     prompt = args.prompt
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
-    context = init_prompt(tokenizer, text_encoder, device, prompt)
+    #context = init_prompt(tokenizer, text_encoder, device, prompt)
     """
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
@@ -561,7 +561,7 @@ def main(args) :
         with open(os.path.join(train_base_folder, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
     """
-    print(f' (3.2) train images')
+    print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
     test_base_folder = os.path.join(output_dir, 'test')
     os.makedirs(test_base_folder, exist_ok=True)
