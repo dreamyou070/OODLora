@@ -564,29 +564,27 @@ def main(args) :
         class_folder = os.path.join(test_img_folder, class_name)
         class_base_folder = os.path.join(test_base_folder, class_name)
         os.makedirs(class_base_folder, exist_ok=True)
+
         image_folder = os.path.join(class_folder, 'rgb')
         mask_folder = os.path.join(class_folder, 'gt')
         test_images = os.listdir(image_folder)
         for test_img in test_images:
             test_img_dir = os.path.join(image_folder, test_img)
             mask_img_dir = os.path.join(mask_folder, test_img)
+            mask_img_pil = Image.open(mask_img_dir)
             concept_name = test_img.split('.')[0]
             save_base_folder = os.path.join(class_base_folder, concept_name)
             os.makedirs(save_base_folder, exist_ok=True)
+            mask_img_pil.resize((512, 512)).save(os.path.join(save_base_folder, 'mask.png'))
             print(f' (2.3.1) inversion')
             image_gt_np = load_512(test_img_dir)
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
-            base_folder = os.path.join(output_dir, concept_name)
-            os.makedirs(base_folder, exist_ok=True)
-            save_folder = os.path.join(save_base_folder,
-                                       f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
-            os.makedirs(save_folder, exist_ok=True)
             # time_steps = 0,20,..., 980
             latent_dict, time_steps, pil_images = ddim_loop(latent,
                                                             invers_context,
                                                             inference_times,
                                                             scheduler,
-                                                            invers_unet, vae, save_folder,
+                                                            invers_unet, vae, save_base_folder,
                                                             attention_storer)
 
             layer_names = attention_storer.self_query_store.keys()
@@ -623,7 +621,7 @@ def main(args) :
             all_latent, _, _ = recon_loop(latent_dict,
                                           context,
                                           time_steps,
-                                          scheduler, unet, vae, save_folder)
+                                          scheduler, unet, vae, save_base_folder)
             attention_storer.reset()
 
             with open(os.path.join(save_folder, 'config.json'), 'w') as f:
