@@ -164,10 +164,9 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
 
+            """
             if not is_cross_attention:
-                print(f'trg_indexs_list : {trg_indexs_list} : args.threshold_time (1000) : {args.threshold_time} | mask (prev) : {mask}')
                 if trg_indexs_list > args.threshold_time or mask == 0 :
-                    print('Using Self Attention Guidance')
                     if hidden_states.shape[0] == 2 :
                         uncon_key, con_key = key.chunk(2)
                         uncon_value, con_value = value.chunk(2)
@@ -176,9 +175,9 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
                         value = torch.cat([uncon_value,
                                            self_value_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
                     else :
-                        print('Not Using Self Attention Guidance')
                         key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
                         value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
+            """
 
             if self.upcast_attention:
                 query = query.float()
