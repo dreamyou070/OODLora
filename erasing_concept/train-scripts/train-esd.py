@@ -67,8 +67,6 @@ def sample_model(model, sampler, c, h, w, ddim_steps, scale, ddim_eta, start_cod
 def load_img(path, target_size=512):
     """Load an image, resize and output -1..1"""
     image = Image.open(path).convert("RGB")
-
-
     tform = transforms.Compose([
             transforms.Resize(target_size),
             transforms.CenterCrop(target_size),
@@ -96,10 +94,8 @@ def plot_loss(losses, path,word, n=100):
 def get_models(config_path, ckpt_path, devices):
     model_orig = load_model_from_config(config_path, ckpt_path, devices[1])
     sampler_orig = DDIMSampler(model_orig)
-
     model = load_model_from_config(config_path, ckpt_path, devices[0])
     sampler = DDIMSampler(model)
-
     return model_orig, sampler_orig, model, sampler
 
 def train_esd(prompt, train_method, start_guidance, negative_guidance, iterations, lr, config_path, ckpt_path, diffusers_config_path, devices, seperator=None, image_size=512, ddim_steps=50):
@@ -244,7 +240,10 @@ def train_esd(prompt, train_method, start_guidance, negative_guidance, iteration
         e_0.requires_grad = False
         e_p.requires_grad = False
         # reconstruction loss for ESD objective from frozen model and conditional score of ESD model
-        loss = criteria(e_n.to(devices[0]), e_0.to(devices[0]) - (negative_guidance*(e_p.to(devices[0]) - e_0.to(devices[0])))) #loss = criteria(e_n, e_0) works the best try 5000 epochs
+        loss = criteria(
+            e_n.to(devices[0]),
+            e_0.to(devices[0]) - (negative_guidance*(e_p.to(devices[0]) - e_0.to(devices[0])))
+        ) #loss = criteria(e_n, e_0) works the best try 5000 epochs
         # update weights to erase the concept
         loss.backward()
         losses.append(loss.item())
@@ -257,17 +256,13 @@ def train_esd(prompt, train_method, start_guidance, negative_guidance, iteration
 
         if i % 100 == 0:
             save_history(losses, name, word_print)
-
     model.eval()
-
     save_model(model, name, None, save_compvis=True, save_diffusers=True, compvis_config_file=config_path, diffusers_config_file=diffusers_config_path)
     save_history(losses, name, word_print)
-
 def save_model(model, name, num, compvis_config_file=None, diffusers_config_file=None, device='cpu', save_compvis=True, save_diffusers=True):
     # SAVE MODEL
 
 #     PATH = f'{FOLDER}/{model_type}-word_{word_print}-method_{train_method}-sg_{start_guidance}-ng_{neg_guidance}-iter_{i+1}-lr_{lr}-startmodel_{start_model}-numacc_{numacc}.pt'
-
     folder_path = f'models/{name}'
     os.makedirs(folder_path, exist_ok=True)
     if num is not None:

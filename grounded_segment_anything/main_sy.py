@@ -132,36 +132,7 @@ def save_mask_data(output_dir, mask_list, box_list, label_list):
         json.dump(json_data, f)
 
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser("Grounded-Segment-Anything Demo", add_help=True)
-    parser.add_argument("--config", type=str, required=True, help="path to config file")
-    parser.add_argument(
-        "--grounded_checkpoint", type=str, required=True, help="path to checkpoint file"
-    )
-    parser.add_argument(
-        "--sam_version", type=str, default="vit_h", required=False, help="SAM ViT version: vit_b / vit_l / vit_h"
-    )
-    parser.add_argument(
-        "--sam_checkpoint", type=str, required=False, help="path to sam checkpoint file"
-    )
-    parser.add_argument(
-        "--sam_hq_checkpoint", type=str, default=None, help="path to sam-hq checkpoint file"
-    )
-    parser.add_argument(
-        "--use_sam_hq", action="store_true", help="using sam-hq for prediction"
-    )
-    parser.add_argument("--input_image", type=str, required=True, help="path to image file")
-    parser.add_argument("--text_prompt", type=str, required=True, help="text prompt")
-    parser.add_argument(
-        "--output_dir", "-o", type=str, default="outputs", required=True, help="output directory"
-    )
-
-    parser.add_argument("--box_threshold", type=float, default=0.3, help="box threshold")
-    parser.add_argument("--text_threshold", type=float, default=0.25, help="text threshold")
-
-    parser.add_argument("--device", type=str, default="cpu", help="running on cpu only!, default=False")
-    args = parser.parse_args()
+def main(args):
 
     # cfg
     config_file = args.config  # change the path of the model config file
@@ -233,3 +204,32 @@ if __name__ == "__main__":
     )
 
     save_mask_data(output_dir, masks, boxes_filt, pred_phrases)
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser("Grounded-Segment-Anything Demo", add_help=True)
+    parser.add_argument("--config", type=str, required=True, help="path to config file")
+    parser.add_argument("--grounded_checkpoint", type=str, required=True, help="path to checkpoint file")
+    parser.add_argument("--sam_version", type=str, default="vit_h", required=False, help="SAM ViT version: vit_b / vit_l / vit_h")
+    parser.add_argument(
+        "--sam_checkpoint", type=str, required=False, help="path to sam checkpoint file"
+    )
+    parser.add_argument(
+        "--sam_hq_checkpoint", type=str, default=None, help="path to sam-hq checkpoint file"
+    )
+    parser.add_argument(
+        "--use_sam_hq", action="store_true", help="using sam-hq for prediction"
+    )
+    parser.add_argument("--input_image", type=str, required=True, help="path to image file")
+    parser.add_argument("--text_prompt", type=str, required=True, help="text prompt")
+    parser.add_argument(
+        "--output_dir", "-o", type=str, default="outputs", required=True, help="output directory"
+    )
+
+    parser.add_argument("--box_threshold", type=float, default=0.3, help="box threshold")
+    parser.add_argument("--text_threshold", type=float, default=0.25, help="text threshold")
+
+    parser.add_argument("--device", type=str, default="cpu", help="running on cpu only!, default=False")
+    args = parser.parse_args()
+    main(args)
