@@ -6,7 +6,7 @@ def main():
     print(f'\n step 1. make model')
     device = 'cuda:1'
     pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",
-                                                          cache_dir = r'/data7/sooyeon/pretrained_stable_diffusion').to(device)
+                                                          cache_dir = r'/data7/sooyeon/pretrained_stable_diffusion/models-stable-diffusion-anomalydetection').to(device)
     prompt = "bagel"
     base_dir = '/data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel/test'
     classes = os.listdir(base_dir)
