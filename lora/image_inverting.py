@@ -501,7 +501,7 @@ def main(args) :
     print(f' (3.1) prompt condition')
     prompt = args.prompt
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
-    #context = init_prompt(tokenizer, text_encoder, device, prompt)
+
     """
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
@@ -593,8 +593,8 @@ def main(args) :
                                                             invers_unet,
                                                             vae, save_base_folder,
                                                             attention_storer)
-            """
 
+            context = init_prompt(tokenizer, text_encoder, device, prompt)
             layer_names = attention_storer.self_query_store.keys()
             self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
             for layer in layer_names:
@@ -635,7 +635,7 @@ def main(args) :
 
             with open(os.path.join(save_base_folder, 'config.json'), 'w') as f:
                 json.dump(vars(args), f, indent=4)
-            """
+            
 
 
 
