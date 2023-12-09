@@ -465,10 +465,10 @@ def main(args) :
         text_encoder = [t_enc1, t_enc2]
         del t_enc1, t_enc2
     else:
-        unet, text_encoder = unet.to(device), text_encoder.to(device)
-        text_encoders = [text_encoder]
         invers_unet, invers_text_encoder = invers_unet.to(device), invers_text_encoder.to(device)
         invers_text_encoders = [invers_text_encoder]
+        unet, text_encoder = unet.to(device), text_encoder.to(device)
+        text_encoders = [text_encoder]
     attention_storer = AttentionStore()
     register_attention_control(invers_unet, attention_storer)
 
@@ -492,10 +492,9 @@ def main(args) :
                                                 vae, text_encoder, unet, neuron_dropout=args.network_dropout,
                                                 **net_kwargs, )
     print(f' (1.3.4) apply trained state dict')
+    network.apply_to(text_encoder, unet, True, True)
     if args.network_weights is not None:
         info = network.load_weights(args.network_weights)
-        print(f'after loading weights: {info}')
-    network.apply_to(text_encoder, unet, True, True)
     network.to(device)
 
     print(f' \n step 3. ground-truth image preparing')
@@ -594,6 +593,7 @@ def main(args) :
                                                             invers_unet,
                                                             vae, save_base_folder,
                                                             attention_storer)
+            """
 
             layer_names = attention_storer.self_query_store.keys()
             self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
@@ -635,6 +635,7 @@ def main(args) :
 
             with open(os.path.join(save_base_folder, 'config.json'), 'w') as f:
                 json.dump(vars(args), f, indent=4)
+            """
 
 
 
