@@ -598,7 +598,7 @@ def main(args) :
 
             context = init_prompt(tokenizer, text_encoder, device, prompt)
             layer_names = attention_storer.self_query_store.keys()
-            self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
+            self_query_dict, self_key_dict, self_value_dict  = {}, {}, {}
             for layer in layer_names:
                 self_query_list = attention_storer.self_query_store[layer]
                 self_key_list = attention_storer.self_key_store[layer]
