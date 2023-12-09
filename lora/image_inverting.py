@@ -396,6 +396,8 @@ def main(args) :
     print(f" (1.3) save dir")
     output_dir = args.output_dir
     os.makedirs(output_dir, exist_ok=True)
+    output_dir = os.path.join(output_dir, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
+    os.makedirs(output_dir, exist_ok=True)
 
     print(f' \n step 2. make stable diffusion model')
     device = args.device
@@ -503,10 +505,7 @@ def main(args) :
         print(f' (2.3.1) inversion')
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        base_folder = os.path.join(output_dir, f'train/{concept_name}')
-        os.makedirs(base_folder, exist_ok=True)
-        train_base_folder = os.path.join(base_folder,
-                                   f'train/dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
+        train_base_folder = os.path.join(output_dir, f'train/{concept_name}')
         os.makedirs(train_base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
         latent_dict, time_steps, pil_images = ddim_loop(latent,
