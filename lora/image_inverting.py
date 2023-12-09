@@ -165,7 +165,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             value = self.reshape_heads_to_batch_dim(value)
 
             if not is_cross_attention:
-                print(f'trg_indexs_list : {trg_indexs_list} : args.threshold_time (1000) : {args.threshold_time} | mask (current time) : {mask}')
+                print(f'trg_indexs_list : {trg_indexs_list} : args.threshold_time (1000) : {args.threshold_time} | mask (prev) : {mask}')
                 if trg_indexs_list > args.threshold_time or mask == 0 :
                     print('Using Self Attention Guidance')
                     if hidden_states.shape[0] == 2 :
