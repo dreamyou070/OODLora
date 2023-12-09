@@ -625,8 +625,8 @@ class StableDiffusionInpaintPipeline(
         return_noise=False,
         return_image_latents=False,):
 
+        # shape = [1,4,64,64]
         shape = (batch_size, num_channels_latents, height // self.vae_scale_factor, width // self.vae_scale_factor)
-        print(f'shape (1,9,64,64): {shape}')
         if isinstance(generator, list) and len(generator) != batch_size:
             raise ValueError(f"You have passed a list of generators of length {len(generator)}, but requested an effective batch"
                 f" size of {batch_size}. Make sure the batch size matches the length of the generators.")
@@ -635,7 +635,7 @@ class StableDiffusionInpaintPipeline(
                 "However, either the image or the noise timestep has not been provided.")
 
         if return_image_latents or (latents is None and not is_strength_max):
-            print('Not Here')
+            # Not Here
             image = image.to(device=device, dtype=dtype)
             if image.shape[1] == 4:
                 image_latents = image
@@ -645,22 +645,18 @@ class StableDiffusionInpaintPipeline(
 
         if latents is None:
             noise = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
-            # if strength is 1. then initialise the latents to noise, else initial to image + noise
             latents = noise if is_strength_max else self.scheduler.add_noise(image_latents, noise, timestep)
-            # if pure noise then scale the initial latents by the  Scheduler's init sigma
             latents = latents * self.scheduler.init_noise_sigma if is_strength_max else latents
-            print(f'latents (1,9,64,64): {latents.shape}')
         else:
             noise = latents.to(device)
             latents = noise * self.scheduler.init_noise_sigma
-
         outputs = (latents,)
-
+        print(f'outputs : {type(outputs)}')
         if return_noise:
+            print(f'Here (latent, noise)')
             outputs += (noise,)
         if return_image_latents:
             outputs += (image_latents,)
-
         return outputs
 
     def _encode_vae_image(self, image: torch.Tensor, generator: torch.Generator):
@@ -813,8 +809,7 @@ class StableDiffusionInpaintPipeline(
         return self._num_timesteps
 
     @torch.no_grad()
-    def __call__(
-        self,
+    def __call__(self,
         prompt: Union[str, List[str]] = None,
         image: PipelineImageInput = None,
         mask_image: PipelineImageInput = None,
@@ -841,41 +836,27 @@ class StableDiffusionInpaintPipeline(
         callback = kwargs.pop("callback", None)
         callback_steps = kwargs.pop("callback_steps", None)
         if callback is not None:
-            deprecate("callback","1.0.0",
-                      "Passing `callback` as an input argument to `__call__` is deprecated, consider use `callback_on_step_end`",)
+            deprecate("callback","1.0.0, Passing `callback` as an input argument to `__call__` is deprecated, consider use `callback_on_step_end`",)
         if callback_steps is not None:
-            deprecate("callback_steps",
-                      "1.0.0",
-                      "Passing `callback_steps` as an input argument to `__call__` is deprecated, consider use `callback_on_step_end`",)
+            deprecate("callback_steps, 1.0.0, Passing `callback_steps` as an input argument to `__call__` is deprecated, consider use `callback_on_step_end`",)
 
         # 0. Default height and width to unet
         height = height or self.unet.config.sample_size * self.vae_scale_factor
         width = width or self.unet.config.sample_size * self.vae_scale_factor
-
         # 1. Check inputs
-        self.check_inputs(prompt,height,width,strength,callback_steps,negative_prompt,prompt_embeds,
-                          negative_prompt_embeds,callback_on_step_end_tensor_inputs,)
+        self.check_inputs(prompt,height,width,strength,callback_steps,negative_prompt,prompt_embeds, negative_prompt_embeds,callback_on_step_end_tensor_inputs,)
         self._guidance_scale = guidance_scale
         self._clip_skip = clip_skip
         self._cross_attention_kwargs = cross_attention_kwargs
-
         # 2. Define call parameters
-        if prompt is not None and isinstance(prompt, str):
-            batch_size = 1
-        elif prompt is not None and isinstance(prompt, list):
-            batch_size = len(prompt)
-        else:
-            batch_size = prompt_embeds.shape[0]
+        if prompt is not None and isinstance(prompt, str): batch_size = 1
+        elif prompt is not None and isinstance(prompt, list): batch_size = len(prompt)
+        else: batch_size = prompt_embeds.shape[0]
         device = self._execution_device
         # 3. Encode input prompt
         text_encoder_lora_scale = (cross_attention_kwargs.get("scale", None) if cross_attention_kwargs is not None else None)
-        prompt_embeds, negative_prompt_embeds = self.encode_prompt(prompt,device,
-                                                                   num_images_per_prompt,
-                                                                   self.do_classifier_free_guidance,
-                                                                   negative_prompt,
-                                                                   prompt_embeds=prompt_embeds,
-                                                                   negative_prompt_embeds=negative_prompt_embeds,lora_scale=text_encoder_lora_scale,
-                                                                   clip_skip=self.clip_skip,)
+        prompt_embeds, negative_prompt_embeds = self.encode_prompt(prompt,device, num_images_per_prompt, self.do_classifier_free_guidance, negative_prompt,
+                                                                   prompt_embeds=prompt_embeds, negative_prompt_embeds=negative_prompt_embeds,lora_scale=text_encoder_lora_scale, clip_skip=self.clip_skip,)
         if self.do_classifier_free_guidance:
             prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
         # 4. set timesteps
@@ -889,54 +870,51 @@ class StableDiffusionInpaintPipeline(
         is_strength_max = strength == 1.0
 
         # 5. Preprocess mask and image
-        init_image = self.image_processor.preprocess(image, height=height, width=width)
-        init_image = init_image.to(dtype=torch.float32)
-        print(f'init_image.shape : {init_image.shape}')
+        init_image = self.image_processor.preprocess(image, height=height, width=width).to(dtype=torch.float32) # [1,3,512,512]
 
         # 6. Prepare latent variables
         num_channels_latents = self.vae.config.latent_channels # 4
         num_channels_unet = self.unet.config.in_channels       # 9
-        return_image_latents = num_channels_unet == 4
-        latents_outputs = self.prepare_latents(batch_size * num_images_per_prompt,
-                                               num_channels_latents, # 9
-                                               height,
-                                               width,
+        return_image_latents = num_channels_unet == 4          # False
+        print(f'[before] latents : {latents}')
+        print(f'[before] init_image : {init_image}')
+        print(f'[before] latent_timestep : {latent_timestep}')
+        latents_outputs = self.prepare_latents(batch_size * num_images_per_prompt, # 1
+                                               num_channels_latents,               # 4
+                                               height,                             # 512
+                                               width,                              # 512
                                                prompt_embeds.dtype,
                                                device,
                                                generator,
-                                               latents,
-                                               image=init_image,
-                                               timestep=latent_timestep,
-                                               is_strength_max=is_strength_max,
-                                               return_noise=True,
-                                               return_image_latents=return_image_latents,)
-        if return_image_latents:
-            latents, noise, image_latents = latents_outputs
-        else:
-            # image / noise
-            print(f'not return image latents ...')
-            latents, noise = latents_outputs
+                                               latents,                            # None
+                                               image=init_image,                   # [1,3,512,512]
+                                               timestep=latent_timestep,           # [1]
+                                               is_strength_max=is_strength_max,    # True
+                                               return_noise=True,                  # True
+                                               return_image_latents=return_image_latents,) # False
+        if return_image_latents: latents, noise, image_latents = latents_outputs
+        else: latents, noise = latents_outputs
 
         # 7. Prepare mask latent variables
         mask_condition = self.mask_processor.preprocess(mask_image, height=height, width=width)
 
         if masked_image_latents is None:
+            #
             masked_image = init_image * (mask_condition < 0.5)
+            print(f'masked_image [1,3,64,64] : {masked_image.shape}')
         else:
             masked_image = masked_image_latents
-        mask, masked_image_latents = self.prepare_mask_latents(
-            mask_condition,
-            masked_image,
-            batch_size * num_images_per_prompt,
-            height,
-            width,
-            prompt_embeds.dtype,
-            device,
-            generator,
-            self.do_classifier_free_guidance,
-        )
-        print(f'masked_image_latenets (1,4,64,64) : {masked_image_latents.shape}')
-        print(f'masked (1,1,64,64) : {mask.shape}')
+        mask, masked_image_latents = self.prepare_mask_latents(mask_condition, # 1,1,64,64
+                                                               masked_image, # 1,3,64,64
+                                                               batch_size * num_images_per_prompt,
+                                                               height,
+                                                               width,
+                                                               prompt_embeds.dtype,
+                                                               device,
+                                                               generator,
+                                                               self.do_classifier_free_guidance,)
+        print(f'masked_image_latenets (2,4,64,64) : {masked_image_latents.shape}')
+        print(f'masked (2,1,64,64) : {mask.shape}')
         # 8. Check that sizes of mask, masked image and latents match
         if num_channels_unet == 9:
             # default case for runwayml/stable-diffusion-inpainting
@@ -948,12 +926,9 @@ class StableDiffusionInpaintPipeline(
                     f" {self.unet.config.in_channels} but received `num_channels_latents`: {num_channels_latents} +"
                     f" `num_channels_mask`: {num_channels_mask} + `num_channels_masked_image`: {num_channels_masked_image}"
                     f" = {num_channels_latents+num_channels_masked_image+num_channels_mask}. Please verify the config of"
-                    " `pipeline.unet` or your `mask_image` or `image` input."
-                )
+                    " `pipeline.unet` or your `mask_image` or `image` input.")
         elif num_channels_unet != 4:
-            raise ValueError(
-                f"The unet {self.unet.__class__} should have either 4 or 9 input channels, not {self.unet.config.in_channels}."
-            )
+            raise ValueError(f"The unet {self.unet.__class__} should have either 4 or 9 input channels, not {self.unet.config.in_channels}.")
 
         # 9. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
@@ -976,25 +951,19 @@ class StableDiffusionInpaintPipeline(
 
                 # concat latents, mask, masked_image_latents in the channel dimension
                 latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
-
                 if num_channels_unet == 9:
                     latent_model_input = torch.cat([latent_model_input, mask, masked_image_latents], dim=1)
 
                 # predict the noise residual
-                noise_pred = self.unet(
-                    latent_model_input,
-                    t,
-                    encoder_hidden_states=prompt_embeds,
-                    timestep_cond=timestep_cond,
-                    cross_attention_kwargs=self.cross_attention_kwargs,
-                    return_dict=False,
-                )[0]
-
+                noise_pred = self.unet(latent_model_input,t,
+                                       encoder_hidden_states=prompt_embeds,
+                                       timestep_cond=timestep_cond,
+                                       cross_attention_kwargs=self.cross_attention_kwargs,
+                                       return_dict=False,)[0]
                 # perform guidance
                 if self.do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                     noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
-
                 # compute the previous noisy sample x_t -> x_t-1
                 latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
                 if num_channels_unet == 4:
@@ -1059,5 +1028,4 @@ class StableDiffusionInpaintPipeline(
 
         if not return_dict:
             return (image, has_nsfw_concept)
-
         return StableDiffusionPipelineOutput(images=image, nsfw_content_detected=has_nsfw_concept)
