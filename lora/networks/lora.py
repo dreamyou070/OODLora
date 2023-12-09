@@ -121,7 +121,6 @@ class LoRAModule(torch.nn.Module):
         #del self.org_module
 
     def forward(self, x):
-        print(f'infer with lora' )
         org_forwarded = self.org_forward(x)
         # module dropout
         if self.module_dropout is not None and self.training:
