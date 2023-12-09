@@ -302,7 +302,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
                 np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
-            pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
+            #pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
@@ -343,7 +343,8 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+        if prev_time == 0 :
+            pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
         all_latent.append(latent)
     time_steps.append(prev_time)
     return all_latent, time_steps, pil_images
@@ -507,7 +508,6 @@ def main(args) :
         base_folder = os.path.join(base_folder, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
         os.makedirs(base_folder, exist_ok=True)
 
-
         # time_steps = 0,20,..., 980
         latent_dict, time_steps, pil_images = ddim_loop(latent,
                                                          invers_context,
@@ -554,7 +554,7 @@ def main(args) :
 
         with open(os.path.join(base_folder, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
-
+        """
         print(f' (2.3.3) heatmap checking')
         org_img_dir = os.path.join(args.concept_image_folder, concept_img)
         orgin_latent = image2latent(load_512(org_img_dir), vae, device, weight_dtype)
@@ -609,8 +609,7 @@ def main(args) :
             pil_image = Image.fromarray(heatmap).resize((512, 512))
             heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
             pil_image.save(heatmap_save_dir)
-
-        break
+        """
 
 
 if __name__ == "__main__":
