@@ -624,7 +624,7 @@ def main(args) :
                                           scheduler, unet, vae, save_base_folder)
             attention_storer.reset()
 
-            with open(os.path.join(save_folder, 'config.json'), 'w') as f:
+            with open(os.path.join(save_base_folder, 'config.json'), 'w') as f:
                 json.dump(vars(args), f, indent=4)
 
 
