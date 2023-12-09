@@ -13,7 +13,9 @@ def main():
     vae = pipe.vae
     text_encoder = pipe.text_encoder
     unet_config_dir = '/data7/sooyeon/pretrained_stable_diffusion/models--runwayml--stable-diffusion-inpainting/snapshots/51388a731f57604945fddd703ecb5c50e8e7b49d/unet/config.json'
-    unet = UNet2DConditionModel.load_config(unet_config_dir).to(device)
+    unet_config = UNet2DConditionModel.load_config(pretrained_model_name_or_path=unet_config_dir)
+    unet = UNet2DConditionModel.from_config(unet_config).to(device)
+
 
 if __name__ == "__main__":
     main()

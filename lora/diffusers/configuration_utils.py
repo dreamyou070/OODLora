@@ -283,7 +283,6 @@ class ConfigMixin:
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         r"""
         Load a model or scheduler configuration.
-
         Parameters:
             pretrained_model_name_or_path (`str` or `os.PathLike`, *optional*):
                 Can be either:
