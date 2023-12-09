@@ -4,10 +4,8 @@ from PIL import Image
 
 def main():
     print(f'\n step 1. make model')
-    pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",
-                                                          #revision="fp16",
-                                                          #torch_dtype=torch.float16,
-                                                          )
+    device = 'cuda:1'
+    pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",).to(device)
     prompt = "bagel"
     base_dir = '/data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel/test'
     classes = os.listdir(base_dir)

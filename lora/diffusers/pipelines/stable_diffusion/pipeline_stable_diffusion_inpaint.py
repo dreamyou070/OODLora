@@ -174,7 +174,6 @@ class StableDiffusionInpaintPipeline(
 ):
     r"""
     Pipeline for text-guided image inpainting using Stable Diffusion.
-
     This model inherits from [`DiffusionPipeline`]. Check the superclass documentation for the generic methods
     implemented for all pipelines (downloading, saving, running on a particular device, etc.).
 
