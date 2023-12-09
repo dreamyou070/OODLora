@@ -1,6 +1,6 @@
 from diffusers import StableDiffusionInpaintPipeline
 import torch, os
-
+from PIL import Image
 
 def main():
     print(f'\n step 1. make model')
@@ -20,8 +20,11 @@ def main():
         images = os.listdir(image_dir)
         for i in images:
             image_path = os.path.join(image_dir, i)
+
             mask_path = os.path.join(mask_dir, i)
-            image = pipe(prompt=prompt, image=image_path, mask_image=mask_path).images[0]
+            image = pipe(prompt=prompt,
+                         image=Image.open(image_path),
+                         mask_image=Image.open(mask_path).convert('L'),).images[0]
             image.save(os.path.join(inpainted_dir, i))
 
 if __name__ == "__main__":
