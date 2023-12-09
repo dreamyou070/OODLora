@@ -941,7 +941,7 @@ class StableDiffusionInpaintPipeline(
             latents, noise, image_latents = latents_outputs
         else:
             # image / noise
-            print(f'not return image latents ... ')
+            print(f'not return image latents ...')
             latents, noise = latents_outputs
 
         # 7. Prepare mask latent variables
