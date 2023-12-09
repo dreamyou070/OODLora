@@ -296,14 +296,16 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             next_time = flip_times[i+1].item()
             latent_dict[int(t.item())] = latent
             time_steps.append(t.item())
-            noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
+            con_noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
+            uncon_noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
+            noise_pred = uncon_noise_pred - args.inversion_weight * (con_noise_pred - uncon_noise_pred)
             noise_pred_dict[int(t.item())] = noise_pred
             latent = next_step(noise_pred, int(t.item()), latent, scheduler)
             with torch.no_grad():
                 np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
-            #pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
+            pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
@@ -402,7 +404,7 @@ def main(args) :
     print(f" (1.3) save dir")
     output_dir = args.output_dir
     os.makedirs(output_dir, exist_ok=True)
-    output_dir = os.path.join(output_dir, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}_cfg_check_{args.cfg_check}')
+    output_dir = os.path.join(output_dir, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}_cfg_check_{args.cfg_check}_inversion_weight_{args.inversion_weight}')
     os.makedirs(output_dir, exist_ok=True)
 
     print(f' \n step 2. make stable diffusion model')
@@ -500,8 +502,7 @@ def main(args) :
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
     prompt = args.prompt
-    #invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
-    invers_context = init_prompt(tokenizer, text_encoder, device, prompt)
+    invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
 
     """
     print(f' (3.2) train images')
@@ -591,8 +592,7 @@ def main(args) :
                                                             invers_context,
                                                             inference_times,
                                                             scheduler,
-                                                            #invers_unet,
-                                                            unet,
+                                                            invers_unet,
                                                             vae, save_base_folder,
                                                             attention_storer)
 
@@ -750,8 +750,7 @@ if __name__ == "__main__":
     parser.add_argument("--inversion_experiment", action="store_true",)
     parser.add_argument("--repeat_time", type=int, default=1)
     parser.add_argument("--cfg_check", type=int, default=200)
-
-
+    parser.add_argument("--inversion_weight", type=float, default=3.0)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
