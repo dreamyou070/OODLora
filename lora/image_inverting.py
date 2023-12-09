@@ -492,9 +492,10 @@ def main(args) :
                                                 vae, text_encoder, unet, neuron_dropout=args.network_dropout,
                                                 **net_kwargs, )
     print(f' (1.3.4) apply trained state dict')
-    network.apply_to(text_encoder, unet, True, True)
     if args.network_weights is not None:
         info = network.load_weights(args.network_weights)
+        print(f'after loading weights: {info}')
+    network.apply_to(text_encoder, unet, True, True)
     network.to(device)
 
     print(f' \n step 3. ground-truth image preparing')
@@ -590,7 +591,8 @@ def main(args) :
                                                             invers_context,
                                                             inference_times,
                                                             scheduler,
-                                                            invers_unet, vae, save_base_folder,
+                                                            invers_unet,
+                                                            vae, save_base_folder,
                                                             attention_storer)
 
             layer_names = attention_storer.self_query_store.keys()
@@ -627,7 +629,8 @@ def main(args) :
             all_latent, _, _ = recon_loop(latent_dict,
                                           context,
                                           time_steps,
-                                          scheduler, unet, vae, save_base_folder)
+                                          scheduler,
+                                          unet, vae, save_base_folder)
             attention_storer.reset()
 
             with open(os.path.join(save_base_folder, 'config.json'), 'w') as f:
