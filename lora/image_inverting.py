@@ -165,7 +165,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             value = self.reshape_heads_to_batch_dim(value)
 
             if not is_cross_attention:
-                #query = self_query_dict[trg_indexs_list][layer_name].to(query.device)
+                print(f'trg_indexs_list : {trg_indexs_list} : args.threshold_time (1000) : {args.threshold_time} | mask (current time) : {mask}')
                 if trg_indexs_list > args.threshold_time or mask == 0 :
                     print('Using Self Attention Guidance')
                     if hidden_states.shape[0] == 2 :
@@ -326,7 +326,6 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
         if t > args.cfg_check :
-            print('Using CFG guidance')
             input_latent = torch.cat([latent] * 2)
             trg_latent = latent_dict[prev_time]
             noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
@@ -343,7 +342,6 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
             noise_pred = latent_dictionary[best_guidance_scale]
         else :
-            print('Not Using CFG guidance')
             uncon, con = context.chunk(2)
             input_latent = latent
             noise_pred = call_unet(unet, input_latent, t, con, t, prev_time)
