@@ -5,8 +5,8 @@ import torch, os
 def main():
     print(f'\n step 1. make model')
     pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",
-                                                          revision="fp16",
-                                                          torch_dtype=torch.float16,
+                                                          #revision="fp16",
+                                                          #torch_dtype=torch.float16,
                                                           )
     prompt = "bagel"
     base_dir = '/data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel/test'
