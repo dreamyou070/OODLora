@@ -321,23 +321,28 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
     for i, t in enumerate(inference_times[:-1]):
-        prev_time = int(inference_times[i+1])
+        prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
-        input_latent = torch.cat([latent] * 2)
-        trg_latent = latent_dict[prev_time]
-        noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
-        guidance_scales = [0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10]
-        latent_diff_dict = {}
-        latent_dictionary = {}
-        for guidance_scale in guidance_scales:
-            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-            inter_noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-            latent_diff = torch.nn.functional.mse_loss(prev_step(inter_noise_pred, int(t), latent, scheduler).float(),
-                                                       trg_latent.float(), reduction='none')
-            latent_diff_dict[guidance_scale] = latent_diff.mean()
-            latent_dictionary[guidance_scale] = inter_noise_pred
-        best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
-        noise_pred = latent_dictionary[best_guidance_scale]
+        if t > args.cfg_check :
+            input_latent = torch.cat([latent] * 2)
+            trg_latent = latent_dict[prev_time]
+            noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
+            guidance_scales = [0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10]
+            latent_diff_dict = {}
+            latent_dictionary = {}
+            for guidance_scale in guidance_scales:
+                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                inter_noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+                latent_diff = torch.nn.functional.mse_loss(prev_step(inter_noise_pred, int(t), latent, scheduler).float(),
+                                                           trg_latent.float(), reduction='none')
+                latent_diff_dict[guidance_scale] = latent_diff.mean()
+                latent_dictionary[guidance_scale] = inter_noise_pred
+            best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
+            noise_pred = latent_dictionary[best_guidance_scale]
+        else :
+            uncon, con = context.chunk(2)
+            input_latent = latent
+            noise_pred = call_unet(unet, input_latent, t, con, t, prev_time)
         latent = prev_step(noise_pred, int(t), latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
@@ -396,7 +401,7 @@ def main(args) :
     print(f" (1.3) save dir")
     output_dir = args.output_dir
     os.makedirs(output_dir, exist_ok=True)
-    output_dir = os.path.join(output_dir, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}')
+    output_dir = os.path.join(output_dir, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}_cfg_check_{args.cfg_check}')
     os.makedirs(output_dir, exist_ok=True)
 
     print(f' \n step 2. make stable diffusion model')
@@ -737,6 +742,8 @@ if __name__ == "__main__":
     parser.add_argument("--threshold_time", type=int, default = 900)
     parser.add_argument("--inversion_experiment", action="store_true",)
     parser.add_argument("--repeat_time", type=int, default=1)
+    parser.add_argument("--cfg_check", type=int, default=200)
+
 
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
