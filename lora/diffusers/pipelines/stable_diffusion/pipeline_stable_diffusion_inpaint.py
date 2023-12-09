@@ -612,7 +612,7 @@ class StableDiffusionInpaintPipeline(
     def prepare_latents(
         self,
         batch_size,
-        num_channels_latents,
+        num_channels_latents, #
         height,
         width,
         dtype,
@@ -623,24 +623,20 @@ class StableDiffusionInpaintPipeline(
         timestep=None,
         is_strength_max=True,
         return_noise=False,
-        return_image_latents=False,
-    ):
-        shape = (batch_size, num_channels_latents, height // self.vae_scale_factor, width // self.vae_scale_factor)
-        if isinstance(generator, list) and len(generator) != batch_size:
-            raise ValueError(
-                f"You have passed a list of generators of length {len(generator)}, but requested an effective batch"
-                f" size of {batch_size}. Make sure the batch size matches the length of the generators."
-            )
+        return_image_latents=False,):
 
+        shape = (batch_size, num_channels_latents, height // self.vae_scale_factor, width // self.vae_scale_factor)
+        print(f'shape (1,9,64,64): {shape}')
+        if isinstance(generator, list) and len(generator) != batch_size:
+            raise ValueError(f"You have passed a list of generators of length {len(generator)}, but requested an effective batch"
+                f" size of {batch_size}. Make sure the batch size matches the length of the generators.")
         if (image is None or timestep is None) and not is_strength_max:
-            raise ValueError(
-                "Since strength < 1. initial latents are to be initialised as a combination of Image + Noise."
-                "However, either the image or the noise timestep has not been provided."
-            )
+            raise ValueError("Since strength < 1. initial latents are to be initialised as a combination of Image + Noise."
+                "However, either the image or the noise timestep has not been provided.")
 
         if return_image_latents or (latents is None and not is_strength_max):
+            print('Not Here')
             image = image.to(device=device, dtype=dtype)
-
             if image.shape[1] == 4:
                 image_latents = image
             else:
@@ -653,6 +649,7 @@ class StableDiffusionInpaintPipeline(
             latents = noise if is_strength_max else self.scheduler.add_noise(image_latents, noise, timestep)
             # if pure noise then scale the initial latents by the  Scheduler's init sigma
             latents = latents * self.scheduler.init_noise_sigma if is_strength_max else latents
+            print(f'latents (1,9,64,64): {latents.shape}')
         else:
             noise = latents.to(device)
             latents = noise * self.scheduler.init_noise_sigma
@@ -662,9 +659,7 @@ class StableDiffusionInpaintPipeline(
         if return_noise:
             outputs += (noise,)
         if return_image_latents:
-            print(f'image latents ')
             outputs += (image_latents,)
-            print(f'type of outpus = tuple : {type(outputs)}')
 
         return outputs
 
@@ -858,18 +853,8 @@ class StableDiffusionInpaintPipeline(
         width = width or self.unet.config.sample_size * self.vae_scale_factor
 
         # 1. Check inputs
-        self.check_inputs(
-            prompt,
-            height,
-            width,
-            strength,
-            callback_steps,
-            negative_prompt,
-            prompt_embeds,
-            negative_prompt_embeds,
-            callback_on_step_end_tensor_inputs,
-        )
-
+        self.check_inputs(prompt,height,width,strength,callback_steps,negative_prompt,prompt_embeds,
+                          negative_prompt_embeds,callback_on_step_end_tensor_inputs,)
         self._guidance_scale = guidance_scale
         self._clip_skip = clip_skip
         self._cross_attention_kwargs = cross_attention_kwargs
@@ -881,30 +866,21 @@ class StableDiffusionInpaintPipeline(
             batch_size = len(prompt)
         else:
             batch_size = prompt_embeds.shape[0]
-
         device = self._execution_device
-
         # 3. Encode input prompt
-        text_encoder_lora_scale = (
-            cross_attention_kwargs.get("scale", None) if cross_attention_kwargs is not None else None
-        )
-        prompt_embeds, negative_prompt_embeds = self.encode_prompt(
-            prompt,
-            device,
-            num_images_per_prompt,
-            self.do_classifier_free_guidance,
-            negative_prompt,
-            prompt_embeds=prompt_embeds,
-            negative_prompt_embeds=negative_prompt_embeds,
-            lora_scale=text_encoder_lora_scale,
-            clip_skip=self.clip_skip,
-        )
+        text_encoder_lora_scale = (cross_attention_kwargs.get("scale", None) if cross_attention_kwargs is not None else None)
+        prompt_embeds, negative_prompt_embeds = self.encode_prompt(prompt,device,
+                                                                   num_images_per_prompt,
+                                                                   self.do_classifier_free_guidance,
+                                                                   negative_prompt,
+                                                                   prompt_embeds=prompt_embeds,
+                                                                   negative_prompt_embeds=negative_prompt_embeds,lora_scale=text_encoder_lora_scale,
+                                                                   clip_skip=self.clip_skip,)
         if self.do_classifier_free_guidance:
             prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
         # 4. set timesteps
         self.scheduler.set_timesteps(num_inference_steps, device=device)
-        timesteps, num_inference_steps = self.get_timesteps(
-            num_inference_steps=num_inference_steps, strength=strength, device=device)
+        timesteps, num_inference_steps = self.get_timesteps(num_inference_steps=num_inference_steps, strength=strength, device=device)
         # check that number of inference steps is not < 1 - as this doesn't make sense
         if num_inference_steps < 1:
             raise ValueError(f"After adjusting the num_inference_steps by strength parameter: {strength}, the number of pipeline"
@@ -913,19 +889,16 @@ class StableDiffusionInpaintPipeline(
         is_strength_max = strength == 1.0
 
         # 5. Preprocess mask and image
-
         init_image = self.image_processor.preprocess(image, height=height, width=width)
         init_image = init_image.to(dtype=torch.float32)
+        print(f'init_image.shape : {init_image.shape}')
 
         # 6. Prepare latent variables
         num_channels_latents = self.vae.config.latent_channels # 4
         num_channels_unet = self.unet.config.in_channels       # 9
-        print(f'num_channels_unet (9?) : {num_channels_unet}')
         return_image_latents = num_channels_unet == 4
-        print(f'return_image_latents (False?) : {return_image_latents}')
-
         latents_outputs = self.prepare_latents(batch_size * num_images_per_prompt,
-                                               num_channels_latents,
+                                               num_channels_latents, # 9
                                                height,
                                                width,
                                                prompt_embeds.dtype,
