@@ -470,8 +470,8 @@ def main(args) :
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
     attention_storer = AttentionStore()
-    register_attention_control(invers_unet, attention_storer)
-
+    #register_attention_control(invers_unet, attention_storer)
+    register_attention_control(unet, attention_storer)
     print(f' (2.5) network')
     sys.path.append(os.path.dirname(__file__))
     network_module = importlib.import_module(args.network_module)
@@ -500,7 +500,8 @@ def main(args) :
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
     prompt = args.prompt
-    invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
+    #invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
+    invers_context = init_prompt(tokenizer, text_encoder, device, prompt)
 
     """
     print(f' (3.2) train images')
@@ -590,7 +591,8 @@ def main(args) :
                                                             invers_context,
                                                             inference_times,
                                                             scheduler,
-                                                            invers_unet,
+                                                            #invers_unet,
+                                                            unet,
                                                             vae, save_base_folder,
                                                             attention_storer)
 
