@@ -164,7 +164,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
 
-            """
+
             if not is_cross_attention:
                 if trg_indexs_list > args.threshold_time or mask == 0 :
                     if hidden_states.shape[0] == 2 :
@@ -177,7 +177,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
                     else :
                         key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
                         value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
-            """
+
 
             if self.upcast_attention:
                 query = query.float()
@@ -298,6 +298,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             time_steps.append(t.item())
             con_noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
             uncon_noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
+            # if -1 only con
+            # is 0, only uncon
             noise_pred = uncon_noise_pred - args.inversion_weight * (con_noise_pred - uncon_noise_pred)
             noise_pred_dict[int(t.item())] = noise_pred
             latent = next_step(noise_pred, int(t.item()), latent, scheduler)
