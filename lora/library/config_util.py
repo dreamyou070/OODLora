@@ -280,7 +280,6 @@ class ConfigSanitizer:
                                              self.ARGPARSE_SPECIFIC_SCHEMA,
                                              {optname: Any(None, self.general_schema[optname]) for optname in self.ARGPARSE_NULLABLE_OPTNAMES},
                                              {a_name: self.general_schema[c_name] for a_name, c_name in self.ARGPARSE_OPTNAME_TO_CONFIG_OPTNAME.items()},)
-    print(self.argparse_schema)
     self.argparse_config_validator = Schema(Object(self.argparse_schema),
                                             extra=voluptuous.ALLOW_EXTRA)
 
@@ -349,11 +348,12 @@ class BlueprintGenerator:
       for subset_config in subsets:
         #subset_config['mask_dir'] = argparse_namespace.mask_dir
         import os
-        subset_config['trg_concept'] = argparse_namespace.trg_concept
-        parent, child = os.path.split(argparse_namespace.trg_concept)
-        super_parent, folder_name = os.path.split(parent)
+        subset_config['trg_concept'] = subsets.class_tokens
+        parent, child = os.path.split(subsets.image_dir)  # bad, 10_combined
+        super_parent, folder_name = os.path.split(parent) # , bad
         mask_parent = os.path.join(super_parent, f'{folder_name}_mask')
         subset_config['mask_dir'] = os.path.join(mask_parent, child)
+
         print(f' subset_config[trg_concept] : {subset_config["trg_concept"]}')
         print(f' subset_config[mask_dir] : {subset_config["mask_dir"]}')
         params = self.generate_params_by_fallbacks(subset_params_klass,
