@@ -255,11 +255,18 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
               scheduler):
     timestep, next_timestep = timestep, min( timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
+    alpha_prod_t_matrix = torch.ones_like(model_output) * alpha_prod_t
     alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
+    alpha_prod_t_next_matrix = torch.ones_like(model_output) * alpha_prod_t_next
     beta_prod_t = 1 - alpha_prod_t
-    next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
-    next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
-    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
+    beta_prod_t_matrix = torch.ones_like(model_output) * beta_prod_t
+    #next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+    next_original_sample = (sample - beta_prod_t_matrix ** 0.5 * model_output) / alpha_prod_t_matrix ** 0.5
+    #next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
+    next_sample_direction = (torch.ones_like(model_output) - alpha_prod_t_next_matrix) ** 0.5 * model_output
+
+    #next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
+    next_sample = alpha_prod_t_next_matrix ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
 def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
@@ -268,11 +275,18 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
               scheduler):
     timestep, prev_timestep = timestep, max( timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 0)
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
+    alpha_prod_t_matrix = torch.ones_like(model_output) * alpha_prod_t
+
     alpha_prod_t_prev = scheduler.alphas_cumprod[prev_timestep]
+    alpha_prod_t_prev_matrix = torch.ones_like(model_output) * alpha_prod_t_prev
     beta_prod_t = 1 - alpha_prod_t
-    prev_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
-    prev_sample_direction = (1 - alpha_prod_t_prev) ** 0.5 * model_output
-    prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
+    beta_prod_t_matrix = torch.ones_like(model_output) * beta_prod_t
+
+    #prev_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+    prev_original_sample = (sample - beta_prod_t_matrix ** 0.5 * model_output) / alpha_prod_t_matrix ** 0.5
+    #prev_sample_direction = (1 - alpha_prod_t_prev) ** 0.5 * model_output
+    prev_sample_direction = (torch.ones_like(model_output) - alpha_prod_t_prev_matrix) ** 0.5 * model_output
+    prev_sample = alpha_prod_t_prev_matrix ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
 
 @torch.no_grad()
@@ -595,7 +609,7 @@ def main(args) :
             mask_img_dir = os.path.join(mask_folder, test_img)
             mask_img_pil = Image.open(mask_img_dir)
             concept_name = test_img.split('.')[0]
-            save_base_folder = os.path.join(class_base_folder, f'{concept_name}_pretrain_lora_cond_text')
+            save_base_folder = os.path.join(class_base_folder, f'matrix_{concept_name}_pretrain_lora_cond_text')
             os.makedirs(save_base_folder, exist_ok=True)
             """
             mask_img_pil.resize((512, 512)).save(os.path.join(save_base_folder, 'mask.png'))
