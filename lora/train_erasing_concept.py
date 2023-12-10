@@ -295,10 +295,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
     train_util.add_training_arguments(parser, True)
+    train_util.add_sd_models_arguments(parser)
+
     parser.add_argument('--process_title', type=str, default='parksooyeon')
     # step 2. make model
     parser.add_argument("--no_half_vae",)
-    train_util.add_sd_models_arguments(parser)
     parser.add_argument("--network_weights", type=str, default=None,
                         help="pretrained weights for network / 学習するネットワークの初期重み")
     parser.add_argument("--network_module", type=str, default=None,
@@ -313,7 +314,6 @@ if __name__ == "__main__":
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
     # step 5. optimizer
     train_util.add_optimizer_arguments(parser)
-    train_util.add_training_arguments(parser, True)
     # step 3. dataset common
     parser.add_argument("--train_data_dir", type=str, default=None,
                         help="directory for train images / 学習画像データのディレクトリ")
