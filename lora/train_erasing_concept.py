@@ -84,19 +84,19 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                 if trg_indexs_list is not None :
                     batch_num = len(trg_indexs_list)
                     attention_probs_batch = torch.chunk(attention_probs, batch_num, dim=0)
+                    attn_vector_list = []
                     for batch_idx, attention_prob in enumerate(attention_probs_batch) :
                         print(f'{batch_idx} : attention_prob : {attention_prob.shape}')
                         batch_trg_index = trg_indexs_list[batch_idx] # two times
-                        attn_vector_list = []
                         for word_idx in batch_trg_index :
                             # head, pix_len
                             attn_vector = attention_prob[:, :, word_idx]
                             attn_vector_list.append(attn_vector)
-                        attn_vectors = torch.stack(attn_vector_list, dim=0) # (word_num, 512, 512)
-                        print(f'attn_vectors (2,8,pix) : {attn_vectors.shape}')
-                        attn_loss = attn_vectors.mean([1,2])
-                        print(f'attn_loss (2) : {attn_loss.shape}')
-                        controller.store_loss(attn_loss)
+                    attn_vectors = torch.stack(attn_vector_list, dim=0) # (word_num, 512, 512)
+                    print(f'attn_vectors (2,8,pix) : {attn_vectors.shape}')
+                    attn_loss = attn_vectors.mean([1,2])
+                    print(f'attn_loss (2) : {attn_loss.shape}')
+                    controller.store_loss(attn_loss)
                 # check if torch.no_grad() is in effect
                 elif torch.is_grad_enabled(): # if not, while training, trg_indexs_list should not be None
                     if mask is None:
