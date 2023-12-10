@@ -414,7 +414,9 @@ def main(args) :
 
     output_dir = args.output_dir
     os.makedirs(output_dir, exist_ok=True)
-    output_dir = os.path.join(output_dir, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}_cfg_check_{args.cfg_check}_inversion_weight_{args.inversion_weight}_model_epoch_{model_epoch}')
+    #output_dir = os.path.join(output_dir, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}_cfg_check_{args.cfg_check}_inversion_weight_{args.inversion_weight}_model_epoch_{model_epoch}')
+    output_dir = os.path.join(output_dir,
+                              f'recon_check')
     os.makedirs(output_dir, exist_ok=True)
 
     print(f' \n step 2. make stable diffusion model')
@@ -598,10 +600,12 @@ def main(args) :
             image_gt_np = load_512(test_img_dir)
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
 
-
+            org_img_dir = os.path.join(save_base_folder, f'org_img.png')
+            Image.open(test_img_dir).resize((512, 512)).save(org_img_dir)
             np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
-            pil_img.save(f'vae_recon_check.png')
+            recon_dir = os.path.join(save_base_folder, f'vae_recon_check.png')
+            pil_img.save(recon_dir)
 
             """
             # time_steps = 0,20,..., 980
