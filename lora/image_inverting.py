@@ -605,7 +605,7 @@ def main(args) :
             mask_img_dir = os.path.join(mask_folder, test_img)
             mask_img_pil = Image.open(mask_img_dir)
             concept_name = test_img.split('.')[0]
-            save_base_folder = os.path.join(class_base_folder, f'interpolate_matrix_{concept_name}_pretrain_lora_cond_text')
+            save_base_folder = os.path.join(class_base_folder, f'interpolate_matrix_{concept_name}_pretrain_lora_cond_text_interpolation_{args.interpolate_alpha}')
             os.makedirs(save_base_folder, exist_ok=True)
             """
             mask_img_pil.resize((512, 512)).save(os.path.join(save_base_folder, 'mask.png'))
