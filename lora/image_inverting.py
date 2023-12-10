@@ -330,6 +330,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
         if t > args.cfg_check :
+            print(f'using classifier guidance ')
             input_latent = torch.cat([latent] * 2)
             trg_latent = latent_dict[prev_time]
             noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
@@ -347,6 +348,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             print(f'best guidance scale is {best_guidance_scale} | latent_diff = {latent_diff_dict[best_guidance_scale]}')
             noise_pred = latent_dictionary[best_guidance_scale]
         else :
+            print(f'not using cfg')
             uncon, con = context.chunk(2)
             input_latent = latent
             noise_pred = call_unet(unet, input_latent, t, con, t, prev_time)
