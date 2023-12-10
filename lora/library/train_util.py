@@ -1437,7 +1437,6 @@ class DreamBoothDataset(BaseDataset):
                 print(f"ignore duplicated subset with image_dir='{subset.image_dir}': use the first one / 既にサブセットが登録されているため、重複した後発のサブセットを無視します")
                 continue
             img_paths, captions, mask_dir = load_dreambooth_dir(subset)
-            print(f'mask_dir = {mask_dir}')
             if mask_dir:
                 print(f"found mask directory {mask_dir}")
                 assert os.path.isdir(mask_dir), f"not directory: {mask_dir}"
@@ -1456,7 +1455,8 @@ class DreamBoothDataset(BaseDataset):
                     # --------------------------------------------------------------------------------------------
                     # re.compile = make local functino that finding specific pattern
                     # find name_{something optional}_mask.{png or jpg}
-                    mask_re = re.compile(f"{name}(_[^_]+)?_mask\.(png|jpg)$") #matches name_{something optional}_mask.{png or jpg}
+                    #mask_re = re.compile(f"{name}(_[^_]+)?_mask\.(png|jpg)$") #matches name_{something optional}_mask.{png or jpg}
+                    mask_re = re.compile(f"{name}\.(png|jpg)$")  # matches name_{something optional}_mask.{png or jpg}
                     mask_path = None
                     for mask_name in os.listdir(mask_dir):
                         # if success on finding specific pattern,
