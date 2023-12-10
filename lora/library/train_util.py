@@ -1204,7 +1204,7 @@ class BaseDataset(torch.utils.data.Dataset):
         example["trg_indexs_list"] = trg_indexs_list ##########################################################
         example["trg_concepts"] = trg_concepts
         example["absolute_paths"] = absolute_paths
-        example["mask_imgs"] = mask_imgs
+
         example["loss_weights"] = torch.FloatTensor(loss_weights)
         example["caption_attention_mask"] = caption_attention_masks
 #        example["class_caption_attention_mask"] = class_caption_attention_mask
@@ -1243,9 +1243,12 @@ class BaseDataset(torch.utils.data.Dataset):
         if images[0] is not None:
             images = torch.stack(images)
             images = images.to(memory_format=torch.contiguous_format).float()
+            mask_imgs = torch.stack(mask_imgs)
+            mask_imgs = mask_imgs.to(memory_format=torch.contiguous_format).float()
         else:
             images = None
 
+        example["mask_imgs"] = mask_imgs
         example["images"] = images
         example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
         example["captions"] = captions

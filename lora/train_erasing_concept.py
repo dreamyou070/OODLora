@@ -801,6 +801,7 @@ class NetworkTrainer:
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
+            f = 0
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -812,6 +813,27 @@ class NetworkTrainer:
                             print(f'make latent using vae')
                             latents         = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
                             mask_latents = vae.encode(batch['mask_imgs'].to(dtype=vae_dtype)).latent_dist.sample()
+
+
+                            import numpy as np
+                            from PIL import Image
+                            @torch.no_grad()
+                            def latent2image(latents, vae, return_type='np'):
+                                latents = 1 / 0.18215 * latents.detach()
+                                image = vae.decode(latents)['sample']
+                                if return_type == 'np':
+                                    image = (image / 2 + 0.5).clamp(0, 1)
+                                    image = image.cpu().permute(0, 2, 3, 1).numpy()[0]
+                                    image = (image * 255).astype(np.uint8)
+                                return image
+
+                            latent_np = latent2image(latents, vae)
+                            masked_latent_np = latent2image(mask_latents, vae)
+                            Image.fromarray(latent_np).save(f'latent_{f}.png')
+                            Image.fromarray(masked_latent_np).save(f'masked_latent_{f}.png')
+                            f += 1
+
+
         """
                             # NaNが含まれていれば警告を表示し0に置き換える
                             if torch.any(torch.isnan(latents)):
