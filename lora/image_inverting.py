@@ -318,11 +318,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[int(t.item())] = noise_pred
             latent = next_step(noise_pred, int(t.item()), latent, scheduler)
-            with torch.no_grad():
-                np_img = latent2image(latent, vae, return_type='np')
-            pil_img = Image.fromarray(np_img)
-            pil_images.append(pil_img)
-            pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
+
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
@@ -331,8 +327,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
 @torch.no_grad()
 def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir):
     latent = latent_dict[inference_times[0]]
-    all_latent = []
-    all_latent.append(latent)
+    all_latent_dict = {}
+    all_latent_dict[inference_times[0]] = latent
     time_steps = []
     pil_images = []
     with torch.no_grad():
@@ -370,9 +366,9 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         pil_images.append(pil_img)
         if prev_time == 0 :
             pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
-        all_latent.append(latent)
+        all_latent_dict[prev_time] = latent
     time_steps.append(prev_time)
-    return all_latent, time_steps, pil_images
+    return all_latent_dict, time_steps, pil_images
 
 
 
@@ -609,7 +605,7 @@ def main(args) :
             mask_img_dir = os.path.join(mask_folder, test_img)
             mask_img_pil = Image.open(mask_img_dir)
             concept_name = test_img.split('.')[0]
-            save_base_folder = os.path.join(class_base_folder, f'matrix_{concept_name}_pretrain_lora_cond_text')
+            save_base_folder = os.path.join(class_base_folder, f'interpolate_matrix_{concept_name}_pretrain_lora_cond_text')
             os.makedirs(save_base_folder, exist_ok=True)
             """
             mask_img_pil.resize((512, 512)).save(os.path.join(save_base_folder, 'mask.png'))
@@ -643,7 +639,7 @@ def main(args) :
                 #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                 time_steps.reverse()
                 print(f' (2.3.2) recon')
-                all_latent, _, _ = recon_loop(latent_dict=latent_dict,
+                recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                               context = context,
                                               inference_times = time_steps, # [20,0]
                                               scheduler = scheduler,
@@ -652,6 +648,15 @@ def main(args) :
                                               base_folder_dir=timewise_save_base_folder,)
                 attention_storer.reset()
 
+                # org and recon interpolate
+                org_latent = original_latent
+                recon_latent = recon_latent_dict[0]
+                interpolate_latent = args.interpolate_alpha * org_latent + (1 - args.interpolate_alpha) * recon_latent
+                with torch.no_grad():
+                    np_img = latent2image(interpolate_latent, vae, return_type='np')
+                    pil_img = Image.fromarray(np_img)
+                    pil_images.append(pil_img)
+                    pil_img.save(os.path.join(timewise_save_base_folder, f'interpolate_result.png'))
                 """
                 # recon
                 for j, recon_time in enumerate(recon_times) :
@@ -831,6 +836,7 @@ if __name__ == "__main__":
     parser.add_argument("--repeat_time", type=int, default=1)
     parser.add_argument("--cfg_check", type=int, default=200)
     parser.add_argument("--inversion_weight", type=float, default=3.0)
+    parser.add_argument("--inversion_weight", type=float, default=0.5)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
