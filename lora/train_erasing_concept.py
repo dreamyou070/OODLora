@@ -294,23 +294,18 @@ class NetworkTrainer:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
+    train_util.add_training_arguments(parser, True)
     parser.add_argument('--process_title', type=str, default='parksooyeon')
-    parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument("--logging_dir", type=str, default=None, )
-    parser.add_argument("--log_with", type=str, default='wandb', choices=["tensorboard", "wandb", "all"], )
-    parser.add_argument("--log_prefix", type=str, default=None,
-                        help="add prefix for each log directory / ログディレクトリ名の先頭に追加する文字列")
-    parser.add_argument('--wandb_api_key', type=str, default='3a3bc2f629692fa154b9274a5bbe5881d47245dc')
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1,
                         help="Number of updates steps to accumulate before performing a backward/update pass / 学習時に逆伝播をする前に勾配を合計するステップ数", )
-    parser.add_argument('--output_dir', type=str, default='wandb')
-    parser.add_argument('--wandb_init_name', type=str, default='wandb')
     # step 2. make model
     parser.add_argument("--mixed_precision", type=str, default="no", choices=["no", "fp16", "bf16"],
                         help="use mixed precision / 混合精度を使う場合、その精度")
     parser.add_argument("--save_precision",type=str,default=None,choices=[None, "float", "fp16", "bf16"],
                         help="precision in saving / 保存時に精度を変更して保存する",)
     parser.add_argument("--no_half_vae",)
+    parser.add_argument("--max_token_length",type=int,default=None,choices=[None, 150, 225],
+                        help="max token length of text encoder (default for 75, 150 or 225) / text encoderのトークンの最大長（未指定で75、150または225が指定可）",)
     train_util.add_sd_models_arguments(parser)
     parser.add_argument("--network_weights", type=str, default=None,
                         help="pretrained weights for network / 学習するネットワークの初期重み")
