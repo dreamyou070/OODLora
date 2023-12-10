@@ -311,6 +311,8 @@ if __name__ == "__main__":
                         help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
+    # step 5. optimizer
+    train_util.add_optimizer_arguments(parser)
     # step 3. dataset common
     parser.add_argument("--train_data_dir", type=str, default=None,
                         help="directory for train images / 学習画像データのディレクトリ")
