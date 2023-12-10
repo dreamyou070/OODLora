@@ -2955,9 +2955,9 @@ def add_dataset_arguments(parser: argparse.ArgumentParser, support_dreambooth: b
     parser.add_argument("--debug_dataset", action="store_true", help="show images for debugging (do not train) / デバッグ用に学習データを画面表示する（学習は行わない）"    )
     parser.add_argument( "--resolution",        type=str,        default=None,
                          help="resolution in training ('size' or 'width,height') / 学習時の画像解像度（'サイズ'指定、または'幅,高さ'指定）",    )
-    parser.add_argument(        "--cache_latents",        action="store_true",        help="cache latents to main memory to reduce VRAM usage (augmentations must be disabled) / VRAM削減のためにlatentをメインメモリにcacheする（augmentationは使用不可） ",)
+    parser.add_argument("--cache_latents",        action="store_true",        help="cache latents to main memory to reduce VRAM usage (augmentations must be disabled) / VRAM削減のためにlatentをメインメモリにcacheする（augmentationは使用不可） ",)
     parser.add_argument("--vae_batch_size", type=int, default=1, help="batch size for caching latents / latentのcache時のバッチサイズ")
-    parser.add_argument(        "--cache_latents_to_disk",        action="store_true",
+    parser.add_argument("--cache_latents_to_disk",        action="store_true",
                                         help="cache latents to disk to reduce VRAM usage (augmentations must be disabled) / VRAM削減のためにlatentをディスクにcacheする（augmentationは使用不可）",    )
     parser.add_argument(        "--enable_bucket", action="store_true", help="enable buckets for multi aspect ratio training / 複数解像度学習のためのbucketを有効にする"    )
     parser.add_argument("--min_bucket_reso", type=int, default=256, help="minimum resolution for buckets / bucketの最小解像度")
