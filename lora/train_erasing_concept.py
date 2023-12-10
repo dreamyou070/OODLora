@@ -453,22 +453,22 @@ class NetworkTrainer:
 
         from diffusers.image_processor import VaeImageProcessor
         from diffusers import StableDiffusionInpaintPipeline
-        pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",
-                                                              cache_dir=r'/data7/sooyeon/pretrained_stable_diffusion/models-stable-diffusion-anomalydetection')
-        mask_processor = pipe.mask_processor
+        #pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",
+        #                                                      cache_dir=r'/data7/sooyeon/pretrained_stable_diffusion/models-stable-diffusion-anomalydetection')
+        #mask_processor = pipe.mask_processor
 
         # acceleratorがなんかよろしくやってくれるらしい
         # TODO めちゃくちゃ冗長なのでコードを整理する
         if train_unet and train_text_encoder:
             if len(text_encoders) > 1:
-                unet, t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler, mask_processor = accelerator.prepare(
-                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler, mask_processor
+                unet, t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler, = accelerator.prepare(
+                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler,
                 )
                 text_encoder = text_encoders = [t_enc1, t_enc2]
                 del t_enc1, t_enc2
             else:
-                unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler,mask_processor = accelerator.prepare(
-                    unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler,mask_processor)
+                unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(
+                    unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler)
                 text_encoders = [text_encoder]
         elif train_unet:
             unet, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
