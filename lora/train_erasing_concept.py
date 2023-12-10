@@ -313,6 +313,7 @@ if __name__ == "__main__":
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
     # step 5. optimizer
     train_util.add_optimizer_arguments(parser)
+    train_util.add_training_arguments(parser, True)
     # step 3. dataset common
     parser.add_argument("--train_data_dir", type=str, default=None,
                         help="directory for train images / 学習画像データのディレクトリ")
