@@ -595,6 +595,7 @@ def main(args) :
             concept_name = test_img.split('.')[0]
             save_base_folder = os.path.join(class_base_folder, concept_name)
             os.makedirs(save_base_folder, exist_ok=True)
+            """
             mask_img_pil.resize((512, 512)).save(os.path.join(save_base_folder, 'mask.png'))
             print(f' (2.3.1) inversion')
             image_gt_np = load_512(test_img_dir)
@@ -602,10 +603,49 @@ def main(args) :
 
             org_img_dir = os.path.join(save_base_folder, f'org_img.png')
             Image.open(test_img_dir).resize((512, 512)).save(org_img_dir)
-            np_img = latent2image(latent, vae, return_type='np')
-            pil_img = Image.fromarray(np_img)
+            np_img = 
+            pil_img = 
             recon_dir = os.path.join(save_base_folder, f'vae_recon_check.png')
-            pil_img.save(recon_dir)
+            
+            """
+            # inference_times = [980, 960, ..., 0]
+            flip_times = torch.flip(inference_times, dims=[0]) # [0,20, ..., 980]
+
+            uncond_embeddings, cond_embeddings = invers_context.chunk(2)
+            original_latent = latent.clone().detach()
+            for final_time in flip_times[1:]:
+                timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
+                os.makedirs(timewise_save_base_folder, exist_ok=True)
+                latent = original_latent.clone().detach()
+                noising_times = []
+                org_save_dir = os.path.join(timewise_save_base_folder, f'org_img.png')
+                Image.fromarray(latent2image(latent, vae, return_type='np')).save(org_save_dir)
+                # noising
+                for i, t in enumerate(flip_times[:-1]): # [0,20,...,960]
+                    noising_times.append(t.item())
+                    if t < final_time :
+                        with torch.no_grad():
+                            noise_pred = call_unet(unet, latent, int(t.item()), uncond_embeddings, None, None)
+                        attention_storer.reset()
+                        latent = next_step(noise_pred, int(t.item()), latent, scheduler)
+                        save_dir = os.path.join(timewise_save_base_folder, f'noising_{flip_times[i+1].item()}.png')
+                        Image.fromarray(latent2image(latent, vae, return_type='np')).save(save_dir)
+                noising_times.reverse()
+                recon_times = noising_times
+                # recon
+                for j, recon_time in enumerate(recon_times) :
+                    if j < len(recon_times) - 1:
+                        with torch.no_grad():
+                            noise_pred = call_unet(unet, latent, recon_time, uncond_embeddings, None, None)
+                            latent = prev_step(noise_pred, int(t), latent, scheduler)
+                            save_dir = os.path.join(timewise_save_base_folder, f'recon_{recon_times[j + 1].item()}.png')
+                            Image.fromarray(latent2image(latent, vae, return_type='np')).save(save_dir)
+
+
+            break
+
+
+
 
             """
             # time_steps = 0,20,..., 980
