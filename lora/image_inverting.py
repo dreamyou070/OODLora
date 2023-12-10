@@ -634,6 +634,7 @@ def main(args) :
                         Image.fromarray(latent2image(latent, vae, return_type='np')).save(save_dir)
                 noising_times.reverse()
                 recon_times = noising_times
+                print(f'recon_times : {recon_times}')
                 # recon
                 for j, recon_time in enumerate(recon_times) :
                     if j < len(recon_times) - 1:
