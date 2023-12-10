@@ -314,12 +314,10 @@ if __name__ == "__main__":
 
     parser.add_argument('--process_title', type=str, default='parksooyeon')
     # step 2. make model
-    parser.add_argument("--no_half_vae",)
     parser.add_argument("--network_weights", type=str, default=None,
                         help="pretrained weights for network / 学習するネットワークの初期重み")
     parser.add_argument("--network_module", type=str, default=None,
                         help="network module to train / 学習対象のネットワークのモジュール")
-    parser.add_argument("--base_weights", type=str, default=None,)
     parser.add_argument("--network_dim", type=int, default=None,
                         help="network dimensions (depends on each network) / モジュールの次元数（ネットワークにより定義は異なります）")
     parser.add_argument("--network_alpha", type=float, default=1,
