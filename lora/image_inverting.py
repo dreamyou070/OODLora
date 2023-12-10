@@ -288,18 +288,19 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
-    inference_times = torch.cat([torch.Tensor([999]), inference_times])
+    #inference_times = torch.cat([torch.Tensor([999]), inference_times])
     flip_times = torch.flip(inference_times, dims=[0])
+    flip_times = inference_times
     repeat_time = 0
     for i, t in enumerate(flip_times[:-1]):
-        if repeat_time < args.repeat_time :
-            next_time = flip_times[i+1].item()
+        if repeat_time < args.repeat_time:
+            next_time = flip_times[i + 1].item()
             latent_dict[int(t.item())] = latent
             time_steps.append(t.item())
-            #con_noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
-            #uncon_noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
+            # con_noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
+            # uncon_noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             # if -1 only con, if 0, only uncon
-            #noise_pred = uncon_noise_pred - args.inversion_weight * (con_noise_pred - uncon_noise_pred)
+            # noise_pred = uncon_noise_pred - args.inversion_weight * (con_noise_pred - uncon_noise_pred)
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[int(t.item())] = noise_pred
             latent = next_step(noise_pred, int(t.item()), latent, scheduler)
@@ -307,11 +308,11 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
                 np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
-            #pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
+            pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
-    return latent_dict, time_steps, pil_images
+    return
 
 @torch.no_grad()
 def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir):
@@ -602,43 +603,30 @@ def main(args) :
             print(f' (2.3.1) inversion')
             image_gt_np = load_512(test_img_dir)
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
-
             org_img_dir = os.path.join(save_base_folder, f'org_img.png')
             Image.open(test_img_dir).resize((512, 512)).save(org_img_dir)
-            np_img = 
-            pil_img = 
-            recon_dir = os.path.join(save_base_folder, f'vae_recon_check.png')
-            
+            recon_dir = os.path.join(save_base_folder, f'vae_recon_check.png')            
             """
             # inference_times = [980, 960, ..., 0]
             image_gt_np = load_512(test_img_dir)
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
             flip_times = torch.flip(inference_times, dims=[0]) # [0,20, ..., 980]
-
-            uncond_embeddings, cond_embeddings = invers_context.chunk(2)
             original_latent = latent.clone().detach()
-            for final_time in flip_times[1:]:
+            for ii, final_time in enumerate(flip_times[1:]):
                 timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
                 os.makedirs(timewise_save_base_folder, exist_ok=True)
-                latent = original_latent.clone().detach()
-                noising_times = []
-                org_save_dir = os.path.join(timewise_save_base_folder, f'org_img.png')
-                Image.fromarray(latent2image(latent, vae, return_type='np')).save(org_save_dir)
-                # noising
-                for i, t in enumerate(flip_times[:-1]): # [0,20,...,960]
+                latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
+                                                                context=invers_context,
+                                                                inference_times=flip_times[:ii + 1],
+                                                                scheduler=scheduler,
+                                                                unet=invers_unet,
+                                                                vae=vae,
+                                                                base_folder_dir=timewise_save_base_folder,
+                                                                attention_storer=attention_storer)
+                """
 
-                    if t < final_time :
-                        noising_times.append(t.item())
-                        with torch.no_grad():
-                            noise_pred = call_unet(invers_unet, latent, int(t.item()), uncond_embeddings, None, None)
-                        attention_storer.reset()
-                        latent = next_step(noise_pred, int(t.item()), latent, scheduler)
-                        save_dir = os.path.join(timewise_save_base_folder, f'noising_{flip_times[i+1]}.png')
-                        Image.fromarray(latent2image(latent, vae, return_type='np')).save(save_dir)
-                noising_times.append(final_time.item())
-                noising_times.reverse()
-                recon_times = noising_times
-                print(f'recon_times : {recon_times}')
+
+
                 # recon
                 for j, recon_time in enumerate(recon_times) :
                     # recon_time =
@@ -649,12 +637,8 @@ def main(args) :
                             latent = prev_step(noise_pred, int(t), latent, scheduler)
                             save_dir = os.path.join(timewise_save_base_folder, f'recon_{recon_times[j + 1]}.png')
                             Image.fromarray(latent2image(latent, vae, return_type='np')).save(save_dir)
-
-
+                """
             break
-
-
-
 
             """
             # time_steps = 0,20,..., 980
