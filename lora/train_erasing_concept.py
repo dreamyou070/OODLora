@@ -190,6 +190,7 @@ class NetworkTrainer:
         train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
         if torch.__version__ >= "2.0.0":  # PyTorch 2.0.0 以上対応のxformersなら以下が使える
             vae.set_use_memory_efficient_attention_xformers(args.xformers)
+
         print(f' (2.3) get lora network')
         sys.path.append(os.path.dirname(__file__))
         accelerator.print("import network module:", args.network_module)
@@ -216,25 +217,18 @@ class NetworkTrainer:
         net_kwargs['key_layers'] = net_key_names.split(",")
         # if a new network is added in future, add if ~ then blocks for each network (;'∀')
         if args.dim_from_weights:
-            network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
-                                                                    **net_kwargs)
+            network, weights_sd = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,**net_kwargs)
         else:
-            # LyCORIS will work with this...
-            network = network_module.create_network(1.0,
-                                                    args.network_dim, args.network_alpha, vae,
-                                                    text_encoder, unet, neuron_dropout=args.network_dropout,
-                                                    **net_kwargs, )
+            network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae,text_encoder, unet, neuron_dropout=args.network_dropout,**net_kwargs, )
         if network is None:
             return
         if hasattr(network, "prepare_network"):
             network.prepare_network(args)
         if args.scale_weight_norms and not hasattr(network, "apply_max_norm_regularization"):
-            print(
-                "warning: scale_weight_norms is specified but the network does not support it / scale_weight_normsが指定されていますが、ネットワークが対応していません")
+            print("warning: scale_weight_norms is specified but the network does not support it / scale_weight_normsが指定されていますが、ネットワークが対応していません")
             args.scale_weight_norms = False
         train_unet = not args.network_train_text_encoder_only
         train_text_encoder = not args.network_train_unet_only and not self.is_text_encoder_outputs_cached(args)
-
         if args.network_weights is not None:
             info = network.load_weights(args.network_weights)
             accelerator.print(f"load network weights from {args.network_weights}: {info}")
@@ -247,6 +241,7 @@ class NetworkTrainer:
         # 学習に必要なクラスを準備する
         network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
         accelerator.print("prepare optimizer, data loader etc.")
+        """
         # 後方互換性を確保するよ
         try:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
@@ -282,6 +277,7 @@ class NetworkTrainer:
         # 必要ならテキストエンコーダーの出力をキャッシュする: Text Encoderはcpuまたはgpuへ移される
         self.cache_text_encoder_outputs_if_needed(args, accelerator, unet, vae, tokenizers, text_encoders,
                                                   train_dataset_group, weight_dtype)
+        """
 
 
 
@@ -304,6 +300,7 @@ if __name__ == "__main__":
                         help="pretrained weights for network / 学習するネットワークの初期重み")
     parser.add_argument("--network_module", type=str, default=None,
                         help="network module to train / 学習対象のネットワークのモジュール")
+    parser.add_argument("--base_weights", type=str, default=None,)
     parser.add_argument("--network_dim", type=int, default=None,
                         help="network dimensions (depends on each network) / モジュールの次元数（ネットワークにより定義は異なります）")
     parser.add_argument("--network_alpha", type=float, default=1,
@@ -312,6 +309,13 @@ if __name__ == "__main__":
                         help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
+    parser.add_argument("--dim_from_weights", type=str, default=None, )
+    parser.add_argument("--network_train_text_encoder_only", action='store_true')
+    parser.add_argument("--network_train_unet_only", action='store_true')
+
+
+
+
     # step 5. optimizer
     train_util.add_optimizer_arguments(parser)
     # step 3. dataset common
