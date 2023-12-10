@@ -80,23 +80,29 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
             attention_probs = attention_probs.to(value.dtype)
 
             if is_cross_attention:
-                if trg_indexs_list is not None and mask is not None:
-                    trg_indexs = trg_indexs_list
-                    batch_num = len(trg_indexs)
+                #if trg_indexs_list is not None and mask is not None:
+                if trg_indexs_list is not None :
+                    batch_num = len(trg_indexs_list)
+                    print(f'batch_num (2) : {batch_num}')
                     attention_probs_batch = torch.chunk(attention_probs, batch_num, dim=0)
                     for batch_idx, attention_prob in enumerate(attention_probs_batch) :
-                        batch_trg_index = trg_indexs[batch_idx] # two times
+                        print(f'{batch_idx} : attention_prob : {attention_prob.shape}')
+                        batch_trg_index = trg_indexs_list[batch_idx] # two times
+                        print(f'batch_trg_index : {batch_trg_index}')
                         head_num = attention_prob.shape[0]
                         res = int(math.sqrt(attention_prob.shape[1]))
                         word_heat_map_list = []
                         for word_idx in batch_trg_index :
                             # head, pix_len
                             word_heat_map = attention_prob[:, :, word_idx]
+                            word_heat_map_list.append(word_heat_map)
+                            """
                             word_heat_map_ = word_heat_map.reshape(-1, res, res)
                             word_heat_map_ = word_heat_map_.mean(dim=0)
                             word_heat_map_ = F.interpolate(word_heat_map_.unsqueeze(0).unsqueeze(0),
                                                            size=((512, 512)),mode='bicubic').squeeze()
                             word_heat_map_list.append(word_heat_map_)
+                            """
                         word_heat_map_ = torch.stack(word_heat_map_list, dim=0) # (word_num, 512, 512)
                         # saving word_heat_map
                         # ------------------------------------------------------------------------------------------------------------------------------
@@ -852,7 +858,6 @@ class NetworkTrainer:
                         noise_pred = self.call_unet(args,accelerator,unet,noisy_latents,timesteps,text_encoder_conds,
                                                     batch,weight_dtype,
                                                     batch["trg_indexs_list"],
-                                                    #trg_index_list,
                                                     batch['mask_imgs'])
                         if attention_storer is not None:
                             atten_collection = attention_storer.step_store
