@@ -595,7 +595,7 @@ def main(args) :
             mask_img_dir = os.path.join(mask_folder, test_img)
             mask_img_pil = Image.open(mask_img_dir)
             concept_name = test_img.split('.')[0]
-            save_base_folder = os.path.join(class_base_folder, concept_name)
+            save_base_folder = os.path.join(class_base_folder, f'{concept_name}_pretrain_lora_cond_text')
             os.makedirs(save_base_folder, exist_ok=True)
             """
             mask_img_pil.resize((512, 512)).save(os.path.join(save_base_folder, 'mask.png'))
@@ -644,8 +644,8 @@ def main(args) :
                     # recon_time =
                     if j < len(recon_times) - 1:
                         with torch.no_grad():
-                            #noise_pred = call_unet(unet, latent, recon_time, context.chunk(2)[-1], None, None)
-                            noise_pred = call_unet(unet, latent, recon_time, uncond_embeddings, None, None)
+                            noise_pred = call_unet(unet, latent, recon_time, context.chunk(2)[-1], None, None)
+                            #noise_pred = call_unet(unet, latent, recon_time, uncond_embeddings, None, None)
                             latent = prev_step(noise_pred, int(t), latent, scheduler)
                             save_dir = os.path.join(timewise_save_base_folder, f'recon_{recon_times[j + 1]}.png')
                             Image.fromarray(latent2image(latent, vae, return_type='np')).save(save_dir)
