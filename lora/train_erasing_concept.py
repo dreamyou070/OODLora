@@ -243,32 +243,68 @@ class NetworkTrainer:
         device = accelerator.device if args.lowram else "cpu"
 
         print(f'\n step 3. dataset')
+        train_util.prepare_dataset_args(args, True)
+        cache_latents = args.cache_latents
+        use_dreambooth_method = args.in_json is None
+        use_user_config = args.dataset_config is not None
+        use_class_caption = args.class_caption is not None
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
-        blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
-        sub_config_list = config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,args.reg_data_dir)
-        user_config = {"datasets": [{"subsets": sub_config_list}]}
-        blueprint = blueprint_generator.generate(user_config,
-                                                 args,
-                                                 tokenizer=tokenizer)
+        if args.dataset_class is None:
+            blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
+            if use_user_config:
+                print(f"Loading dataset config from {args.dataset_config}")
+                user_config = config_util.load_user_config(args.dataset_config)
+                ignored = ["train_data_dir", "reg_data_dir", "in_json"]
+                if any(getattr(args, attr) is not None for attr in ignored):
+                    print(
+                        "ignoring the following options because config file is found: {0} / 設定ファイルが利用されるため以下のオプションは無視されます: {0}".format(
+                            ", ".join(ignored)))
+            else:
+                if use_dreambooth_method:
+                    print("Using DreamBooth method.")
+                    user_config = {}
+                    user_config['datasets'] = [{"subsets": None}]
+                    subsets_dict_list = []
+                    for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
+                                                                                                  args.reg_data_dir):
+                        if use_class_caption:
+                            subsets_dict['class_caption'] = args.class_caption
+                        subsets_dict_list.append(subsets_dict)
+                        user_config['datasets'][0]['subsets'] = subsets_dict_list
+                else:
+                    print("Training with captions.")
+                    user_config = {}
+                    user_config["datasets"] = []
+                    user_config["datasets"].append({"subsets": [{"image_dir": args.train_data_dir,
+                                                                 "metadata_file": args.in_json, }]})
+                    if use_class_caption:
+                        for subset in user_config["datasets"][0]["subsets"]:
+                            subset["class_caption"] = args.class_caption
+            print(f'User config: {user_config}')
+            # blueprint_generator = BlueprintGenerator
+            print('start of generate function ...')
+            blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
+            train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
+        else:
+            train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
 
-        train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
-        if args.cache_latents:
-            vae.to(accelerator.device, dtype=vae_dtype)
-            vae.requires_grad_(False)
-            vae.eval()
-            with torch.no_grad():
-                train_dataset_group.cache_latents(vae, args.vae_batch_size, args.cache_latents_to_disk,
-                                                  accelerator.is_main_process)
-            vae.to("cpu")
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            gc.collect()
-            accelerator.wait_for_everyone()
-
-        # 必要ならテキストエンコーダーの出力をキャッシュする: Text Encoderはcpuまたはgpuへ移される
-        self.cache_text_encoder_outputs_if_needed(args, accelerator, unet, vae, tokenizers, text_encoders,
-                                                  train_dataset_group, weight_dtype)
+        training_started_at = time.time()
+        train_util.verify_training_args(args)
+        current_epoch = Value("i", 0)
+        current_step = Value("i", 0)
+        ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
+        collater = train_util.collater_class(current_epoch, current_step, ds_for_collater)
+        if args.debug_dataset:
+            train_util.debug_dataset(train_dataset_group)
+            return
+        if len(train_dataset_group) == 0:
+            print("No data found. Please verify arguments (train_data_dir must be the parent of folders with images) ）")
+            return
+        if cache_latents:
+            assert (
+                train_dataset_group.is_latent_cacheable()), "when caching latents, either color_aug or random_crop cannot be used / latentをキャッシュするときはcolor_augとrandom_cropは使えません"
+        self.assert_extra_args(args, train_dataset_group)
 
         """
         try:
