@@ -104,7 +104,6 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                             """
                         attn_vectors = torch.stack(attn_vector_list, dim=0) # (word_num, 512, 512)
                         attn_loss = attn_vectors.mean([1,2])
-                        print(f'attn_loss : {attn_loss.shape}')
                         # saving word_heat_map
                         # ------------------------------------------------------------------------------------------------------------------------------
                         # mask = [512,512]
@@ -115,7 +114,7 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                         #assert mask_.requires_grad == False, 'mask_ should not be updated'
                         #masked_heat_map = word_heat_map_ * mask_
                         #attn_loss = F.mse_loss(word_heat_map_.mean(), masked_heat_map.mean())
-                        controller.store(attn_loss, layer_name)
+                        controller.store_loss(attn_loss, layer_name)
                 # check if torch.no_grad() is in effect
                 elif torch.is_grad_enabled(): # if not, while training, trg_indexs_list should not be None
                     if mask is None:
@@ -860,32 +859,13 @@ class NetworkTrainer:
                                                     batch,weight_dtype,
                                                     batch["trg_indexs_list"],
                                                     batch['mask_imgs'])
-                        if attention_storer is not None:
-                            atten_collection = attention_storer.step_store
-                            attention_storer.step_store = {}
-                    if args.v_parameterization:
-                        # v-parameterization training
-                        target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                    else:
-                        target = noise
-                    loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
-                    loss = loss.mean([1, 2, 3])
-                    loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                    loss = loss * loss_weights
-                    if args.min_snr_gamma:
-                        loss = apply_snr_weight(loss, timesteps, noise_scheduler, args.min_snr_gamma)
-                    if args.scale_v_pred_loss_like_noise_pred:
-                        loss = scale_v_prediction_loss_like_noise_prediction(loss, timesteps, noise_scheduler)
-                    if args.v_pred_like_loss:
-                        loss = add_v_prediction_like_loss(loss, timesteps, noise_scheduler, args.v_pred_like_loss)
-                    loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-                    task_loss = loss
-                    attn_loss = 0
+                    losss = attention_storer.loss_list
+                    attention_storer.reset()
+                    loss = torch.stack(losss, dim=0).mean(dim=0)
+                    loss = loss.mean()
                     attention_losses = {}
-                    attention_losses["loss/task_loss"] = loss
-
+                    attention_losses["loss/cross_attna_loss"] = loss
                     # ------------------------------------------------------------------------------------
-                    attention_losses = {}
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
@@ -967,18 +947,13 @@ class NetworkTrainer:
             if attention_storer is not None:
                 attention_storer.step_store = {}
             # end of epoch
-
         # metadata["ss_epoch"] = str(num_train_epochs)
         metadata["ss_training_finished_at"] = str(time.time())
-
         if is_main_process:
             network = accelerator.unwrap_model(network)
-
         accelerator.end_training()
-
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
-
         if is_main_process:
             ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
             save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
