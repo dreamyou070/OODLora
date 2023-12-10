@@ -321,77 +321,10 @@ if __name__ == "__main__":
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
 
 
-
-
     # step 5. optimizer
     train_util.add_optimizer_arguments(parser)
     # step 3. dataset common
-    parser.add_argument("--train_data_dir", type=str, default=None,
-                        help="directory for train images / 学習画像データのディレクトリ")
-    parser.add_argument("--shuffle_caption", action="store_true",
-                        help="shuffle comma-separated caption / コンマで区切られたcaptionの各要素をshuffleする")
-    parser.add_argument("--caption_extension", type=str, default=".caption",
-                        help="extension of caption files / 読み込むcaptionファイルの拡張子")
-    parser.add_argument("--caption_extention", type=str, default=None,
-                        help="extension of caption files (backward compatibility) / 読み込むcaptionファイルの拡張子（スペルミスを残してあります）", )
-    parser.add_argument("--keep_tokens", type=int, default=0,
-                        help="keep heading N tokens when shuffling caption tokens (token means comma separated strings) / captionのシャッフル時に、先頭からこの個数のトークンをシャッフルしないで残す（トークンはカンマ区切りの各部分を意味する）", )
-    parser.add_argument("--caption_prefix", type=str, default=None,
-                        help="prefix for caption text / captionのテキストの先頭に付ける文字列", )
-    parser.add_argument("--caption_suffix", type=str, default=None,
-                        help="suffix for caption text / captionのテキストの末尾に付ける文字列", )
-    parser.add_argument("--color_aug", action="store_true",
-                        help="enable weak color augmentation / 学習時に色合いのaugmentationを有効にする")
-    parser.add_argument("--flip_aug", action="store_true",
-                        help="enable horizontal flip augmentation / 学習時に左右反転のaugmentationを有効にする")
-    parser.add_argument("--face_crop_aug_range", type=str, default=None,
-                        help="enable face-centered crop augmentation and its range (e.g. 2.0,4.0) / 学習時に顔を中心とした切り出しaugmentationを有効にするときは倍率を指定する（例：2.0,4.0）", )
-    parser.add_argument("--random_crop", action="store_true",
-                        help="enable random crop (for style training in face-centered crop augmentation) / ランダムな切り出しを有効にする（顔を中心としたaugmentationを行うときに画風の学習用に指定する）", )
-    parser.add_argument("--debug_dataset", action="store_true",
-                        help="show images for debugging (do not train) / デバッグ用に学習データを画面表示する（学習は行わない）")
-    parser.add_argument("--resolution", type=str, default=None,
-                        help="resolution in training ('size' or 'width,height') / 学習時の画像解像度（'サイズ'指定、または'幅,高さ'指定）", )
-    parser.add_argument("--cache_latents", action="store_true",
-                        help="cache latents to main memory to reduce VRAM usage (augmentations must be disabled) / VRAM削減のためにlatentをメインメモリにcacheする（augmentationは使用不可） ", )
-    parser.add_argument("--vae_batch_size", type=int, default=1,
-                        help="batch size for caching latents / latentのcache時のバッチサイズ")
-    parser.add_argument("--cache_latents_to_disk", action="store_true",
-                        help="cache latents to disk to reduce VRAM usage (augmentations must be disabled) / VRAM削減のためにlatentをディスクにcacheする（augmentationは使用不可）", )
-    parser.add_argument("--enable_bucket", action="store_true",
-                        help="enable buckets for multi aspect ratio training / 複数解像度学習のためのbucketを有効にする")
-    parser.add_argument("--min_bucket_reso", type=int, default=256,
-                        help="minimum resolution for buckets / bucketの最小解像度")
-    parser.add_argument("--max_bucket_reso", type=int, default=1024,
-                        help="maximum resolution for buckets / bucketの最大解像度")
-    parser.add_argument("--bucket_reso_steps", type=int, default=64,
-                        help="steps of resolution for buckets, divisible by 8 is recommended / bucketの解像度の単位、8で割り切れる値を推奨します", )
-    parser.add_argument("--bucket_no_upscale", action="store_true",
-                        help="make bucket for each image without upscaling / 画像を拡大せずbucketを作成します")
-    parser.add_argument("--token_warmup_min", type=int, default=1,
-                        help="start learning at N tags (token means comma separated strinfloatgs) / タグ数をN個から増やしながら学習する", )
-    parser.add_argument("--token_warmup_step", type=float, default=0,
-                        help="tag length reaches maximum on N steps (or N*max_train_steps if N<1) / N（N<1ならN*max_train_steps）ステップでタグ長が最大になる。デフォルトは0（最初から最大）", )
-    parser.add_argument("--dataset_class",type=str,default=None,
-                        help="dataset class for arbitrary dataset (package.module.Class) / 任意のデータセットを用いるときのクラス名 (package.module.Class)",)
-    support_caption_dropout = True
-    if support_caption_dropout:
-        parser.add_argument("--caption_dropout_rate", type=float, default=0.0,
-                            help="Rate out dropout caption(0.0~1.0) / captionをdropoutする割合")
-        parser.add_argument("--caption_dropout_every_n_epochs",
-                            type=int,default=0,help="Dropout all captions every N epochs / captionを指定エポックごとにdropoutする",)
-        parser.add_argument("--caption_tag_dropout_rate",type=float,default=0.0,
-                            help="Rate out dropout comma separated tokens(0.0~1.0) / カンマ区切りのタグをdropoutする割合",)
-    support_dreambooth = True
-    if support_dreambooth:
-        parser.add_argument("--reg_data_dir", type=str, default=None,
-                            help="directory for regularization images / 正則化画像データのディレクトリ")
-    support_caption = True
-    if support_caption:
-        parser.add_argument("--in_json", type=str, default=None,
-                            help="json metadata for dataset / データセットのmetadataのjsonファイル")
-        parser.add_argument("--dataset_repeats", type=int, default=1,
-                            help="repeat dataset when training with captions / キャプションでの学習時にデータセットを繰り返す回数")
+    train_util.add_dataset_arguments(parser, True, True, True)
     # step 4. training
     custom_train_functions.add_custom_train_arguments(parser)
     parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")

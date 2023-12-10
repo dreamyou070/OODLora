@@ -177,8 +177,7 @@ class ConfigSanitizer:
     "enable_bucket": bool,
     "max_bucket_reso": int,
     "min_bucket_reso": int,
-    "resolution": functools.partial(__validate_and_convert_scalar_or_twodim.__func__, int),
-  }
+    "resolution": functools.partial(__validate_and_convert_scalar_or_twodim.__func__, int),}
 
   # options handled by argparse but not handled by user config
   ARGPARSE_SPECIFIC_SCHEMA = {
@@ -204,8 +203,7 @@ class ConfigSanitizer:
       self.SUBSET_ASCENDABLE_SCHEMA,
       self.DB_SUBSET_DISTINCT_SCHEMA,
       self.DB_SUBSET_ASCENDABLE_SCHEMA,
-      self.DO_SUBSET_ASCENDABLE_SCHEMA if support_dropout else {},
-    )
+      self.DO_SUBSET_ASCENDABLE_SCHEMA if support_dropout else {},)
 
     self.ft_subset_schema = self.__merge_dict(
       self.SUBSET_ASCENDABLE_SCHEMA,
@@ -275,14 +273,14 @@ class ConfigSanitizer:
       self.CN_SUBSET_ASCENDABLE_SCHEMA if support_controlnet else {},
       self.DO_SUBSET_ASCENDABLE_SCHEMA if support_dropout else {},)
 
-    self.user_config_validator = Schema({"general": self.general_schema,"datasets": [self.dataset_schema],})
+    self.user_config_validator = Schema({"general": self.general_schema,
+                                         "datasets": [self.dataset_schema],})
 
-    self.argparse_schema = self.__merge_dict(
-      self.general_schema,
-      self.ARGPARSE_SPECIFIC_SCHEMA,
-      {optname: Any(None, self.general_schema[optname]) for optname in self.ARGPARSE_NULLABLE_OPTNAMES},
-      {a_name: self.general_schema[c_name] for a_name, c_name in self.ARGPARSE_OPTNAME_TO_CONFIG_OPTNAME.items()},)
-
+    self.argparse_schema = self.__merge_dict(self.general_schema,
+                                             self.ARGPARSE_SPECIFIC_SCHEMA,
+                                             {optname: Any(None, self.general_schema[optname]) for optname in self.ARGPARSE_NULLABLE_OPTNAMES},
+                                             {a_name: self.general_schema[c_name] for a_name, c_name in self.ARGPARSE_OPTNAME_TO_CONFIG_OPTNAME.items()},)
+    print(self.argparse_schema)
     self.argparse_config_validator = Schema(Object(self.argparse_schema),
                                             extra=voluptuous.ALLOW_EXTRA)
 
