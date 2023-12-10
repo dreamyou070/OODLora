@@ -289,9 +289,10 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
     #inference_times = torch.cat([torch.Tensor([999]), inference_times])
-    flip_times = torch.flip(inference_times, dims=[0])
+    #flip_times = torch.flip(inference_times, dims=[0])
     flip_times = inference_times
     repeat_time = 0
+    print(f'flip_times: {flip_times}')
     for i, t in enumerate(flip_times[:-1]):
         if repeat_time < args.repeat_time:
             next_time = flip_times[i + 1].item()
