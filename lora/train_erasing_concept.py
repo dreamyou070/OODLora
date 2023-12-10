@@ -417,8 +417,8 @@ class NetworkTrainer:
             args.scale_weight_norms = False
         train_unet = not args.network_train_text_encoder_only
         train_text_encoder = not args.network_train_unet_only and not self.is_text_encoder_outputs_cached(args)
-
-
+        # 学習に必要なクラスを準備する
+        network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
         if args.network_weights is not None:
             info = network.load_weights(args.network_weights)
             accelerator.print(f"load network weights from {args.network_weights}: {info}")
@@ -428,8 +428,7 @@ class NetworkTrainer:
                 t_enc.gradient_checkpointing_enable()
             del t_enc
             network.enable_gradient_checkpointing()  # may have no effect
-        # 学習に必要なクラスを準備する
-        network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
+
         accelerator.print("prepare optimizer, data loader etc.")
         # 後方互換性を確保するよ
         try:
