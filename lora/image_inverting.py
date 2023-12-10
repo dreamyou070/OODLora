@@ -620,7 +620,6 @@ def main(args) :
                     else:
                         self_key_dict[time_step][layer] = self_key
                     print(f'make self key dict, time_step : {time_step}')
-
                     if time_step not in self_value_dict.keys():
                         self_value_dict[time_step] = {}
                         self_value_dict[time_step][layer] = self_value
