@@ -348,7 +348,7 @@ class BlueprintGenerator:
       for subset_config in subsets:
         #subset_config['mask_dir'] = argparse_namespace.mask_dir
         import os
-        subset_config['trg_concept'] = subset_config.class_tokens
+        subset_config['trg_concept'] = subset_config['class_tokens']
         parent, child = os.path.split(subset_config.image_dir)  # bad, 10_combined
         super_parent, folder_name = os.path.split(parent) # , bad
         mask_parent = os.path.join(super_parent, f'{folder_name}_mask')
