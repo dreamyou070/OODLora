@@ -330,7 +330,6 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
         if t > args.cfg_check :
-            print(f'using classifier guidance ')
             input_latent = torch.cat([latent] * 2)
             trg_latent = latent_dict[prev_time]
             noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
@@ -345,10 +344,8 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                 latent_diff_dict[guidance_scale] = latent_diff.mean()
                 latent_dictionary[guidance_scale] = inter_noise_pred
             best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
-            print(f'best guidance scale is {best_guidance_scale} | latent_diff = {latent_diff_dict[best_guidance_scale]}')
             noise_pred = latent_dictionary[best_guidance_scale]
         else :
-            print(f'not using cfg')
             uncon, con = context.chunk(2)
             input_latent = latent
             noise_pred = call_unet(unet, input_latent, t, con, t, prev_time)
@@ -612,6 +609,7 @@ def main(args) :
             # inference_times = [980, 960, ..., 0]
             image_gt_np = load_512(test_img_dir)
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
+            inference_times = torch.cat([torch.tensor([999]), inference_times, ], dim=0)
             flip_times = torch.flip(inference_times, dims=[0]) # [0,20, ..., 980]
             original_latent = latent.clone().detach()
             for ii, final_time in enumerate(flip_times[1:]):
@@ -625,6 +623,7 @@ def main(args) :
                                                                 vae=vae,
                                                                 base_folder_dir=timewise_save_base_folder,
                                                                 attention_storer=attention_storer)
+                # timesteps = [0,20]
                 context = init_prompt(tokenizer, text_encoder, device, prompt)
                 collector = AttentionStore()
                 #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
