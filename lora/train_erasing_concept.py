@@ -88,6 +88,8 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                         for word_idx in batch_trg_index :
                             # head, pix_len
                             org_attn_vector = attention_prob[:, :, word_idx]
+                            if attention_prob.dim() != masked_attention_prob.dim() :
+                                masked_attention_prob = masked_attention_prob.unsqueeze(0)
                             masked_attn_vector = masked_attention_prob[:, :, word_idx]
                             vector_diff = torch.nn.functional.mse_loss(org_attn_vector, masked_attn_vector, reduction='none')
                             vector_diff_list.append(vector_diff)
