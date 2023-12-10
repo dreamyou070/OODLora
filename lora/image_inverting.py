@@ -515,6 +515,8 @@ def main(args) :
     print(f' (3.1) prompt condition')
     prompt = args.prompt
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
+    context = init_prompt(tokenizer, text_encoder, device, prompt)
+
 
     """
     print(f' (3.2) train images')
@@ -639,8 +641,10 @@ def main(args) :
                 print(f'recon_times : {recon_times}')
                 # recon
                 for j, recon_time in enumerate(recon_times) :
+                    # recon_time =
                     if j < len(recon_times) - 1:
                         with torch.no_grad():
+                            #noise_pred = call_unet(unet, latent, recon_time, context.chunk(2)[-1], None, None)
                             noise_pred = call_unet(unet, latent, recon_time, uncond_embeddings, None, None)
                             latent = prev_step(noise_pred, int(t), latent, scheduler)
                             save_dir = os.path.join(timewise_save_base_folder, f'recon_{recon_times[j + 1]}.png')
