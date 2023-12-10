@@ -1130,22 +1130,23 @@ class BaseDataset(torch.utils.data.Dataset):
             print(f'class_caption : {class_caption}')
             print(f'trg_concept : {trg_concept}')
             if image_info.text_encoder_outputs1 is not None:
-                print(f'not here 1')
                 text_encoder_outputs1_list.append(image_info.text_encoder_outputs1)
                 text_encoder_outputs2_list.append(image_info.text_encoder_outputs2)
                 text_encoder_pool2_list.append(image_info.text_encoder_pool2)
                 captions.append(caption)
             elif image_info.text_encoder_outputs_npz is not None:
-                print(f'not here 2')
                 text_encoder_outputs1, text_encoder_outputs2, text_encoder_pool2 = load_text_encoder_outputs_from_disk(image_info.text_encoder_outputs_npz)
                 text_encoder_outputs1_list.append(text_encoder_outputs1)
                 text_encoder_outputs2_list.append(text_encoder_outputs2)
                 text_encoder_pool2_list.append(text_encoder_pool2)
                 captions.append(caption)
             else:
+                # caption = crack,
+                image_info.caption = trg_concept
                 caption = self.process_caption(subset, image_info.caption)
                 class_caption = self.process_caption(subset, class_caption)
-                print(f'here, caption : {caption} | calss_caption : {class_caption}')
+                concept = self.process_caption(subset, trg_concept)           # only good
+
                 if self.XTI_layers:
                     caption_layer = []
                     for layer in self.XTI_layers:
@@ -1161,13 +1162,13 @@ class BaseDataset(torch.utils.data.Dataset):
                     if self.XTI_layers:
                         token_caption = self.get_input_ids(caption_layer, self.tokenizers[0])
                     else:
-                        token_caption, caption_attention_mask = self.get_input_ids(caption,self.tokenizers[0])
-                        class_token_caption, class_caption_attention_mask = self.get_input_ids(class_caption,
-                                                                 self.tokenizers[0])
-
+                        #
+                        token_caption, caption_attention_mask = self.get_input_ids(caption, self.tokenizers[0])
+                        class_token_caption, class_caption_attention_mask = self.get_input_ids(class_caption, self.tokenizers[0])
                         caption_attention_masks.append(caption_attention_mask)
                     input_ids_list.append(token_caption)
                     class_input_ids_list.append(class_token_caption)
+
                     def generate_text_embedding(caption, tokenizer):
                         cls_token = 49406
                         pad_token = 49407
@@ -1178,6 +1179,7 @@ class BaseDataset(torch.utils.data.Dataset):
                         trg_token_id = []
                         for token_id, token_attn in zip(token_ids, token_attns):
                             if token_id != cls_token and token_id != pad_token and token_attn == 1:
+                                print(f'save token_id : {token_id}')
                                 # token_id = 24215
                                 trg_token_id.append(token_id)
                         text_input = tokenizer(caption,padding="max_length",max_length=tokenizer.model_max_length,
@@ -1190,7 +1192,9 @@ class BaseDataset(torch.utils.data.Dataset):
                                 if id in trg_token_id:
                                     trg_indexs.append(i)
                         return trg_indexs
-                    trg_indexs = generate_text_embedding(caption,  self.tokenizers[0])
+
+                    trg_indexs = generate_text_embedding(caption, self.tokenizers[0])
+                    print(f'trg_indexs : {trg_indexs}')
                     trg_indexs_list.append(trg_indexs)
                     #------------------------------------------------------------------------------------------
                     if len(self.tokenizers) > 1:
