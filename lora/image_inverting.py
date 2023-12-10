@@ -332,7 +332,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             input_latent = torch.cat([latent] * 2)
             trg_latent = latent_dict[prev_time]
             noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
-            guidance_scales = [0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10]
+            guidance_scales = [0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10, 11, 12, 13, 14, 15, 16,17,18,19,20]
             latent_diff_dict = {}
             latent_dictionary = {}
             for guidance_scale in guidance_scales:
@@ -343,6 +343,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                 latent_diff_dict[guidance_scale] = latent_diff.mean()
                 latent_dictionary[guidance_scale] = inter_noise_pred
             best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
+            print(f'best guidance scale is {best_guidance_scale} | latent_diff = {latent_diff_dict[best_guidance_scale]}')
             noise_pred = latent_dictionary[best_guidance_scale]
         else :
             uncon, con = context.chunk(2)
