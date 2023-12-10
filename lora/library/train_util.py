@@ -3106,8 +3106,9 @@ def add_training_arguments(parser: argparse.ArgumentParser,
         "--wandb_api_key",
         type=str,
         default=None,
-        help="specify WandB API key to log in before starting training (optional). / WandB APIキーを指定して学習開始前にログインする（オプション）",
-    )
+        help="specify WandB API key to log in before starting training (optional). / WandB APIキーを指定して学習開始前にログインする（オプション）",)
+    parser.add_argument("--wandb_init_name",type=str,default=None,
+                        help="specify WandB API key to log in before starting training (optional). / WandB APIキーを指定して学習開始前にログインする（オプション）", )
     parser.add_argument("--wandb_run_name",type=str,)
     parser.add_argument(
         "--noise_offset",

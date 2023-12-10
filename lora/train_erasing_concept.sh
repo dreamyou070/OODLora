@@ -1,7 +1,7 @@
 accelerate launch --config_file /data7/sooyeon/LyCORIS/gpu_config/gpu_6_7_config --main_process_port 26724 train_erasing_concept.py \
   --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 \
   --log_with wandb --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
-  --wandb_run_name bagel_normal_concept_trainingiom_pretraining --wandb_run_name 6_img_negative_guidance \
+  --wandb_init_name bagel_normal_concept_trainingiom_pretraining --wandb_run_name 6_img_negative_guidance \
   --seed 42 --output_dir ../result/MVTec_experiment/bagel/6_img_negative_guidance \
   --pretrained_model_name_or_path /data7/sooyeon/pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora \
