@@ -404,9 +404,16 @@ def main(args) :
     vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
 
     print(f" (1.3) save dir")
+    model_name = os.path.split(args.network_weights)[-1]
+    model_name = os.path.splitext(model_name)[0]
+    if 'last' not in model_name:
+        model_epoch = int(model_name.replace('epoch-', ''))
+    else:
+        model_epoch = 'last'
+
     output_dir = args.output_dir
     os.makedirs(output_dir, exist_ok=True)
-    output_dir = os.path.join(output_dir, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}_cfg_check_{args.cfg_check}_inversion_weight_{args.inversion_weight}')
+    output_dir = os.path.join(output_dir, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}_cfg_check_{args.cfg_check}_inversion_weight_{args.inversion_weight}_model_epoch_{model_epoch}')
     os.makedirs(output_dir, exist_ok=True)
 
     print(f' \n step 2. make stable diffusion model')
