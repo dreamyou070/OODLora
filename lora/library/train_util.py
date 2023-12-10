@@ -1038,19 +1038,21 @@ class BaseDataset(torch.utils.data.Dataset):
             absolute_path = image_info.absolute_path
             absolute_paths.append(absolute_path)
             parent, dir = os.path.split(absolute_path)
-            name, ext = os.path.splitext(dir)
+            #name, ext = os.path.splitext(dir)
             mask_dir = image_info.mask_dir
+            print(f'absolute_path: {absolute_path} | mask_dir : {mask_dir}')
             mask_dirs.append(mask_dir)
+            """
 
             if mask_dir is not None:
                 mask_img = Image.open(mask_dir)
-                mask_img = mask_img.convert("L").resize((512, 512))
+                mask_img = mask_img.convert("RGB").resize((512, 512))
                 np_img = np.array(mask_img)
                 np_img = np.where(np_img > 200, 255, 0)
                 pil = Image.fromarray(np_img).convert("RGB")
                 torch_mask = torch.from_numpy(np.array(pil).transpose(2, 0, 1))
                 mask_imgs.append(torch_mask)
-
+            """
 
             subset = self.image_to_subset[image_key]
             loss_weights.append(self.prior_loss_weight if image_info.is_reg else 1.0)
