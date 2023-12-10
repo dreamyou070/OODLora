@@ -606,8 +606,6 @@ def main(args) :
                 self_key_list = attention_storer.self_key_store[layer]
                 self_value_list = attention_storer.self_value_store[layer]
                 i = 1
-                # time_steps = 0,20,..., 980, 999
-                print(f'len of self_query_list (50) : {len(self_query_list)}')
                 for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
                     time_step = time_steps[i]
                     if time_step not in self_query_dict.keys():
@@ -621,7 +619,6 @@ def main(args) :
                         self_key_dict[time_step][layer] = self_key
                     else:
                         self_key_dict[time_step][layer] = self_key
-                    print(f'make self key dict, time_step : {time_step}')
                     if time_step not in self_value_dict.keys():
                         self_value_dict[time_step] = {}
                         self_value_dict[time_step][layer] = self_value
