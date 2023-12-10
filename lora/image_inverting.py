@@ -630,7 +630,7 @@ def main(args) :
                     if t < final_time :
                         noising_times.append(t.item())
                         with torch.no_grad():
-                            noise_pred = call_unet(unet, latent, int(t.item()), uncond_embeddings, None, None)
+                            noise_pred = call_unet(invers_unet, latent, int(t.item()), uncond_embeddings, None, None)
                         attention_storer.reset()
                         latent = next_step(noise_pred, int(t.item()), latent, scheduler)
                         save_dir = os.path.join(timewise_save_base_folder, f'noising_{flip_times[i+1]}.png')
