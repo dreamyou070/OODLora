@@ -808,6 +808,7 @@ class NetworkTrainer:
                     on_step_start(text_encoder, unet)
                     with torch.no_grad():
                         mask_imgs = batch['mask_imgs']
+                        print(f'mask_imgs : {type(mask_imgs)}')
                         mask_condition = mask_processor.preprocess(mask_imgs)
 
                         if "latents" in batch and batch["latents"] is not None:
