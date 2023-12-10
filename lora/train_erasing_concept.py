@@ -381,6 +381,11 @@ if __name__ == "__main__":
                             help="json metadata for dataset / データセットのmetadataのjsonファイル")
         parser.add_argument("--dataset_repeats", type=int, default=1,
                             help="repeat dataset when training with captions / キャプションでの学習時にデータセットを繰り返す回数")
+    # step 4. training
+    custom_train_functions.add_custom_train_arguments(parser)
+    parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")
+    parser.add_argument("--text_encoder_lr", type=float, default=None,
+                        help="learning rate for Text Encoder / Text Encoderの学習率")
     args = parser.parse_args()
     trainer = NetworkTrainer()
     trainer.train(args)
