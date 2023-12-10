@@ -836,7 +836,7 @@ if __name__ == "__main__":
     parser.add_argument("--repeat_time", type=int, default=1)
     parser.add_argument("--cfg_check", type=int, default=200)
     parser.add_argument("--inversion_weight", type=float, default=3.0)
-    parser.add_argument("--inversion_weight", type=float, default=0.5)
+    parser.add_argument("--interpolate_alpha", type=float, default=0.5)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
