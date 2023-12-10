@@ -328,9 +328,20 @@ if __name__ == "__main__":
                         help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
-    parser.add_argument("--dim_from_weights", type=str, default=None, )
-    parser.add_argument("--network_train_text_encoder_only", action='store_true')
-    parser.add_argument("--network_train_unet_only", action='store_true')
+    arser.add_argument("--network_train_unet_only", action="store_true",
+                       help="only training U-Net part / U-Net関連部分のみ学習する")
+    parser.add_argument("--network_train_text_encoder_only", action="store_true",
+                        help="only training Text Encoder part / Text Encoder関連部分のみ学習する")
+    parser.add_argument("--dim_from_weights", action="store_true",
+                       help="automatically determine dim (rank) from network_weights / dim (rank)をnetwork_weightsで指定した重みから自動で決定する", )
+    parser.add_argument("--scale_weight_norms", type=float, default=None,
+                        help="Scale the weight of each key pair to help prevent overtraing via exploding gradients. ", )
+    parser.add_argument("--base_weights", type=str, default=None, nargs="*",
+                        help="network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みファイル", )
+    parser.add_argument("--base_weights_multiplier", type=float, default=None, nargs="*",
+                        help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率", )
+    parser.add_argument("--no_half_vae", action="store_true",
+                        help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
 
 
 
