@@ -474,8 +474,8 @@ def main(args) :
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
     attention_storer = AttentionStore()
-    #register_attention_control(invers_unet, attention_storer)
-    register_attention_control(unet, attention_storer)
+    register_attention_control(invers_unet, attention_storer)
+    #register_attention_control(unet, attention_storer)
     print(f' (2.5) network')
     sys.path.append(os.path.dirname(__file__))
     network_module = importlib.import_module(args.network_module)
@@ -599,6 +599,9 @@ def main(args) :
                                                             attention_storer)
 
             context = init_prompt(tokenizer, text_encoder, device, prompt)
+
+
+
             layer_names = attention_storer.self_query_store.keys()
             self_query_dict, self_key_dict, self_value_dict  = {}, {}, {}
             for layer in layer_names:
