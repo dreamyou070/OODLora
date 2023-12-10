@@ -241,44 +241,17 @@ class NetworkTrainer:
         accelerator.print("prepare optimizer, data loader etc.")
         from gen_img_diffusers import PipelineLike
         device = accelerator.device if args.lowram else "cpu"
-        print(f'\n step 3. dataset')
-        tokenizer = self.load_tokenizer(args)
-        tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
-        """
-        pipe = PipelineLike(device,
-                            vae,
-                            text_encoder,
-                            tokenizer,
-                            unet,
-                            scheduler,
-                            args.clip_skip,
-                            clip_model,
-                            args.clip_guidance_scale,
-                            args.clip_image_guidance_scale,
-                            vgg16_model,
-                            args.vgg16_guidance_scale,
-                            args.vgg16_guidance_layer,)
-        pipe.set_control_nets(control_nets)
-        print("pipeline is ready.")
-        
-        # 後方互換性を確保するよ
-        try:
-            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
-        except TypeError:
-            accelerator.print(
-                "Deprecated: use prepare_optimizer_params(text_encoder_lr, unet_lr, learning_rate) instead of prepare_optimizer_params(text_encoder_lr, unet_lr)")
-            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
-        optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
-        # --------------------------------------------------------------------------------------------------------------------------------------
         print(f'\n step 3. dataset')
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
         blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
-        user_config = {"datasets": [
-            {"subsets": config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
-                                                                                  args.reg_data_dir)}]}
-        blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
+        sub_config_list = config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,args.reg_data_dir)
+        user_config = {"datasets": [{"subsets": sub_config_list}]}
+        blueprint = blueprint_generator.generate(user_config,
+                                                 args,
+                                                 tokenizer=tokenizer)
+
         train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
         if args.cache_latents:
             vae.to(accelerator.device, dtype=vae_dtype)
@@ -296,11 +269,17 @@ class NetworkTrainer:
         # 必要ならテキストエンコーダーの出力をキャッシュする: Text Encoderはcpuまたはgpuへ移される
         self.cache_text_encoder_outputs_if_needed(args, accelerator, unet, vae, tokenizers, text_encoders,
                                                   train_dataset_group, weight_dtype)
+
         """
-
-
-
-
+        try:
+            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
+        except TypeError:
+            accelerator.print(
+                "Deprecated: use prepare_optimizer_params(text_encoder_lr, unet_lr, learning_rate) instead of prepare_optimizer_params(text_encoder_lr, unet_lr)")
+            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+        optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
+        """
+        # --------------------------------------------------------------------------------------------------------------------------------------
 
 
 

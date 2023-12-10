@@ -326,14 +326,11 @@ class BlueprintGenerator:
                argparse_namespace: argparse.Namespace,
                **runtime_params) -> Blueprint:
 
-    mask_dir = argparse_namespace.mask_dir
     sanitized_user_config = self.sanitizer.sanitize_user_config(user_config)
     sanitized_argparse_namespace = self.sanitizer.sanitize_argparse_namespace(argparse_namespace)
     optname_map = self.sanitizer.ARGPARSE_OPTNAME_TO_CONFIG_OPTNAME
     argparse_config = {optname_map.get(optname, optname): value for optname, value in vars(sanitized_argparse_namespace).items()}
-
     general_config = sanitized_user_config.get("general", {})
-
     dataset_blueprints = []
     for dataset_config in sanitized_user_config.get("datasets", []):
       subsets = dataset_config.get("subsets", [])
@@ -352,8 +349,15 @@ class BlueprintGenerator:
       subset_blueprints = []
 
       for subset_config in subsets:
-        subset_config['mask_dir'] = argparse_namespace.mask_dir
+        #subset_config['mask_dir'] = argparse_namespace.mask_dir
+        import os
         subset_config['trg_concept'] = argparse_namespace.trg_concept
+        parent, child = os.path.split(argparse_namespace.trg_concept)
+        super_parent, folder_name = os.path.split(parent)
+        mask_parent = os.path.join(super_parent, f'{folder_name}_mask')
+        subset_config['mask_dir'] = os.path.join(mask_parent, child)
+        print(f' subset_config[trg_concept] : {subset_config["trg_concept"]}')
+        print(f' subset_config[mask_dir] : {subset_config["mask_dir"]}')
         params = self.generate_params_by_fallbacks(subset_params_klass,
                                                    [subset_config, # subset_config
                                                     dataset_config,
@@ -485,11 +489,9 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
 
     if base_dir is None:
       return []
-
     base_dir: Path = Path(base_dir)
     if not base_dir.is_dir():
       return []
-
     subsets_config = []
     for subdir in base_dir.iterdir():
       if not subdir.is_dir():
