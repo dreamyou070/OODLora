@@ -296,10 +296,11 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             next_time = flip_times[i+1].item()
             latent_dict[int(t.item())] = latent
             time_steps.append(t.item())
-            con_noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
-            uncon_noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
+            #con_noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
+            #uncon_noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             # if -1 only con, if 0, only uncon
-            noise_pred = uncon_noise_pred - args.inversion_weight * (con_noise_pred - uncon_noise_pred)
+            #noise_pred = uncon_noise_pred - args.inversion_weight * (con_noise_pred - uncon_noise_pred)
+            noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[int(t.item())] = noise_pred
             latent = next_step(noise_pred, int(t.item()), latent, scheduler)
             with torch.no_grad():
@@ -600,7 +601,6 @@ def main(args) :
 
             layer_names = attention_storer.self_query_store.keys()
             self_query_dict, self_key_dict, self_value_dict  = {}, {}, {}
-            print(f'len of time_steps (51) : {len(time_steps)}')
             for layer in layer_names:
                 self_query_list = attention_storer.self_query_store[layer]
                 self_key_list = attention_storer.self_key_store[layer]
