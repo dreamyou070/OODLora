@@ -303,8 +303,6 @@ if __name__ == "__main__":
     parser.add_argument('--wandb_api_key', type=str, default='3a3bc2f629692fa154b9274a5bbe5881d47245dc')
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1,
                         help="Number of updates steps to accumulate before performing a backward/update pass / 学習時に逆伝播をする前に勾配を合計するステップ数", )
-    parser.add_argument("--mixed_precision", type=str, default="no", choices=["no", "fp16", "bf16"],
-                        help="use mixed precision / 混合精度を使う場合、その精度")
     parser.add_argument('--output_dir', type=str, default='wandb')
     parser.add_argument('--wandb_init_name', type=str, default='wandb')
     # step 2. make model
