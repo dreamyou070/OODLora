@@ -609,6 +609,8 @@ def main(args) :
             
             """
             # inference_times = [980, 960, ..., 0]
+            image_gt_np = load_512(test_img_dir)
+            latent = image2latent(image_gt_np, vae, device, weight_dtype)
             flip_times = torch.flip(inference_times, dims=[0]) # [0,20, ..., 980]
 
             uncond_embeddings, cond_embeddings = invers_context.chunk(2)
