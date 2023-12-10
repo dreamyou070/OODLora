@@ -597,6 +597,13 @@ def main(args) :
             print(f' (2.3.1) inversion')
             image_gt_np = load_512(test_img_dir)
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
+
+
+            np_img = latent2image(latent, vae, return_type='np')
+            pil_img = Image.fromarray(np_img)
+            pil_img.save(f'vae_recon_check.png')
+
+            """
             # time_steps = 0,20,..., 980
             latent_dict, time_steps, pil_images = ddim_loop(latent,
                                                             invers_context,
@@ -646,6 +653,7 @@ def main(args) :
 
             with open(os.path.join(save_base_folder, 'config.json'), 'w') as f:
                 json.dump(vars(args), f, indent=4)
+            """
 
 
 
