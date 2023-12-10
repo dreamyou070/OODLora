@@ -292,7 +292,6 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     #flip_times = torch.flip(inference_times, dims=[0])
     flip_times = inference_times
     repeat_time = 0
-    print(f'flip_times: {flip_times}')
     for i, t in enumerate(flip_times[:-1]):
         if repeat_time < args.repeat_time:
             next_time = flip_times[i + 1].item()
@@ -313,7 +312,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
-    return
+    return latent_dict, time_steps, pil_images
 
 @torch.no_grad()
 def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir):
@@ -616,7 +615,6 @@ def main(args) :
             for ii, final_time in enumerate(flip_times[1:]):
                 timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
                 os.makedirs(timewise_save_base_folder, exist_ok=True)
-                print(f'final_time : {final_time.item()} | original_latent : {original_latent.shape}')
                 latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
                                                                 context=invers_context,
                                                                 inference_times=flip_times[:ii + 2],
@@ -625,10 +623,21 @@ def main(args) :
                                                                 vae=vae,
                                                                 base_folder_dir=timewise_save_base_folder,
                                                                 attention_storer=attention_storer)
+                context = init_prompt(tokenizer, text_encoder, device, prompt)
+                collector = AttentionStore()
+                register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                time_steps.reverse()
+                print(f' (2.3.2) recon')
+                all_latent, _, _ = recon_loop(latent_dict=latent_dict,
+                                              context = context,
+                                              inference_times = time_steps, # [20,0]
+                                              scheduler = scheduler,
+                                              unet = unet,
+                                              vae = vae,
+                                              base_folder_dir=timewise_save_base_folder,)
+                attention_storer.reset()
+
                 """
-
-
-
                 # recon
                 for j, recon_time in enumerate(recon_times) :
                     # recon_time =
