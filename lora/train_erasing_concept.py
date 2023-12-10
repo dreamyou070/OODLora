@@ -451,19 +451,25 @@ class NetworkTrainer:
         for t_enc in text_encoders:
             t_enc.requires_grad_(False)
 
+        from diffusers.image_processors import VaeImageProcessor
+        mask_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor,
+                                           do_normalize=False,
+                                           do_binarize=True,
+                                           do_convert_grayscale=True)
+
+
         # acceleratorがなんかよろしくやってくれるらしい
         # TODO めちゃくちゃ冗長なのでコードを整理する
         if train_unet and train_text_encoder:
             if len(text_encoders) > 1:
-                unet, t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler
+                unet, t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler, mask_processor = accelerator.prepare(
+                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler, mask_processor
                 )
                 text_encoder = text_encoders = [t_enc1, t_enc2]
                 del t_enc1, t_enc2
             else:
-                unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                    unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler
-                )
+                unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler,mask_processor = accelerator.prepare(
+                    unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler,mask_processor)
                 text_encoders = [text_encoder]
         elif train_unet:
             unet, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
@@ -801,6 +807,9 @@ class NetworkTrainer:
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
                     with torch.no_grad():
+                        mask_imgs = batch['mask_imgs']
+                        mask_condition = mask_processor.preprocess(mask_imgs)
+
                         if "latents" in batch and batch["latents"] is not None:
                             latents = batch["latents"].to(accelerator.device)
                         else:

@@ -1044,14 +1044,14 @@ class BaseDataset(torch.utils.data.Dataset):
 
             if mask_dir is not None:
                 mask_img = Image.open(mask_dir)
-                # grayscale
-                if mask_img.mode != "L":
-                    mask_img = mask_img.convert("L")
-                np_img = np.array(mask_img.resize((512, 512)))
-                #np_img.where(np_img > 0, 255, 0)
-                torch_img = torch.from_numpy(np_img)
-                mask_img = torch_img / 255.0  # 0~1
-                mask_imgs.append(mask_img)
+                mask_img = mask_img.convert("L").resize((512, 512))
+                np_img = np.array(mask_img)
+                np_img = np.where(np_img > 200, 255, 0)
+                #mask_img = Image.fromarray(np_img)
+                mask_imgs.append(np_img)
+
+
+
 
             subset = self.image_to_subset[image_key]
             loss_weights.append(self.prior_loss_weight if image_info.is_reg else 1.0)
