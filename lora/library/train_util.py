@@ -1126,9 +1126,6 @@ class BaseDataset(torch.utils.data.Dataset):
             if class_caption is None:
                 class_caption = 'good' ## TODO remove
             class_caption = caption.replace(trg_concept, class_caption)
-            print(f'caption : {caption}')
-            print(f'class_caption : {class_caption}')
-            print(f'trg_concept : {trg_concept}')
             if image_info.text_encoder_outputs1 is not None:
                 text_encoder_outputs1_list.append(image_info.text_encoder_outputs1)
                 text_encoder_outputs2_list.append(image_info.text_encoder_outputs2)
@@ -1192,7 +1189,6 @@ class BaseDataset(torch.utils.data.Dataset):
                                     trg_indexs.append(i)
                         return trg_indexs
                     trg_indexs = generate_text_embedding(caption, self.tokenizers[0])
-                    print(f'trg_indexs : {trg_indexs}')
                     trg_indexs_list.append(trg_indexs)
                     #------------------------------------------------------------------------------------------
                     if len(self.tokenizers) > 1:
