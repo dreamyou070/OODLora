@@ -78,16 +78,20 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
             if is_cross_attention:
                 #if trg_indexs_list is not None and mask is not None:
                 if trg_indexs_list is not None :
+                    org_attention_probs, masked_attention_probs = attention_probs.chunk(2, dim=0)
                     batch_num = len(trg_indexs_list)
-                    attention_probs_batch = torch.chunk(attention_probs, batch_num, dim=0)
-                    attn_vector_list = []
+                    attention_probs_batch = torch.chunk(org_attention_probs, batch_num, dim=0)
+                    vector_diff_list = []
                     for batch_idx, attention_prob in enumerate(attention_probs_batch) :
+                        masked_attention_prob = masked_attention_probs[batch_idx]
                         batch_trg_index = trg_indexs_list[batch_idx] # two times
                         for word_idx in batch_trg_index :
                             # head, pix_len
-                            attn_vector = attention_prob[:, :, word_idx]
-                            attn_vector_list.append(attn_vector)
-                    attn_vectors = torch.stack(attn_vector_list, dim=0) # (word_num, 512, 512)
+                            org_attn_vector = attention_prob[:, :, word_idx]
+                            masked_attn_vector = masked_attention_prob[:, :, word_idx]
+                            vector_diff = torch.nn.functional.mse_loss(org_attn_vector, masked_attn_vector, reduction='none')
+                            vector_diff_list.append(vector_diff)
+                    attn_vectors = torch.stack(vector_diff_list, dim=0) # (word_num, 512, 512)
                     attn_loss = attn_vectors.mean([1,2])
                     controller.store_loss(attn_loss)
                 elif torch.is_grad_enabled(): # if not, while training, trg_indexs_list should not be None
@@ -810,38 +814,14 @@ class NetworkTrainer:
                         if "latents" in batch and batch["latents"] is not None:
                             latents = batch["latents"].to(accelerator.device)
                         else:
-                            print(f'make latent using vae')
                             latents         = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
                             mask_latents = vae.encode(batch['mask_imgs'].to(dtype=vae_dtype)).latent_dist.sample()
-
-
-                            import numpy as np
-                            from PIL import Image
-                            @torch.no_grad()
-                            def latent2image(latents, vae, return_type='np'):
-                                latents = 1 / 0.18215 * latents.detach()
-                                image = vae.decode(latents)['sample']
-                                if return_type == 'np':
-                                    image = (image / 2 + 0.5).clamp(0, 1)
-                                    image = image.cpu().permute(0, 2, 3, 1).numpy()[0]
-                                    image = (image * 255).astype(np.uint8)
-                                return image
-
-                            latent_np = latent2image(latents, vae)
-                            masked_latent_np = latent2image(mask_latents, vae)
-                            Image.fromarray(latent_np).save(f'latent_{f}.png')
-                            Image.fromarray(masked_latent_np).save(f'masked_latent_{f}.png')
-                            f += 1
-
-
-        """
-                            # NaNが含まれていれば警告を表示し0に置き換える
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
+                        mask_latents = mask_latents * self.vae_scale_factor
                         input_latents = torch.cat([latents, mask_latents], dim=0)
-                    b_size = latents.shape[0]
                     with torch.set_grad_enabled(train_text_encoder):
                         # Get the text embedding for conditioning
                         if args.weighted_captions:
@@ -857,13 +837,14 @@ class NetworkTrainer:
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
                                                                                                        input_latents)
+                    input_condition = torch.cat([text_encoder_conds]*2, dim=0)
                     # Predict the noise residual
                     with accelerator.autocast():
                         noise_pred = self.call_unet(args,
                                                     accelerator,
                                                     unet,
                                                     noisy_latents,timesteps,
-                                                    torch.cat([text_encoder_conds]*2, dim=0),
+                                                    input_condition,
                                                     batch,weight_dtype,
                                                     batch["trg_indexs_list"],
                                                     batch['mask_imgs'])
@@ -973,7 +954,6 @@ class NetworkTrainer:
             with open(attn_loss_save_dir, 'w') as f:
                 writer = csv.writer(f)
                 writer.writerows(attn_loss_records)
-        """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting

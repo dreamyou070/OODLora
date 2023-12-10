@@ -1,6 +1,13 @@
 import os
 from PIL import Image
 import numpy as np
+import torch
+
+latent = torch.randn((1, 4, 64, 64))
+
+input_latents = torch.cat([latent, latent], dim=0)
+print(input_latents.shape)
+"""
 
 rgb_dir = r'/data7/sooyeon/MyData/anomaly_detection/MVTecAD/bad'
 mask_dir = r'/data7/sooyeon/MyData/anomaly_detection/MVTecAD/bad_mask'
@@ -21,6 +28,7 @@ for cls in classes:
         img_np = np.array(img)
         img_np[mask_np > 200] = 0
         Image.fromarray(img_np).save(os.path.join(masked_dir_cls, i))
+"""
 """        
 mask_dir= r"gt"
 rgb_dir = r"rgb"
