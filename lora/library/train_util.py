@@ -1047,10 +1047,9 @@ class BaseDataset(torch.utils.data.Dataset):
                 mask_img = mask_img.convert("L").resize((512, 512))
                 np_img = np.array(mask_img)
                 np_img = np.where(np_img > 200, 255, 0)
-                #mask_img = Image.fromarray(np_img)
-                mask_imgs.append(np_img)
-
-
+                pil = Image.fromarray(np_img).convert("RGB")
+                torch_mask = torch.from_numpy(np.array(pil).transpose(2, 0, 1))
+                mask_imgs.append(torch_mask)
 
 
             subset = self.image_to_subset[image_key]
@@ -1074,9 +1073,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 image = None
             else:
                 # 画像を読み込み、必要ならcropする and resizing
-                img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset, image_info.absolute_path,
-                                                                                       is_resize = True,
-                                                                                       trg_h = self.height, trg_w = self.width)
+                img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset, image_info.absolute_path, is_resize = True,trg_h = self.height, trg_w = self.width)
                 im_h, im_w = img.shape[0:2]
                 if self.enable_bucket:
                     img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
@@ -1084,16 +1081,13 @@ class BaseDataset(torch.utils.data.Dataset):
                     if face_cx > 0:  # 顔位置情報あり
                         img = self.crop_target(subset, img, face_cx, face_cy, face_w, face_h)
                     elif im_h > self.height or im_w > self.width:
-                        assert (
-                            subset.random_crop
-                        ), f"image too large, but cropping and bucketing are disabled / 画像サイズが大きいのでface_crop_aug_rangeかrandom_crop、またはbucketを有効にしてください: {image_info.absolute_path}"
+                        assert (subset.random_crop ), f"image too large, but cropping and bucketing are disabled / 画像サイズが大きいのでface_crop_aug_rangeかrandom_crop、またはbucketを有効にしてください: {image_info.absolute_path}"
                         if im_h > self.height:
                             p = random.randint(0, im_h - self.height)
                             img = img[p : p + self.height]
                         if im_w > self.width:
                             p = random.randint(0, im_w - self.width)
                             img = img[:, p : p + self.width]
-
                     im_h, im_w = img.shape[0:2]
                     assert (im_h == self.height and im_w == self.width), f"image size is small / 画像サイズが小さいようです: {image_info.absolute_path}"
                     original_size = [im_w, im_h]
@@ -1107,6 +1101,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 latents = None
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
             images.append(image)
+
             latents_list.append(latents)
             target_size = (image.shape[2], image.shape[1]) if image is not None else (latents.shape[2] * 8, latents.shape[1] * 8)
             if not flipped:

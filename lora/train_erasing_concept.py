@@ -806,20 +806,18 @@ class NetworkTrainer:
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
                     with torch.no_grad():
-                        mask_imgs = batch['mask_imgs']
-                        print(f'mask_imgs : {type(mask_imgs)}')
-                        mask_condition = mask_processor.preprocess(mask_imgs)
-
                         if "latents" in batch and batch["latents"] is not None:
                             latents = batch["latents"].to(accelerator.device)
                         else:
-                            # latentに変換
-                            latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
+                            print(f'make latent using vae')
+                            latents         = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
+                            mask_latents = vae.encode(batch['mask_imgs'].to(dtype=vae_dtype)).latent_dist.sample()
                             # NaNが含まれていれば警告を表示し0に置き換える
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
+                        input_latents = torch.cat([latents, mask_latents], dim=0)
                     b_size = latents.shape[0]
                     with torch.set_grad_enabled(train_text_encoder):
                         # Get the text embedding for conditioning
@@ -832,10 +830,17 @@ class NetworkTrainer:
                             text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
                     # Sample noise, sample a random timestep for each image, and add noise to the latents,
                     # with noise offset and/or multires noise if specified
-                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
+                    #noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
+                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                       noise_scheduler,
+                                                                                                       input_latents)
                     # Predict the noise residual
                     with accelerator.autocast():
-                        noise_pred = self.call_unet(args,accelerator,unet,noisy_latents,timesteps,text_encoder_conds,
+                        noise_pred = self.call_unet(args,
+                                                    accelerator,
+                                                    unet,
+                                                    noisy_latents,timesteps,
+                                                    torch.cat([text_encoder_conds]*2, dim=0),
                                                     batch,weight_dtype,
                                                     batch["trg_indexs_list"],
                                                     batch['mask_imgs'])
