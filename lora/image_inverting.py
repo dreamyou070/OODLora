@@ -630,7 +630,7 @@ def main(args) :
                             noise_pred = call_unet(unet, latent, int(t.item()), uncond_embeddings, None, None)
                         attention_storer.reset()
                         latent = next_step(noise_pred, int(t.item()), latent, scheduler)
-                        save_dir = os.path.join(timewise_save_base_folder, f'noising_{flip_times[i+1].item()}.png')
+                        save_dir = os.path.join(timewise_save_base_folder, f'noising_{flip_times[i+1]}.png')
                         Image.fromarray(latent2image(latent, vae, return_type='np')).save(save_dir)
                 noising_times.reverse()
                 recon_times = noising_times
