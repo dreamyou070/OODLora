@@ -307,7 +307,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
                 np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
-            pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
+            #pil_img.save(os.path.join(base_folder_dir, f'inversion_{next_time}.png'))
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
