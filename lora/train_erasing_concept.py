@@ -299,6 +299,7 @@ if __name__ == "__main__":
     # step 2. make model
     parser.add_argument("--no_half_vae",)
     train_util.add_sd_models_arguments(parser)
+    parser.add_argument("--output_dir", type=str,)
     parser.add_argument("--network_weights", type=str, default=None,
                         help="pretrained weights for network / 学習するネットワークの初期重み")
     parser.add_argument("--network_module", type=str, default=None,
