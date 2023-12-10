@@ -294,7 +294,6 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     for i, t in enumerate(flip_times[:-1]):
         if repeat_time < args.repeat_time :
             next_time = flip_times[i+1].item()
-            print(f'key in latent_dict : {int(t.item())}')
             latent_dict[int(t.item())] = latent
             time_steps.append(t.item())
             con_noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
@@ -597,18 +596,18 @@ def main(args) :
                                                             invers_unet,
                                                             vae, save_base_folder,
                                                             attention_storer)
-
             context = init_prompt(tokenizer, text_encoder, device, prompt)
-
-
 
             layer_names = attention_storer.self_query_store.keys()
             self_query_dict, self_key_dict, self_value_dict  = {}, {}, {}
+            print(f'len of time_steps (51) : {len(time_steps)}')
             for layer in layer_names:
                 self_query_list = attention_storer.self_query_store[layer]
                 self_key_list = attention_storer.self_key_store[layer]
                 self_value_list = attention_storer.self_value_store[layer]
                 i = 1
+                # time_steps = 0,20,..., 980, 999
+                print(f'len of self_query_list (50) : {len(self_query_list)}')
                 for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
                     time_step = time_steps[i]
                     if time_step not in self_query_dict.keys():
