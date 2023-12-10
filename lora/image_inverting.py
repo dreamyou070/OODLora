@@ -618,7 +618,7 @@ def main(args) :
                 os.makedirs(timewise_save_base_folder, exist_ok=True)
                 latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
                                                                 context=invers_context,
-                                                                inference_times=flip_times[:ii + 1],
+                                                                inference_times=flip_times[:ii + 2],
                                                                 scheduler=scheduler,
                                                                 unet=invers_unet,
                                                                 vae=vae,
