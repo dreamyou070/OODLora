@@ -1179,7 +1179,6 @@ class BaseDataset(torch.utils.data.Dataset):
                         trg_token_id = []
                         for token_id, token_attn in zip(token_ids, token_attns):
                             if token_id != cls_token and token_id != pad_token and token_attn == 1:
-                                print(f'save token_id : {token_id}')
                                 # token_id = 24215
                                 trg_token_id.append(token_id)
                         text_input = tokenizer(caption,padding="max_length",max_length=tokenizer.model_max_length,
@@ -1192,7 +1191,6 @@ class BaseDataset(torch.utils.data.Dataset):
                                 if id in trg_token_id:
                                     trg_indexs.append(i)
                         return trg_indexs
-
                     trg_indexs = generate_text_embedding(caption, self.tokenizers[0])
                     print(f'trg_indexs : {trg_indexs}')
                     trg_indexs_list.append(trg_indexs)
@@ -1206,7 +1204,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
         example = {}
         example["mask_dirs"] = mask_dirs
-        example["trg_indexs_list"] = trg_indexs_list
+        example["trg_indexs_list"] = trg_indexs_list ##########################################################
         example["trg_concepts"] = trg_concepts
         example["absolute_paths"] = absolute_paths
         example["mask_imgs"] = mask_imgs
@@ -1214,10 +1212,10 @@ class BaseDataset(torch.utils.data.Dataset):
         example["caption_attention_mask"] = caption_attention_masks
 #        example["class_caption_attention_mask"] = class_caption_attention_mask
 
-
-
+        # input_ids
         if len(text_encoder_outputs1_list) == 0:
             if self.token_padding_disabled :
+                print(f'generate input ids 1')
                 example["input_ids"] = self.tokenizer[0](captions,
                                                          padding=True,
                                                          truncation=True,
@@ -1236,6 +1234,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 else:
                     example["input_ids2"] = None
             else:
+                print(f'generate input ids 2')
                 example["input_ids"] = torch.stack(input_ids_list)
                 example["input_ids2"] = torch.stack(input_ids2_list) if len(self.tokenizers) > 1 else None
                 example["class_input_ids"] = torch.stack(class_input_ids_list)
