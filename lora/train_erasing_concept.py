@@ -371,47 +371,26 @@ if __name__ == "__main__":
                         help="start learning at N tags (token means comma separated strinfloatgs) / タグ数をN個から増やしながら学習する", )
     parser.add_argument("--token_warmup_step", type=float, default=0,
                         help="tag length reaches maximum on N steps (or N*max_train_steps if N<1) / N（N<1ならN*max_train_steps）ステップでタグ長が最大になる。デフォルトは0（最初から最大）", )
-
-    parser.add_argument(
-        "--dataset_class",
-        type=str,
-        default=None,
-        help="dataset class for arbitrary dataset (package.module.Class) / 任意のデータセットを用いるときのクラス名 (package.module.Class)",
-    )
-
+    parser.add_argument("--dataset_class",type=str,default=None,
+                        help="dataset class for arbitrary dataset (package.module.Class) / 任意のデータセットを用いるときのクラス名 (package.module.Class)",)
+    support_caption_dropout = True
     if support_caption_dropout:
-        # Textual Inversion はcaptionのdropoutをsupportしない
-        # いわゆるtensorのDropoutと紛らわしいのでprefixにcaptionを付けておく　every_n_epochsは他と平仄を合わせてdefault Noneに
-        parser.add_argument(
-            "--caption_dropout_rate", type=float, default=0.0,
-            help="Rate out dropout caption(0.0~1.0) / captionをdropoutする割合"
-        )
-        parser.add_argument(
-            "--caption_dropout_every_n_epochs",
-            type=int,
-            default=0,
-            help="Dropout all captions every N epochs / captionを指定エポックごとにdropoutする",
-        )
-        parser.add_argument(
-            "--caption_tag_dropout_rate",
-            type=float,
-            default=0.0,
-            help="Rate out dropout comma separated tokens(0.0~1.0) / カンマ区切りのタグをdropoutする割合",
-        )
-
+        parser.add_argument("--caption_dropout_rate", type=float, default=0.0,
+                            help="Rate out dropout caption(0.0~1.0) / captionをdropoutする割合")
+        parser.add_argument("--caption_dropout_every_n_epochs",
+                            type=int,default=0,help="Dropout all captions every N epochs / captionを指定エポックごとにdropoutする",)
+        parser.add_argument("--caption_tag_dropout_rate",type=float,default=0.0,
+                            help="Rate out dropout comma separated tokens(0.0~1.0) / カンマ区切りのタグをdropoutする割合",)
+    support_dreambooth = True
     if support_dreambooth:
-        # DreamBooth dataset
         parser.add_argument("--reg_data_dir", type=str, default=None,
                             help="directory for regularization images / 正則化画像データのディレクトリ")
-
+    support_caption = True
     if support_caption:
-        # caption dataset
         parser.add_argument("--in_json", type=str, default=None,
                             help="json metadata for dataset / データセットのmetadataのjsonファイル")
-        parser.add_argument(
-            "--dataset_repeats", type=int, default=1,
-            help="repeat dataset when training with captions / キャプションでの学習時にデータセットを繰り返す回数"
-        )
+        parser.add_argument("--dataset_repeats", type=int, default=1,
+                            help="repeat dataset when training with captions / キャプションでの学習時にデータセットを繰り返す回数")
     args = parser.parse_args()
     trainer = NetworkTrainer()
     trainer.train(args)
