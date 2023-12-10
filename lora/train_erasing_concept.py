@@ -71,22 +71,17 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                 query = query.float()
                 key = key.float()
             attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                                                         device=query.device),
-                                             query,key.transpose(-1, -2),beta=0,alpha=self.scale, )
+                                                         device=query.device), query,key.transpose(-1, -2),beta=0,alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention:
                 #if trg_indexs_list is not None and mask is not None:
                 if trg_indexs_list is not None :
                     org_attention_probs, masked_attention_probs = attention_probs.chunk(2, dim=0)
-                    print(f'org_attention_probs : {org_attention_probs.shape}')
-                    print(f'masked_attention_probs : {masked_attention_probs.shape}')
                     batch_num = len(trg_indexs_list)
-                    print(f'batch_num : {batch_num}')
                     attention_probs_batch = torch.chunk(org_attention_probs, batch_num, dim=0)
                     masked_attention_probs_batch = torch.chunk(masked_attention_probs, batch_num, dim=0)
                     vector_diff_list = []
-
                     for batch_idx, (attention_prob,masked_attention_prob) in enumerate(zip(attention_probs_batch,masked_attention_probs_batch)) :
 
                         batch_trg_index = trg_indexs_list[batch_idx] # two times
