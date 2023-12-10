@@ -213,8 +213,6 @@ class NetworkTrainer:
                 key, value = net_arg.split("=")
                 net_kwargs[key] = value
 
-        net_key_names = args.net_key_names
-        net_kwargs['key_layers'] = net_key_names.split(",")
         # if a new network is added in future, add if ~ then blocks for each network (;'∀')
         if args.dim_from_weights:
             network, weights_sd = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,**net_kwargs)
@@ -241,7 +239,28 @@ class NetworkTrainer:
         # 学習に必要なクラスを準備する
         network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
         accelerator.print("prepare optimizer, data loader etc.")
+        from gen_img_diffusers import PipelineLike
+        device = accelerator.device if args.lowram else "cpu"
+        print(f'\n step 3. dataset')
+        tokenizer = self.load_tokenizer(args)
+        tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
         """
+        pipe = PipelineLike(device,
+                            vae,
+                            text_encoder,
+                            tokenizer,
+                            unet,
+                            scheduler,
+                            args.clip_skip,
+                            clip_model,
+                            args.clip_guidance_scale,
+                            args.clip_image_guidance_scale,
+                            vgg16_model,
+                            args.vgg16_guidance_scale,
+                            args.vgg16_guidance_layer,)
+        pipe.set_control_nets(control_nets)
+        print("pipeline is ready.")
+        
         # 後方互換性を確保するよ
         try:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
