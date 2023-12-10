@@ -328,7 +328,7 @@ if __name__ == "__main__":
                         help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
-    arser.add_argument("--network_train_unet_only", action="store_true",
+    parser.add_argument("--network_train_unet_only", action="store_true",
                        help="only training U-Net part / U-Net関連部分のみ学習する")
     parser.add_argument("--network_train_text_encoder_only", action="store_true",
                         help="only training Text Encoder part / Text Encoder関連部分のみ学習する")
