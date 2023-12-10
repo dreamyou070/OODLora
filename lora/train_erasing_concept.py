@@ -163,9 +163,7 @@ class NetworkTrainer:
         print(f' (1.2) seed')
         if args.seed is None: args.seed = random.randint(0, 2 ** 32)
         set_seed(args.seed)
-        print(f' (1.3) accelerator')
-        accelerator = train_util.prepare_accelerator(args)
-        is_main_process = accelerator.is_main_process
+
         print(f' (1.4) save directory and save config')
         save_base_dir = args.output_dir
         _, folder_name = os.path.split(save_base_dir)
@@ -173,76 +171,8 @@ class NetworkTrainer:
         os.makedirs(record_save_dir, exist_ok=True)
         with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
-        print(f' (1.5) make wandb dir')
-        wandb.login(key=args.wandb_api_key)
-        if is_main_process:
-            wandb.init(project=args.wandb_init_name)
-            wandb.run.name = folder_name
 
-        # --------------------------------------------------------------------------------------------------------------------------------------
-        print(f'\n step 2. make model')
-        print(f' (2.1) mixed precision and model')
-        weight_dtype, save_dtype = train_util.prepare_dtype(args)
-        vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
-        print(f' (2.2) loading model')
-        model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
-        text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-        train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
-        if torch.__version__ >= "2.0.0":  # PyTorch 2.0.0 以上対応のxformersなら以下が使える
-            vae.set_use_memory_efficient_attention_xformers(args.xformers)
-
-        print(f' (2.3) get lora network')
-        sys.path.append(os.path.dirname(__file__))
-        accelerator.print("import network module:", args.network_module)
-        network_module = importlib.import_module(args.network_module)
-        if args.base_weights is not None:
-            for i, weight_path in enumerate(args.base_weights):
-                if args.base_weights_multiplier is None or len(args.base_weights_multiplier) <= i:
-                    multiplier = 1.0
-                else:
-                    multiplier = args.base_weights_multiplier[i]
-                accelerator.print(f"merging module: {weight_path} with multiplier {multiplier}")
-                module, weights_sd = network_module.create_network_from_weights(
-                    multiplier, weight_path, vae, text_encoder, unet, for_inference=True)
-                module.merge_to(text_encoder, unet, weights_sd, weight_dtype,
-                                accelerator.device if args.lowram else "cpu")
-            accelerator.print(f"all weights merged: {', '.join(args.base_weights)}")
-        net_kwargs = {}
-        if args.network_args is not None:
-            for net_arg in args.network_args:
-                key, value = net_arg.split("=")
-                net_kwargs[key] = value
-
-        # if a new network is added in future, add if ~ then blocks for each network (;'∀')
-        if args.dim_from_weights:
-            network, weights_sd = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,**net_kwargs)
-        else:
-            network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae,text_encoder, unet, neuron_dropout=args.network_dropout,**net_kwargs, )
-        if network is None:
-            return
-        if hasattr(network, "prepare_network"):
-            network.prepare_network(args)
-        if args.scale_weight_norms and not hasattr(network, "apply_max_norm_regularization"):
-            print("warning: scale_weight_norms is specified but the network does not support it / scale_weight_normsが指定されていますが、ネットワークが対応していません")
-            args.scale_weight_norms = False
-        train_unet = not args.network_train_text_encoder_only
-        train_text_encoder = not args.network_train_unet_only and not self.is_text_encoder_outputs_cached(args)
-        # 学習に必要なクラスを準備する
-        network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
-        if args.network_weights is not None:
-            info = network.load_weights(args.network_weights)
-            accelerator.print(f"load network weights from {args.network_weights}: {info}")
-        if args.gradient_checkpointing:
-            unet.enable_gradient_checkpointing()
-            for t_enc in text_encoders:
-                t_enc.gradient_checkpointing_enable()
-            del t_enc
-            network.enable_gradient_checkpointing()  # may have no effect
-        accelerator.print("prepare optimizer, data loader etc.")
-        from gen_img_diffusers import PipelineLike
-        device = accelerator.device if args.lowram else "cpu"
-
-        print(f'\n step 3. dataset')
+        print(f'\n step 2. dataset')
         train_util.prepare_dataset_args(args, True)
         cache_latents = args.cache_latents
         use_dreambooth_method = True
@@ -305,6 +235,80 @@ class NetworkTrainer:
             assert (
                 train_dataset_group.is_latent_cacheable()), "when caching latents, either color_aug or random_crop cannot be used / latentをキャッシュするときはcolor_augとrandom_cropは使えません"
         self.assert_extra_args(args, train_dataset_group)
+
+        print(f' (1.3) accelerator')
+        accelerator = train_util.prepare_accelerator(args)
+        is_main_process = accelerator.is_main_process
+        print(f' (1.5) make wandb dir')
+        wandb.login(key=args.wandb_api_key)
+        if is_main_process:
+            wandb.init(project=args.wandb_init_name)
+            wandb.run.name = folder_name
+
+        # --------------------------------------------------------------------------------------------------------------------------------------
+        print(f'\n step 3. make model')
+        print(f' (2.1) mixed precision and model')
+        weight_dtype, save_dtype = train_util.prepare_dtype(args)
+        vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
+        print(f' (2.2) loading model')
+        model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
+        text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
+        train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
+        if torch.__version__ >= "2.0.0":  # PyTorch 2.0.0 以上対応のxformersなら以下が使える
+            vae.set_use_memory_efficient_attention_xformers(args.xformers)
+
+        print(f' (2.3) get lora network')
+        sys.path.append(os.path.dirname(__file__))
+        accelerator.print("import network module:", args.network_module)
+        network_module = importlib.import_module(args.network_module)
+        if args.base_weights is not None:
+            for i, weight_path in enumerate(args.base_weights):
+                if args.base_weights_multiplier is None or len(args.base_weights_multiplier) <= i:
+                    multiplier = 1.0
+                else:
+                    multiplier = args.base_weights_multiplier[i]
+                accelerator.print(f"merging module: {weight_path} with multiplier {multiplier}")
+                module, weights_sd = network_module.create_network_from_weights(
+                    multiplier, weight_path, vae, text_encoder, unet, for_inference=True)
+                module.merge_to(text_encoder, unet, weights_sd, weight_dtype,
+                                accelerator.device if args.lowram else "cpu")
+            accelerator.print(f"all weights merged: {', '.join(args.base_weights)}")
+        net_kwargs = {}
+        if args.network_args is not None:
+            for net_arg in args.network_args:
+                key, value = net_arg.split("=")
+                net_kwargs[key] = value
+
+        # if a new network is added in future, add if ~ then blocks for each network (;'∀')
+        if args.dim_from_weights:
+            network, weights_sd = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,**net_kwargs)
+        else:
+            network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae,text_encoder, unet, neuron_dropout=args.network_dropout,**net_kwargs, )
+        if network is None:
+            return
+        if hasattr(network, "prepare_network"):
+            network.prepare_network(args)
+        if args.scale_weight_norms and not hasattr(network, "apply_max_norm_regularization"):
+            print("warning: scale_weight_norms is specified but the network does not support it / scale_weight_normsが指定されていますが、ネットワークが対応していません")
+            args.scale_weight_norms = False
+        train_unet = not args.network_train_text_encoder_only
+        train_text_encoder = not args.network_train_unet_only and not self.is_text_encoder_outputs_cached(args)
+        # 学習に必要なクラスを準備する
+        network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
+        if args.network_weights is not None:
+            info = network.load_weights(args.network_weights)
+            accelerator.print(f"load network weights from {args.network_weights}: {info}")
+        if args.gradient_checkpointing:
+            unet.enable_gradient_checkpointing()
+            for t_enc in text_encoders:
+                t_enc.gradient_checkpointing_enable()
+            del t_enc
+            network.enable_gradient_checkpointing()  # may have no effect
+        accelerator.print("prepare optimizer, data loader etc.")
+        from gen_img_diffusers import PipelineLike
+        device = accelerator.device if args.lowram else "cpu"
+
+
 
         """
         try:
