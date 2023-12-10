@@ -1040,19 +1040,7 @@ class BaseDataset(torch.utils.data.Dataset):
             parent, dir = os.path.split(absolute_path)
             #name, ext = os.path.splitext(dir)
             mask_dir = image_info.mask_dir
-            print(f'absolute_path: {absolute_path} | mask_dir : {mask_dir}')
             mask_dirs.append(mask_dir)
-            """
-
-            if mask_dir is not None:
-                mask_img = Image.open(mask_dir)
-                mask_img = mask_img.convert("RGB").resize((512, 512))
-                np_img = np.array(mask_img)
-                np_img = np.where(np_img > 200, 255, 0)
-                pil = Image.fromarray(np_img).convert("RGB")
-                torch_mask = torch.from_numpy(np.array(pil).transpose(2, 0, 1))
-                mask_imgs.append(torch_mask)
-            """
 
             subset = self.image_to_subset[image_key]
             loss_weights.append(self.prior_loss_weight if image_info.is_reg else 1.0)
@@ -1074,23 +1062,35 @@ class BaseDataset(torch.utils.data.Dataset):
                 latents = torch.FloatTensor(latents)
                 image = None
             else:
-                # 画像を読み込み、必要ならcropする and resizing
+
                 img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset, image_info.absolute_path, is_resize = True,trg_h = self.height, trg_w = self.width)
+                if mask_dir is not None:
+                    masked_img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset,
+                                                                                           mask_dir,
+                                                                                           is_resize=True,
+                                                                                           trg_h=self.height,
+                                                                                           trg_w=self.width)
+
                 im_h, im_w = img.shape[0:2]
                 if self.enable_bucket:
                     img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
+                    masked_img, _, _ = trim_and_resize_if_required(subset.random_crop, masked_img, image_info.bucket_reso, image_info.resized_size)
                 else:
                     if face_cx > 0:  # 顔位置情報あり
                         img = self.crop_target(subset, img, face_cx, face_cy, face_w, face_h)
+                        masked_img = self.crop_target(subset, masked_img, face_cx, face_cy, face_w, face_h)
                     elif im_h > self.height or im_w > self.width:
                         assert (subset.random_crop ), f"image too large, but cropping and bucketing are disabled / 画像サイズが大きいのでface_crop_aug_rangeかrandom_crop、またはbucketを有効にしてください: {image_info.absolute_path}"
                         if im_h > self.height:
                             p = random.randint(0, im_h - self.height)
                             img = img[p : p + self.height]
+                            masked_img = masked_img[p : p + self.height]
                         if im_w > self.width:
                             p = random.randint(0, im_w - self.width)
                             img = img[:, p : p + self.width]
+                            masked_img = masked_img[:, p : p + self.width]
                     im_h, im_w = img.shape[0:2]
+                    masked_img_h, masked_img_w = masked_img.shape[0:2]
                     assert (im_h == self.height and im_w == self.width), f"image size is small / 画像サイズが小さいようです: {image_info.absolute_path}"
                     original_size = [im_w, im_h]
                     crop_ltrb = (0, 0, 0, 0)
@@ -1098,12 +1098,16 @@ class BaseDataset(torch.utils.data.Dataset):
                 aug = self.aug_helper.get_augmentor(subset.color_aug)
                 if aug is not None:
                     img = aug(image=img)["image"]
+                    masked_img = aug(image=masked_img)["image"]
                 if flipped:
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
+                    masked_img = masked_img[:, ::-1, :].copy()
                 latents = None
-                image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
-            images.append(image)
 
+                image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
+                masked_image = self.image_transforms(masked_img)
+            images.append(image)
+            mask_imgs.append(masked_image)
             latents_list.append(latents)
             target_size = (image.shape[2], image.shape[1]) if image is not None else (latents.shape[2] * 8, latents.shape[1] * 8)
             if not flipped:

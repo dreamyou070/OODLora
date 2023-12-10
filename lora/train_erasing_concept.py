@@ -812,6 +812,7 @@ class NetworkTrainer:
                             print(f'make latent using vae')
                             latents         = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
                             mask_latents = vae.encode(batch['mask_imgs'].to(dtype=vae_dtype)).latent_dist.sample()
+        """
                             # NaNが含まれていれば警告を表示し0に置き換える
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
@@ -950,7 +951,7 @@ class NetworkTrainer:
             with open(attn_loss_save_dir, 'w') as f:
                 writer = csv.writer(f)
                 writer.writerows(attn_loss_records)
-
+        """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
