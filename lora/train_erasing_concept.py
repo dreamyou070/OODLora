@@ -83,38 +83,20 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                 #if trg_indexs_list is not None and mask is not None:
                 if trg_indexs_list is not None :
                     batch_num = len(trg_indexs_list)
-                    print(f'batch_num (2) : {batch_num}')
                     attention_probs_batch = torch.chunk(attention_probs, batch_num, dim=0)
                     for batch_idx, attention_prob in enumerate(attention_probs_batch) :
                         print(f'{batch_idx} : attention_prob : {attention_prob.shape}')
                         batch_trg_index = trg_indexs_list[batch_idx] # two times
-                        head_num = attention_prob.shape[0]
-                        res = int(math.sqrt(attention_prob.shape[1]))
                         attn_vector_list = []
                         for word_idx in batch_trg_index :
                             # head, pix_len
                             attn_vector = attention_prob[:, :, word_idx]
                             attn_vector_list.append(attn_vector)
-                            """
-                            word_heat_map_ = word_heat_map.reshape(-1, res, res)
-                            word_heat_map_ = word_heat_map_.mean(dim=0)
-                            word_heat_map_ = F.interpolate(word_heat_map_.unsqueeze(0).unsqueeze(0),
-                                                           size=((512, 512)),mode='bicubic').squeeze()
-                            word_heat_map_list.append(word_heat_map_)
-                            """
                         attn_vectors = torch.stack(attn_vector_list, dim=0) # (word_num, 512, 512)
+                        print(f'attn_vectors (2,8,pix) : {attn_vectors.shape}')
                         attn_loss = attn_vectors.mean([1,2])
-                        # saving word_heat_map
-                        # ------------------------------------------------------------------------------------------------------------------------------
-                        # mask = [512,512]
-                        #mask_ = mask[batch_idx].to(attention_prob.dtype) # (512,512)
-                        # thresholding, convert to 1 if upper than threshold else itself
-                        #mask_ = torch.where(mask_ > mask_threshold, torch.ones_like(mask_), mask_)
-                        # check if mask_ is frozen, it should not be updated
-                        #assert mask_.requires_grad == False, 'mask_ should not be updated'
-                        #masked_heat_map = word_heat_map_ * mask_
-                        #attn_loss = F.mse_loss(word_heat_map_.mean(), masked_heat_map.mean())
-                        controller.store_loss(attn_loss, layer_name)
+                        print(f'attn_loss (2) : {attn_loss.shape}')
+                        controller.store_loss(attn_loss)
                 # check if torch.no_grad() is in effect
                 elif torch.is_grad_enabled(): # if not, while training, trg_indexs_list should not be None
                     if mask is None:
