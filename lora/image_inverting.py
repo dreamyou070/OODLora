@@ -640,7 +640,7 @@ def main(args) :
                         with torch.no_grad():
                             noise_pred = call_unet(unet, latent, recon_time, uncond_embeddings, None, None)
                             latent = prev_step(noise_pred, int(t), latent, scheduler)
-                            save_dir = os.path.join(timewise_save_base_folder, f'recon_{recon_times[j + 1].item()}.png')
+                            save_dir = os.path.join(timewise_save_base_folder, f'recon_{recon_times[j + 1]}.png')
                             Image.fromarray(latent2image(latent, vae, return_type='np')).save(save_dir)
 
 
