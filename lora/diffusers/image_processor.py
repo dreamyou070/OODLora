@@ -282,9 +282,7 @@ class VaeImageProcessor(ConfigMixin):
 
         elif isinstance(image[0], np.ndarray):
             image = np.concatenate(image, axis=0) if image[0].ndim == 4 else np.stack(image, axis=0)
-
             image = self.numpy_to_pt(image)
-
             height, width = self.get_default_height_width(image, height, width)
             if self.config.do_resize:
                 image = self.resize(image, height, width)

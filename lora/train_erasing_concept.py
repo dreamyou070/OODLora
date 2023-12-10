@@ -452,11 +452,10 @@ class NetworkTrainer:
             t_enc.requires_grad_(False)
 
         from diffusers.image_processor import VaeImageProcessor
-        mask_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor,
-                                           do_normalize=False,
-                                           do_binarize=True,
-                                           do_convert_grayscale=True)
-
+        from diffusers import StableDiffusionInpaintPipeline
+        pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",
+                                                              cache_dir=r'/data7/sooyeon/pretrained_stable_diffusion/models-stable-diffusion-anomalydetection')
+        mask_processor = pipe.mask_processor
 
         # acceleratorがなんかよろしくやってくれるらしい
         # TODO めちゃくちゃ冗長なのでコードを整理する
