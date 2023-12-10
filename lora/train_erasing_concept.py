@@ -814,6 +814,10 @@ class NetworkTrainer:
                 accelerator.print(f"removing old checkpoint: {old_ckpt_file}")
                 os.remove(old_ckpt_file)
 
+        self.sample_images(accelerator, args, 0 + 1, global_step, accelerator.device, vae, tokenizer, text_encoder,
+                           unet)
+
+        """
         # training loop
         attn_loss_records = [['epoch', 'global_step', 'attn_loss']]
         for epoch in range(num_train_epochs):
@@ -884,22 +888,6 @@ class NetworkTrainer:
                     attention_losses["loss/task_loss"] = loss
 
                     # ------------------------------------------------------------------------------------
-                    """
-                    if args.heatmap_loss :
-                        layer_names = atten_collection.keys()
-                        assert len(layer_names) > 0, "Cannot find any layer names in attention_storer. check your model."
-                        heatmap_per_batch = {}
-                        for layer_name in layer_names:
-                            if args.attn_loss_layers == 'all' or match_layer_name(layer_name, args.attn_loss_layers):
-                                sum_of_attn = sum(atten_collection[layer_name])
-                                attn_loss = attn_loss + sum_of_attn
-                                attention_losses["loss/attention_loss_" + layer_name] = sum_of_attn
-                        attention_losses["loss/attention_loss"] = attn_loss
-                        assert attn_loss != 0, f"attn_loss is 0. check attn_loss_layers or attn_loss_ratio.\n available layers: {layer_names}\n given layers: {args.attn_loss_layers}"
-                        if args.heatmap_backprop :
-                            loss = task_loss + args.attn_loss_ratio * attn_loss
-                    else:
-                    """
                     attention_losses = {}
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
@@ -1005,6 +993,7 @@ class NetworkTrainer:
             with open(attn_loss_save_dir, 'w') as f:
                 writer = csv.writer(f)
                 writer.writerows(attn_loss_records)
+        """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
