@@ -1048,6 +1048,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 if mask_img.mode != "L":
                     mask_img = mask_img.convert("L")
                 np_img = np.array(mask_img.resize((512, 512)))
+                #np_img.where(np_img > 0, 255, 0)
                 torch_img = torch.from_numpy(np_img)
                 mask_img = torch_img / 255.0  # 0~1
                 mask_imgs.append(mask_img)
@@ -1120,20 +1121,22 @@ class BaseDataset(torch.utils.data.Dataset):
 
             # captionとtext encoder outputを処理する
             caption = image_info.caption  # default
-            #print(f'caption : {caption}')
-            trg_concept = image_info.trg_concept
-            class_caption = image_info.class_caption
+            trg_concept = image_info.trg_concept     # good
+            class_caption = image_info.class_caption #
             if class_caption is None:
-                # hardcoded 'girl' for research
-                class_caption = 'girl' ## TODO remove
+                class_caption = 'good' ## TODO remove
             class_caption = caption.replace(trg_concept, class_caption)
-
+            print(f'caption : {caption}')
+            print(f'class_caption : {class_caption}')
+            print(f'trg_concept : {trg_concept}')
             if image_info.text_encoder_outputs1 is not None:
+                print(f'not here 1')
                 text_encoder_outputs1_list.append(image_info.text_encoder_outputs1)
                 text_encoder_outputs2_list.append(image_info.text_encoder_outputs2)
                 text_encoder_pool2_list.append(image_info.text_encoder_pool2)
                 captions.append(caption)
             elif image_info.text_encoder_outputs_npz is not None:
+                print(f'not here 2')
                 text_encoder_outputs1, text_encoder_outputs2, text_encoder_pool2 = load_text_encoder_outputs_from_disk(image_info.text_encoder_outputs_npz)
                 text_encoder_outputs1_list.append(text_encoder_outputs1)
                 text_encoder_outputs2_list.append(text_encoder_outputs2)
@@ -1142,7 +1145,7 @@ class BaseDataset(torch.utils.data.Dataset):
             else:
                 caption = self.process_caption(subset, image_info.caption)
                 class_caption = self.process_caption(subset, class_caption)
-
+                print(f'here, caption : {caption} | calss_caption : {class_caption}')
                 if self.XTI_layers:
                     caption_layer = []
                     for layer in self.XTI_layers:
@@ -1154,16 +1157,11 @@ class BaseDataset(torch.utils.data.Dataset):
                 else:
                     class_captions.append(class_caption)
                     captions.append(caption)
-
                 if not self.token_padding_disabled:  # this option might be omitted in future
                     if self.XTI_layers:
                         token_caption = self.get_input_ids(caption_layer, self.tokenizers[0])
-
-
-
                     else:
-                        token_caption, caption_attention_mask = self.get_input_ids(caption,
-                                                           self.tokenizers[0])
+                        token_caption, caption_attention_mask = self.get_input_ids(caption,self.tokenizers[0])
                         class_token_caption, class_caption_attention_mask = self.get_input_ids(class_caption,
                                                                  self.tokenizers[0])
 
