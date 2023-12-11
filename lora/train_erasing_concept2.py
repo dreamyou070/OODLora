@@ -93,7 +93,6 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                             standard = torch.zeros_like(attention_diff)
                             loss = torch.max(attention_diff, standard)
                             controller.store_loss(loss)
-                            print(f'loss : {loss}')
                             #vector_diff_list.append(attention_diff)
 
                     #attn_vectors = torch.stack(vector_diff_list, dim=0) # (word_num, 512, 512)
