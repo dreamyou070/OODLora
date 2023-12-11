@@ -355,7 +355,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                 latent_diff_dict[guidance_scale] = latent_diff.mean()
                 latent_dictionary[guidance_scale] = inter_noise_pred
             #best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
-            best_guidance_scale = sorted(latent_diff_dict.items(), key=lambda x : x[1])[0][0]
+            best_guidance_scale = sorted(latent_diff_dict.items(), key=lambda x : x[1].item())[0][0]
             print(f'best guidance scale : {best_guidance_scale}')
             print(f'latent_diff_dict : {latent_diff_dict}')
             noise_pred = latent_dictionary[best_guidance_scale]
