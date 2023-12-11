@@ -94,7 +94,12 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                     attn_vectors = torch.stack(vector_diff_list, dim=0) # (word_num, 512, 512)
                     attn_loss = attn_vectors.mean([1])
                     standard = torch.zeros_like(attn_loss)
+                    print(f'attn_loss : {attn_loss}')
+                    print(f'standard : {standard}')
                     loss = max(attn_loss, standard)
+
+
+
                     controller.store_loss(loss)
                 elif torch.is_grad_enabled(): # if not, while training, trg_indexs_list should not be None
                     if mask is None:
