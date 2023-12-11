@@ -816,14 +816,14 @@ class NetworkTrainer:
                         if "latents" in batch and batch["latents"] is not None:
                             latents = batch["latents"].to(accelerator.device)
                         else:
-                            bad_latents         = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
+                            latents         = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
                             good_latents = vae.encode(batch['mask_imgs'].to(dtype=vae_dtype)).latent_dist.sample()
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
-                        bad_latents = bad_latents * self.vae_scale_factor
+                        latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
-                        input_latents = torch.cat([bad_latents, good_latents], dim=0)
+                        input_latents = torch.cat([latents, good_latents], dim=0)
                     with torch.set_grad_enabled(train_text_encoder):
                         # Get the text embedding for conditioning
                         if args.weighted_captions:
