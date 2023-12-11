@@ -346,14 +346,16 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             guidance_scales = [-80,-70,-60,-50,-40,-30,-20,-10,0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10, 11, 12, 13, 14, 15, 16,17,18,19,20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80]
             latent_diff_dict = {}
             latent_dictionary = {}
+            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
             for guidance_scale in guidance_scales:
-                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                 inter_noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
                 latent_diff = torch.nn.functional.mse_loss(prev_step(inter_noise_pred, int(t), latent, scheduler).float(),
-                                                           trg_latent.float(), reduction='none')
+                                                           trg_latent.float(),
+                                                           reduction='none')
                 latent_diff_dict[guidance_scale] = latent_diff.mean()
                 latent_dictionary[guidance_scale] = inter_noise_pred
-            best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
+            #best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
+            best_guidance_scale = sorted(latent_diff_dict.items(), key=lambda x : x[1])[0][0]
             print(f'best guidance scale : {best_guidance_scale}')
             print(f'latent_diff_dict : {latent_diff_dict}')
             noise_pred = latent_dictionary[best_guidance_scale]
