@@ -91,7 +91,6 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
-
 def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
     """ Register cross attention layers to controller. """
     def ca_forward(self, layer_name):
@@ -232,18 +231,43 @@ def load_512(image_path, left=0, right=0, top=0, bottom=0):
         image = image[offset:offset + w]
     image = np.array(Image.fromarray(image).resize((512, 512)))
     return image
+@torch.no_grad()
 def image2latent(image, vae, device, weight_dtype):
-    with torch.no_grad():
-        if type(image) is Image:
-            image = np.array(image)
-        if type(image) is torch.Tensor and image.dim() == 4:
-            latents = image
-        else:
-            image = torch.from_numpy(image).float() / 127.5 - 1
-            image = image.permute(2, 0, 1).unsqueeze(0).to(device, weight_dtype)
-            latents = vae.encode(image)['latent_dist'].mean
-            latents = latents * 0.18215
+    if type(image) is Image:
+        image = np.array(image)
+    if type(image) is torch.Tensor and image.dim() == 4:
+        latents = image
+    else:
+        image = torch.from_numpy(image).float() / 127.5 - 1
+        image = image.permute(2, 0, 1).unsqueeze(0).to(device, weight_dtype)
+        latents = vae.encode(image)['latent_dist'].mean
+        latents = latents * 0.18215
     return latents
+
+@torch.no_grad()
+def latent2image(latents, vae, return_type='np'):
+    latents = 1 / 0.18215 * latents.detach()
+    image = vae.decode(latents)['sample']
+    if return_type == 'np':
+        image = (image / 2 + 0.5).clamp(0, 1)
+        image = image.cpu().permute(0, 2, 3, 1).numpy()[0]
+        image = (image * 255).astype(np.uint8)
+    return image
+
+def init_prompt(tokenizer, text_encoder, device, prompt: str):
+    uncond_input = tokenizer([""],
+                             padding="max_length", max_length=tokenizer.model_max_length,
+                             return_tensors="pt")
+    uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
+    text_input = tokenizer([prompt],
+                           padding="max_length",
+                           max_length=tokenizer.model_max_length,
+                           truncation=True,
+                           return_tensors="pt",)
+    text_embeddings = text_encoder(text_input.input_ids.to(device))[0]
+    context = torch.cat([uncond_embeddings, text_embeddings])
+    return context
+
 def call_unet(unet, noisy_latents, timesteps, text_conds, trg_indexs_list, mask_imgs):
     noise_pred = unet(noisy_latents, timesteps, text_conds,
                       trg_indexs_list=trg_indexs_list,
@@ -340,34 +364,34 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
-        """
-        if t > args.cfg_check :
-            input_latent = torch.cat([latent] * 2)
-            trg_latent = latent_dict[prev_time]
-            noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
-            guidance_scales = [-80,-70,-60,-50,-40,-30,-20,-10,0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10, 11, 12, 13, 14, 15, 16,17,18,19,20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80]
-            latent_diff_dict = {}
-            latent_dictionary = {}
-            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-            for guidance_scale in guidance_scales:
-                inter_noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-                latent_diff = torch.nn.functional.mse_loss(prev_step(inter_noise_pred, int(t), latent, scheduler).float(),
-                                                           trg_latent.float(),
-                                                           reduction='none')
-                latent_diff_dict[guidance_scale] = latent_diff.mean()
-                latent_dictionary[guidance_scale] = inter_noise_pred
-            best_guidance_scale = sorted(latent_diff_dict.items(), key=lambda x : x[1].item())[0][0]
-            noise_pred = latent_dictionary[best_guidance_scale]
-        """
-        #else :
-        uncon, con = context.chunk(2)
-        #input_latent = latent
-        #noise_pred = call_unet(unet, input_latent, t, con, t, prev_time)
-        noise_pred = call_unet(unet, latent_y, t, con, t, prev_time)
-        latent_y = prev_step(noise_pred, int(t), latent_y, scheduler)
-        noise_pred = call_unet(unet, latent_y, prev_time, uncon, t, prev_time)
+
+        if args.classifier_free_guidance_infer :
+            if t > args.cfg_check :
+                input_latent = torch.cat([latent] * 2)
+                trg_latent = latent_dict[prev_time]
+                noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
+                guidance_scales = [-80, -70,-60,-50,-40,-30,-20,-10,0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10, 11, 12, 13, 14, 15, 16,17,18,19,20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80]
+                latent_diff_dict = {}
+                latent_dictionary = {}
+                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                for guidance_scale in guidance_scales:
+                    inter_noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+                    latent_diff = torch.nn.functional.mse_loss(prev_step(inter_noise_pred, int(t), latent, scheduler).float(),
+                                                               trg_latent.float(),
+                                                               reduction='none')
+                    latent_diff_dict[guidance_scale] = latent_diff.mean()
+                    latent_dictionary[guidance_scale] = inter_noise_pred
+                best_guidance_scale = sorted(latent_diff_dict.items(), key=lambda x : x[1].item())[0][0]
+                noise_pred = latent_dictionary[best_guidance_scale]
+            else :
+                uncon, con = context.chunk(2)
+                noise_pred = call_unet(unet, latent, t, con, t, prev_time)
+        if args.latent_coupling:
+            uncon, con = context.chunk(2)
+            noise_pred = call_unet(unet, latent_y, t, con, t, prev_time)
+            latent_y = prev_step(noise_pred, int(t), latent_y, scheduler)
+            noise_pred = call_unet(unet, latent_y, prev_time, uncon, t, prev_time)
         latent = prev_step(noise_pred, int(t), latent, scheduler)
-        #latent = prev_step(noise_pred, int(t), latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
@@ -378,32 +402,6 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
 
-
-
-
-@torch.no_grad()
-def latent2image(latents, vae, return_type='np'):
-    latents = 1 / 0.18215 * latents.detach()
-    image = vae.decode(latents)['sample']
-    if return_type == 'np':
-        image = (image / 2 + 0.5).clamp(0, 1)
-        image = image.cpu().permute(0, 2, 3, 1).numpy()[0]
-        image = (image * 255).astype(np.uint8)
-    return image
-
-def init_prompt(tokenizer, text_encoder, device, prompt: str):
-    uncond_input = tokenizer([""],
-                             padding="max_length", max_length=tokenizer.model_max_length,
-                             return_tensors="pt")
-    uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
-    text_input = tokenizer([prompt],
-                           padding="max_length",
-                           max_length=tokenizer.model_max_length,
-                           truncation=True,
-                           return_tensors="pt",)
-    text_embeddings = text_encoder(text_input.input_ids.to(device))[0]
-    context = torch.cat([uncond_embeddings, text_embeddings])
-    return context
 
 def main(args) :
 
@@ -535,7 +533,6 @@ def main(args) :
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
     context = init_prompt(tokenizer, text_encoder, device, prompt)
 
-
     """
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
@@ -613,17 +610,11 @@ def main(args) :
             mask_img_dir = os.path.join(mask_folder, test_img)
             mask_img_pil = Image.open(mask_img_dir)
             concept_name = test_img.split('.')[0]
-            save_base_folder = os.path.join(class_base_folder, f'latent_coupling_interpolate_matrix_{concept_name}_pretrain_lora_cond_text_interpolation_{args.interpolate_alpha}_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
+            if args.latent_coupling :
+                save_base_folder = os.path.join(class_base_folder, f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling')
+            elif args.classifier_free_guidance_infer :
+                save_base_folder = os.path.join(class_base_folder, f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
             os.makedirs(save_base_folder, exist_ok=True)
-            """
-            mask_img_pil.resize((512, 512)).save(os.path.join(save_base_folder, 'mask.png'))
-            print(f' (2.3.1) inversion')
-            image_gt_np = load_512(test_img_dir)
-            latent = image2latent(image_gt_np, vae, device, weight_dtype)
-            org_img_dir = os.path.join(save_base_folder, f'org_img.png')
-            Image.open(test_img_dir).resize((512, 512)).save(org_img_dir)
-            recon_dir = os.path.join(save_base_folder, f'vae_recon_check.png')            
-            """
             # inference_times = [980, 960, ..., 0]
             image_gt_np = load_512(test_img_dir)
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
@@ -655,28 +646,6 @@ def main(args) :
                                                       vae = vae,
                                                       base_folder_dir=timewise_save_base_folder,)
                 attention_storer.reset()
-
-                # org and recon interpolate
-                org_latent = original_latent
-                recon_latent = recon_latent_dict[0]
-                interpolate_latent = args.interpolate_alpha * org_latent + (1 - args.interpolate_alpha) * recon_latent
-                with torch.no_grad():
-                    np_img = latent2image(interpolate_latent, vae, return_type='np')
-                    pil_img = Image.fromarray(np_img)
-                    pil_images.append(pil_img)
-                    pil_img.save(os.path.join(timewise_save_base_folder, f'interpolate_result.png'))
-                """
-                # recon
-                for j, recon_time in enumerate(recon_times) :
-                    # recon_time =
-                    if j < len(recon_times) - 1:
-                        with torch.no_grad():
-                            noise_pred = call_unet(unet, latent, recon_time, context.chunk(2)[-1], None, None)
-                            #noise_pred = call_unet(unet, latent, recon_time, uncond_embeddings, None, None)
-                            latent = prev_step(noise_pred, int(t), latent, scheduler)
-                            save_dir = os.path.join(timewise_save_base_folder, f'recon_{recon_times[j + 1]}.png')
-                            Image.fromarray(latent2image(latent, vae, return_type='np')).save(save_dir)
-                """
             break
 
             """
@@ -730,11 +699,6 @@ def main(args) :
             with open(os.path.join(save_base_folder, 'config.json'), 'w') as f:
                 json.dump(vars(args), f, indent=4)
             """
-
-
-
-
-
         """
         print(f' (2.3.3) heatmap checking')
         org_img_dir = os.path.join(args.concept_image_folder, concept_img)
@@ -826,7 +790,6 @@ if __name__ == "__main__":
                         help="automatically determine dim (rank) from network_weights / dim (rank)をnetwork_weightsで指定した重みから自動で決定する", )
     parser.add_argument("--network_weights", type=str, default=None,
                         help="pretrained weights for network / 学習するネットワークの初期重み")
-
     parser.add_argument("--concept_image", type=str,
                         default = '/data7/sooyeon/MyData/perfusion_dataset/td_100/100_td/td_1.jpg')
     parser.add_argument("--mask_image_folder", type=str,)
@@ -842,9 +805,15 @@ if __name__ == "__main__":
     parser.add_argument("--threshold_time", type=int, default = 900)
     parser.add_argument("--inversion_experiment", action="store_true",)
     parser.add_argument("--repeat_time", type=int, default=1)
+    parser.add_argument("--latent_coupling", action="store_true",)
+    parser.add_argument("--classifier_free_guidance_infer", action="store_true", )
+
+
+
+
+
     parser.add_argument("--cfg_check", type=int, default=200)
     parser.add_argument("--inversion_weight", type=float, default=3.0)
-    parser.add_argument("--interpolate_alpha", type=float, default=0.5)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
