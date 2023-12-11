@@ -336,9 +336,11 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
+    latent_y = latent.clone().detach()
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
+        """
         if t > args.cfg_check :
             input_latent = torch.cat([latent] * 2)
             trg_latent = latent_dict[prev_time]
@@ -354,16 +356,18 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                                                            reduction='none')
                 latent_diff_dict[guidance_scale] = latent_diff.mean()
                 latent_dictionary[guidance_scale] = inter_noise_pred
-            #best_guidance_scale = min(latent_diff_dict, key=latent_diff_dict.get)
             best_guidance_scale = sorted(latent_diff_dict.items(), key=lambda x : x[1].item())[0][0]
-            print(f'best guidance scale : {best_guidance_scale}')
-            print(f'latent_diff_dict : {latent_diff_dict}')
             noise_pred = latent_dictionary[best_guidance_scale]
-        else :
-            uncon, con = context.chunk(2)
-            input_latent = latent
-            noise_pred = call_unet(unet, input_latent, t, con, t, prev_time)
+        """
+        #else :
+        uncon, con = context.chunk(2)
+        #input_latent = latent
+        #noise_pred = call_unet(unet, input_latent, t, con, t, prev_time)
+        noise_pred = call_unet(unet, latent_y, t, con, t, prev_time)
+        latent_y = prev_step(noise_pred, int(t), latent_y, scheduler)
+        noise_pred = call_unet(unet, latent_y, prev_time, uncon, t, prev_time)
         latent = prev_step(noise_pred, int(t), latent, scheduler)
+        #latent = prev_step(noise_pred, int(t), latent, scheduler)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
@@ -609,7 +613,7 @@ def main(args) :
             mask_img_dir = os.path.join(mask_folder, test_img)
             mask_img_pil = Image.open(mask_img_dir)
             concept_name = test_img.split('.')[0]
-            save_base_folder = os.path.join(class_base_folder, f'interpolate_matrix_{concept_name}_pretrain_lora_cond_text_interpolation_{args.interpolate_alpha}_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
+            save_base_folder = os.path.join(class_base_folder, f'latent_coupling_interpolate_matrix_{concept_name}_pretrain_lora_cond_text_interpolation_{args.interpolate_alpha}_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
             os.makedirs(save_base_folder, exist_ok=True)
             """
             mask_img_pil.resize((512, 512)).save(os.path.join(save_base_folder, 'mask.png'))
