@@ -89,9 +89,10 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                             org_attn_vector           = attention_prob[:, :, word_idx]
                             masked_attn_vector = masked_attention_prob[:, :, word_idx]
                             #vector_diff = torch.nn.functional.mse_loss(org_attn_vector, masked_attn_vector,reduction='none')
-                            attention_diff = (masked_attn_vector-org_attn_vector).mean([0])
+                            attention_diff = (masked_attn_vector-org_attn_vector).mean()
                             standard = torch.zeros_like(attention_diff)
-                            print(f'attention_diff : {attention_diff.shape}')
+                            loss = torch.max(attention_diff, standard)
+                            print(f'loss : {loss.shape}')
                             #vector_diff_list.append(attention_diff)
 
                     #attn_vectors = torch.stack(vector_diff_list, dim=0) # (word_num, 512, 512)
