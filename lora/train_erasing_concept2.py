@@ -90,17 +90,21 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                             masked_attn_vector = masked_attention_prob[:, :, word_idx]
                             #vector_diff = torch.nn.functional.mse_loss(org_attn_vector, masked_attn_vector,reduction='none')
                             attention_diff = (masked_attn_vector-org_attn_vector).mean([0])
-                            vector_diff_list.append(attention_diff)
-                    attn_vectors = torch.stack(vector_diff_list, dim=0) # (word_num, 512, 512)
-                    attn_loss = attn_vectors.mean([1])
-                    standard = torch.zeros_like(attn_loss)
-                    print(f'attn_loss : {attn_loss}')
-                    print(f'standard : {standard}')
-                    loss = max(attn_loss, standard)
+                            standard = torch.zeros_like(attention_diff)
+                            print(f'attention_diff : {attention_diff.shape}')
+                            #vector_diff_list.append(attention_diff)
+
+                    #attn_vectors = torch.stack(vector_diff_list, dim=0) # (word_num, 512, 512)
+                    #attn_loss = attn_vectors.mean([1])
+                    #standard = torch.zeros_like(attn_loss)
+                    #loss = torch.max(attn_loss, standard)
+                    #print(f'attn_loss : {attn_loss}')
+                    #print(f'standard : {standard}')
+                    #loss = max(attn_loss, standard)
 
 
 
-                    controller.store_loss(loss)
+                    #controller.store_loss(loss)
                 elif torch.is_grad_enabled(): # if not, while training, trg_indexs_list should not be None
                     if mask is None:
                         raise RuntimeError("mask is None but hooked to cross attention layer. Maybe the dataset does not contain mask properly.")
