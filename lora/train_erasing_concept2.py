@@ -90,7 +90,7 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                             masked_attn_vector = masked_attention_prob[:, :, word_idx]
                             #vector_diff = torch.nn.functional.mse_loss(org_attn_vector, masked_attn_vector,reduction='none')
                             attention_diff = (masked_attn_vector-org_attn_vector).mean()
-                            standard = torch.zeros_like(attention_diff)
+                            standard = torch.ones_like(attention_diff) * args.contrastive_eps
                             loss = torch.max(attention_diff, standard)
                             controller.store_loss(loss)
                             #vector_diff_list.append(attention_diff)
@@ -1032,6 +1032,7 @@ if __name__ == "__main__":
     parser.add_argument("--trg_concept", type=str, default='haibara')
     parser.add_argument("--net_key_names", type=str, default='text')
     parser.add_argument("--mask_threshold", type=float, default=0.5)
+    parser.add_argument("--contrastive_eps", type=float, default=0.00005)
 
     # class_caption
     args= parser.parse_args()
