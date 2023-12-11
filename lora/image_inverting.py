@@ -340,6 +340,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
         if t > args.cfg_check :
+            print('using classifier free guidance')
             input_latent = torch.cat([latent] * 2)
             trg_latent = latent_dict[prev_time]
             noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
@@ -605,7 +606,7 @@ def main(args) :
             mask_img_dir = os.path.join(mask_folder, test_img)
             mask_img_pil = Image.open(mask_img_dir)
             concept_name = test_img.split('.')[0]
-            save_base_folder = os.path.join(class_base_folder, f'interpolate_matrix_{concept_name}_pretrain_lora_cond_text_interpolation_{args.interpolate_alpha}_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
+            save_base_folder = os.path.join(class_base_folder, f'interpolate_matrix_{concept_name}_pretrain_lora_cond_text_interpolation_{args.interpolate_alpha}_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
             os.makedirs(save_base_folder, exist_ok=True)
             """
             mask_img_pil.resize((512, 512)).save(os.path.join(save_base_folder, 'mask.png'))
@@ -640,12 +641,12 @@ def main(args) :
                 time_steps.reverse()
                 print(f' (2.3.2) recon')
                 recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
-                                              context = context,
-                                              inference_times = time_steps, # [20,0]
-                                              scheduler = scheduler,
-                                              unet = unet,
-                                              vae = vae,
-                                              base_folder_dir=timewise_save_base_folder,)
+                                                      context = context,
+                                                      inference_times = time_steps, # [20,0]
+                                                      scheduler = scheduler,
+                                                      unet = unet,
+                                                      vae = vae,
+                                                      base_folder_dir=timewise_save_base_folder,)
                 attention_storer.reset()
 
                 # org and recon interpolate
