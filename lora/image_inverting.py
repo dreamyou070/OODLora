@@ -430,9 +430,7 @@ def main(args) :
 
     output_dir = args.output_dir
     os.makedirs(output_dir, exist_ok=True)
-    #output_dir = os.path.join(output_dir, f'dynamic_guidance_repeat_{args.repeat_time}_self_attn_con_from_{args.threshold_time}_cfg_check_{args.cfg_check}_inversion_weight_{args.inversion_weight}_model_epoch_{model_epoch}')
-    output_dir = os.path.join(output_dir,
-                              f'recon_check')
+    output_dir = os.path.join(output_dir, f'recon_check')
     os.makedirs(output_dir, exist_ok=True)
 
     print(f' \n step 2. make stable diffusion model')
@@ -533,7 +531,6 @@ def main(args) :
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
     context = init_prompt(tokenizer, text_encoder, device, prompt)
 
-    """
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
@@ -543,15 +540,44 @@ def main(args) :
         print(f' (2.3.1) inversion')
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        train_base_folder = os.path.join(output_dir, f'train/{concept_name}')
+        if args.latent_coupling:
+            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling')
+        elif args.classifier_free_guidance_infer:
+            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
+        os.makedirs(save_base_folder, exist_ok=True)
+        train_base_folder = os.path.join(save_base_folder, concept_name)
         os.makedirs(train_base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
-        latent_dict, time_steps, pil_images = ddim_loop(latent,
-                                                        invers_context,
-                                                        inference_times,
-                                                        scheduler,
-                                                        invers_unet, vae, train_base_folder, attention_storer)
+        inference_times = torch.cat([torch.tensor([999]), inference_times, ], dim=0)
+        flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
+        original_latent = latent.clone().detach()
+        for ii, final_time in enumerate(flip_times[1:]):
+            timewise_save_base_folder = os.path.join(train_base_folder, f'final_time_{final_time.item()}')
+            os.makedirs(timewise_save_base_folder, exist_ok=True)
+            latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
+                                                            context=invers_context,
+                                                            inference_times=flip_times[:ii + 2],
+                                                            scheduler=scheduler,
+                                                            unet=invers_unet,
+                                                            vae=vae,
+                                                            base_folder_dir=timewise_save_base_folder,
+                                                            attention_storer=attention_storer)
+            # timesteps = [0,20]
+            context = init_prompt(tokenizer, text_encoder, device, prompt)
+            collector = AttentionStore()
+            # register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+            time_steps.reverse()
+            print(f' (2.3.2) recon')
+            recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
+                                                 context=context,
+                                                 inference_times=time_steps,  # [20,0]
+                                                 scheduler=scheduler,
+                                                 unet=unet,
+                                                 vae=vae,
+                                                 base_folder_dir=timewise_save_base_folder, )
+            attention_storer.reset()
 
+        """
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
@@ -591,6 +617,7 @@ def main(args) :
 
         with open(os.path.join(train_base_folder, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
+        """
     """
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
@@ -647,8 +674,8 @@ def main(args) :
                                                       base_folder_dir=timewise_save_base_folder,)
                 attention_storer.reset()
             break
-
-            """
+    """
+    """
             # time_steps = 0,20,..., 980
             latent_dict, time_steps, pil_images = ddim_loop(latent,
                                                             invers_context,
@@ -698,8 +725,8 @@ def main(args) :
 
             with open(os.path.join(save_base_folder, 'config.json'), 'w') as f:
                 json.dump(vars(args), f, indent=4)
-            """
-        """
+    """
+    """
         print(f' (2.3.3) heatmap checking')
         org_img_dir = os.path.join(args.concept_image_folder, concept_img)
         orgin_latent = image2latent(load_512(org_img_dir), vae, device, weight_dtype)
@@ -754,7 +781,7 @@ def main(args) :
             pil_image = Image.fromarray(heatmap).resize((512, 512))
             heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
             pil_image.save(heatmap_save_dir)
-        """
+    """
 
 
 if __name__ == "__main__":
