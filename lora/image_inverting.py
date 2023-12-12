@@ -360,6 +360,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
+    latent_dict_keys = latent_dict.keys()
+    print(latent_dict_keys)
     return latent_dict, time_steps, pil_images
 
 @torch.no_grad()
