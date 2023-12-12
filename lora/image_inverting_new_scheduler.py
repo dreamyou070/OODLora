@@ -777,12 +777,13 @@ def main(args) :
                     inference_alpha_dict = {}
                     inference_alpha_dict[time_steps[0]] = scheduler.alphas_cumprod[time_steps[0]]
                     uncon, con = context.chunk(2)
+                    inference_alpha_dict[t] = scheduler.alphas_cumprod[t]
                     for i, t in enumerate(time_steps[:-1]):
                         prev_time = int(time_steps[i + 1])
                         trg_latent = latent_dict[prev_time]
                         with torch.no_grad():
                             noise_pred = call_unet(invers_unet, latent, t, invers_context.chunk(2)[0], t, prev_time)
-                        alpha_prod_t = scheduler.alphas_cumprod[t]
+                        alpha_prod_t = inference_alpha_dict[t]
                         alpha = scheduler.alphas_cumprod[prev_time].clone().detach()
                         alpha.requires_grad = True
                         optimizer = torch.optim.Adam([alpha], lr=0.01)
@@ -795,7 +796,7 @@ def main(args) :
                             loss = torch.nn.functional.mse_loss(trg_latent.float(), prev_sample.float(),
                                                                 reduction='none')
                             loss = loss.mean()
-                            if loss.item() < 0.000002:
+                            if loss.item() < 0.00002:
                                 break
                             else:
                                 optimizer.zero_grad()
