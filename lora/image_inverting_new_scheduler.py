@@ -542,10 +542,11 @@ def main(args) :
     SCHEDLER_SCHEDULE = "scaled_linear"
     scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,
                               beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,
-                              rescale_betas_zero_snr=True, 
+                              rescale_betas_zero_snr=True,
                               )
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
+    print(f'scheduler.alphas_cumprod : {scheduler.alphas_cumprod}')
 
     print(f' (2.4) model to accelerator device')
     device = args.device
