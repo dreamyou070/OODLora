@@ -790,9 +790,10 @@ def main(args) :
                         optimizer = torch.optim.Adam([alpha], lr=0.01)
                         for i in range(5000):
                             beta_t = 1 - alpha_prod_t
-                            prev_original_sample = (latent - beta_t ** 0.5 * noise_pred) * (
-                                        (alpha / alpha_prod_t) ** 0.5)
-                            prev_sample_direction = (1 - alpha) ** 0.5 * noise_pred
+                            prev_original_sample = latent * ((alpha/alpha_prod_t)**0.5)
+                            a = (1 - alpha) ** 0.5 * noise_pred
+                            b = ((alpha * beta_t / alpha_prod_t) ** 0.5) * noise_pred
+                            prev_sample_direction = a-b
                             prev_sample = prev_original_sample + prev_sample_direction
                             loss = torch.nn.functional.mse_loss(trg_latent.float(), prev_sample.float(),
                                                                 reduction='none')
