@@ -616,9 +616,11 @@ def main(args) :
             time_steps.append(int(t))
 
             trg_latent = latent_dict[prev_time]
-            noise_pred = call_unet(unet, latent, t, con, t, prev_time)
+            with torch.no_grad():
+                noise_pred = call_unet(unet, latent, t, con, t, prev_time)
             alpha_prod_t = scheduler.alphas_cumprod[t]
-            alpha = scheduler.alphas_cumprod[prev_time]
+            alpha = scheduler.alphas_cumprod[prev_time].clone().detach()
+            alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.01)
             for i in range(1000) :
                 beta_prod_t = 1 - alpha_prod_t
@@ -627,7 +629,7 @@ def main(args) :
                 prev_sample = alpha ** 0.5 * prev_original_sample + prev_sample_direction
                 loss = torch.nn.functional.mse_loss(trg_latent.float(), prev_sample.float(), reduction='none')
                 loss = loss.mean()
-                if loss < 0.00005 :
+                if loss.item() < 0.00005 :
                     break
                 else :
                     print(f'i : {i}, loss : {loss.item()}')
