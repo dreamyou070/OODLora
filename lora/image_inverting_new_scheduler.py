@@ -655,7 +655,9 @@ def main(args) :
                     loss.backward()
                     optimizer.step()
             print(f'prev_time : {prev_time}, alpha : {type(alpha)}')
-            if alpha.item() == float('nan') :
+            if torch.isnan(alpha).any() :
+                print(f'nan!')
+                print(f'{torch.isnan(alpha).any()}')
                 alpha = scheduler.alphas_cumprod[prev_time]
             print(f'prev_time : {prev_time}, alpha : {alpha}')
             inference_alpha_dict[prev_time] = alpha
