@@ -781,7 +781,7 @@ def main(args) :
                         prev_time = int(time_steps[i + 1])
                         trg_latent = latent_dict[prev_time]
                         with torch.no_grad():
-                            noise_pred = call_unet(unet, latent, t, con, t, prev_time)
+                            noise_pred = call_unet(invers_unet, latent, t, con, t, prev_time)
                         alpha_prod_t = scheduler.alphas_cumprod[t]
                         alpha = scheduler.alphas_cumprod[prev_time].clone().detach()
                         alpha.requires_grad = True
