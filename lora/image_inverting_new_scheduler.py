@@ -661,6 +661,7 @@ def main(args) :
         # timesteps = [0,20]
         context = init_prompt(tokenizer, text_encoder, device, prompt)
         print(f' (2.3.2) recon')
+        print(f'timesteps : {time_steps}')
         recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                              context=context,
                                              inference_times=time_steps,  # [20,0]
