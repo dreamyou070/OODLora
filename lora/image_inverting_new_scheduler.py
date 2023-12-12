@@ -732,7 +732,7 @@ def main(args) :
             test_img_dir = os.path.join(image_folder, test_img)
             mask_img_dir = os.path.join(mask_folder, test_img)
             mask_img_pil = Image.open(mask_img_dir)
-            concept_name = test_img.split('.')[0]
+            #concept_name = test_img.split('.')[0]
             if args.latent_coupling:
                 save_base_folder = os.path.join(class_base_folder,
                                                 f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_p_{args.p}')
