@@ -786,7 +786,7 @@ def main(args) :
                         alpha = scheduler.alphas_cumprod[prev_time].clone().detach()
                         alpha.requires_grad = True
                         optimizer = torch.optim.Adam([alpha], lr=0.01)
-                        for i in range(1000):
+                        for i in range(5000):
                             beta_t = 1 - alpha_prod_t
                             prev_original_sample = (latent - beta_t ** 0.5 * noise_pred) * (
                                         (alpha / alpha_prod_t) ** 0.5)
@@ -795,7 +795,7 @@ def main(args) :
                             loss = torch.nn.functional.mse_loss(trg_latent.float(), prev_sample.float(),
                                                                 reduction='none')
                             loss = loss.mean()
-                            if loss.item() < 0.00002:
+                            if loss.item() < 0.000002:
                                 break
                             else:
                                 optimizer.zero_grad()
