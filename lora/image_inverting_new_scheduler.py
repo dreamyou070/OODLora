@@ -633,9 +633,9 @@ def main(args) :
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
         pil_img.save(os.path.join(timewise_save_base_folder, f'recon_start_time_{inference_times[0]}.png')) # 999
-        """
 
 
+        inference_times = inference_times[30:]
         inference_alpha_dict = {}
         inference_alpha_dict[inference_times[0]] = scheduler.alphas_cumprod[inference_times[0]]
         uncon, con = context.chunk(2)
@@ -661,6 +661,7 @@ def main(args) :
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
+            print(f'prev_time : {prev_time}, alpha : {alpha}')
             if torch.isnan(alpha).any() :
                 alpha = scheduler.alphas_cumprod[prev_time]
             inference_alpha_dict[prev_time] = alpha
@@ -668,17 +669,17 @@ def main(args) :
         # timesteps = [0,20]
         context = init_prompt(tokenizer, text_encoder, device, prompt)
         print(f' (2.3.2) recon')
-        print(f'timesteps : {time_steps}')
+        print(f'inference_times : {inference_times}')
         recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                              context=context,
-                                             inference_times=time_steps,  # [999, 980, 960, ... 20, 0]
+                                             inference_times=inference_times,
                                              scheduler=scheduler,
                                              unet=unet,
                                              vae=vae,
                                              base_folder_dir=timewise_save_base_folder,
                                              alpha_dict=inference_alpha_dict,)
         attention_storer.reset()
-        """
+
         break
 
 
