@@ -553,10 +553,10 @@ def main(args) :
         info = network.load_weights(args.network_weights)
     network.to(device)
 
-    original_alpha_cumprod = scheduler.alpha_cumprod
-    print(f'original_alpha_cumprod : {original_alpha_cumprod}')
-    print(f'oiginal_alpha_cumprod shape : {original_alpha_cumprod.shape}')
-    print(f'original_alpha_cumprod type : {type(original_alpha_cumprod)}')
+    original_alphas_cumprod = scheduler.alphas_cumprod
+    print(f'original_alpha_cumprod : {original_alphas_cumprod}')
+    print(f'oiginal_alpha_cumprod shape : {original_alphas_cumprod.shape}')
+    print(f'original_alpha_cumprod type : {type(original_alphs_cumprod)}')
 
     """
     print(f' \n step 3. ground-truth image preparing')
