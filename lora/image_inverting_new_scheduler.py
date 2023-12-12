@@ -632,7 +632,10 @@ def main(args) :
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(os.path.join(timewise_save_base_folder, f'recon_start_time_{inference_times[0]}.png'))
+        pil_img.save(os.path.join(timewise_save_base_folder, f'recon_start_time_{inference_times[0]}.png')) # 999
+        """
+
+
         inference_alpha_dict = {}
         inference_alpha_dict[inference_times[0]] = scheduler.alphas_cumprod[inference_times[0]]
         uncon, con = context.chunk(2)
@@ -668,13 +671,14 @@ def main(args) :
         print(f'timesteps : {time_steps}')
         recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                              context=context,
-                                             inference_times=time_steps,  # [20,0]
+                                             inference_times=time_steps,  # [999, 980, 960, ... 20, 0]
                                              scheduler=scheduler,
                                              unet=unet,
                                              vae=vae,
                                              base_folder_dir=timewise_save_base_folder,
                                              alpha_dict=inference_alpha_dict,)
         attention_storer.reset()
+        """
         break
 
 
