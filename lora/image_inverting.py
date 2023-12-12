@@ -576,7 +576,7 @@ def main(args) :
                                                  vae=vae,
                                                  base_folder_dir=timewise_save_base_folder, )
             attention_storer.reset()
-
+        break
         """
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
@@ -618,7 +618,7 @@ def main(args) :
         with open(os.path.join(train_base_folder, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
         """
-    """
+
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
     test_base_folder = os.path.join(output_dir, 'test')
@@ -674,7 +674,7 @@ def main(args) :
                                                       base_folder_dir=timewise_save_base_folder,)
                 attention_storer.reset()
             break
-    """
+        break
     """
             # time_steps = 0,20,..., 980
             latent_dict, time_steps, pil_images = ddim_loop(latent,
