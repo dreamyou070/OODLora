@@ -593,6 +593,8 @@ def main(args) :
             save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_dynamic_p')
         elif args.classifier_free_guidance_infer:
             save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
+        elif args.using_customizing_scheduling :
+            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_customizing_scheduling')
         print(f'save_base_folder : {save_base_folder}')
         os.makedirs(save_base_folder, exist_ok=True)
         train_base_folder = os.path.join(save_base_folder, concept_name)
