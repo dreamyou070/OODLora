@@ -777,7 +777,8 @@ def main(args) :
                     inference_alpha_dict = {}
                     inference_alpha_dict[time_steps[0]] = scheduler.alphas_cumprod[time_steps[0]]
                     uncon, con = context.chunk(2)
-                    inference_alpha_dict[t] = scheduler.alphas_cumprod[t]
+                    print(f'alpha dict of {int(time_steps[0])}')
+                    inference_alpha_dict[int(time_steps[0])] = scheduler.alphas_cumprod[int(time_steps[0])]
                     for i, t in enumerate(time_steps[:-1]):
                         prev_time = int(time_steps[i + 1])
                         trg_latent = latent_dict[prev_time]
@@ -806,6 +807,7 @@ def main(args) :
                         if torch.isnan(alpha).any():
                             alpha = scheduler.alphas_cumprod[prev_time]
                         inference_alpha_dict[prev_time] = alpha
+                        print(f'alpha dict of {prev_time}')
                     print(f' (2.3.3) reconstructing')
                     # timesteps = [0,20]
                     context = init_prompt(tokenizer, text_encoder, device, prompt)
