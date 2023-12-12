@@ -361,7 +361,6 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
     latent_dict_keys = latent_dict.keys()
-    print(latent_dict_keys)
     return latent_dict, time_steps, pil_images
 
 @torch.no_grad()
@@ -407,7 +406,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         if args.latent_coupling:
             trg_latent = latent_dict[prev_time]
             latent_loss_dict = {}
-            latent_dict = {}
+            latent_dictionary = {}
             uncon, con = context.chunk(2)
             noise_pred_y = call_unet(unet, latent_y,       t, con, t, prev_time)
             latent_x_inter = inter_step(noise_pred_y,int(t),latent, scheduler)
@@ -419,9 +418,9 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                 latent_loss = torch.nn.functional.mse_loss(latent_x,
                                                            trg_latent, reduction='none')
                 latent_loss_dict[p] = latent_loss.mean()
-                latent_dict[p] = latent_x
+                latent_dictionary[p] = latent_x
             best_p = sorted(latent_loss_dict.items(), key=lambda x : x[1].item())[0][0]
-            latent = latent_dict[best_p]
+            latent = latent_dictionary[best_p]
             # trg_latent
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
