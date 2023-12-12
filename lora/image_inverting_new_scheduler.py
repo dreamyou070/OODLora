@@ -635,7 +635,7 @@ def main(args) :
         pil_img.save(os.path.join(timewise_save_base_folder, f'recon_start_time_{inference_times[0]}.png')) # 999
 
 
-        inference_times = inference_times[30:]
+        #inference_times = inference_times[30:]
         inference_alpha_dict = {}
         inference_alpha_dict[inference_times[0]] = scheduler.alphas_cumprod[inference_times[0]]
         uncon, con = context.chunk(2)
