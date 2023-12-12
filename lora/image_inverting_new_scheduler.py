@@ -653,7 +653,9 @@ def main(args) :
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
-            print(f'timestep : {prev_time}, alpha : {alpha.item()}')
+            if alpha == 'nan' :
+                alpha = scheduler.alphas_cumprod[prev_time]
+            print(f'prev_time : {prev_time}, alpha : {alpha}')
             inference_alpha_dict[prev_time] = alpha
         break
 
