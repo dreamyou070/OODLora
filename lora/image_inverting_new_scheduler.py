@@ -554,11 +554,7 @@ def main(args) :
     network.to(device)
 
     original_alphas_cumprod = scheduler.alphas_cumprod
-    print(f'original_alpha_cumprod : {original_alphas_cumprod}')
-    print(f'oiginal_alpha_cumprod shape : {original_alphas_cumprod.shape}')
-    print(f'original_alpha_cumprod type : {type(original_alphs_cumprod)}')
 
-    """
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
     prompt = args.prompt
@@ -586,237 +582,57 @@ def main(args) :
         inference_times = torch.cat([torch.tensor([999]), inference_times, ], dim=0)
         flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
         original_latent = latent.clone().detach()
-        for ii, final_time in enumerate(flip_times[1:]):
-            timewise_save_base_folder = os.path.join(train_base_folder, f'final_time_{final_time.item()}')
-            os.makedirs(timewise_save_base_folder, exist_ok=True)
-            latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
-                                                            context=invers_context,
-                                                            inference_times=flip_times[:ii + 2],
-                                                            scheduler=scheduler,
-                                                            unet=invers_unet,
-                                                            vae=vae,
-                                                            base_folder_dir=timewise_save_base_folder,
-                                                            attention_storer=attention_storer)
-            # timesteps = [0,20]
-            context = init_prompt(tokenizer, text_encoder, device, prompt)
-            collector = AttentionStore()
-            # register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-            time_steps.reverse()
-            print(f' (2.3.2) recon')
-            recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
-                                                 context=context,
-                                                 inference_times=time_steps,  # [20,0]
-                                                 scheduler=scheduler,
-                                                 unet=unet,
-                                                 vae=vae,
-                                                 base_folder_dir=timewise_save_base_folder, )
-            attention_storer.reset()
-        break
-        
-        layer_names = attention_storer.self_query_store.keys()
-        self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
-        for layer in layer_names:
-            self_query_list = attention_storer.self_query_store[layer]
-            self_key_list = attention_storer.self_key_store[layer]
-            self_value_list = attention_storer.self_value_store[layer]
-            i = 1
-            for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
-                time_step = time_steps[i]
-                if time_step not in self_query_dict.keys():
-                    self_query_dict[time_step] = {}
-                    self_query_dict[time_step][layer] = self_query
-                else:
-                    self_query_dict[time_step][layer] = self_query
-
-                if time_step not in self_key_dict.keys():
-                    self_key_dict[time_step] = {}
-                    self_key_dict[time_step][layer] = self_key
-                else:
-                    self_key_dict[time_step][layer] = self_key
-
-                if time_step not in self_value_dict.keys():
-                    self_value_dict[time_step] = {}
-                    self_value_dict[time_step][layer] = self_value
-                else:
-                    self_value_dict[time_step][layer] = self_value
-                i += 1
-        collector = AttentionStore()
-        register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+        final_time = flip_times[-1]
+        timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
+        os.makedirs(timewise_save_base_folder, exist_ok=True)
+        latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
+                                                        context=invers_context,
+                                                        inference_times=flip_times,
+                                                        scheduler=scheduler,
+                                                        unet=invers_unet,
+                                                        vae=vae,
+                                                        base_folder_dir=timewise_save_base_folder,
+                                                        attention_storer=attention_storer)
+        # timesteps = [0,20]
+        context = init_prompt(tokenizer, text_encoder, device, prompt)
         time_steps.reverse()
-        print(f' (2.3.2) recon')
-        all_latent, _, _ = recon_loop(latent_dict,
-                                      context,
-                                      time_steps,
-                                      scheduler, unet, vae, train_base_folder)
-        attention_storer.reset()
+        print(f' customizing scheduling')
+        inference_times = time_steps
+        latent = latent_dict[inference_times[0]]
+        all_latent_dict = {}
+        all_latent_dict[inference_times[0]] = latent
+        time_steps = []
+        pil_images = []
+        with torch.no_grad():
+            np_img = latent2image(latent, vae, return_type='np')
+        pil_img = Image.fromarray(np_img)
+        pil_images.append(pil_img)
+        pil_img.save(os.path.join(timewise_save_base_folder, f'recon_start_time_{inference_times[0]}.png'))
+        inference_alpha_dict = {}
+        inference_alpha_dict[inference_times[0]]
+        uncon, con = context.cunk(2)
+        for i, t in enumerate(inference_times[:-1]):
+            prev_time = int(inference_times[i + 1])
+            time_steps.append(int(t))
 
-        with open(os.path.join(train_base_folder, 'config.json'), 'w') as f:
-            json.dump(vars(args), f, indent=4)
-        
-
-    print(f' (3.2) test images')
-    test_img_folder = os.path.join(args.concept_image_folder, 'test')
-    test_base_folder = os.path.join(output_dir, 'test')
-    os.makedirs(test_base_folder, exist_ok=True)
-    classes = os.listdir(test_img_folder)
-    for class_name in classes:
-        class_folder = os.path.join(test_img_folder, class_name)
-        class_base_folder = os.path.join(test_base_folder, class_name)
-        os.makedirs(class_base_folder, exist_ok=True)
-
-        image_folder = os.path.join(class_folder, 'rgb')
-        mask_folder = os.path.join(class_folder, 'gt')
-        test_images = os.listdir(image_folder)
-        for test_img in test_images:
-            test_img_dir = os.path.join(image_folder, test_img)
-            mask_img_dir = os.path.join(mask_folder, test_img)
-            mask_img_pil = Image.open(mask_img_dir)
-            concept_name = test_img.split('.')[0]
-            if args.latent_coupling :
-                save_base_folder = os.path.join(class_base_folder, f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_p_{args.p}')
-            elif args.classifier_free_guidance_infer :
-                save_base_folder = os.path.join(class_base_folder, f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
-            print(f'save_base_folder : {save_base_folder}')
-            os.makedirs(save_base_folder, exist_ok=True)
-            # inference_times = [980, 960, ..., 0]
-            image_gt_np = load_512(test_img_dir)
-            latent = image2latent(image_gt_np, vae, device, weight_dtype)
-            inference_times = torch.cat([torch.tensor([999]), inference_times, ], dim=0)
-            flip_times = torch.flip(inference_times, dims=[0]) # [0,20, ..., 980]
-            original_latent = latent.clone().detach()
-            final_time = flip_times[-1]
-            timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
-            os.makedirs(timewise_save_base_folder, exist_ok=True)
-            latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
-                                                            context=invers_context,
-                                                            inference_times=flip_times[:ii + 2],
-                                                            scheduler=scheduler,
-                                                            unet=invers_unet,
-                                                            vae=vae,
-                                                            base_folder_dir=timewise_save_base_folder,
-                                                            attention_storer=attention_storer)
-            # timesteps = [0,20]
-            context = init_prompt(tokenizer, text_encoder, device, prompt)
-            time_steps.reverse()
-            print(f' (2.3.2) recon')
-            recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
-                                                  context = context,
-                                                  inference_times = time_steps, # [20,0]
-                                                  scheduler = scheduler,
-                                                  unet = unet,
-                                                  vae = vae,
-                                                  base_folder_dir=timewise_save_base_folder,)
-            attention_storer.reset()
-            break
+            trg_latent = latent_dict[prev_time]
+            noise_pred = call_unet(unet, latent, t, con, t, prev_time)
+            alpha_prod_t = scheduler.alphas_cumprod[t]
+            alpha = scheduler.alphas_cumprod[prev_time]
+            optimizer = torch.optim.Adam([alpha], lr=0.01)
+            for i in range(1000) :
+                beta_prod_t = 1 - alpha_prod_t
+                prev_original_sample = (latent - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
+                prev_sample_direction = (1 - alpha) ** 0.5 * noise_pred
+                prev_sample = alpha ** 0.5 * prev_original_sample + prev_sample_direction
+                loss = torch.nn.functional.mse_loss(trg_latent.float(), prev_sample.float(), reduction='none')
+                loss = loss.mean()
+                print(f'i : {i}, loss : {loss.item()}')
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+            inference_alpha_dict[prev_time] = alpha
         break
-    
-            # time_steps = 0,20,..., 980
-            latent_dict, time_steps, pil_images = ddim_loop(latent,
-                                                            invers_context,
-                                                            inference_times,
-                                                            scheduler,
-                                                            invers_unet,
-                                                            vae, save_base_folder,
-                                                            attention_storer)
-            context = init_prompt(tokenizer, text_encoder, device, prompt)
-
-            layer_names = attention_storer.self_query_store.keys()
-            self_query_dict, self_key_dict, self_value_dict  = {}, {}, {}
-            for layer in layer_names:
-                self_query_list = attention_storer.self_query_store[layer]
-                self_key_list = attention_storer.self_key_store[layer]
-                self_value_list = attention_storer.self_value_store[layer]
-                i = 1
-                for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
-                    time_step = time_steps[i]
-                    if time_step not in self_query_dict.keys():
-                        self_query_dict[time_step] = {}
-                        self_query_dict[time_step][layer] = self_query
-                    else:
-                        self_query_dict[time_step][layer] = self_query
-
-                    if time_step not in self_key_dict.keys():
-                        self_key_dict[time_step] = {}
-                        self_key_dict[time_step][layer] = self_key
-                    else:
-                        self_key_dict[time_step][layer] = self_key
-                    if time_step not in self_value_dict.keys():
-                        self_value_dict[time_step] = {}
-                        self_value_dict[time_step][layer] = self_value
-                    else:
-                        self_value_dict[time_step][layer] = self_value
-                    i += 1
-            collector = AttentionStore()
-            register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-            time_steps.reverse()
-            print(f' (2.3.2) recon')
-            all_latent, _, _ = recon_loop(latent_dict,
-                                          context,
-                                          time_steps,
-                                          scheduler,
-                                          unet, vae, save_base_folder)
-            attention_storer.reset()
-
-            with open(os.path.join(save_base_folder, 'config.json'), 'w') as f:
-                json.dump(vars(args), f, indent=4)
-    """
-    """
-        print(f' (2.3.3) heatmap checking')
-        org_img_dir = os.path.join(args.concept_image_folder, concept_img)
-        orgin_latent = image2latent(load_512(org_img_dir), vae, device, weight_dtype)
-        recon_latent = all_latent[-1]
-        input_latent = torch.cat([orgin_latent, recon_latent])
-        query_storer = AttentionStore()
-        register_attention_control(unet, query_storer)
-        un, _ = context.chunk(2)
-        call_unet(unet,input_latent, 0, torch.cat([un] * 2),None, None)
-        query_storing = query_storer.cross_key_store
-        layer_names = query_storing.keys()
-        query_storer.reset()
-        org_query_dict, recon_query_dict = {}, {}
-        for layer_name in layer_names :
-            query_value_list = query_storing[layer_name]
-            query_collecting = query_value_list[0]
-            org_query, recon_query = query_collecting.chunk(2)
-            org_query = torch.mean(org_query, dim=0)
-            recon_query = torch.mean(recon_query, dim=0) # [pix_2, dim]
-            pix_num = org_query.shape[-2]
-            height = int(pix_num ** 0.5)
-            if height not in org_query_dict.keys():
-                org_query_dict[height] = []
-                org_query_dict[height].append(org_query)
-                recon_query_dict[height] = []
-                recon_query_dict[height].append(recon_query)
-            else:
-                org_query_dict[height].append(org_query)
-                recon_query_dict[height].append(recon_query)
-        heights = org_query_dict.keys()
-        for height in heights:
-            org_query_list = org_query_dict[height]
-            recon_query_list = recon_query_dict[height]
-            org_query = torch.stack(org_query_list, dim=0)
-            recon_query = torch.stack(recon_query_list, dim=0)
-            org_query = torch.mean(org_query, dim=0)
-            recon_query = torch.mean(recon_query, dim=0)
-            cross_attn_map = torch.matmul(org_query, recon_query.transpose(-1, -2))
-            print(f'[cross_attn_map] height : {height} | cross_attn_map (pix2,pix2) : {cross_attn_map.shape}')
-
-            cross_attn_map = torch.softmax(cross_attn_map, dim=-1)
-            diagonal_mask = torch.eye(height*height)
-            normal_map = cross_attn_map * diagonal_mask
-            print(f'normal_map : {normal_map}')
-            sim_vector = normal_map.sum(-1)
-            print(f'sim_vector : {sim_vector}')
-            sim_map = sim_vector.reshape(height, height)
-            anomal_map = 1 - sim_map
-            gray = anomal_map * 255.0
-            import cv2
-            heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
-            pil_image = Image.fromarray(heatmap).resize((512, 512))
-            heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
-            pil_image.save(heatmap_save_dir)
-    """
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
