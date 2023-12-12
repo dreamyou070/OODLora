@@ -653,6 +653,7 @@ def main(args) :
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
+            print(f'prev_time : {prev_time}, alpha : {type(alpha)}')
             if alpha == float('nan') :
                 alpha = scheduler.alphas_cumprod[prev_time]
             print(f'prev_time : {prev_time}, alpha : {alpha}')
