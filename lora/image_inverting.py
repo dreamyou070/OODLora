@@ -333,6 +333,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     latent = latent.clone().detach()
     latent_dict = {}
     noise_pred_dict = {}
+    latent_dict[0] = latent
     pil_images = []
     with torch.no_grad():
         np_img = latent2image(latent, vae, return_type='np')
