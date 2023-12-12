@@ -605,7 +605,7 @@ def main(args) :
         if args.latent_coupling:
             save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_dynamic_p')
         elif args.classifier_free_guidance_infer and args.using_customizing_scheduling:
-            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling_lora_noising')
+            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling')
         #elif args.using_customizing_scheduling :
         #    save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_customizing_scheduling')
         print(f'save_base_folder : {save_base_folder}')
@@ -736,12 +736,12 @@ def main(args) :
             if args.latent_coupling:
                 save_base_folder = os.path.join(class_base_folder,
                                                 f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_p_{args.p}')
-            elif args.classifier_free_guidance_infer:
+            elif args.classifier_free_guidance_infer and args.using_customizing_scheduling :
                 save_base_folder = os.path.join(class_base_folder,
-                                                f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
-            elif args.using_customizing_scheduling:
-                save_base_folder = os.path.join(class_base_folder,
-                                                f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_customizing_scheduling')
+                                                f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling')
+            #elif args.using_customizing_scheduling:
+            #    save_base_folder = os.path.join(class_base_folder,
+            #                                    f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_customizing_scheduling')
             os.makedirs(save_base_folder, exist_ok=True)
             # inference_times = [980, 960, ..., 0]
             image_gt_np = load_512(test_img_dir)
