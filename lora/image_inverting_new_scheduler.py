@@ -605,7 +605,7 @@ def main(args) :
         if args.latent_coupling:
             save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_dynamic_p')
         elif args.classifier_free_guidance_infer and args.using_customizing_scheduling:
-            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling')
+            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling_lora_noising')
         #elif args.using_customizing_scheduling :
         #    save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_customizing_scheduling')
         print(f'save_base_folder : {save_base_folder}')
@@ -615,7 +615,6 @@ def main(args) :
         # time_steps = 0,20,..., 980
         flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980]
         original_latent = latent.clone().detach()
-
         final_time = flip_times[-1]
         timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
         os.makedirs(timewise_save_base_folder, exist_ok=True)
