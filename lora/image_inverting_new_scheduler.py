@@ -592,7 +592,7 @@ def main(args) :
     prompt = args.prompt
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
     context = init_prompt(tokenizer, text_encoder, device, prompt)
-
+    """
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
@@ -713,7 +713,7 @@ def main(args) :
                                              base_folder_dir=timewise_save_base_folder,
                                              alpha_dict=inference_alpha_dict,)
         break
-
+    """
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
     test_base_folder = os.path.join(output_dir, 'test')
@@ -761,21 +761,64 @@ def main(args) :
                                                                     vae=vae,
                                                                     base_folder_dir=timewise_save_base_folder,
                                                                     attention_storer=attention_storer)
+
+                    context = init_prompt(tokenizer, text_encoder, device, prompt)
+                    time_steps.reverse()
+                    print(f' (2.3.2) customizing scheduling')
+                    latent = latent_dict[time_steps[0]]
+                    all_latent_dict = {}
+                    all_latent_dict[time_steps[0]] = latent
+                    pil_images = []
+                    with torch.no_grad():
+                        np_img = latent2image(latent, vae, return_type='np')
+                    pil_img = Image.fromarray(np_img)
+                    pil_images.append(pil_img)
+                    pil_img.save(
+                        os.path.join(timewise_save_base_folder, f'recon_start_time_{time_steps[0]}.png'))  # 999
+
+                    inference_alpha_dict = {}
+                    inference_alpha_dict[time_steps[0]] = scheduler.alphas_cumprod[time_steps[0]]
+                    uncon, con = context.chunk(2)
+                    for i, t in enumerate(time_steps[:-1]):
+                        prev_time = int(time_steps[i + 1])
+                        trg_latent = latent_dict[prev_time]
+                        with torch.no_grad():
+                            noise_pred = call_unet(unet, latent, t, con, t, prev_time)
+                        alpha_prod_t = scheduler.alphas_cumprod[t]
+                        alpha = scheduler.alphas_cumprod[prev_time].clone().detach()
+                        alpha.requires_grad = True
+                        optimizer = torch.optim.Adam([alpha], lr=0.01)
+                        for i in range(1000):
+                            beta_t = 1 - alpha_prod_t
+                            prev_original_sample = (latent - beta_t ** 0.5 * noise_pred) * (
+                                        (alpha / alpha_prod_t) ** 0.5)
+                            prev_sample_direction = (1 - alpha) ** 0.5 * noise_pred
+                            prev_sample = prev_original_sample + prev_sample_direction
+                            loss = torch.nn.functional.mse_loss(trg_latent.float(), prev_sample.float(),
+                                                                reduction='none')
+                            loss = loss.mean()
+                            if loss.item() < 0.00002:
+                                break
+                            else:
+                                optimizer.zero_grad()
+                                loss.backward()
+                                optimizer.step()
+                        print(f'prev_time : {prev_time}, alpha : {alpha}')
+                        if torch.isnan(alpha).any():
+                            alpha = scheduler.alphas_cumprod[prev_time]
+                        inference_alpha_dict[prev_time] = alpha
+                    print(f' (2.3.3) reconstructing')
                     # timesteps = [0,20]
                     context = init_prompt(tokenizer, text_encoder, device, prompt)
-                    collector = AttentionStore()
-                    register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                    time_steps.reverse()
                     print(f' (2.3.2) recon')
                     recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                                          context=context,
-                                                         inference_times=time_steps,  # [20,0]
+                                                         inference_times=time_steps,
                                                          scheduler=scheduler,
                                                          unet=unet,
                                                          vae=vae,
                                                          base_folder_dir=timewise_save_base_folder,
-                                                 alpha_dict=inference_alpha_dict, )
-                    attention_storer.reset()
+                                                         alpha_dict=inference_alpha_dict, )
             break
         break
 
