@@ -558,7 +558,7 @@ def main(args) :
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         if args.latent_coupling:
-            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling')
+            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_p_{args.p}')
         elif args.classifier_free_guidance_infer:
             save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
         os.makedirs(save_base_folder, exist_ok=True)
