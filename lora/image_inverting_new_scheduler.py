@@ -704,7 +704,7 @@ def main(args) :
             # inference_times = [980, 960, ..., 0]
             image_gt_np = load_512(test_img_dir)
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
-            flip_times = torch.flip(torch.cat([torch.tensor([999]), scheduler.time_steps, ], dim=0), dims=[0])  # [0,20, ..., 980]
+            flip_times = torch.flip(torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0), dims=[0])  # [0,20, ..., 980]
             original_latent = latent.clone().detach()
             for ii, final_time in enumerate(flip_times[1:]):
                 if final_time.item() == 999 :
