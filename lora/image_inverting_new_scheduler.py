@@ -633,7 +633,6 @@ def main(args) :
         for i, t in enumerate(inference_times[:-1]):
             prev_time = int(inference_times[i + 1])
             time_steps.append(int(t))
-
             trg_latent = latent_dict[prev_time]
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, t, con, t, prev_time)
@@ -651,10 +650,10 @@ def main(args) :
                 if loss.item() < 0.00002 :
                     break
                 else :
-                    print(f'i : {i}, loss : {loss.item()}')
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
+            print(f'timestep : {prev_time}, alpha : {alpha.item()}')
             inference_alpha_dict[prev_time] = alpha
         break
 
