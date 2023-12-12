@@ -711,35 +711,36 @@ def main(args) :
             # inference_times = [980, 960, ..., 0]
             image_gt_np = load_512(test_img_dir)
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
-            inference_times = torch.cat([torch.tensor([999]), inference_times, ], dim=0)
+            inference_times = torch.cat([torch.tensor([999]), scheduler.time_steps, ], dim=0)
             flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
             original_latent = latent.clone().detach()
             for ii, final_time in enumerate(flip_times[1:]):
-                timewise_save_base_folder = os.path.join(save_base_folder, f'final_time_{final_time.item()}')
-                os.makedirs(timewise_save_base_folder, exist_ok=True)
-                latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
-                                                                context=invers_context,
-                                                                inference_times=flip_times[:ii + 2],
-                                                                scheduler=scheduler,
-                                                                unet=invers_unet,
-                                                                vae=vae,
-                                                                base_folder_dir=timewise_save_base_folder,
-                                                                attention_storer=attention_storer)
-                # timesteps = [0,20]
-                context = init_prompt(tokenizer, text_encoder, device, prompt)
-                collector = AttentionStore()
-                # register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                time_steps.reverse()
-                print(f' (2.3.2) recon')
-                recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
-                                                     context=context,
-                                                     inference_times=time_steps,  # [20,0]
-                                                     scheduler=scheduler,
-                                                     unet=unet,
-                                                     vae=vae,
-                                                     base_folder_dir=timewise_save_base_folder,
-                                             alpha_dict=inference_alpha_dict, )
-                attention_storer.reset()
+                if final_time.item() == 999 :
+                    timewise_save_base_folder = os.path.join(save_base_folder, f'final_time_{final_time.item()}')
+                    os.makedirs(timewise_save_base_folder, exist_ok=True)
+                    latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
+                                                                    context=invers_context,
+                                                                    inference_times=flip_times[:ii + 2],
+                                                                    scheduler=scheduler,
+                                                                    unet=invers_unet,
+                                                                    vae=vae,
+                                                                    base_folder_dir=timewise_save_base_folder,
+                                                                    attention_storer=attention_storer)
+                    # timesteps = [0,20]
+                    context = init_prompt(tokenizer, text_encoder, device, prompt)
+                    collector = AttentionStore()
+                    # register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                    time_steps.reverse()
+                    print(f' (2.3.2) recon')
+                    recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
+                                                         context=context,
+                                                         inference_times=time_steps,  # [20,0]
+                                                         scheduler=scheduler,
+                                                         unet=unet,
+                                                         vae=vae,
+                                                         base_folder_dir=timewise_save_base_folder,
+                                                 alpha_dict=inference_alpha_dict, )
+                    attention_storer.reset()
             break
         break
 
