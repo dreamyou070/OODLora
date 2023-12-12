@@ -810,10 +810,11 @@ def main(args) :
                     context = init_prompt(tokenizer, text_encoder, device, prompt)
                     print(f' (2.3.2) recon')
                     recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
-                                                         context=context,
+                                                         context=invers_context,
                                                          inference_times=time_steps,
                                                          scheduler=scheduler,
-                                                         unet=unet,
+                                                         #unet=unet,
+                                                         unet=invers_unet,
                                                          vae=vae,
                                                          base_folder_dir=timewise_save_base_folder,
                                                          alpha_dict=inference_alpha_dict, )
