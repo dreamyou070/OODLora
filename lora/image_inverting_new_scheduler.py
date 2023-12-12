@@ -653,7 +653,7 @@ def main(args) :
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
-            if alpha == 'nan' :
+            if torch.isnan(alpha) :
                 alpha = scheduler.alphas_cumprod[prev_time]
             print(f'prev_time : {prev_time}, alpha : {alpha}')
             inference_alpha_dict[prev_time] = alpha
