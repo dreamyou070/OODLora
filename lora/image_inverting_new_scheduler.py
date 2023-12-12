@@ -575,8 +575,6 @@ def main(args) :
         info = network.load_weights(args.network_weights)
     network.to(device)
 
-    original_alphas_cumprod = scheduler.alphas_cumprod
-
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
     prompt = args.prompt
@@ -603,8 +601,7 @@ def main(args) :
         train_base_folder = os.path.join(save_base_folder, concept_name)
         os.makedirs(train_base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
-        inference_times = torch.cat([torch.tensor([999]), inference_times, ], dim=0)
-        flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
+        flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980]
         original_latent = latent.clone().detach()
 
         final_time = flip_times[-1]
@@ -622,25 +619,22 @@ def main(args) :
         context = init_prompt(tokenizer, text_encoder, device, prompt)
         time_steps.reverse()
         print(f' (2.3.2) customizing scheduling')
-        inference_times = time_steps
-        print(f'inference start : {inference_times[0]}')
-        latent = latent_dict[inference_times[0]]
+        latent = latent_dict[time_steps[0]]
         all_latent_dict = {}
-        all_latent_dict[inference_times[0]] = latent
+        all_latent_dict[time_steps[0]] = latent
         pil_images = []
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(os.path.join(timewise_save_base_folder, f'recon_start_time_{inference_times[0]}.png')) # 999
+        pil_img.save(os.path.join(timewise_save_base_folder, f'recon_start_time_{time_steps[0]}.png')) # 999
 
 
-        #inference_times = inference_times[30:]
         inference_alpha_dict = {}
-        inference_alpha_dict[inference_times[0]] = scheduler.alphas_cumprod[inference_times[0]]
+        inference_alpha_dict[time_steps[0]] = scheduler.alphas_cumprod[time_steps[0]]
         uncon, con = context.chunk(2)
-        for i, t in enumerate(inference_times[:-1]):
-            prev_time = int(inference_times[i + 1])
+        for i, t in enumerate(time_steps[:-1]):
+            prev_time = int(time_steps[i + 1])
             trg_latent = latent_dict[prev_time]
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, t, con, t, prev_time)
@@ -669,10 +663,9 @@ def main(args) :
         # timesteps = [0,20]
         context = init_prompt(tokenizer, text_encoder, device, prompt)
         print(f' (2.3.2) recon')
-        print(f'inference_times : {inference_times}')
         recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                              context=context,
-                                             inference_times=inference_times,
+                                             inference_times=time_steps,
                                              scheduler=scheduler,
                                              unet=unet,
                                              vae=vae,
@@ -711,8 +704,7 @@ def main(args) :
             # inference_times = [980, 960, ..., 0]
             image_gt_np = load_512(test_img_dir)
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
-            inference_times = torch.cat([torch.tensor([999]), scheduler.time_steps, ], dim=0)
-            flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
+            flip_times = torch.flip(torch.cat([torch.tensor([999]), scheduler.time_steps, ], dim=0), dims=[0])  # [0,20, ..., 980]
             original_latent = latent.clone().detach()
             for ii, final_time in enumerate(flip_times[1:]):
                 if final_time.item() == 999 :
