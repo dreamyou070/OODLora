@@ -434,12 +434,10 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             best_p = sorted(latent_loss_dict.items(), key=lambda x : x[1].item())[0][0]
             latent = latent_dictionary[best_p]
             # trg_latent
-
         if args.using_customizing_scheduling :
             uncon, con = context.chunk(2)
             noise_pred = call_unet(unet, latent, t, con, t, prev_time)
             latent = customizing_prev_step(noise_pred,t,latent,scheduler, alpha_dict)
-
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
@@ -447,6 +445,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         if prev_time == 0 :
             pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
         all_latent_dict[prev_time] = latent
+
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
 
@@ -623,7 +622,6 @@ def main(args) :
         latent = latent_dict[inference_times[0]]
         all_latent_dict = {}
         all_latent_dict[inference_times[0]] = latent
-        time_steps = []
         pil_images = []
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
@@ -635,7 +633,6 @@ def main(args) :
         uncon, con = context.chunk(2)
         for i, t in enumerate(inference_times[:-1]):
             prev_time = int(inference_times[i + 1])
-            time_steps.append(int(t))
             trg_latent = latent_dict[prev_time]
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, t, con, t, prev_time)
@@ -662,9 +659,6 @@ def main(args) :
         print(f' (2.3.3) reconstructing')
         # timesteps = [0,20]
         context = init_prompt(tokenizer, text_encoder, device, prompt)
-        collector = AttentionStore()
-        # register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-        time_steps.reverse()
         print(f' (2.3.2) recon')
         recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                              context=context,
