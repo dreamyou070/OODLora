@@ -620,12 +620,12 @@ def main(args) :
         timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
         os.makedirs(timewise_save_base_folder, exist_ok=True)
         latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
-                                                        #context=invers_context,
-                                                        context=context,
+                                                        context=invers_context,
+                                                        #context=context,
                                                         inference_times=flip_times,
                                                         scheduler=scheduler,
-                                                        #unet=invers_unet,
-                                                        unet=unet,
+                                                        unet=invers_unet,
+                                                        #unet=unet,
                                                         vae=vae,
                                                         base_folder_dir=timewise_save_base_folder,
                                                         attention_storer=attention_storer)
