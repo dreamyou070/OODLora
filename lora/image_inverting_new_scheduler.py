@@ -292,7 +292,7 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     #next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     next_sample = alpha_prod_t_next_matrix ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
-"""
+
 def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
@@ -307,7 +307,23 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     prev_sample_direction = (1 - alpha_prod_t_prev) ** 0.5 * model_output
     prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
-"""
+
+
+def customizing_prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
+                          timestep: int,
+                          sample: Union[torch.FloatTensor, np.ndarray],
+                          scheduler,
+                          alpha_dict):
+    timestep, prev_timestep = timestep, max(timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 0)
+    alpha_prod_t = alpha_dict[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
+    alpha_prod_t_prev = alpha_dict[prev_timestep]
+    beta_prod_t = 1 - alpha_prod_t
+    prev_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+    prev_sample_direction = (1 - alpha_prod_t_prev) ** 0.5 * model_output
+    prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
+    return prev_sample
+
+
 def inter_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
@@ -357,9 +373,10 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     latent_dict[int(next_time)] = latent
     latent_dict_keys = latent_dict.keys()
     return latent_dict, time_steps, pil_images
-"""
+
+
 @torch.no_grad()
-def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir):
+def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir, alpha_dict):
     latent = latent_dict[inference_times[0]]
     all_latent_dict = {}
     all_latent_dict[inference_times[0]] = latent
@@ -371,18 +388,15 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
     latent_y = latent.clone().detach()
-    inference_alpha_dict = {}
-    inference_alpha_dict[inference_times[0]] = 
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
 
-        
-        trg_latent = latent_dict[prev_time]
-        noise_pred = call_unet(unet, latent, t, context, t, prev_time)
-        
-        optimizer = torch.optim.Adam([latent_y], lr=0.01)
-        
+        if args.classifier_free_guidance_infer :
+            if t > args.cfg_check :
+                input_latent = torch.cat([latent] * 2)
+                trg_latent = latent_dict[prev_time]
+                noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
                 guidance_scales = [-80, -70,-60,-50,-40,-30,-20,-10,0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10, 11, 12, 13, 14, 15, 16,17,18,19,20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80]
                 latent_diff_dict = {}
                 latent_dictionary = {}
@@ -401,7 +415,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                 uncon, con = context.chunk(2)
                 noise_pred = call_unet(unet, latent, t, con, t, prev_time)
                 latent = prev_step(noise_pred, int(t), latent, scheduler)
-        if args.latent_coupling:
+        elif args.latent_coupling:
             trg_latent = latent_dict[prev_time]
             latent_loss_dict = {}
             latent_dictionary = {}
@@ -420,6 +434,12 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             best_p = sorted(latent_loss_dict.items(), key=lambda x : x[1].item())[0][0]
             latent = latent_dictionary[best_p]
             # trg_latent
+
+        else :
+            uncon, con = context.chunk(2)
+            noise_pred = call_unet(unet, latent, t, con, t, prev_time)
+            latent = customizing_prev_step(noise_pred,t,latent,scheduler, alpha_dict)
+
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
@@ -429,7 +449,6 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         all_latent_dict[prev_time] = latent
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
-"""
 
 def main(args) :
 
@@ -638,6 +657,7 @@ def main(args) :
                     optimizer.step()
             inference_alpha_dict[prev_time] = alpha
         break
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
