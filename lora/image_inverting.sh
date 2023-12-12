@@ -1,4 +1,4 @@
-python image_inverting.py --device cuda:1 \
+python image_inverting.py --device cuda:2 \
   --process_title parksooyeon \
   --pretrained_model_name_or_path /data7/sooyeon/pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora \
@@ -7,7 +7,9 @@ python image_inverting.py --device cuda:1 \
   --prompt 'good' --inversion_experiment --sample_sampler ddim --num_ddim_steps 50 \
   --output_dir '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/1_contrastive_learning_eps_0.00005/inference_check' \
   --concept_image_folder /data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel \
-  --latent_coupling --repeat_time 51 --threshold_time 1000 --p 0.93
+  --latent_coupling --repeat_time 51 --threshold_time 1000
+
+   --p 0.93
 
   --classifier_free_guidance_infer --cfg_check 0 --repeat_time 51 --threshold_time 1000
 

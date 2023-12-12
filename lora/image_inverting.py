@@ -402,13 +402,23 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                 noise_pred = call_unet(unet, latent, t, con, t, prev_time)
                 latent = prev_step(noise_pred, int(t), latent, scheduler)
         if args.latent_coupling:
+            trg_latent = latent_dict[prev_time]
+            latent_loss_dict = {}
             uncon, con = context.chunk(2)
             noise_pred_y = call_unet(unet, latent_y,       t, con, t, prev_time)
             latent_x_inter = inter_step(noise_pred_y,int(t),latent, scheduler)
             noise_pred_x = call_unet(unet, latent_x_inter, t, con, t, prev_time)
             latent_y_inter =  inter_step(noise_pred_x,int(t),latent, scheduler)
-            latent =   args.p * latent_x_inter + (1 - args.p) * latent_y_inter
-            latent_y = args.p * latent_y_inter + (1 - args.p) * latent_x_inter
+            for p in [0.8, 0.85, 0.9, 0.95, 0.98]:
+                latent_y = args.p * latent_y_inter + (1 - args.p) * latent_x_inter
+                latent_x =   args.p * latent_x_inter + (1 - args.p) * latent_y_inter
+                latent_loss = torch.nn.functional.mse_loss(latent_x,
+                                                           trg_latent, reduction='none')
+                latent_loss_dict[p] = latent_loss.mean()
+                latent[p] = latent_x
+            best_p = sorted(latent_loss_dict.items(), key=lambda x : x[1].item())[0][0]
+            latent = latent[best_p]
+            # trg_latent
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
@@ -558,7 +568,7 @@ def main(args) :
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         if args.latent_coupling:
-            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_p_{args.p}')
+            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_dynamic_p')
         elif args.classifier_free_guidance_infer:
             save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
         print(f'save_base_folder : {save_base_folder}')
