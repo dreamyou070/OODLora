@@ -629,7 +629,7 @@ def main(args) :
                 prev_sample = alpha ** 0.5 * prev_original_sample + prev_sample_direction
                 loss = torch.nn.functional.mse_loss(trg_latent.float(), prev_sample.float(), reduction='none')
                 loss = loss.mean()
-                if loss.item() < 0.00005 :
+                if loss.item() < 0.00002 :
                     break
                 else :
                     print(f'i : {i}, loss : {loss.item()}')
