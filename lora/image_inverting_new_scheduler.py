@@ -308,14 +308,12 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
 
-
 def customizing_prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
-                          timestep: int,
                           sample: Union[torch.FloatTensor, np.ndarray],
-                          scheduler,
-                          alpha_dict):
-    timestep, prev_timestep = timestep, max(timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 0)
-    alpha_prod_t = alpha_dict[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
+                          alpha_dict,
+                          timestep,
+                          prev_timestep):
+    alpha_prod_t = alpha_dict[timestep]
     alpha_prod_t_prev = alpha_dict[prev_timestep]
     beta_prod_t = 1 - alpha_prod_t
     prev_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
@@ -443,7 +441,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         if args.using_customizing_scheduling :
             uncon, con = context.chunk(2)
             noise_pred = call_unet(unet, latent, t, con, t, prev_time)
-            latent = customizing_prev_step(noise_pred,t,latent,scheduler, alpha_dict)
+            latent = customizing_prev_step(noise_pred,latent,alpha_dict, t, prev_time)
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
