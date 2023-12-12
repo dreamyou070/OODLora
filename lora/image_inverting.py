@@ -313,6 +313,19 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     prev_sample = alpha_prod_t_prev_matrix ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
 
+def inter_step(model_output: Union[torch.FloatTensor, np.ndarray],
+              timestep: int,
+              sample: Union[torch.FloatTensor, np.ndarray],
+              scheduler):
+    timestep, prev_timestep = timestep, max( timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 0)
+    alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
+    alpha_prod_t_prev = scheduler.alphas_cumprod[prev_timestep]
+    a_t = (alpha_prod_t_prev/alpha_prod_t) ** 0.5
+    beta_prod_t = 1 - alpha_prod_t
+    b_t = -1 * (((beta_prod_t*alpha_prod_t_prev)/alpha_prod_t)**0.5) + (1-alpha_prod_t_prev)**0.5
+    inter_sample = a_t * sample + b_t * model_output
+    return inter_sample
+
 @torch.no_grad()
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
     uncond_embeddings, cond_embeddings = context.chunk(2)
@@ -383,15 +396,19 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                     latent_dictionary[guidance_scale] = inter_noise_pred
                 best_guidance_scale = sorted(latent_diff_dict.items(), key=lambda x : x[1].item())[0][0]
                 noise_pred = latent_dictionary[best_guidance_scale]
+                latent = prev_step(noise_pred, int(t), latent, scheduler)
             else :
                 uncon, con = context.chunk(2)
                 noise_pred = call_unet(unet, latent, t, con, t, prev_time)
+                latent = prev_step(noise_pred, int(t), latent, scheduler)
         if args.latent_coupling:
             uncon, con = context.chunk(2)
-            noise_pred = call_unet(unet, latent_y, t, con, t, prev_time)
-            latent_y = prev_step(noise_pred, int(t), latent_y, scheduler)
-            noise_pred = call_unet(unet, latent_y, prev_time, uncon, t, prev_time)
-        latent = prev_step(noise_pred, int(t), latent, scheduler)
+            noise_pred_y = call_unet(unet, latent_y,       t, con, t, prev_time)
+            latent_x_inter = inter_step(noise_pred_y,int(t),latent, scheduler)
+            noise_pred_x = call_unet(unet, latent_x_inter, t, con, t, prev_time)
+            latent_y_inter =  inter_step(noise_pred_x,int(t),latent, scheduler)
+            latent =   args.p * latent_x_inter + (1 - args.p) * latent_y_inter
+            latent_y = args.p * latent_y_inter + (1 - args.p) * latent_x_inter
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
@@ -638,7 +655,7 @@ def main(args) :
             mask_img_pil = Image.open(mask_img_dir)
             concept_name = test_img.split('.')[0]
             if args.latent_coupling :
-                save_base_folder = os.path.join(class_base_folder, f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling')
+                save_base_folder = os.path.join(class_base_folder, f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_p_{args.p}')
             elif args.classifier_free_guidance_infer :
                 save_base_folder = os.path.join(class_base_folder, f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
             os.makedirs(save_base_folder, exist_ok=True)
@@ -834,10 +851,7 @@ if __name__ == "__main__":
     parser.add_argument("--repeat_time", type=int, default=1)
     parser.add_argument("--latent_coupling", action="store_true",)
     parser.add_argument("--classifier_free_guidance_infer", action="store_true", )
-
-
-
-
+    parser.add_argument("--p", type=float, default=0.3)
 
     parser.add_argument("--cfg_check", type=int, default=200)
     parser.add_argument("--inversion_weight", type=float, default=3.0)
