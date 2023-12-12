@@ -649,10 +649,10 @@ def main(args) :
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.01)
             for i in range(1000) :
-                beta_prod_t = 1 - alpha_prod_t
-                prev_original_sample = (latent - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
+                beta_t = 1 - alpha_prod_t
+                prev_original_sample = (latent - beta_t ** 0.5 * noise_pred) * (( alpha/ alpha_prod_t) ** 0.5)
                 prev_sample_direction = (1 - alpha) ** 0.5 * noise_pred
-                prev_sample = alpha ** 0.5 * prev_original_sample + prev_sample_direction
+                prev_sample = prev_original_sample + prev_sample_direction
                 loss = torch.nn.functional.mse_loss(trg_latent.float(), prev_sample.float(), reduction='none')
                 loss = loss.mean()
                 if loss.item() < 0.00002 :
