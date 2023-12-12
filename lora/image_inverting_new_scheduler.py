@@ -601,6 +601,7 @@ def main(args) :
         inference_times = torch.cat([torch.tensor([999]), inference_times, ], dim=0)
         flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
         original_latent = latent.clone().detach()
+
         final_time = flip_times[-1]
         timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
         os.makedirs(timewise_save_base_folder, exist_ok=True)
@@ -654,7 +655,7 @@ def main(args) :
                     loss.backward()
                     optimizer.step()
             print(f'prev_time : {prev_time}, alpha : {type(alpha)}')
-            if alpha == float('nan') :
+            if alpha.item() == float('nan') :
                 alpha = scheduler.alphas_cumprod[prev_time]
             print(f'prev_time : {prev_time}, alpha : {alpha}')
             inference_alpha_dict[prev_time] = alpha
