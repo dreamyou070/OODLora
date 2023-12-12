@@ -404,6 +404,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         if args.latent_coupling:
             trg_latent = latent_dict[prev_time]
             latent_loss_dict = {}
+            latent_dict = {}
             uncon, con = context.chunk(2)
             noise_pred_y = call_unet(unet, latent_y,       t, con, t, prev_time)
             latent_x_inter = inter_step(noise_pred_y,int(t),latent, scheduler)
@@ -415,9 +416,9 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                 latent_loss = torch.nn.functional.mse_loss(latent_x,
                                                            trg_latent, reduction='none')
                 latent_loss_dict[p] = latent_loss.mean()
-                latent[p] = latent_x
+                latent_dict[p] = latent_x
             best_p = sorted(latent_loss_dict.items(), key=lambda x : x[1].item())[0][0]
-            latent = latent[best_p]
+            latent = latent_dict[best_p]
             # trg_latent
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
