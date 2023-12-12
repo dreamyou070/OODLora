@@ -415,7 +415,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                 uncon, con = context.chunk(2)
                 noise_pred = call_unet(unet, latent, t, con, t, prev_time)
                 latent = prev_step(noise_pred, int(t), latent, scheduler)
-        elif args.latent_coupling:
+        if args.latent_coupling:
             trg_latent = latent_dict[prev_time]
             latent_loss_dict = {}
             latent_dictionary = {}
@@ -435,7 +435,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             latent = latent_dictionary[best_p]
             # trg_latent
 
-        else :
+        if args.using_customizing_scheduling :
             uncon, con = context.chunk(2)
             noise_pred = call_unet(unet, latent, t, con, t, prev_time)
             latent = customizing_prev_step(noise_pred,t,latent,scheduler, alpha_dict)
@@ -616,7 +616,7 @@ def main(args) :
         # timesteps = [0,20]
         context = init_prompt(tokenizer, text_encoder, device, prompt)
         time_steps.reverse()
-        print(f' customizing scheduling')
+        print(f' (2.3.2) customizing scheduling')
         inference_times = time_steps
         latent = latent_dict[inference_times[0]]
         all_latent_dict = {}
@@ -654,13 +654,25 @@ def main(args) :
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
-            print(f'prev_time : {prev_time}, alpha : {type(alpha)}')
             if torch.isnan(alpha).any() :
-                print(f'nan!')
-                print(f'{torch.isnan(alpha).any()}')
                 alpha = scheduler.alphas_cumprod[prev_time]
-            print(f'prev_time : {prev_time}, alpha : {alpha}')
             inference_alpha_dict[prev_time] = alpha
+        print(f' (2.3.3) reconstructing')
+        # timesteps = [0,20]
+        context = init_prompt(tokenizer, text_encoder, device, prompt)
+        collector = AttentionStore()
+        # register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+        time_steps.reverse()
+        print(f' (2.3.2) recon')
+        recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
+                                             context=context,
+                                             inference_times=time_steps,  # [20,0]
+                                             scheduler=scheduler,
+                                             unet=unet,
+                                             vae=vae,
+                                             base_folder_dir=timewise_save_base_folder,
+                                             alpha_dict=inference_alpha_dict,)
+        attention_storer.reset()
         break
 
 
@@ -715,6 +727,7 @@ if __name__ == "__main__":
     parser.add_argument("--latent_coupling", action="store_true",)
     parser.add_argument("--classifier_free_guidance_infer", action="store_true", )
     parser.add_argument("--p", type=float, default=0.3)
+    parser.add_argument("--using_customizing_scheduling", action="store_true", )
 
     parser.add_argument("--cfg_check", type=int, default=200)
     parser.add_argument("--inversion_weight", type=float, default=3.0)
