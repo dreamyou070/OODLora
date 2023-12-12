@@ -625,6 +625,7 @@ def main(args) :
         time_steps.reverse()
         print(f' (2.3.2) customizing scheduling')
         inference_times = time_steps
+        print(f'inference start : {inference_times[0]}')
         latent = latent_dict[inference_times[0]]
         all_latent_dict = {}
         all_latent_dict[inference_times[0]] = latent
