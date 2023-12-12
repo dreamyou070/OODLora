@@ -367,11 +367,16 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[int(t.item())] = noise_pred
             latent = next_step(noise_pred, int(t.item()), latent, scheduler)
-
+            with torch.no_grad():
+                np_img = latent2image(latent, vae, return_type='np')
+            pil_img = Image.fromarray(np_img)
+            pil_images.append(pil_img)
+            pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
     latent_dict_keys = latent_dict.keys()
+    print(f'time_Steps : {time_steps}')
     return latent_dict, time_steps, pil_images
 
 
