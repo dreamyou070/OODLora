@@ -610,7 +610,7 @@ def main(args) :
         pil_img.save(os.path.join(timewise_save_base_folder, f'recon_start_time_{inference_times[0]}.png'))
         inference_alpha_dict = {}
         inference_alpha_dict[inference_times[0]] = scheduler.alphas_cumprod[inference_times[0]]
-        uncon, con = context.cunk(2)
+        uncon, con = context.chunk(2)
         for i, t in enumerate(inference_times[:-1]):
             prev_time = int(inference_times[i + 1])
             time_steps.append(int(t))
@@ -627,10 +627,13 @@ def main(args) :
                 prev_sample = alpha ** 0.5 * prev_original_sample + prev_sample_direction
                 loss = torch.nn.functional.mse_loss(trg_latent.float(), prev_sample.float(), reduction='none')
                 loss = loss.mean()
-                print(f'i : {i}, loss : {loss.item()}')
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                if loss < 0.00005 :
+                    break
+                else :
+                    print(f'i : {i}, loss : {loss.item()}')
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
             inference_alpha_dict[prev_time] = alpha
         break
 
