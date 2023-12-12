@@ -605,7 +605,7 @@ def main(args) :
         if args.latent_coupling:
             save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_dynamic_p')
         elif args.classifier_free_guidance_infer and args.using_customizing_scheduling:
-            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling')
+            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling_lora_noising')
         #elif args.using_customizing_scheduling :
         #    save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_customizing_scheduling')
         print(f'save_base_folder : {save_base_folder}')
@@ -620,10 +620,12 @@ def main(args) :
         timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
         os.makedirs(timewise_save_base_folder, exist_ok=True)
         latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
-                                                        context=invers_context,
+                                                        #context=invers_context,
+                                                        context=context,
                                                         inference_times=flip_times,
                                                         scheduler=scheduler,
-                                                        unet=invers_unet,
+                                                        #unet=invers_unet,
+                                                        unet=unet,
                                                         vae=vae,
                                                         base_folder_dir=timewise_save_base_folder,
                                                         attention_storer=attention_storer)
