@@ -165,7 +165,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
 
 
             if not is_cross_attention:
-                if trg_indexs_list > args.threshold_time or mask == 0 :
+                if trg_indexs_list > args.self_attn_threshold_time or mask == 0 :
                     if hidden_states.shape[0] == 2 :
                         uncon_key, con_key = key.chunk(2)
                         uncon_value, con_value = value.chunk(2)
@@ -615,7 +615,36 @@ def main(args) :
                                                         vae=vae,
                                                         base_folder_dir=timewise_save_base_folder,
                                                         attention_storer=attention_storer)
-        # timesteps = [0,20]
+        # attention storer checking #
+        layer_names = attention_storer.self_query_store.keys()
+        self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
+        for layer in layer_names:
+            self_query_list = attention_storer.self_query_store[layer]
+            self_key_list = attention_storer.self_key_store[layer]
+            self_value_list = attention_storer.self_value_store[layer]
+            i = 1
+            for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
+                time_step = time_steps[i]
+                if time_step not in self_query_dict.keys():
+                    self_query_dict[time_step] = {}
+                    self_query_dict[time_step][layer] = self_query
+                else:
+                    self_query_dict[time_step][layer] = self_query
+
+                if time_step not in self_key_dict.keys():
+                    self_key_dict[time_step] = {}
+                    self_key_dict[time_step][layer] = self_key
+                else:
+                    self_key_dict[time_step][layer] = self_key
+
+                if time_step not in self_value_dict.keys():
+                    self_value_dict[time_step] = {}
+                    self_value_dict[time_step][layer] = self_value
+                else:
+                    self_value_dict[time_step][layer] = self_value
+                i += 1
+        attention_storer.reset()
+
         context = init_prompt(tokenizer, text_encoder, device, prompt)
         time_steps.reverse()
         print(f' (2.3.2) customizing scheduling')
@@ -628,7 +657,6 @@ def main(args) :
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
         pil_img.save(os.path.join(timewise_save_base_folder, f'recon_start_time_{time_steps[0]}.png')) # 999
-
 
         inference_alpha_dict = {}
         inference_alpha_dict[time_steps[0]] = scheduler.alphas_cumprod[time_steps[0]]
@@ -671,8 +699,6 @@ def main(args) :
                                              vae=vae,
                                              base_folder_dir=timewise_save_base_folder,
                                              alpha_dict=inference_alpha_dict,)
-        attention_storer.reset()
-
         break
 
     print(f' (3.2) test images')
@@ -699,7 +725,9 @@ def main(args) :
             elif args.classifier_free_guidance_infer:
                 save_base_folder = os.path.join(class_base_folder,
                                                 f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
-            print(f'save_base_folder : {save_base_folder}')
+            elif args.using_customizing_scheduling:
+                save_base_folder = os.path.join(class_base_folder,
+                                                f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_customizing_scheduling')
             os.makedirs(save_base_folder, exist_ok=True)
             # inference_times = [980, 960, ..., 0]
             image_gt_np = load_512(test_img_dir)
@@ -721,7 +749,7 @@ def main(args) :
                     # timesteps = [0,20]
                     context = init_prompt(tokenizer, text_encoder, device, prompt)
                     collector = AttentionStore()
-                    # register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                    register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                     time_steps.reverse()
                     print(f' (2.3.2) recon')
                     recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
@@ -782,7 +810,7 @@ if __name__ == "__main__":
     parser.add_argument("--folder_name", type=str)
     parser.add_argument("--guidance_scale", type=float, default=7.5)
     parser.add_argument("--self_key_control", action='store_true')
-    parser.add_argument("--threshold_time", type=int, default = 900)
+    parser.add_argument("--self_attn_threshold_time", type=int, default = 900)
     parser.add_argument("--inversion_experiment", action="store_true",)
     parser.add_argument("--repeat_time", type=int, default=1)
     parser.add_argument("--latent_coupling", action="store_true",)
