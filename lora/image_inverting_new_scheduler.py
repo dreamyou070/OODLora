@@ -395,6 +395,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
 
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
+        """
 
         if args.classifier_free_guidance_infer :
             if t > args.cfg_check :
@@ -419,6 +420,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                 uncon, con = context.chunk(2)
                 noise_pred = call_unet(unet, latent, t, con, t, prev_time)
                 latent = prev_step(noise_pred, int(t), latent, scheduler)
+        """
         if args.latent_coupling:
             trg_latent = latent_dict[prev_time]
             latent_loss_dict = {}
@@ -439,9 +441,19 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             latent = latent_dictionary[best_p]
             # trg_latent
         if args.using_customizing_scheduling :
-            uncon, con = context.chunk(2)
-            noise_pred = call_unet(unet, latent, t, con, t, prev_time)
-            latent = customizing_prev_step(noise_pred,latent,alpha_dict, t, prev_time)
+            if args.classifier_free_guidance_infer :
+                if t > args.cfg_check:
+                    input_latent = torch.cat([latent] * 2)
+                    trg_latent = latent_dict[prev_time]
+                    noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
+                    noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                    noise_pred = noise_pred_uncond + 7.5 * (noise_pred_text - noise_pred_uncond)
+                    latent = customizing_prev_step(noise_pred,latent,alpha_dict, t, prev_time)
+            else :
+                uncon, con = context.chunk(2)
+                noise_pred = call_unet(unet, latent, t, con, t, prev_time)
+                latent = customizing_prev_step(noise_pred,latent,alpha_dict, t, prev_time)
+
         with torch.no_grad():
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
@@ -592,8 +604,8 @@ def main(args) :
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         if args.latent_coupling:
             save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_dynamic_p')
-        elif args.classifier_free_guidance_infer:
-            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
+        elif args.classifier_free_guidance_infer and args.using_customizing_scheduling:
+            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling')
         elif args.using_customizing_scheduling :
             save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_customizing_scheduling')
         print(f'save_base_folder : {save_base_folder}')
