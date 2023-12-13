@@ -407,8 +407,10 @@ def main(args):
     inference_decoding_factor = {}
     for line in content:
         line = line.strip()
-        line = line.split(':')
-        inference_decoding_factor[int(line[0])] = float(line[1])
+        line = line.split(' : ')
+        t, f = int(line[0]), float(line[1])
+        print(f't : {t}, f : {f}')
+        inference_decoding_factor[t] = f
 
     print(f' (3.3) random check')
     for train_img in train_images:
