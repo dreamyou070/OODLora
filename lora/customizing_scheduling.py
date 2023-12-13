@@ -435,6 +435,7 @@ def main(args):
                                                        unet=invers_unet,
                                                        vae=vae,
                                                        base_folder_dir=image_folder,)
+        time_steps.reverse()
         recon_loop(latent_dict=latent_dict,
                    context=invers_context,
                    inference_times=time_steps,
