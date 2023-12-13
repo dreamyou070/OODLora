@@ -253,7 +253,15 @@ def latent2image(latents, vae, return_type='np'):
         image = image.cpu().permute(0, 2, 3, 1).numpy()[0]
         image = (image * 255).astype(np.uint8)
     return image
-
+@torch.no_grad()
+def latent2image_customizing(latents, vae, factor, return_type='np'):
+    latents = factor * latents.detach()
+    image = vae.decode(latents)['sample']
+    if return_type == 'np':
+        image = (image / 2 + 0.5).clamp(0, 1)
+        image = image.cpu().permute(0, 2, 3, 1).numpy()[0]
+        image = (image * 255).astype(np.uint8)
+    return image
 def init_prompt(tokenizer, text_encoder, device, prompt: str):
     uncond_input = tokenizer([""],
                              padding="max_length", max_length=tokenizer.model_max_length,
@@ -378,7 +386,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
 
 
 @torch.no_grad()
-def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir, alpha_dict):
+def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir, vae_factor_dict, args):
     latent = latent_dict[inference_times[0]]
     all_latent_dict = {}
     all_latent_dict[inference_times[0]] = latent
@@ -440,21 +448,12 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             latent = latent_dictionary[best_p]
             # trg_latent
         if args.using_customizing_scheduling :
-            if args.classifier_free_guidance_infer :
-                if t > args.cfg_check:
-                    input_latent = torch.cat([latent] * 2)
-                    trg_latent = latent_dict[prev_time]
-                    noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
-                    noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                    noise_pred = noise_pred_uncond + 7.5 * (noise_pred_text - noise_pred_uncond)
-                    latent = customizing_prev_step(noise_pred,latent,alpha_dict, t, prev_time)
-            else :
-                uncon, con = context.chunk(2)
-                noise_pred = call_unet(unet, latent, t, con, t, prev_time)
-                latent = customizing_prev_step(noise_pred,latent,alpha_dict, t, prev_time)
-
-        with torch.no_grad():
-            np_img = latent2image(latent, vae, return_type='np')
+            uncon, con = context.chunk(2)
+            noise_pred = call_unet(unet, latent, t, con, t, prev_time)
+            latent = prev_step(noise_pred, t, latent, scheduler)
+            with torch.no_grad():
+                factor = vae_factor_dict[prev_time]
+                np_img = latent2image_customizing(latent, vae, factor, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
         #if prev_time == 0 :
@@ -540,11 +539,10 @@ def main(args) :
     SCHEDULER_TIMESTEPS = 1000
     SCHEDLER_SCHEDULE = "scaled_linear"
     scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,
-                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,
-                              rescale_betas_zero_snr=True,
-                              )
+                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
+
 
     print(f' (2.4) model to accelerator device')
     device = args.device
@@ -566,13 +564,13 @@ def main(args) :
     print(f' (2.5) network')
     sys.path.append(os.path.dirname(__file__))
     network_module = importlib.import_module(args.network_module)
-    print(f' (1.3.1) merging weights')
+    print(f' (2.5.1) merging weights')
     net_kwargs = {}
     if args.network_args is not None:
         for net_arg in args.network_args:
             key, value = net_arg.split("=")
             net_kwargs[key] = value
-    print(f' (1.3.3) make network')
+    print(f' (2.5.2) make network')
     if args.dim_from_weights:
         network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
                                                                 **net_kwargs)
@@ -582,11 +580,20 @@ def main(args) :
                                                 args.network_alpha,
                                                 vae, text_encoder, unet, neuron_dropout=args.network_dropout,
                                                 **net_kwargs, )
-    print(f' (1.3.4) apply trained state dict')
+    print(f' (2.5.3) apply trained state dict')
     network.apply_to(text_encoder, unet, True, True)
     if args.network_weights is not None:
         info = network.load_weights(args.network_weights)
     network.to(device)
+
+    print(f' (2.6) inference vae factor')
+    vae_factor_dir = r'/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/4_contrastive_learning_eps_change_direction_0.0/recon_check/train/noising_scheduling_test/new_scheduling_check/inference_decoding_factor_txt.txt'
+    with open(vae_factor_dir, 'r') as f:
+        vae_factors = f.readline()
+    vae_factor_dict = {}
+    for vae_factor in vae_factors:
+        infer_time, f = vae_factor.split(' : ')
+        vae_factor_dict[int(infer_time)] = float(f)
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
@@ -610,17 +617,18 @@ def main(args) :
         #    save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling_lora_noising')
         #elif args.using_customizing_scheduling :
         #    save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_customizing_scheduling')
-        save_base_folder = os.path.join(output_dir, f'train/noising_scheduling_test')
-        print(f'save_base_folder : {save_base_folder}')
+        save_base_folder = os.path.join(output_dir, f'train/infer_with_new_scheduling')
         os.makedirs(save_base_folder, exist_ok=True)
+
         train_base_folder = os.path.join(save_base_folder, concept_name)
         os.makedirs(train_base_folder, exist_ok=True)
+        print(f' - train_base_folder : {train_base_folder}')
         # time_steps = 0,20,..., 980
         flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
         final_time = flip_times[-1]
-        timewise_save_base_folder = os.path.join(save_base_folder,f'new_scheduling_check')
-        os.makedirs(timewise_save_base_folder, exist_ok=True)
         uncon, con = invers_context.chunk(2)
+        original_latent = latent.clone().detach()
+        """
         inference_decoding_factor = {}
         vae.eval()
         vae.requires_grad_(False)
@@ -665,14 +673,7 @@ def main(args) :
         with open(os.path.join(timewise_save_base_folder, f'inference_decoding_factor.json'), 'w') as f:
             json.dump(inference_decoding_factor, f, indent = 4)
         break
-        """        
-            
-                
-        
-        
-        
-        
-        
+        """
         latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
                                                         context=invers_context,
                                                         #context=context,
@@ -681,7 +682,7 @@ def main(args) :
                                                         unet=invers_unet,
                                                         #unet=unet,
                                                         vae=vae,
-                                                        base_folder_dir=timewise_save_base_folder,
+                                                        base_folder_dir=train_base_folder,
                                                         attention_storer=attention_storer)
         # attention storer checking #
         layer_names = attention_storer.self_query_store.keys()
@@ -712,7 +713,6 @@ def main(args) :
                     self_value_dict[time_step][layer] = self_value
                 i += 1
         attention_storer.reset()
-
         context = init_prompt(tokenizer, text_encoder, device, prompt)
         time_steps.reverse()
         print(f' (2.3.2) customizing scheduling')
@@ -724,8 +724,8 @@ def main(args) :
             np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        pil_img.save(os.path.join(timewise_save_base_folder, f'recon_start_time_{time_steps[0]}.png')) # 999
-
+        pil_img.save(os.path.join(train_base_folder, f'recon_start_time_{time_steps[0]}.png')) # 999
+        """
         inference_alpha_dict = {}
         inference_alpha_dict[time_steps[0]] = scheduler.alphas_cumprod[time_steps[0]]
         uncon, con = context.chunk(2)
@@ -755,6 +755,7 @@ def main(args) :
             if torch.isnan(alpha).any() :
                 alpha = scheduler.alphas_cumprod[prev_time]
             inference_alpha_dict[prev_time] = alpha
+        """
         print(f' (2.3.3) reconstructing')
         # timesteps = [0,20]
         context = init_prompt(tokenizer, text_encoder, device, prompt)
@@ -765,10 +766,11 @@ def main(args) :
                                              scheduler=scheduler,
                                              unet=unet,
                                              vae=vae,
-                                             base_folder_dir=timewise_save_base_folder,
-                                             alpha_dict=inference_alpha_dict,)
+                                             base_folder_dir=train_base_folder,
+                                             vae_factor_dict=vae_factor_dict,
+                                             args=args,)
         break
-        """
+        
     """
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
