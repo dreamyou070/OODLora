@@ -480,76 +480,76 @@ def main(args):
 
         print(f' (2.3.2) inversing')
         inference_decoding_factor = {}
-        vae.eval()
-        vae.requires_grad_(False)
+        #vae.eval()
+        #vae.requires_grad_(False)
         for i, present_t in enumerate(flip_times[:-1]):
             print(f'present_t : {present_t}')
             next_t = flip_times[i + 1]
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
-                layer_names = attention_storer.self_query_store.keys()
-                attention_storer.reset()
-                self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
-                for layer in layer_names:
-                    self_query_list = attention_storer.self_query_store[layer]
-                    self_key_list = attention_storer.self_key_store[layer]
-                    self_value_list = attention_storer.self_value_store[layer]
-                    for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
-                        t_ = present_t.item()
-                        if t_ not in self_query_dict.keys():
-                            self_query_dict[t_] = {}
-                            self_query_dict[t_][layer] = self_query
-                        else:
-                            self_query_dict[t_][layer] = self_query
+            layer_names = attention_storer.self_query_store.keys()
+            attention_storer.reset()
+            self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
+            for layer in layer_names:
+                self_query_list = attention_storer.self_query_store[layer]
+                self_key_list = attention_storer.self_key_store[layer]
+                self_value_list = attention_storer.self_value_store[layer]
+                for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
+                    t_ = present_t.item()
+                    if t_ not in self_query_dict.keys():
+                        self_query_dict[t_] = {}
+                        self_query_dict[t_][layer] = self_query
+                    else:
+                        self_query_dict[t_][layer] = self_query
 
-                        if t_ not in self_key_dict.keys():
-                            self_key_dict[t_] = {}
-                            self_key_dict[t_][layer] = self_key
-                        else:
-                            self_key_dict[t_][layer] = self_key
+                    if t_ not in self_key_dict.keys():
+                        self_key_dict[t_] = {}
+                        self_key_dict[t_][layer] = self_key
+                    else:
+                        self_key_dict[t_][layer] = self_key
 
-                        if t_ not in self_value_dict.keys():
-                            self_value_dict[t_] = {}
-                            self_value_dict[t_][layer] = self_value
-                        else:
-                            self_value_dict[t_][layer] = self_value
+                    if t_ not in self_value_dict.keys():
+                        self_value_dict[t_] = {}
+                        self_value_dict[t_][layer] = self_value
+                    else:
+                        self_value_dict[t_][layer] = self_value
                     #
-                latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
-                collector = AttentionStore()
-                register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t, next_t)
-                recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next, scheduler)
-                pixel_origin = latent2image(latent, vae, return_type='torch')
-                alpha = torch.Tensor([copy.deepcopy(decoding_factor)],).to(vae.device)
-                alpha.requires_grad = True
-                optimizer = torch.optim.Adam([alpha], lr=0.001)
-                for j in range(500):
-                    alpha_before = alpha.clone().detach()
-                    recon_pixel = alpha * recon_latent.detach()
-                    loss = torch.nn.functional.mse_loss(vae.decode(recon_pixel)['sample'],
-                                                        pixel_origin).mean()
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
-                    loss_item = loss.item()
-                    if loss.item() < 0.0001 :
-                        break
-                    if torch.isnan(alpha).any():
-                        alpha = alpha_before
-                        break
+            latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
+            collector = AttentionStore()
+            register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+            noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t, next_t)
+            recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next, scheduler)
+            pixel_origin = latent2image(latent, vae, return_type='torch')
+            alpha = torch.Tensor([copy.deepcopy(decoding_factor)],).to(vae.device)
+            alpha.requires_grad = True
+            optimizer = torch.optim.Adam([alpha], lr=0.001)
+            for j in range(500):
+                alpha_before = alpha.clone().detach()
+                recon_pixel = alpha * recon_latent.detach()
+                loss = torch.nn.functional.mse_loss(vae.decode(recon_pixel)['sample'],
+                                                    pixel_origin).mean()
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                loss_item = loss.item()
+                if loss.item() < 0.0001 :
+                    break
+                if torch.isnan(alpha).any():
+                    alpha = alpha_before
+                    break
 
 
-                inference_decoding_factor[int(present_t.item())] = alpha.clone().detach().item()
-                print(f'alpha : {alpha.clone().detach().item()}')
-                latent = latent_next
-            # ----------------------------------------------------------------------------------------------- #
-            # Testing
-            #np_img = latent2image(recon_latent , vae, return_type='np')
-            #pil_img = Image.fromarray(np_img)
-            #pil_img.save(os.path.join(save_base_folder, f'recon_{int(present_t.item())}.png'))  # 999
-            line = f'{int(present_t.item())} : {alpha.clone().detach().item()}'
-            with open(os.path.join(save_base_folder, f'inference_decoding_factor_txt.txt'), 'a') as ff:
-                ff.write(line + '\n')
+            inference_decoding_factor[int(present_t.item())] = alpha.clone().detach().item()
+            print(f'alpha : {alpha.clone().detach().item()}')
+            latent = latent_next
+        # ----------------------------------------------------------------------------------------------- #
+        # Testing
+        #np_img = latent2image(recon_latent , vae, return_type='np')
+        #pil_img = Image.fromarray(np_img)
+        #pil_img.save(os.path.join(save_base_folder, f'recon_{int(present_t.item())}.png'))  # 999
+        line = f'{int(present_t.item())} : {alpha.clone().detach().item()}'
+        with open(os.path.join(save_base_folder, f'inference_decoding_factor_txt.txt'), 'a') as ff:
+            ff.write(line + '\n')
         break
 
 
