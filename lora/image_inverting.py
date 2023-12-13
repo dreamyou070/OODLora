@@ -513,7 +513,8 @@ def main(args) :
     network.to(device)
 
     print(f' (2.4) scheduling factors')
-    vae_factor_dict = r'/data7/sooyeon/Lora/OODLora/result/inference_scheduling/inference_decoding_factor_txt.txt'
+    vae_factor_dict = r'/data7/sooyeon/Lora/OODLora/result/inference_scheduling_with_self_attention_guidance/inference_decoding_factor_txt.txt'
+
     with open(vae_factor_dict, 'r') as f:
         content = f.readlines()
     inference_decoding_factor = {}
@@ -539,7 +540,7 @@ def main(args) :
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         save_base_folder = os.path.join(output_dir,
-                                        f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
+                                        f'train/new_guidance_with_self_attn_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
         print(f' - save_base_folder : {save_base_folder}')
         os.makedirs(save_base_folder, exist_ok=True)
         train_base_folder = os.path.join(save_base_folder, concept_name)
