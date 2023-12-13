@@ -625,6 +625,7 @@ def main(args) :
         noising_alphas_cumprod_dict = {}
         noising_alphas_cumprod_dict[0] = scheduler.alphas_cumprod[0]
         vae.eval()
+        vae.requires_grad_(False)
         for i, present_t in enumerate(flip_times[:-1]):
             next_t = flip_times[i + 1]
             with torch.no_grad():
