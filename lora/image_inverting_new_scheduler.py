@@ -637,7 +637,8 @@ def main(args) :
             for j in range(10000):
                 next_latent = ((alpha/alpha_prev)**0.5) * (latent - ((1-alpha_prev)**0.5)*noise_pred) + ((1-alpha)**0.5) * noise_pred
                 noise_pred = call_unet(unet, next_latent, next_t, uncon, next_t, present_t)
-                loss = torch.nn.functional.mse_loss(next_latent, target_latent).mean()
+                origin_latent = prev_step(noise_pred,int(next_t.item()),latent,scheduler)
+                loss = torch.nn.functional.mse_loss(origin_latent, latent).mean()
                 optimizer.zero_grad()
                 loss.backward(retain_graph=True)
                 optimizer.step()
