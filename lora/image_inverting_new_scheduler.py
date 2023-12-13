@@ -457,7 +457,9 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
         #if prev_time == 0 :
-        pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+        s = os.path.join(base_folder_dir, f'recon_{prev_time}.png')
+        print(f'recon save dir : {s}')
+        pil_img.save(s)
         all_latent_dict[prev_time] = latent
 
     time_steps.append(prev_time)
@@ -771,7 +773,6 @@ def main(args) :
                                              base_folder_dir=train_base_folder,
                                              vae_factor_dict=vae_factor_dict,
                                              args=args,)
-        break
 
     """
     print(f' (3.2) test images')
