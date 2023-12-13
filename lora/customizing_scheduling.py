@@ -486,7 +486,7 @@ def main(args):
             print(f'present_t : {present_t}')
             next_t = flip_times[i + 1]
             with torch.no_grad():
-                noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
+                noise_pred = call_unet(invers_unet, latent, present_t, uncon, next_t, present_t)
             layer_names = attention_storer.self_query_store.keys()
             attention_storer.reset()
             self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
@@ -537,8 +537,6 @@ def main(args):
                 if torch.isnan(alpha).any():
                     alpha = alpha_before
                     break
-
-
             inference_decoding_factor[int(present_t.item())] = alpha.clone().detach().item()
             print(f'alpha : {alpha.clone().detach().item()}')
             latent = latent_next
