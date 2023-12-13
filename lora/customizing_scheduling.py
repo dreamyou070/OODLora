@@ -465,19 +465,13 @@ def main(args):
 
     for train_img in train_images:
         train_img_dir = os.path.join(train_img_folder, train_img)
-
         print(f' (2.3.1) get suber image')
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-
         save_base_folder = os.path.join(output_dir, f'inference_scheduling_with_self_attention_guidance')
         os.makedirs(save_base_folder, exist_ok=True)
-
         flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
-        final_time = flip_times[-1]
         uncon, con = invers_context.chunk(2)
-        original_latent = latent.clone().detach()
-
         print(f' (2.3.2) inversing')
         inference_decoding_factor = {}
         vae.eval()
@@ -488,11 +482,9 @@ def main(args):
             with torch.no_grad():
                 noise_pred = call_unet(invers_unet, latent, present_t, uncon, next_t, present_t)
             layer_names = attention_storer.self_query_store.keys()
-
             self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
             t_ = present_t.item()
             for layer in layer_names:
-                #print(f'making dictionary, layer : {layer} | t : {t_}')
                 self_query_list = attention_storer.self_query_store[layer]
                 self_key_list = attention_storer.self_key_store[layer]
                 self_value_list = attention_storer.self_value_store[layer]
@@ -502,19 +494,16 @@ def main(args):
                         self_query_dict[t_][layer] = self_query
                     else:
                         self_query_dict[t_][layer] = self_query
-
                     if t_ not in self_key_dict.keys():
                         self_key_dict[t_] = {}
                         self_key_dict[t_][layer] = self_key
                     else:
                         self_key_dict[t_][layer] = self_key
-
                     if t_ not in self_value_dict.keys():
                         self_value_dict[t_] = {}
                         self_value_dict[t_][layer] = self_value
                     else:
                         self_value_dict[t_][layer] = self_value
-                    #
             attention_storer.reset()
             latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
             collector = AttentionStore()
@@ -526,7 +515,7 @@ def main(args):
             alpha = torch.Tensor([copy.deepcopy(decoding_factor)],).to(vae.device)
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.001)
-            for j in range(1000):
+            for j in range(10000):
                 alpha_before = alpha.clone().detach()
                 recon_pixel = alpha * recon_latent.detach()
                 loss = torch.nn.functional.mse_loss(vae.decode(recon_pixel)['sample'],
@@ -534,7 +523,7 @@ def main(args):
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                if loss.item() < 0.0001 :
+                if loss.item() < 0.00005 :
                     break
                 if torch.isnan(alpha).any():
                     alpha = alpha_before
@@ -553,9 +542,9 @@ def main(args):
         break
 
 
-    """
 
-    vae_factor_dict = r'/data7/sooyeon/Lora/OODLora/result/inference_scheduling/inference_decoding_factor_txt.txt'
+
+    vae_factor_dict = os.path.join(save_base_folder, f'inference_decoding_factor_txt.txt')
     with open(vae_factor_dict, 'r') as f:
         content = f.readlines()
     inference_decoding_factor = {}
@@ -563,9 +552,7 @@ def main(args):
         line = line.strip()
         line = line.split(' : ')
         t, f = int(line[0]), float(line[1])
-        print(f't : {t}, f : {f}')
         inference_decoding_factor[t] = f
-
     print(f' (3.3) random check')
     for train_img in train_images:
         concept = train_img.split('.')[0]
@@ -598,8 +585,6 @@ def main(args):
                    vae=vae,
                    base_folder_dir=image_folder,
                    vae_factor_dict = inference_decoding_factor)
-    """
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
