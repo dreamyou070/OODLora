@@ -625,6 +625,7 @@ def main(args) :
         vae.eval()
         vae.requires_grad_(False)
         for i, present_t in enumerate(flip_times[:-1]):
+            print(f'present_t : {present_t}')
             next_t = flip_times[i + 1]
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
@@ -635,19 +636,20 @@ def main(args) :
             alpha = torch.Tensor([copy.deepcopy(decoding_factor)]).to(vae.device)
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.01)
-            for j in range(10000):
+            for j in range(1000):
                 recon_pixel = alpha * recon_latent.detach()
                 image = vae.decode(recon_pixel)['sample']
                 loss = torch.nn.functional.mse_loss(image,pixel_origin).mean()
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                if loss.item() < 0.000005 :
+                if loss.item() < 0.00005 :
                     break
                 if torch.isnan(alpha).any():
                     alpha = alpha_before
                     break
             inference_decoding_factor[int(present_t.item())] = alpha.clone().detach().item()
+            print(f'alpha : {alpha.clone().detach().item()}')
             latent = latent_next
 
             # ----------------------------------------------------------------------------------------------- #
