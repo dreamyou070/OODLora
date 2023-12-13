@@ -154,6 +154,69 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     return prev_sample
 
 
+@torch.no_grad()
+def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir):
+    uncond_embeddings, cond_embeddings = context.chunk(2)
+    time_steps = []
+    latent = latent.clone().detach()
+    latent_dict = {}
+    noise_pred_dict = {}
+    latent_dict[0] = latent
+    pil_images = []
+    with torch.no_grad():
+        np_img = latent2image(latent, vae, return_type='np')
+    pil_img = Image.fromarray(np_img)
+    pil_images.append(pil_img)
+    pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
+    flip_times = inference_times
+    repeat_time = 0
+    for i, t in enumerate(flip_times[:-1]):
+        next_time = flip_times[i + 1].item()
+        latent_dict[int(t.item())] = latent
+        time_steps.append(t.item())
+        noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
+        noise_pred_dict[int(t.item())] = noise_pred
+        latent = next_step(noise_pred, int(t.item()), latent, scheduler)
+        with torch.no_grad():
+            np_img = latent2image(latent, vae, return_type='np')
+            pil_img = Image.fromarray(np_img)
+            pil_images.append(pil_img)
+            pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
+    time_steps.append(next_time)
+    latent_dict[int(next_time)] = latent
+    return latent_dict, time_steps, pil_images
+
+@torch.no_grad()
+def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir, vae_factor_dict):
+    uncon, con = context.chunk(2)
+    latent = latent_dict[inference_times[0]]
+    all_latent_dict = {}
+    all_latent_dict[inference_times[0]] = latent
+    time_steps = []
+    pil_images = []
+    with torch.no_grad():
+        np_img = latent2image(latent, vae, return_type='np')
+    pil_img = Image.fromarray(np_img)
+    pil_images.append(pil_img)
+    pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
+    latent_y = latent.clone().detach()
+    for i, t in enumerate(inference_times[:-1]):
+        prev_time = int(inference_times[i + 1])
+        time_steps.append(int(t))
+        with torch.no_grad():
+            noise_pred = call_unet(unet, latent, t, uncon, t, prev_time)
+            latent = prev_step(noise_pred, int(t), latent, scheduler)
+            np_img = latent2image_customizing(latent, vae,
+                                              vae_factor_dict[prev_time],
+                                              return_type='np')
+        pil_img = Image.fromarray(np_img)
+        pil_images.append(pil_img)
+        if prev_time == 0 :
+            pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+        all_latent_dict[prev_time] = latent
+    time_steps.append(prev_time)
+    return all_latent_dict, time_steps, pil_images
+
 def main(args):
 
     print(f' \n step 1. setting')
@@ -279,6 +342,7 @@ def main(args):
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
     decoding_factor = 1 / 0.18215
+    """
     for train_img in train_images:
         train_img_dir = os.path.join(train_img_folder, train_img)
 
@@ -329,13 +393,56 @@ def main(args):
 
             # ----------------------------------------------------------------------------------------------- #
             # Testing
-            np_img = latent2image(recon_latent , vae, return_type='np')
-            pil_img = Image.fromarray(np_img)
-            pil_img.save(os.path.join(save_base_folder, f'recon_{int(present_t.item())}.png'))  # 999
+            #np_img = latent2image(recon_latent , vae, return_type='np')
+            #pil_img = Image.fromarray(np_img)
+            #pil_img.save(os.path.join(save_base_folder, f'recon_{int(present_t.item())}.png'))  # 999
             line = f'{int(present_t.item())} : {alpha.clone().detach().item()}'
             with open(os.path.join(save_base_folder, f'inference_decoding_factor_txt.txt'), 'a') as ff:
                 ff.write(line + '\n')
         break
+    """
+
+    vae_factor_dict = r'/data7/sooyeon/Lora/OODLora/result/inference_scheduling/inference_decoding_factor_txt.txt'
+    with open(vae_factor_dict, 'r') as f:
+        content = f.readlines()
+    inference_decoding_factor = {}
+    for line in content:
+        line = line.strip()
+        line = line.split(':')
+        inference_decoding_factor[int(line[0])] = float(line[1])
+
+    print(f' (3.3) random check')
+    for train_img in train_images:
+        concept = train_img.split('.')[0]
+        train_img_dir = os.path.join(train_img_folder, train_img)
+        print(f' (3.3.1) get suber image')
+        image_gt_np = load_512(train_img_dir)
+        latent = image2latent(image_gt_np, vae, device, weight_dtype)
+        save_base_folder = os.path.join(output_dir, f'inference_scheduling')
+        os.makedirs(save_base_folder, exist_ok=True)
+        image_folder = os.path.join(save_base_folder, f'train_image_{concept}')
+        os.makedirs(image_folder, exist_ok=True)
+        flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
+        final_time = flip_times[-1]
+        original_latent = latent.clone().detach()
+
+        print(f' (2.3.2) inversing')
+        latent_dict, time_steps, pil_images =ddim_loop(latent=original_latent,
+                                                       context=invers_context,
+                                                       inference_times = flip_times,
+                                                       scheduler=scheduler,
+                                                       unet=invers_unet,
+                                                       vae=vae,
+                                                       base_folder_dir=image_folder,)
+        recon_loop(latent_dict=latent_dict,
+                   context=invers_context,
+                   inference_times=time_steps,
+                   scheduler=scheduler,
+                   unet=invers_unet,
+                   vae=vae,
+                   base_folder_dir=image_folder,
+                   vae_factor_dict = vae_factor_dict)
+
 
 
 if __name__ == "__main__":
