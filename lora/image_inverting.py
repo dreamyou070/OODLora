@@ -377,7 +377,6 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         inference_times.reverse()
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
-        print(f't : {t} prev_time : {prev_time}')
         time_steps.append(int(t))
         with torch.no_grad():
             noise_pred = call_unet(unet, latent, t, uncon, t, prev_time)
@@ -572,24 +571,24 @@ def main(args) :
                     self_value_list = attention_storer.self_value_store[layer]
                     i = 1
                     for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
-                        time_step = time_steps[i]
-                        if time_step not in self_query_dict.keys():
-                            self_query_dict[time_step] = {}
-                            self_query_dict[time_step][layer] = self_query
+                        t_ = time_steps[i]
+                        if t_ not in self_query_dict.keys():
+                            self_query_dict[t_] = {}
+                            self_query_dict[t_][layer] = self_query
                         else:
-                            self_query_dict[time_step][layer] = self_query
+                            self_query_dict[t_][layer] = self_query
 
-                        if time_step not in self_key_dict.keys():
-                            self_key_dict[time_step] = {}
-                            self_key_dict[time_step][layer] = self_key
+                        if t_ not in self_key_dict.keys():
+                            self_key_dict[t_] = {}
+                            self_key_dict[t_][layer] = self_key
                         else:
-                            self_key_dict[time_step][layer] = self_key
+                            self_key_dict[t_][layer] = self_key
 
-                        if time_step not in self_value_dict.keys():
-                            self_value_dict[time_step] = {}
-                            self_value_dict[time_step][layer] = self_value
+                        if t_ not in self_value_dict.keys():
+                            self_value_dict[t_] = {}
+                            self_value_dict[t_][layer] = self_value
                         else:
-                            self_value_dict[time_step][layer] = self_value
+                            self_value_dict[t_][layer] = self_value
                         i += 1
                 collector = AttentionStore()
                 register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
@@ -599,8 +598,6 @@ def main(args) :
                 context = init_prompt(tokenizer, text_encoder, device, prompt)
                 collector = AttentionStore()
                 register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                time_steps.reverse()
-                print(f'time_steps : {time_steps}')
                 print(f' (2.3.2) recon')
                 recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                                      context=context,
