@@ -13,7 +13,7 @@ from PIL import Image
 import sys, importlib
 from typing import Union
 import numpy as np
-from sklearn.metrics import roc_auc_score,auc,average_precision_score
+import copy
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -632,7 +632,8 @@ def main(args) :
                 noise_pred_next = call_unet(unet, latent_next, next_t, uncon, next_t, present_t)
                 recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next,scheduler)
                 pixel_next = latent2image(latent, vae, return_type='torch')
-            alpha = decoding_factor.clone().detach()
+
+            alpha = copy.deepcopy(decoding_factor)
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.01)
             alpha_prev = noising_alphas_cumprod_dict[present_t.item()]
