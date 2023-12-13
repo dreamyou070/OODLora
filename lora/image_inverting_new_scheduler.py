@@ -627,16 +627,17 @@ def main(args) :
             next_t = flip_times[i + 1]
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
-                target_latent = next_step(noise_pred,int(present_t.item()), latent, scheduler)
+                #target_latent = next_step(noise_pred,int(present_t.item()), latent, scheduler)
             alpha = scheduler.alphas_cumprod[present_t.item()].clone().detach()
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.01)
             alpha_prev = noising_alphas_cumprod_dict[present_t.item()]
             for j in range(10000):
                 next_latent = ((alpha/alpha_prev)**0.5) * (latent - ((1-alpha_prev)**0.5)*noise_pred) + ((1-alpha)**0.5) * noise_pred
-                noise_pred = call_unet(unet, next_latent, next_t, uncon, next_t, present_t)
-                origin_latent = prev_step(noise_pred,int(next_t.item()),latent,scheduler)
-                loss = torch.nn.functional.mse_loss(origin_latent, latent).mean()
+                noise_pred_inter = call_unet(unet, next_latent, next_t, uncon, next_t, present_t)
+                #origin_latent = prev_step(noise_pred,int(next_t.item()),latent,scheduler)
+                loss = torch.nn.functional.mse_loss(noise_pred_inter, noise_pred).mean()
+                #loss = torch.nn.functional.mse_loss(next_latent, target_latent).mean()
                 optimizer.zero_grad()
                 loss.backward(retain_graph=True)
                 optimizer.step()
