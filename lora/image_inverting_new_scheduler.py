@@ -633,6 +633,7 @@ def main(args) :
             optimizer = torch.optim.Adam([alpha], lr=0.01)
             alpha_prev = noising_alphas_cumprod_dict[present_t.item()]
             for j in range(10000):
+                alpha_before = alpha.clone().detach()
                 next_latent = ((alpha/alpha_prev)**0.5) * (latent - ((1-alpha_prev)**0.5)*noise_pred) + ((1-alpha)**0.5) * noise_pred
                 noise_pred_inter = call_unet(unet, next_latent, next_t, uncon, next_t, present_t)
                 #origin_latent = prev_step(noise_pred,int(next_t.item()),latent,scheduler)
@@ -641,8 +642,11 @@ def main(args) :
                 optimizer.zero_grad()
                 loss.backward(retain_graph=True)
                 optimizer.step()
-                print(f'[loss] {loss.item()}')
                 if loss.item() < 0.000001 :
+                    break
+                if torch.isnan(alpha).any():
+                    print('break cause nan')
+                    alpha = alpha_before
                     break
             print(f'[new alpha] {next_t.item()} : {alpha.item()}')
             noising_alphas_cumprod_dict[next_t.item()] = alpha
