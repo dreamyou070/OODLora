@@ -639,7 +639,7 @@ def main(args) :
                 noise_pred = call_unet(unet, next_latent, next_t, uncon, next_t, present_t)
                 loss = torch.nn.functional.mse_loss(next_latent, target_latent).mean()
                 optimizer.zero_grad()
-                loss.backward()
+                loss.backward(retain_graph=True)
                 optimizer.step()
                 if loss.item() < 0.000001 :
                     break
