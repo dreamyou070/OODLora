@@ -363,6 +363,9 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
 @torch.no_grad()
 def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir, vae_factor_dict):
     uncon, con = context.chunk(2)
+    if inference_times[0] < inference_times[1] :
+        inference_times.reverse()
+    inference_times = inference_times[1:]
     latent = latent_dict[inference_times[0]]
     all_latent_dict = {}
     all_latent_dict[inference_times[0]] = latent
@@ -373,8 +376,6 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
-    if inference_times[0] < inference_times[1] :
-        inference_times.reverse()
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
@@ -383,7 +384,6 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             latent = prev_step(noise_pred, int(t), latent, scheduler)
             factor = float(vae_factor_dict[prev_time])
             if args.using_customizing_scheduling :
-                print('using customizing scheduling')
                 np_img = latent2image_customizing(latent, vae, factor,return_type='np')
             else :
                 np_img = latent2image(latent, vae, return_type='np')
@@ -570,7 +570,7 @@ def main(args) :
                     self_query_list = attention_storer.self_query_store[layer]
                     self_key_list = attention_storer.self_key_store[layer]
                     self_value_list = attention_storer.self_value_store[layer]
-                    i = 1
+                    i = 0
                     for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
                         t_ = time_steps[i]
                         if t_ not in self_query_dict.keys():
