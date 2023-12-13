@@ -206,9 +206,8 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         with torch.no_grad():
             noise_pred = call_unet(unet, latent, t, uncon, t, prev_time)
             latent = prev_step(noise_pred, int(t), latent, scheduler)
-            np_img = latent2image_customizing(latent, vae,
-                                              vae_factor_dict[prev_time],
-                                              return_type='np')
+            factor = float(vae_factor_dict[prev_time])
+            np_img = latent2image_customizing(latent, vae,factor,return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
         if prev_time == 0 :
