@@ -594,7 +594,7 @@ def main(args) :
     prompt = args.prompt
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
     context = init_prompt(tokenizer, text_encoder, device, prompt)
-    """
+
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
@@ -604,22 +604,57 @@ def main(args) :
         print(f' (2.3.1) inversion')
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        if args.latent_coupling:
-            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_dynamic_p')
-        elif args.classifier_free_guidance_infer and args.using_customizing_scheduling:
-            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling_lora_noising')
+        #if args.latent_coupling:
+        #    save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_dynamic_p')
+        #elif args.classifier_free_guidance_infer and args.using_customizing_scheduling:
+        #    save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling_lora_noising')
         #elif args.using_customizing_scheduling :
         #    save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_customizing_scheduling')
+        save_base_folder = os.path.join(output_dir,
+                                        f'train/noising_scheduling_test')
         print(f'save_base_folder : {save_base_folder}')
         os.makedirs(save_base_folder, exist_ok=True)
         train_base_folder = os.path.join(save_base_folder, concept_name)
         os.makedirs(train_base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
-        flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980]
+        flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
         original_latent = latent.clone().detach()
         final_time = flip_times[-1]
         timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
         os.makedirs(timewise_save_base_folder, exist_ok=True)
+        uncon, con = invers_context.chunk(2)
+        noising_alphas_cumprod_dict = {}
+        noising_alphas_cumprod_dict[0] = scheduler.alphas_cumprod[0]
+        for i, present_t in enumerate(flip_times[:-1]):
+            next_t = flip_times[i + 1]
+            with torch.no_grad():
+                noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
+                target_latent = next_step(noise_pred,int(present_t.item()), latent, scheduler)
+            alpha = scheduler.alphas_cumprod[present_t.item()].clone().detach()
+            alpha.requires_grad = True
+            optimizer = torch.optim.Adam([alpha], lr=0.01)
+            alpha_prev = noising_alphas_cumprod_dict[present_t.item()]
+            for j in range(10000):
+                next_latent = ((alpha/alpha_prev)**0.5) * (latent - ((1-alpha_prev)**0.5)*noise_pred) + ((1-alpha)**0.5) * noise_pred
+                noise_pred = call_unet(unet, next_latent, next_t, uncon, next_t, present_t)
+                loss = torch.nn.functional.mse_loss(next_latent, target_latent).mean()
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                if loss.item() < 0.000001 :
+                    break
+            print(f'[new alpha] {next_t.item()} : {alpha.item()}')
+            noising_alphas_cumprod_dict[next_t.item()] = alpha
+            latent = next_latent
+        break
+        """        
+            
+                
+        
+        
+        
+        
+        
         latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
                                                         context=invers_context,
                                                         #context=context,
@@ -715,6 +750,7 @@ def main(args) :
                                              base_folder_dir=timewise_save_base_folder,
                                              alpha_dict=inference_alpha_dict,)
         break
+        """
     """
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
@@ -906,6 +942,7 @@ def main(args) :
                                                          alpha_dict=inference_alpha_dict, )
             break
         break
+    """
 
 
 if __name__ == "__main__":
