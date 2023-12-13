@@ -528,7 +528,6 @@ def main(args):
                 recon_pixel = alpha * recon_latent.detach()
                 loss = torch.nn.functional.mse_loss(vae.decode(recon_pixel)['sample'],
                                                     pixel_origin).mean()
-                print(f'loss : {loss.item()}')
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
