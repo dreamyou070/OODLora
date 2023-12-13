@@ -637,6 +637,7 @@ def main(args) :
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.01)
             for j in range(1000):
+                alpha_before = alpha.clone().detach()
                 recon_pixel = alpha * recon_latent.detach()
                 image = vae.decode(recon_pixel)['sample']
                 loss = torch.nn.functional.mse_loss(image,pixel_origin).mean()
