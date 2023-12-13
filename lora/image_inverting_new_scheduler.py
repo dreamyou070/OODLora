@@ -643,7 +643,7 @@ def main(args) :
                     image = vae.decode(recon_pixel)['sample']
                 loss = torch.nn.functional.mse_loss(image, pixel_next).mean()
                 optimizer.zero_grad()
-                loss.backward(retain_graph=True)
+                loss.backward()
                 optimizer.step()
                 if loss.item() < 0.000001 :
                     break
