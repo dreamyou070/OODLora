@@ -354,7 +354,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
             repeat_time += 1
-    time_steps.append(next_time)
+    #time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
     latent_dict_keys = latent_dict.keys()
     return latent_dict, time_steps, pil_images
@@ -380,7 +380,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
         with torch.no_grad():
-            noise_pred = call_unet(unet, latent, t, uncon, t, prev_time)
+            noise_pred = call_unet(unet, latent, t, con, t, prev_time)
             latent = prev_step(noise_pred, int(t), latent, scheduler)
             factor = float(vae_factor_dict[prev_time])
             if args.using_customizing_scheduling :
@@ -591,6 +591,7 @@ def main(args) :
                         else:
                             self_value_dict[t_][layer] = self_value
                         i += 1
+                        print(f'make self cond, t_ {t_}')
                 collector = AttentionStore()
                 register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                 time_steps.reverse()
