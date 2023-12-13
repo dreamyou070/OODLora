@@ -446,6 +446,7 @@ def main(args):
     print(f' (2.5.3) apply trained state dict')
     network.apply_to(text_encoder, unet, True, True)
     if args.network_weights is not None:
+        print(f'Loading Network Weights')
         info = network.load_weights(args.network_weights)
     network.to(device)
 
@@ -468,7 +469,9 @@ def main(args):
         print(f' (2.3.1) get suber image')
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        save_base_folder = os.path.join(output_dir, f'inference_scheduling_with_self_attention_guidance')
+        parent, network_name = os.path.split(args.network_weights)
+        name, ext = os.path.splitext(network_name)
+        save_base_folder = os.path.join(parent, f'inference_scheduling')
         os.makedirs(save_base_folder, exist_ok=True)
         flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
         uncon, con = invers_context.chunk(2)
@@ -542,8 +545,6 @@ def main(args):
         break
 
 
-
-
     vae_factor_dict = os.path.join(save_base_folder, f'inference_decoding_factor_txt.txt')
     with open(vae_factor_dict, 'r') as f:
         content = f.readlines()
@@ -561,9 +562,9 @@ def main(args):
         print(f' (3.3.1) get suber image')
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        save_base_folder = os.path.join(output_dir, f'inference_scheduling')
-        os.makedirs(save_base_folder, exist_ok=True)
-        image_folder = os.path.join(save_base_folder, f'train_image_{concept}')
+        base_folder = os.path.join(save_base_folder, f'inference_scheduling')
+        os.makedirs(base_folder, exist_ok=True)
+        image_folder = os.path.join(base_folder, f'train_image_{concept}')
         os.makedirs(image_folder, exist_ok=True)
         flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
         final_time = flip_times[-1]
@@ -586,6 +587,7 @@ def main(args):
                    vae=vae,
                    base_folder_dir=image_folder,
                    vae_factor_dict = inference_decoding_factor)
+        
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
