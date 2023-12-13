@@ -310,7 +310,7 @@ def main(args):
             alpha = torch.Tensor([copy.deepcopy(decoding_factor)]).to(vae.device)
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.01)
-            for j in range(1000):
+            for j in range(500):
                 alpha_before = alpha.clone().detach()
                 recon_pixel = alpha * recon_latent.detach()
                 image = vae.decode(recon_pixel)['sample']
