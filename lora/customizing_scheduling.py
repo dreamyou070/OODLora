@@ -484,7 +484,7 @@ def main(args):
         vae.eval()
         vae.requires_grad_(False)
         for i, present_t in enumerate(flip_times[:-1]):
-            print(f'present_t : {present_t}')
+            #print(f'present_t : {present_t}')
             next_t = flip_times[i + 1]
             with torch.no_grad():
                 noise_pred = call_unet(invers_unet, latent, present_t, uncon, next_t, present_t)
@@ -493,7 +493,7 @@ def main(args):
             self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
             t_ = present_t.item()
             for layer in layer_names:
-                print(f'making dictionary, layer : {layer} | t : {t_}')
+                #print(f'making dictionary, layer : {layer} | t : {t_}')
                 self_query_list = attention_storer.self_query_store[layer]
                 self_key_list = attention_storer.self_key_store[layer]
                 self_value_list = attention_storer.self_value_store[layer]
@@ -519,7 +519,6 @@ def main(args):
             attention_storer.reset()
             latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
             collector = AttentionStore()
-            print(f'keys of self_query_dict : {self_query_dict.keys()}')
             register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
             noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t.item(), next_t.item())
 
@@ -528,7 +527,7 @@ def main(args):
             alpha = torch.Tensor([copy.deepcopy(decoding_factor)],).to(vae.device)
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.001)
-            for j in range(1):
+            for j in range(1000):
                 alpha_before = alpha.clone().detach()
                 recon_pixel = alpha * recon_latent.detach()
                 loss = torch.nn.functional.mse_loss(vae.decode(recon_pixel)['sample'],
@@ -542,16 +541,16 @@ def main(args):
                     alpha = alpha_before
                     break
             inference_decoding_factor[int(present_t.item())] = alpha.clone().detach().item()
-            print(f'alpha : {alpha.clone().detach().item()}')
+            #print(f'alpha : {alpha.clone().detach().item()}')
             latent = latent_next
-        # ----------------------------------------------------------------------------------------------- #
-        # Testing
-        #np_img = latent2image(recon_latent , vae, return_type='np')
-        #pil_img = Image.fromarray(np_img)
-        #pil_img.save(os.path.join(save_base_folder, f'recon_{int(present_t.item())}.png'))  # 999
-        line = f'{int(present_t.item())} : {alpha.clone().detach().item()}'
-        with open(os.path.join(save_base_folder, f'inference_decoding_factor_txt.txt'), 'a') as ff:
-            ff.write(line + '\n')
+            # ----------------------------------------------------------------------------------------------- #
+            # Testing
+            #np_img = latent2image(recon_latent , vae, return_type='np')
+            #pil_img = Image.fromarray(np_img)
+            #pil_img.save(os.path.join(save_base_folder, f'recon_{int(present_t.item())}.png'))  # 999
+            line = f'{int(present_t.item())} : {alpha.clone().detach().item()}'
+            with open(os.path.join(save_base_folder, f'inference_decoding_factor_txt.txt'), 'a') as ff:
+                ff.write(line + '\n')
         break
 
 
