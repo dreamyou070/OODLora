@@ -337,8 +337,6 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
-    #inference_times = torch.cat([torch.Tensor([999]), inference_times])
-    #flip_times = torch.flip(inference_times, dims=[0])
     flip_times = inference_times
     repeat_time = 0
     for i, t in enumerate(flip_times[:-1]):
@@ -346,14 +344,14 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             next_time = flip_times[i + 1].item()
             latent_dict[int(t.item())] = latent
             time_steps.append(t.item())
-            # con_noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
-            # uncon_noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
-            # if -1 only con, if 0, only uncon
-            # noise_pred = uncon_noise_pred - args.inversion_weight * (con_noise_pred - uncon_noise_pred)
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[int(t.item())] = noise_pred
             latent = next_step(noise_pred, int(t.item()), latent, scheduler)
 
+            np_img = latent2image(latent, vae, return_type='np')
+            pil_img = Image.fromarray(np_img)
+            pil_images.append(pil_img)
+            pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
@@ -382,7 +380,10 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             noise_pred = call_unet(unet, latent, t, uncon, t, prev_time)
             latent = prev_step(noise_pred, int(t), latent, scheduler)
             factor = float(vae_factor_dict[prev_time])
-            np_img = latent2image_customizing(latent, vae,factor,return_type='np')
+            if args.using_customizing_scheduling :
+                np_img = latent2image_customizing(latent, vae,factor,return_type='np')
+            else :
+                np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
         pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
@@ -859,7 +860,9 @@ if __name__ == "__main__":
     parser.add_argument("--self_key_control", action='store_true')
     parser.add_argument("--inversion_experiment", action="store_true",)
     parser.add_argument("--repeat_time", type=int, default=1)
-    parser.add_argument("--inversion_weight", type=float, default=3.0)
+    parser.add_argument("--using_customizing_scheduling", action="store_true",)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
+
+
