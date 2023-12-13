@@ -488,7 +488,7 @@ def main(args):
             with torch.no_grad():
                 noise_pred = call_unet(invers_unet, latent, present_t, uncon, next_t, present_t)
             layer_names = attention_storer.self_query_store.keys()
-            attention_storer.reset()
+
             self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
             for layer in layer_names:
                 self_query_list = attention_storer.self_query_store[layer]
@@ -514,6 +514,7 @@ def main(args):
                     else:
                         self_value_dict[t_][layer] = self_value
                     #
+            attention_storer.reset()
             latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
             collector = AttentionStore()
             register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
