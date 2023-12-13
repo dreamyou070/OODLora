@@ -617,13 +617,11 @@ def main(args) :
         os.makedirs(train_base_folder, exist_ok=True)
         # time_steps = 0,20,..., 980
         flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
-        original_latent = latent.clone().detach()
         final_time = flip_times[-1]
         timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
         os.makedirs(timewise_save_base_folder, exist_ok=True)
         uncon, con = invers_context.chunk(2)
-        noising_alphas_cumprod_dict = {}
-        noising_alphas_cumprod_dict[0] = scheduler.alphas_cumprod[0]
+        inference_decoding_factor = {}
         vae.eval()
         vae.requires_grad_(False)
         for i, present_t in enumerate(flip_times[:-1]):
@@ -633,30 +631,27 @@ def main(args) :
                 latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
                 noise_pred_next = call_unet(unet, latent_next, next_t, uncon, next_t, present_t)
                 recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next,scheduler)
-                pixel_next = latent2image(latent, vae, return_type='torch')
-
+                pixel_origin = latent2image(latent, vae, return_type='torch')
             alpha = torch.Tensor([copy.deepcopy(decoding_factor)]).to(vae.device)
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.01)
-            alpha_prev = noising_alphas_cumprod_dict[present_t.item()]
             for j in range(10000):
                 recon_pixel = alpha * recon_latent.detach()
-                #with torch.no_grad():
                 image = vae.decode(recon_pixel)['sample']
-                loss = torch.nn.functional.mse_loss(image, pixel_next).mean()
+                loss = torch.nn.functional.mse_loss(image,pixel_origin).mean()
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                print(f'iteration : {j} : loss : {loss.item()} | alpha : {alpha.item()}')
-                if loss.item() < 0.000001 :
+                if loss.item() < 0.000005 :
                     break
                 if torch.isnan(alpha).any():
-                    print('break cause nan')
                     alpha = alpha_before
                     break
-            print(f'[new alpha] {next_t.item()} : {alpha.item()}')
-            noising_alphas_cumprod_dict[next_t.item()] = alpha
-            latent = next_latent
+            inference_decoding_factor[int(present_t.item())] = alpha.clone().detach().item()
+            latent = latent_next
+        # saving off line
+        with open(os.path.join(timewise_save_base_folder, f'inference_decoding_factor.json'), 'w') as f:
+            json.dump(inference_decoding_factor, f, indent = 4)
         break
         """        
             
