@@ -514,12 +514,12 @@ def main(args):
                         else:
                             self_value_dict[t_][layer] = self_value
                     #
-                    latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
-                    collector = AttentionStore()
-                    register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                    noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t, next_t)
-                    recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next,scheduler)
-                    pixel_origin = latent2image(latent, vae, return_type='torch')
+                latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
+                collector = AttentionStore()
+                register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t, next_t)
+                recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next,scheduler)
+                pixel_origin = latent2image(latent, vae, return_type='torch')
                 alpha = torch.Tensor([copy.deepcopy(decoding_factor)]).to(vae.device)
                 alpha.requires_grad = True
                 optimizer = torch.optim.Adam([alpha], lr=0.01)
@@ -531,7 +531,7 @@ def main(args):
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
-                    if loss.item() < 0.00005 :
+                    if loss.item() < 0.0001 :
                         break
                     if torch.isnan(alpha).any():
                         alpha = alpha_before
