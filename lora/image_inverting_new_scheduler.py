@@ -618,7 +618,7 @@ def main(args) :
         # time_steps = 0,20,..., 980
         flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
         final_time = flip_times[-1]
-        timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
+        timewise_save_base_folder = os.path.join(save_base_folder,f'new_scheduling_check')
         os.makedirs(timewise_save_base_folder, exist_ok=True)
         uncon, con = invers_context.chunk(2)
         inference_decoding_factor = {}
@@ -649,6 +649,15 @@ def main(args) :
                     break
             inference_decoding_factor[int(present_t.item())] = alpha.clone().detach().item()
             latent = latent_next
+
+            # ----------------------------------------------------------------------------------------------- #
+            # Testing
+            np_img = latent2image(recon_latent , vae, return_type='np')
+            pil_img = Image.fromarray(np_img)
+            pil_img.save(os.path.join(timewise_save_base_folder, f'recon_{int(present_t.item())}.png'))  # 999
+            line = f'{int(present_t.item())} : {alpha.clone().detach().item()}'
+            with open(os.path.join(timewise_save_base_folder, f'inference_decoding_factor_txt.txt'), 'a') as ff:
+                ff.write(line + '\n')
         # saving off line
         with open(os.path.join(timewise_save_base_folder, f'inference_decoding_factor.json'), 'w') as f:
             json.dump(inference_decoding_factor, f, indent = 4)
