@@ -163,7 +163,6 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
 
-
             if not is_cross_attention:
                 if trg_indexs_list > args.threshold_time or mask == 0 :
                     if hidden_states.shape[0] == 2 :
@@ -313,18 +312,16 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     prev_sample = alpha_prod_t_prev_matrix ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
 
-def inter_step(model_output: Union[torch.FloatTensor, np.ndarray],
-              timestep: int,
-              sample: Union[torch.FloatTensor, np.ndarray],
-              scheduler):
-    timestep, prev_timestep = timestep, max( timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 0)
-    alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
-    alpha_prod_t_prev = scheduler.alphas_cumprod[prev_timestep]
-    a_t = (alpha_prod_t_prev/alpha_prod_t) ** 0.5
-    beta_prod_t = 1 - alpha_prod_t
-    b_t = -1 * (((beta_prod_t*alpha_prod_t_prev)/alpha_prod_t)**0.5) + (1-alpha_prod_t_prev)**0.5
-    inter_sample = a_t * sample + b_t * model_output
-    return inter_sample
+@torch.no_grad()
+def latent2image_customizing(latents, vae, factor, return_type='np'):
+    latents = factor * latents.detach()
+    image = vae.decode(latents)['sample']
+    if return_type == 'np':
+        image = (image / 2 + 0.5).clamp(0, 1)
+        image = image.cpu().permute(0, 2, 3, 1).numpy()[0]
+        image = (image * 255).astype(np.uint8)
+    return image
+
 
 @torch.no_grad()
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
@@ -363,8 +360,10 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     latent_dict_keys = latent_dict.keys()
     return latent_dict, time_steps, pil_images
 
+
 @torch.no_grad()
-def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir):
+def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir, vae_factor_dict):
+    uncon, con = context.chunk(2)
     latent = latent_dict[inference_times[0]]
     all_latent_dict = {}
     all_latent_dict[inference_times[0]] = latent
@@ -379,55 +378,14 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
-
-        if args.classifier_free_guidance_infer :
-            if t > args.cfg_check :
-                input_latent = torch.cat([latent] * 2)
-                trg_latent = latent_dict[prev_time]
-                noise_pred = call_unet(unet, input_latent, t, context, t, prev_time)
-                guidance_scales = [-80, -70,-60,-50,-40,-30,-20,-10,0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, 9, 10, 11, 12, 13, 14, 15, 16,17,18,19,20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80]
-                latent_diff_dict = {}
-                latent_dictionary = {}
-                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                for guidance_scale in guidance_scales:
-                    inter_noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-                    latent_diff = torch.nn.functional.mse_loss(prev_step(inter_noise_pred, int(t), latent, scheduler).float(),
-                                                               trg_latent.float(),
-                                                               reduction='none')
-                    latent_diff_dict[guidance_scale] = latent_diff.mean()
-                    latent_dictionary[guidance_scale] = inter_noise_pred
-                best_guidance_scale = sorted(latent_diff_dict.items(), key=lambda x : x[1].item())[0][0]
-                noise_pred = latent_dictionary[best_guidance_scale]
-                latent = prev_step(noise_pred, int(t), latent, scheduler)
-            else :
-                uncon, con = context.chunk(2)
-                noise_pred = call_unet(unet, latent, t, con, t, prev_time)
-                latent = prev_step(noise_pred, int(t), latent, scheduler)
-        if args.latent_coupling:
-            trg_latent = latent_dict[prev_time]
-            latent_loss_dict = {}
-            latent_dictionary = {}
-            uncon, con = context.chunk(2)
-            noise_pred_y = call_unet(unet, latent_y,       t, con, t, prev_time)
-            latent_x_inter = inter_step(noise_pred_y,int(t),latent, scheduler)
-            noise_pred_x = call_unet(unet, latent_x_inter, t, con, t, prev_time)
-            latent_y_inter =  inter_step(noise_pred_x,int(t),latent, scheduler)
-            for p in [0.8, 0.85, 0.9, 0.95, 0.98]:
-                latent_y = args.p * latent_y_inter + (1 - args.p) * latent_x_inter
-                latent_x =   args.p * latent_x_inter + (1 - args.p) * latent_y_inter
-                latent_loss = torch.nn.functional.mse_loss(latent_x,
-                                                           trg_latent, reduction='none')
-                latent_loss_dict[p] = latent_loss.mean()
-                latent_dictionary[p] = latent_x
-            best_p = sorted(latent_loss_dict.items(), key=lambda x : x[1].item())[0][0]
-            latent = latent_dictionary[best_p]
-            # trg_latent
         with torch.no_grad():
-            np_img = latent2image(latent, vae, return_type='np')
+            noise_pred = call_unet(unet, latent, t, uncon, t, prev_time)
+            latent = prev_step(noise_pred, int(t), latent, scheduler)
+            factor = float(vae_factor_dict[prev_time])
+            np_img = latent2image_customizing(latent, vae,factor,return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        if prev_time == 0 :
-            pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+        pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
         all_latent_dict[prev_time] = latent
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
@@ -529,7 +487,6 @@ def main(args) :
         text_encoders = [text_encoder]
     attention_storer = AttentionStore()
     register_attention_control(invers_unet, attention_storer)
-    #register_attention_control(unet, attention_storer)
     print(f' (2.5) network')
     sys.path.append(os.path.dirname(__file__))
     network_module = importlib.import_module(args.network_module)
@@ -549,11 +506,23 @@ def main(args) :
                                                 args.network_alpha,
                                                 vae, text_encoder, unet, neuron_dropout=args.network_dropout,
                                                 **net_kwargs, )
-    print(f' (1.3.4) apply trained state dict')
+    print(f' (2.3.4) apply trained state dict')
     network.apply_to(text_encoder, unet, True, True)
     if args.network_weights is not None:
         info = network.load_weights(args.network_weights)
     network.to(device)
+
+    print(f' (2.4) scheduling factors')
+    vae_factor_dict = r'/data7/sooyeon/Lora/OODLora/result/inference_scheduling/inference_decoding_factor_txt.txt'
+    with open(vae_factor_dict, 'r') as f:
+        content = f.readlines()
+    inference_decoding_factor = {}
+    for line in content:
+        line = line.strip()
+        line = line.split(' : ')
+        t, f = int(line[0]), float(line[1])
+        print(f't : {t}, f : {f}')
+        inference_decoding_factor[t] = f
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
@@ -570,43 +539,72 @@ def main(args) :
         print(f' (2.3.1) inversion')
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        if args.latent_coupling:
-            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_dynamic_p')
-        if args.classifier_free_guidance_infer:
-            save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
-        print(f'save_base_folder : {save_base_folder}')
+        save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
+        print(f' - save_base_folder : {save_base_folder}')
         os.makedirs(save_base_folder, exist_ok=True)
         train_base_folder = os.path.join(save_base_folder, concept_name)
         os.makedirs(train_base_folder, exist_ok=True)
-        # time_steps = 0,20,..., 980
         inference_times = torch.cat([torch.tensor([999]), inference_times, ], dim=0)
         flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
         original_latent = latent.clone().detach()
         for ii, final_time in enumerate(flip_times[1:]):
-            timewise_save_base_folder = os.path.join(train_base_folder, f'final_time_{final_time.item()}')
-            os.makedirs(timewise_save_base_folder, exist_ok=True)
-            latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
-                                                            context=invers_context,
-                                                            inference_times=flip_times[:ii + 2],
-                                                            scheduler=scheduler,
-                                                            unet=invers_unet,
-                                                            vae=vae,
-                                                            base_folder_dir=timewise_save_base_folder,
-                                                            attention_storer=attention_storer)
-            # timesteps = [0,20]
-            context = init_prompt(tokenizer, text_encoder, device, prompt)
-            collector = AttentionStore()
-            # register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-            time_steps.reverse()
-            print(f' (2.3.2) recon')
-            recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
-                                                 context=context,
-                                                 inference_times=time_steps,  # [20,0]
-                                                 scheduler=scheduler,
-                                                 unet=unet,
-                                                 vae=vae,
-                                                 base_folder_dir=timewise_save_base_folder, )
-            attention_storer.reset()
+            if final_time == 999:
+                timewise_save_base_folder = os.path.join(train_base_folder, f'final_time_{final_time.item()}')
+                os.makedirs(timewise_save_base_folder, exist_ok=True)
+                latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
+                                                                context=invers_context,
+                                                                inference_times=flip_times[:ii + 2],
+                                                                scheduler=scheduler,
+                                                                unet=invers_unet,
+                                                                vae=vae,
+                                                                base_folder_dir=timewise_save_base_folder,
+                                                                attention_storer=attention_storer)
+                # self query / key / value dictionary
+                layer_names = attention_storer.self_query_store.keys()
+                self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
+                for layer in layer_names:
+                    self_query_list = attention_storer.self_query_store[layer]
+                    self_key_list = attention_storer.self_key_store[layer]
+                    self_value_list = attention_storer.self_value_store[layer]
+                    i = 1
+                    for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
+                        time_step = time_steps[i]
+                        if time_step not in self_query_dict.keys():
+                            self_query_dict[time_step] = {}
+                            self_query_dict[time_step][layer] = self_query
+                        else:
+                            self_query_dict[time_step][layer] = self_query
+
+                        if time_step not in self_key_dict.keys():
+                            self_key_dict[time_step] = {}
+                            self_key_dict[time_step][layer] = self_key
+                        else:
+                            self_key_dict[time_step][layer] = self_key
+
+                        if time_step not in self_value_dict.keys():
+                            self_value_dict[time_step] = {}
+                            self_value_dict[time_step][layer] = self_value
+                        else:
+                            self_value_dict[time_step][layer] = self_value
+                        i += 1
+                collector = AttentionStore()
+                register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                time_steps.reverse()
+
+                # timesteps = [0,20]
+                context = init_prompt(tokenizer, text_encoder, device, prompt)
+                collector = AttentionStore()
+                register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                time_steps.reverse()
+                print(f' (2.3.2) recon')
+                recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
+                                                     context=context,
+                                                     inference_times=time_steps,  # [20,0]
+                                                     scheduler=scheduler,
+                                                     unet=unet,
+                                                     vae=vae,
+                                                     base_folder_dir=timewise_save_base_folder, )
+                attention_storer.reset()
 
         """
         layer_names = attention_storer.self_query_store.keys()
@@ -649,7 +647,7 @@ def main(args) :
         with open(os.path.join(train_base_folder, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
         """
-
+    """
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
     test_base_folder = os.path.join(output_dir, 'test')
@@ -705,7 +703,7 @@ def main(args) :
                                                       vae = vae,
                                                       base_folder_dir=timewise_save_base_folder,)
                 attention_storer.reset()
-    """
+    
             # time_steps = 0,20,..., 980
             latent_dict, time_steps, pil_images = ddim_loop(latent,
                                                             invers_context,
@@ -859,14 +857,8 @@ if __name__ == "__main__":
     parser.add_argument("--folder_name", type=str)
     parser.add_argument("--guidance_scale", type=float, default=7.5)
     parser.add_argument("--self_key_control", action='store_true')
-    parser.add_argument("--threshold_time", type=int, default = 900)
     parser.add_argument("--inversion_experiment", action="store_true",)
     parser.add_argument("--repeat_time", type=int, default=1)
-    parser.add_argument("--latent_coupling", action="store_true",)
-    parser.add_argument("--classifier_free_guidance_infer", action="store_true", )
-    parser.add_argument("--p", type=float, default=0.3)
-
-    parser.add_argument("--cfg_check", type=int, default=200)
     parser.add_argument("--inversion_weight", type=float, default=3.0)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)

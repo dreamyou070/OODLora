@@ -210,8 +210,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             np_img = latent2image_customizing(latent, vae,factor,return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        if prev_time == 0 :
-            pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+        pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
         all_latent_dict[prev_time] = latent
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
