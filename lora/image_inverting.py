@@ -373,6 +373,8 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
+    if inference_times[0] < inference_times[1] :
+        inference_times.reverse()
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
         print(f't : {t} prev_time : {prev_time}')
