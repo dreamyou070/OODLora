@@ -521,7 +521,7 @@ def main(args):
             collector = AttentionStore()
             print(f'keys of self_query_dict : {self_query_dict.keys()}')
             register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-            noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t, next_t)
+            noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t.item(), next_t.item())
 
             recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next, scheduler)
             pixel_origin = latent2image(latent, vae, return_type='torch')
