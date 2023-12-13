@@ -528,10 +528,12 @@ def main(args):
 
                     recon_pixel = alpha * recon_latent.detach()
                     image = vae.decode(recon_pixel)['sample']
-                    loss = torch.nn.functional.mse_loss(image,pixel_origin).mean()
+                    loss = torch.nn.functional.mse_loss(image,
+                                                        pixel_origin).mean()
                     optimizer.zero_grad()
                     print(f'loss : {loss.item()}')
-                    loss.backward(retain_graph=True)
+                    loss.requires_grad = True
+                    loss.backward()
                     optimizer.step()
                     if loss.item() < 0.0001 :
                         break
