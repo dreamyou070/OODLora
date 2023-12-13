@@ -483,7 +483,7 @@ def main(args):
                 noise_pred = call_unet(invers_unet, latent, present_t, uncon, next_t, present_t)
             layer_names = attention_storer.self_query_store.keys()
             self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
-            t_ = present_t.item()
+            t_ = next_t.item()
             for layer in layer_names:
                 self_query_list = attention_storer.self_query_store[layer]
                 self_key_list = attention_storer.self_key_store[layer]
@@ -508,8 +508,8 @@ def main(args):
             latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
             collector = AttentionStore()
             register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-            noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t.item(), next_t.item())
-
+            #noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t.item(), next_t.item())
+            noise_pred_next = call_unet(unet, latent_next, next_t, uncon, next_t.item(), next_t.item())
             recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next, scheduler)
             pixel_origin = latent2image(latent, vae, return_type='torch')
             alpha = torch.Tensor([copy.deepcopy(decoding_factor)],).to(vae.device)
