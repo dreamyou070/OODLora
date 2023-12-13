@@ -605,7 +605,8 @@ def main(args) :
                                                      scheduler=scheduler,
                                                      unet=unet,
                                                      vae=vae,
-                                                     base_folder_dir=timewise_save_base_folder, )
+                                                     base_folder_dir=timewise_save_base_folder,
+                                                     vae_factor_dict = inference_decoding_factor)
                 attention_storer.reset()
 
         """
