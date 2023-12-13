@@ -633,7 +633,7 @@ def main(args) :
                 recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next,scheduler)
                 pixel_next = latent2image(latent, vae, return_type='torch')
 
-            alpha = torch.Tensor([copy.deepcopy(decoding_factor)])
+            alpha = torch.Tensor([copy.deepcopy(decoding_factor)]).to(vae.device)
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.01)
             alpha_prev = noising_alphas_cumprod_dict[present_t.item()]
