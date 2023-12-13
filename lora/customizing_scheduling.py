@@ -553,6 +553,7 @@ def main(args):
         line = line.split(' : ')
         t, f = int(line[0]), float(line[1])
         inference_decoding_factor[t] = f
+
     print(f' (3.3) random check')
     for train_img in train_images:
         concept = train_img.split('.')[0]
