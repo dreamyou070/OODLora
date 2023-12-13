@@ -574,7 +574,6 @@ def main(args) :
             save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_dynamic_p')
         if args.classifier_free_guidance_infer:
             save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
-
         print(f'save_base_folder : {save_base_folder}')
         os.makedirs(save_base_folder, exist_ok=True)
         train_base_folder = os.path.join(save_base_folder, concept_name)
@@ -608,7 +607,7 @@ def main(args) :
                                                  vae=vae,
                                                  base_folder_dir=timewise_save_base_folder, )
             attention_storer.reset()
-        break
+
         """
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
@@ -706,8 +705,6 @@ def main(args) :
                                                       vae = vae,
                                                       base_folder_dir=timewise_save_base_folder,)
                 attention_storer.reset()
-            break
-        break
     """
             # time_steps = 0,20,..., 980
             latent_dict, time_steps, pil_images = ddim_loop(latent,
