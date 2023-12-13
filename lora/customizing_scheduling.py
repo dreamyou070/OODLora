@@ -136,7 +136,126 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     next_sample = alpha_prod_t_next_matrix ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
+def register_attention_control(unet : nn.Module, controller:AttentionStore) :
+    """ Register cross attention layers to controller. """
+    def ca_forward(self, layer_name):
 
+        def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
+            is_cross_attention = False
+            if context is not None:
+                is_cross_attention = True
+            query = self.to_q(hidden_states)
+            context = context if context is not None else hidden_states
+            key = self.to_k(context)
+            value = self.to_v(context)
+
+            query = self.reshape_heads_to_batch_dim(query)
+            key = self.reshape_heads_to_batch_dim(key)
+            value = self.reshape_heads_to_batch_dim(value)
+
+            if self.upcast_attention:
+                query = query.float()
+                key = key.float()
+            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                                                         device=query.device),
+                                             query,key.transpose(-1, -2),beta=0,alpha=self.scale, )
+            attention_probs = attention_scores.softmax(dim=-1)
+            attention_probs = attention_probs.to(value.dtype)
+
+            if not is_cross_attention:
+                # when self attention
+                controller.self_query_key_value_caching(query_value=query.detach().cpu(),
+                                                        key_value=key.detach().cpu(),
+                                                        value_value=value.detach().cpu(),
+                                                        layer_name=layer_name)
+            if is_cross_attention :
+                controller.cross_key_caching(key_value=query.detach().cpu(),
+                                             layer_name=layer_name)
+
+            hidden_states = torch.bmm(attention_probs, value)
+            hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
+            hidden_states = self.to_out[0](hidden_states)
+            return hidden_states
+        return forward
+
+    def register_recr(net_, count, layer_name):
+        if net_.__class__.__name__ == 'CrossAttention':
+            net_.forward = ca_forward(net_, layer_name)
+            return count + 1
+        elif hasattr(net_, 'children'):
+            for name__, net__ in net_.named_children():
+                full_name = f'{layer_name}_{name__}'
+                count = register_recr(net__, count, full_name)
+        return count
+
+    cross_att_count = 0
+    for net in unet.named_children():
+        if "down" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+        elif "up" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+        elif "mid" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+    controller.num_att_layers = cross_att_count
+def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, self_key_dict,self_value_dict):
+
+    def ca_forward(self, layer_name):
+        def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
+            is_cross_attention = False
+            if context is not None:
+                is_cross_attention = True
+            query = self.to_q(hidden_states)
+            context = context if context is not None else hidden_states
+            key = self.to_k(context)
+            value = self.to_v(context)
+            query = self.reshape_heads_to_batch_dim(query)
+            key = self.reshape_heads_to_batch_dim(key)
+            value = self.reshape_heads_to_batch_dim(value)
+            if not is_cross_attention:
+                if trg_indexs_list > args.self_attn_threshold_time or mask == 0 :
+                    if hidden_states.shape[0] == 2 :
+                        uncon_key, con_key = key.chunk(2)
+                        uncon_value, con_value = value.chunk(2)
+                        key = torch.cat([uncon_key,
+                                         self_key_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
+                        value = torch.cat([uncon_value,
+                                           self_value_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
+                    else :
+                        key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
+                        value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
+            if self.upcast_attention:
+                query = query.float()
+                key = key.float()
+            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                                                         device=query.device),
+                                             query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            attention_probs = attention_scores.softmax(dim=-1)
+            if mask == 0 and not is_cross_attention :
+                collector.store(attention_probs, layer_name)
+            attention_probs = attention_probs.to(value.dtype)
+            hidden_states = torch.bmm(attention_probs, value)
+            hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
+            hidden_states = self.to_out[0](hidden_states)
+            return hidden_states
+        return forward
+
+    def register_recr(net_, count, layer_name):
+        if net_.__class__.__name__ == 'CrossAttention':
+            net_.forward = ca_forward(net_, layer_name)
+            return count + 1
+        elif hasattr(net_, 'children'):
+            for name__, net__ in net_.named_children():
+                full_name = f'{layer_name}_{name__}'
+                count = register_recr(net__, count, full_name)
+        return count
+    cross_att_count = 0
+    for net in unet.named_children():
+        if "down" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+        elif "up" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+        elif "mid" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
 def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
@@ -336,11 +455,14 @@ def main(args):
     prompt = args.prompt
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
 
+    attention_storer = AttentionStore()
+    register_attention_control(invers_unet, attention_storer)
+
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
     decoding_factor = 1 / 0.18215
-    """
+
     for train_img in train_images:
         train_img_dir = os.path.join(train_img_folder, train_img)
 
@@ -348,7 +470,7 @@ def main(args):
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
 
-        save_base_folder = os.path.join(output_dir, f'inference_scheduling')
+        save_base_folder = os.path.join(output_dir, f'inference_scheduling_with_self_attention_guidance')
         os.makedirs(save_base_folder, exist_ok=True)
 
         flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
@@ -365,30 +487,58 @@ def main(args):
             next_t = flip_times[i + 1]
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
-                latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
-                noise_pred_next = call_unet(unet, latent_next, next_t, uncon, next_t, present_t)
-                recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next,scheduler)
-                pixel_origin = latent2image(latent, vae, return_type='torch')
-            alpha = torch.Tensor([copy.deepcopy(decoding_factor)]).to(vae.device)
-            alpha.requires_grad = True
-            optimizer = torch.optim.Adam([alpha], lr=0.01)
-            for j in range(500):
-                alpha_before = alpha.clone().detach()
-                recon_pixel = alpha * recon_latent.detach()
-                image = vae.decode(recon_pixel)['sample']
-                loss = torch.nn.functional.mse_loss(image,pixel_origin).mean()
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                if loss.item() < 0.00005 :
-                    break
-                if torch.isnan(alpha).any():
-                    alpha = alpha_before
-                    break
-            inference_decoding_factor[int(present_t.item())] = alpha.clone().detach().item()
-            print(f'alpha : {alpha.clone().detach().item()}')
-            latent = latent_next
+                layer_names = attention_storer.self_query_store.keys()
+                attention_storer.reset()
+                self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
+                for layer in layer_names:
+                    self_query_list = attention_storer.self_query_store[layer]
+                    self_key_list = attention_storer.self_key_store[layer]
+                    self_value_list = attention_storer.self_value_store[layer]
+                    for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
+                        t_ = present_t.item()
+                        if t_ not in self_query_dict.keys():
+                            self_query_dict[t_] = {}
+                            self_query_dict[t_][layer] = self_query
+                        else:
+                            self_query_dict[t_][layer] = self_query
 
+                        if t_ not in self_key_dict.keys():
+                            self_key_dict[t_] = {}
+                            self_key_dict[t_][layer] = self_key
+                        else:
+                            self_key_dict[t_][layer] = self_key
+
+                        if t_ not in self_value_dict.keys():
+                            self_value_dict[t_] = {}
+                            self_value_dict[t_][layer] = self_value
+                        else:
+                            self_value_dict[t_][layer] = self_value
+                    #
+                    latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
+                    collector = AttentionStore()
+                    register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                    noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t, next_t)
+                    recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next,scheduler)
+                    pixel_origin = latent2image(latent, vae, return_type='torch')
+                alpha = torch.Tensor([copy.deepcopy(decoding_factor)]).to(vae.device)
+                alpha.requires_grad = True
+                optimizer = torch.optim.Adam([alpha], lr=0.01)
+                for j in range(500):
+                    alpha_before = alpha.clone().detach()
+                    recon_pixel = alpha * recon_latent.detach()
+                    image = vae.decode(recon_pixel)['sample']
+                    loss = torch.nn.functional.mse_loss(image,pixel_origin).mean()
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+                    if loss.item() < 0.00005 :
+                        break
+                    if torch.isnan(alpha).any():
+                        alpha = alpha_before
+                        break
+                inference_decoding_factor[int(present_t.item())] = alpha.clone().detach().item()
+                print(f'alpha : {alpha.clone().detach().item()}')
+                latent = latent_next
             # ----------------------------------------------------------------------------------------------- #
             # Testing
             #np_img = latent2image(recon_latent , vae, return_type='np')
@@ -398,6 +548,8 @@ def main(args):
             with open(os.path.join(save_base_folder, f'inference_decoding_factor_txt.txt'), 'a') as ff:
                 ff.write(line + '\n')
         break
+
+
     """
 
     vae_factor_dict = r'/data7/sooyeon/Lora/OODLora/result/inference_scheduling/inference_decoding_factor_txt.txt'
@@ -443,7 +595,7 @@ def main(args):
                    vae=vae,
                    base_folder_dir=image_folder,
                    vae_factor_dict = inference_decoding_factor)
-
+    """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

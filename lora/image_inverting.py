@@ -159,11 +159,9 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
-
             query = self.reshape_heads_to_batch_dim(query)
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
-
             if not is_cross_attention:
                 if trg_indexs_list > args.self_attn_threshold_time or mask == 0 :
                     if hidden_states.shape[0] == 2 :
@@ -174,11 +172,8 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
                         value = torch.cat([uncon_value,
                                            self_value_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
                     else :
-                        print(f'self condition, time : {trg_indexs_list}')
                         key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
                         value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
-
-
             if self.upcast_attention:
                 query = query.float()
                 key = key.float()
@@ -526,7 +521,6 @@ def main(args) :
         line = line.strip()
         line = line.split(' : ')
         t, f = int(line[0]), float(line[1])
-        print(f't : {t}, f : {f}')
         inference_decoding_factor[t] = f
 
     print(f' \n step 3. ground-truth image preparing')
@@ -544,7 +538,8 @@ def main(args) :
         print(f' (2.3.1) inversion')
         image_gt_np = load_512(train_img_dir)
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
+        save_base_folder = os.path.join(output_dir,
+                                        f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
         print(f' - save_base_folder : {save_base_folder}')
         os.makedirs(save_base_folder, exist_ok=True)
         train_base_folder = os.path.join(save_base_folder, concept_name)
@@ -592,7 +587,6 @@ def main(args) :
                         else:
                             self_value_dict[t_][layer] = self_value
                         i += 1
-                        print(f'make self cond, t_ {t_}')
                 collector = AttentionStore()
                 register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                 time_steps.reverse()
