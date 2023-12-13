@@ -174,6 +174,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
                         value = torch.cat([uncon_value,
                                            self_value_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
                     else :
+                        print(f'self condition, time : {trg_indexs_list}')
                         key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
                         value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
 
