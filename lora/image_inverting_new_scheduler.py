@@ -454,6 +454,12 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             with torch.no_grad():
                 factor = vae_factor_dict[prev_time]
                 np_img = latent2image_customizing(latent, vae, factor, return_type='np')
+        if args.just_scheduling :
+            uncon, con = context.chunk(2)
+            noise_pred = call_unet(unet, latent, t, con, t, prev_time)
+            latent = prev_step(noise_pred, t, latent, scheduler)
+            with torch.no_grad():
+                np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
         #if prev_time == 0 :
@@ -621,7 +627,7 @@ def main(args) :
         #    save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}_customizing_scheduling_lora_noising')
         #elif args.using_customizing_scheduling :
         #    save_base_folder = os.path.join(output_dir,f'train/inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_customizing_scheduling')
-        save_base_folder = os.path.join(output_dir, f'train/infer_with_new_scheduling')
+        save_base_folder = os.path.join(output_dir, f'train/infer_with_just_scheduling')
         os.makedirs(save_base_folder, exist_ok=True)
 
         train_base_folder = os.path.join(save_base_folder, concept_name)
@@ -1020,7 +1026,7 @@ if __name__ == "__main__":
     parser.add_argument("--classifier_free_guidance_infer", action="store_true", )
     parser.add_argument("--p", type=float, default=0.3)
     parser.add_argument("--using_customizing_scheduling", action="store_true", )
-
+    parser.add_argument("--just_scheduling", action="store_true", )
     parser.add_argument("--cfg_check", type=int, default=200)
     parser.add_argument("--inversion_weight", type=float, default=3.0)
     args = parser.parse_args()
