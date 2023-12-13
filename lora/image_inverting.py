@@ -549,7 +549,7 @@ def main(args) :
         os.makedirs(save_base_folder, exist_ok=True)
         train_base_folder = os.path.join(save_base_folder, concept_name)
         os.makedirs(train_base_folder, exist_ok=True)
-        inference_times = torch.cat([torch.tensor([999]), inference_times, ], dim=0)
+        inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
         flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
         original_latent = latent.clone().detach()
         for ii, final_time in enumerate(flip_times[1:]):
