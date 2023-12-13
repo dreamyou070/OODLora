@@ -375,12 +375,14 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
     if inference_times[0] < inference_times[1] :
         inference_times.reverse()
+    print(f'[recon loop] inference_times : {inference_times}')
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
         with torch.no_grad():
             noise_pred = call_unet(unet, latent, t, uncon, t, prev_time)
             latent = prev_step(noise_pred, int(t), latent, scheduler)
+            print(f'[recon loop] prev_time : {prev_time}')
             factor = float(vae_factor_dict[prev_time])
             if args.using_customizing_scheduling :
                 np_img = latent2image_customizing(latent, vae, factor,return_type='np')
