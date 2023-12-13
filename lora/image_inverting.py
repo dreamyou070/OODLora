@@ -373,16 +373,16 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
-    latent_y = latent.clone().detach()
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
+        print(f't : {t} prev_time : {prev_time}')
         time_steps.append(int(t))
         with torch.no_grad():
             noise_pred = call_unet(unet, latent, t, uncon, t, prev_time)
             latent = prev_step(noise_pred, int(t), latent, scheduler)
             factor = float(vae_factor_dict[prev_time])
             if args.using_customizing_scheduling :
-                np_img = latent2image_customizing(latent, vae,factor,return_type='np')
+                np_img = latent2image_customizing(latent, vae, factor,return_type='np')
             else :
                 np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
@@ -598,6 +598,7 @@ def main(args) :
                 collector = AttentionStore()
                 register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                 time_steps.reverse()
+                print(f'time_steps : {time_steps}')
                 print(f' (2.3.2) recon')
                 recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                                      context=context,
