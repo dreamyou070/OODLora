@@ -518,17 +518,19 @@ def main(args):
                 collector = AttentionStore()
                 register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                 noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t, next_t)
-                recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next,scheduler)
+                recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next, scheduler)
                 pixel_origin = latent2image(latent, vae, return_type='torch')
                 alpha = torch.Tensor([copy.deepcopy(decoding_factor)]).to(vae.device)
                 alpha.requires_grad = True
                 optimizer = torch.optim.Adam([alpha], lr=0.01)
                 for j in range(500):
                     alpha_before = alpha.clone().detach()
+
                     recon_pixel = alpha * recon_latent.detach()
                     image = vae.decode(recon_pixel)['sample']
                     loss = torch.nn.functional.mse_loss(image,pixel_origin).mean()
                     optimizer.zero_grad()
+                    print(f'loss : {loss.item()}')
                     loss.backward(retain_graph=True)
                     optimizer.step()
                     if loss.item() < 0.0001 :
