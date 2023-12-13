@@ -221,6 +221,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
                         value = torch.cat([uncon_value,
                                            self_value_dict[trg_indexs_list][layer_name].to(query.device)], dim=0)
                     else :
+                        print(f'trg_indexs_list : {trg_indexs_list} : {type(trg_indexs_list)}')
                         key = self_key_dict[trg_indexs_list][layer_name].to(query.device)
                         value = self_value_dict[trg_indexs_list][layer_name].to(query.device)
             if self.upcast_attention:
@@ -502,11 +503,13 @@ def main(args):
                         self_query_dict[t_][layer] = self_query
                     else:
                         self_query_dict[t_][layer] = self_query
+
                     if t_ not in self_key_dict.keys():
                         self_key_dict[t_] = {}
                         self_key_dict[t_][layer] = self_key
                     else:
                         self_key_dict[t_][layer] = self_key
+
                     if t_ not in self_value_dict.keys():
                         self_value_dict[t_] = {}
                         self_value_dict[t_][layer] = self_value
@@ -525,7 +528,7 @@ def main(args):
             alpha = torch.Tensor([copy.deepcopy(decoding_factor)],).to(vae.device)
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.001)
-            for j in range(500):
+            for j in range(1):
                 alpha_before = alpha.clone().detach()
                 recon_pixel = alpha * recon_latent.detach()
                 loss = torch.nn.functional.mse_loss(vae.decode(recon_pixel)['sample'],
@@ -533,7 +536,6 @@ def main(args):
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                loss_item = loss.item()
                 if loss.item() < 0.0001 :
                     break
                 if torch.isnan(alpha).any():
