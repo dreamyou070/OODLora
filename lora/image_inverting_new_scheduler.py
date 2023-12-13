@@ -643,7 +643,7 @@ def main(args) :
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                if loss.item() < 0.00005 :
+                if loss.item() < 0.0005 :
                     break
                 if torch.isnan(alpha).any():
                     alpha = alpha_before
