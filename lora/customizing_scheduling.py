@@ -230,8 +230,8 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
                                                          device=query.device),
                                              query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
-            if mask == 0 and not is_cross_attention :
-                collector.store(attention_probs, layer_name)
+            #if mask == 0 and not is_cross_attention :
+            #    collector.store(attention_probs, layer_name)
             attention_probs = attention_probs.to(value.dtype)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -490,24 +490,23 @@ def main(args):
             layer_names = attention_storer.self_query_store.keys()
 
             self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
+            t_ = present_t.item()
             for layer in layer_names:
+                print(f'making dictionary, layer : {layer} | t : {t_}')
                 self_query_list = attention_storer.self_query_store[layer]
                 self_key_list = attention_storer.self_key_store[layer]
                 self_value_list = attention_storer.self_value_store[layer]
                 for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
-                    t_ = present_t.item()
                     if t_ not in self_query_dict.keys():
                         self_query_dict[t_] = {}
                         self_query_dict[t_][layer] = self_query
                     else:
                         self_query_dict[t_][layer] = self_query
-
                     if t_ not in self_key_dict.keys():
                         self_key_dict[t_] = {}
                         self_key_dict[t_][layer] = self_key
                     else:
                         self_key_dict[t_][layer] = self_key
-
                     if t_ not in self_value_dict.keys():
                         self_value_dict[t_] = {}
                         self_value_dict[t_][layer] = self_value
@@ -517,8 +516,10 @@ def main(args):
             attention_storer.reset()
             latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
             collector = AttentionStore()
+            print(f'keys of self_query_dict : {self_query_dict.keys()}')
             register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
             noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t, next_t)
+
             recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next, scheduler)
             pixel_origin = latent2image(latent, vae, return_type='torch')
             alpha = torch.Tensor([copy.deepcopy(decoding_factor)],).to(vae.device)
