@@ -589,7 +589,7 @@ def main(args) :
     print(f' (2.6) inference vae factor')
     vae_factor_dir = r'/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/4_contrastive_learning_eps_change_direction_0.0/recon_check/train/noising_scheduling_test/new_scheduling_check/inference_decoding_factor_txt.txt'
     with open(vae_factor_dir, 'r') as f:
-        contents = f.readline()
+        contents = f.readlines()
     vae_factor_dict = {}
     for line in contents:
         print(line)
