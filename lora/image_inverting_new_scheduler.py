@@ -589,10 +589,12 @@ def main(args) :
     print(f' (2.6) inference vae factor')
     vae_factor_dir = r'/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/4_contrastive_learning_eps_change_direction_0.0/recon_check/train/noising_scheduling_test/new_scheduling_check/inference_decoding_factor_txt.txt'
     with open(vae_factor_dir, 'r') as f:
-        vae_factors = f.readline()
+        contents = f.readline()
     vae_factor_dict = {}
-    for vae_factor in vae_factors:
-        infer_time, f = vae_factor.split(' : ')
+    for line in contents:
+        print(line)
+        line = line.strip()
+        infer_time, f = line.split(' : ')
         vae_factor_dict[int(infer_time)] = float(f)
 
     print(f' \n step 3. ground-truth image preparing')
@@ -770,7 +772,7 @@ def main(args) :
                                              vae_factor_dict=vae_factor_dict,
                                              args=args,)
         break
-        
+
     """
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
