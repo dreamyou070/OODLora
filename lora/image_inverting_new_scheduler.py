@@ -641,6 +641,7 @@ def main(args) :
                 optimizer.zero_grad()
                 loss.backward(retain_graph=True)
                 optimizer.step()
+                print(f'[loss] {loss.item()}')
                 if loss.item() < 0.000001 :
                     break
             print(f'[new alpha] {next_t.item()} : {alpha.item()}')
