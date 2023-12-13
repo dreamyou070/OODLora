@@ -91,6 +91,7 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore) :
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
+
 def unregister_attention_control(unet : nn.Module, controller:AttentionStore) :
     """ Register cross attention layers to controller. """
     def ca_forward(self, layer_name):
@@ -164,7 +165,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             value = self.reshape_heads_to_batch_dim(value)
 
             if not is_cross_attention:
-                if trg_indexs_list > args.threshold_time or mask == 0 :
+                if trg_indexs_list > args.self_attn_threshold_time or mask == 0 :
                     if hidden_states.shape[0] == 2 :
                         uncon_key, con_key = key.chunk(2)
                         uncon_value, con_value = value.chunk(2)
@@ -860,9 +861,8 @@ if __name__ == "__main__":
     parser.add_argument("--self_key_control", action='store_true')
     parser.add_argument("--inversion_experiment", action="store_true",)
     parser.add_argument("--repeat_time", type=int, default=1)
+    parser.add_argument("--self_attn_threshold_time", type=int, default=1)
     parser.add_argument("--using_customizing_scheduling", action="store_true",)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
-
-
