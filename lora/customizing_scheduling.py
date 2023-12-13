@@ -442,8 +442,7 @@ def main(args):
                    unet=invers_unet,
                    vae=vae,
                    base_folder_dir=image_folder,
-                   vae_factor_dict = vae_factor_dict)
-
+                   vae_factor_dict = inference_decoding_factor)
 
 
 if __name__ == "__main__":
