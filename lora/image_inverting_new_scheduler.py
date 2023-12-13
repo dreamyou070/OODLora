@@ -624,6 +624,7 @@ def main(args) :
         uncon, con = invers_context.chunk(2)
         noising_alphas_cumprod_dict = {}
         noising_alphas_cumprod_dict[0] = scheduler.alphas_cumprod[0]
+        vae.eval()
         for i, present_t in enumerate(flip_times[:-1]):
             next_t = flip_times[i + 1]
             with torch.no_grad():
@@ -639,8 +640,8 @@ def main(args) :
             alpha_prev = noising_alphas_cumprod_dict[present_t.item()]
             for j in range(10000):
                 recon_pixel = alpha * recon_latent.detach()
-                with torch.no_grad():
-                    image = vae.decode(recon_pixel)['sample']
+                #with torch.no_grad():
+                image = vae.decode(recon_pixel)['sample']
                 loss = torch.nn.functional.mse_loss(image, pixel_next).mean()
                 optimizer.zero_grad()
                 loss.backward()
