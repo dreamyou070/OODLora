@@ -480,8 +480,8 @@ def main(args):
 
         print(f' (2.3.2) inversing')
         inference_decoding_factor = {}
-        #vae.eval()
-        #vae.requires_grad_(False)
+        vae.eval()
+        vae.requires_grad_(False)
         for i, present_t in enumerate(flip_times[:-1]):
             print(f'present_t : {present_t}')
             next_t = flip_times[i + 1]
