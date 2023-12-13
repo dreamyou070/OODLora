@@ -170,18 +170,7 @@ def main(args):
     print(f" (1.2) save directory and save config")
     weight_dtype, save_dtype = train_util.prepare_dtype(args)
     vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
-
-    print(f" (1.3) save dir")
-    model_name = os.path.split(args.network_weights)[-1]
-    model_name = os.path.splitext(model_name)[0]
-    if 'last' not in model_name:
-        model_epoch = int(model_name.replace('epoch-', ''))
-    else:
-        model_epoch = 'last'
-
     output_dir = args.output_dir
-    os.makedirs(output_dir, exist_ok=True)
-    output_dir = os.path.join(output_dir, f'recon_check')
     os.makedirs(output_dir, exist_ok=True)
 
     print(f' \n step 2. make stable diffusion model')
