@@ -597,6 +597,7 @@ def main(args) :
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
+    decoding_factor = 1 / 0.18215
     for train_img in train_images :
         train_img_dir = os.path.join(train_img_folder, train_img)
         concept_name = train_img.split('.')[0]
@@ -627,18 +628,19 @@ def main(args) :
             next_t = flip_times[i + 1]
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
-                #target_latent = next_step(noise_pred,int(present_t.item()), latent, scheduler)
-            alpha = scheduler.alphas_cumprod[present_t.item()].clone().detach()
+                latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
+                noise_pred_next = call_unet(unet, latent_next, next_t, uncon, next_t, present_t)
+                recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next,scheduler)
+                pixel_next = latent2image(latent, vae, return_type='torch')
+            alpha = decoding_factor.clone().detach()
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.01)
             alpha_prev = noising_alphas_cumprod_dict[present_t.item()]
             for j in range(10000):
-                alpha_before = alpha.clone().detach()
-                next_latent = ((alpha/alpha_prev)**0.5) * (latent - ((1-alpha_prev)**0.5)*noise_pred) + ((1-alpha)**0.5) * noise_pred
-                noise_pred_inter = call_unet(unet, next_latent, next_t, uncon, next_t, present_t)
-                #origin_latent = prev_step(noise_pred,int(next_t.item()),latent,scheduler)
-                loss = torch.nn.functional.mse_loss(noise_pred_inter, noise_pred).mean()
-                #loss = torch.nn.functional.mse_loss(next_latent, target_latent).mean()
+                recon_pixel = alpha * recon_latent.detach()
+                with torch.no_grad():
+                    image = vae.decode(recon_pixel)['sample']
+                loss = torch.nn.functional.mse_loss(image, pixel_next).mean()
                 optimizer.zero_grad()
                 loss.backward(retain_graph=True)
                 optimizer.step()
