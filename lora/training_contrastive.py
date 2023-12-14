@@ -719,7 +719,9 @@ class NetworkTrainer:
                     b_size = len(trg_indexs)
                     for i in range(b_size):
                         if i in test_indexs:
-                            index_list.append(trg_indexs[i].tolist())
+                            a = trg_indexs[i].tolist()
+                            print(f'trg list : {a}')
+                            index_list.append(a)
 
 
                     # (2) text condition checking
