@@ -1088,6 +1088,7 @@ class BaseDataset(torch.utils.data.Dataset):
                         img = self.crop_target(subset, img, face_cx, face_cy, face_w, face_h)
                         masked_img = self.crop_target(subset, masked_img, face_cx, face_cy, face_w, face_h)
                     """
+                    im_h, im_w = img.shape[0:2]
                     if im_h > self.height or im_w > self.width:
                         assert (subset.random_crop ), f"image too large, but cropping and bucketing are disabled / 画像サイズが大きいのでface_crop_aug_rangeかrandom_crop、またはbucketを有効にしてください: {image_info.absolute_path}"
                         if im_h > self.height:
