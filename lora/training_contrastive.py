@@ -810,7 +810,7 @@ class NetworkTrainer:
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
-            loss = torch.tensor(0.0, requires_grad=True, device=accelerator.device)
+            #loss = torch.tensor(0.0, requires_grad=True, device=accelerator.device)
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -863,7 +863,7 @@ class NetworkTrainer:
                         attention_storer.reset()
                         contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
                         log_loss["loss/contrastive_loss"] = contrastive_loss
-                        loss += contrastive_loss
+                        loss = contrastive_loss
 
                     if train_latents.shape[0] != 0 :
                         input_latents = train_latents
@@ -875,7 +875,10 @@ class NetworkTrainer:
                         task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
                         task_loss = task_loss.mean()
                         log_loss["loss/task_loss"] = task_loss
-                        loss += task_loss
+                        if test_latents.shape[0] != 0 :
+                            loss += task_loss
+                        else :
+                            loss = task_loss
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
