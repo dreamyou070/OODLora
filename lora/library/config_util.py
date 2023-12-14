@@ -390,7 +390,7 @@ class BlueprintGenerator:
     return default_value
 
 
-def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlueprint, args):
+def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlueprint):
   datasets: List[Union[DreamBoothDataset, FineTuningDataset, ControlNetDataset]] = []
 
   for dataset_blueprint in dataset_group_blueprint.datasets:
@@ -467,10 +467,11 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
   # make buckets first because it determines the length of dataset
   # and set the same seed for all datasets
   # actual seed is seed + epoch_no
+  seed = random.randint(0, 2**31)
   for i, dataset in enumerate(datasets):
     print(f"[Dataset {i}]")
     dataset.make_buckets()
-    dataset.set_seed(args.seed)
+    dataset.set_seed(seed)
 
   return DatasetGroup(datasets)
 

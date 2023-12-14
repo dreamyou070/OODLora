@@ -275,7 +275,7 @@ class NetworkTrainer:
             # blueprint_generator = BlueprintGenerator
             print('start of generate function ...')
             blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
-            train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group, args)
+            train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
 
         else:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
@@ -284,7 +284,7 @@ class NetworkTrainer:
         current_step = Value("i", 0)
         ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
         collater = train_util.collater_class(current_epoch, current_step, ds_for_collater)
-        """
+
         if args.debug_dataset:
             train_util.debug_dataset(train_dataset_group)
             return
@@ -297,7 +297,7 @@ class NetworkTrainer:
             assert (
                 train_dataset_group.is_latent_cacheable()
             ), "when caching latents, either color_aug or random_crop cannot be used / latentをキャッシュするときはcolor_augとrandom_cropは使えません"
-        """
+
         self.assert_extra_args(args, train_dataset_group)
 
         print(f'\n step 3. preparing accelerator')
