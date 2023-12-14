@@ -1126,11 +1126,9 @@ class BaseDataset(torch.utils.data.Dataset):
             class_caption = image_info.class_caption
             caption = image_info.caption
             train_class = 0
-            print(f'class_caption : {class_caption} | caption : {caption}')
             if class_caption == caption :
                 train_class = 1
-                img_check = torch.equal(image,masked_image)
-                print(f'check train class 1 image same ? : {img_check}')
+                #img_check = torch.equal(image,masked_image)
             train_class_list.append(train_class)
 
             if class_caption is None:
@@ -1147,8 +1145,9 @@ class BaseDataset(torch.utils.data.Dataset):
                 text_encoder_pool2_list.append(text_encoder_pool2)
                 captions.append(caption)
             else:
-                # caption = crack,
-                caption = self.process_caption(subset, image_info.caption)
+                # ------------------------------------------------------------------------------------------------------------------------------------------------
+                caption = class_caption
+                caption = self.process_caption(subset, caption)
                 class_caption = self.process_caption(subset, class_caption)
 
                 if self.XTI_layers:
@@ -1160,19 +1159,17 @@ class BaseDataset(torch.utils.data.Dataset):
                         caption_layer.append(caption_)
                     captions.append(caption_layer)
                 else:
-                    class_captions.append(class_caption)
                     captions.append(caption)
+                    class_captions.append(class_caption)
                 if not self.token_padding_disabled:  # this option might be omitted in future
                     if self.XTI_layers:
                         token_caption = self.get_input_ids(caption_layer, self.tokenizers[0])
                     else:
-                        #
                         token_caption, caption_attention_mask = self.get_input_ids(caption, self.tokenizers[0])
                         class_token_caption, class_caption_attention_mask = self.get_input_ids(class_caption, self.tokenizers[0])
                         caption_attention_masks.append(caption_attention_mask)
                     input_ids_list.append(token_caption)
                     class_input_ids_list.append(class_token_caption)
-
                     def generate_text_embedding(caption, tokenizer):
                         cls_token = 49406
                         pad_token = 49407
@@ -1196,7 +1193,7 @@ class BaseDataset(torch.utils.data.Dataset):
                                 if id in trg_token_id:
                                     trg_indexs.append(i)
                         return trg_indexs
-                    trg_indexs = generate_text_embedding(caption, self.tokenizers[0])
+                    trg_indexs = generate_text_embedding(class_caption, self.tokenizers[0])
                     trg_indexs_list.append(trg_indexs)
                     #------------------------------------------------------------------------------------------
                     if len(self.tokenizers) > 1:
@@ -1205,7 +1202,7 @@ class BaseDataset(torch.utils.data.Dataset):
                         else:
                             token_caption2 = self.get_input_ids(caption, self.tokenizers[1])
                         input_ids2_list.append(token_caption2)
-
+        # ------------------------------------------------------------------------------------------------------------
         example = {}
         example["mask_dirs"] = mask_dirs
         example["trg_indexs_list"] = trg_indexs_list ##########################################################
@@ -1245,15 +1242,10 @@ class BaseDataset(torch.utils.data.Dataset):
             example["text_encoder_pool2_list"] = torch.stack(text_encoder_pool2_list)
 
         if images[0] is not None:
-            print('stacking images ... ')
-            #images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
-            #mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
-            images = torch.stack(images).float()
-            mask_imgs = torch.stack(mask_imgs).float()
+            images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
+            mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
         else:
             images = None
-        print(f'train_class_list (1 = good, 0 = test image): {train_class_list}')
-        print(f'images : {images.shape}')
         example["images"] = images
         example["mask_imgs"] = mask_imgs
         for i in train_class_list:
@@ -1265,10 +1257,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 img = images[i]
                 corrected_img = mask_imgs[i]
                 same_check = torch.equal(img, corrected_img)
-                print(f'same check : {same_check}')
-
-
-
+        example['train_class_list'] = train_class_list
         example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
         example["captions"] = captions
         example["original_sizes_hw"] = torch.stack([torch.LongTensor(x) for x in original_sizes_hw])
