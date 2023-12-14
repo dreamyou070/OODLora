@@ -265,6 +265,8 @@ class NetworkTrainer:
             # blueprint_generator = BlueprintGenerator
             print('start of generate function ...')
             blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
+            blueprint.dataset_group
+            print(f'blueprint.dataset_group : {blueprint.dataset_group}')
             train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
 
         else:

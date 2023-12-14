@@ -351,7 +351,6 @@ class BlueprintGenerator:
         super_parent, folder_name = os.path.split(parent) # , bad
         mask_parent = os.path.join(super_parent, f'corrected')
         mask_dir = os.path.join(mask_parent, child)
-        print(f' ** mask_dir : {mask_dir}')
         subset_config['mask_dir'] = mask_dir
         params = self.generate_params_by_fallbacks(subset_params_klass,
                                                    [subset_config,dataset_config,
