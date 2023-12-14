@@ -814,11 +814,16 @@ class NetworkTrainer:
                         good_latents = good_latents * self.vae_scale_factor
                     # ---------------------------------------------------------------------------------------------------------------------
                     total_batch = latents.shape[0]
-                    train_indexs = [i for i in train_class_list if i == 1]
-                    test_indexs = [i for i in train_class_list if i != 1]
+                    train_indexs, test_indexs = [], []
+                    for i in range(total_batch):
+                        if torch.equal(latents[i,:,:,:], good_latents[i,:,:,:]):
+                            train_indexs.append(i)
+                        else:
+                            test_indexs.append(i)
                     train_latents = good_latents[train_indexs, :, :, :]
                     test_latents = latents[test_indexs, :, :, :]
                     test_good_latents = good_latents[test_indexs, :, :, :]
+                    print(f'train_indexs: {train_indexs} | test_indexs: {test_indexs}')
 
                     # (2) text condition checking
                     with torch.set_grad_enabled(train_text_encoder):
