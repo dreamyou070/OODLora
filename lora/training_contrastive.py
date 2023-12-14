@@ -715,13 +715,11 @@ class NetworkTrainer:
                     test_good_latents = good_latents[test_indexs, :, :, :]
 
                     trg_indexs = batch["trg_indexs_list"]
+                    index_list = []
                     b_size = len(trg_indexs)
                     for i in range(b_size):
-                        if i in train_indexs:
-                            trg_indexs[i] = trg_indexs[i] - len(test_indexs)
-                    caption = batch['caption']
-                    print(f'batch["trg_indexs_list"] : {trg_indexs}')
-                    print(f'caption : {caption}')
+                        if i in test_indexs:
+                            index_list.append(trg_indexs[i])
 
 
                     # (2) text condition checking
@@ -742,11 +740,11 @@ class NetworkTrainer:
                         # Predict the noise residual
 
                         with accelerator.autocast():
-                            trg_indexs_list=[batch["trg_indexs_list"][i] for i in test_indexs]
                             self.call_unet(args, accelerator, unet,
                                       noisy_latents, timesteps,
                                       input_condition, batch, weight_dtype,
-                                      trg_indexs_list,None)
+                                      index_list,
+                                      None)
 
 
                         losss = attention_storer.loss_list
