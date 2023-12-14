@@ -820,9 +820,14 @@ class NetworkTrainer:
                     total_batch = latents.shape[0]
                     train_indexs, test_indexs = [], []
                     for i in range(total_batch):
-                        img_check = torch.equal(latents[i,:,:,:], good_latents[i,:,:,:])
                         im =latents[i,:,:,:]
+                        if im.dim() < 4 :
+                            im = im.unsqueeze(0)
+                        good_im = good_latents[i,:,:,:]
+                        if good_im.dim() < 4 :
+                            good_im = good_im.unsqueeze(0)
                         print(f'im : {im.shape}')
+                        img_check = torch.equal(im, good_im)
                         if img_check :
                             train_indexs.append(i)
                         else:
@@ -830,6 +835,7 @@ class NetworkTrainer:
                     train_latents = good_latents[train_indexs, :, :, :]
                     test_latents = latents[test_indexs, :, :, :]
                     test_good_latents = good_latents[test_indexs, :, :, :]
+                    print(f'train_indexs : {train_indexs} | test_indexs : {test_indexs}')
 
                     # (2) text condition checking
                     with torch.set_grad_enabled(train_text_encoder):
