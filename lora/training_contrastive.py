@@ -814,9 +814,8 @@ class NetworkTrainer:
             network.on_epoch_start(text_encoder, unet)
             #loss = torch.tensor(0.0, requires_grad=True, device=accelerator.device)
             for step, batch in enumerate(train_dataloader):
-                train_class = batch["train_class"]
-                print(f"train_class: {train_class}")
-                
+                train_class_list = batch["train_class_list"]
+
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
@@ -834,15 +833,8 @@ class NetworkTrainer:
                         good_latents = good_latents * self.vae_scale_factor
                     # ---------------------------------------------------------------------------------------------------------------------
                     total_batch = latents.shape[0]
-                    train_indexs = []
-                    test_indexs = []
-                    for i in range(total_batch):
-                        bad_latent = latents[i, :, :, :]
-                        good_latent = good_latents[i, :, :, :]
-                        if torch.equal(bad_latent, good_latent):
-                            train_indexs.append(i)
-                        else:
-                            test_indexs.append(i)
+                    train_indexs = [i for i in train_class_list if i == 1]
+                    test_indexs = [i for i in train_class_list if i != 1]
                     print(f'train_indexs: {train_indexs} | test_indexs: {test_indexs}')
 
                     train_latents = good_latents[train_indexs, :, :, :]

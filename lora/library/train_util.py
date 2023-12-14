@@ -1031,6 +1031,7 @@ class BaseDataset(torch.utils.data.Dataset):
         mask_imgs = []
         trg_concepts = []
         trg_indexs_list = []
+        train_class_list = []
         mask_dirs = []
         caption_attention_masks = []
         for image_key in bucket[image_index : image_index + bucket_batch_size ]:
@@ -1126,6 +1127,7 @@ class BaseDataset(torch.utils.data.Dataset):
             train_class = 0
             if caption == trg_concept :
                 train_class = 1
+            train_class_list.append(train_class)
 
             class_caption = image_info.class_caption #
             if class_caption is None:
@@ -1208,7 +1210,7 @@ class BaseDataset(torch.utils.data.Dataset):
         example["trg_indexs_list"] = trg_indexs_list ##########################################################
         example["trg_concepts"] = trg_concepts
         example["absolute_paths"] = absolute_paths
-        example["train_class"] = train_class
+        example["train_class_list"] = train_class_list
 
         example["loss_weights"] = torch.FloatTensor(loss_weights)
         example["caption_attention_mask"] = caption_attention_masks
