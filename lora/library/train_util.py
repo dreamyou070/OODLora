@@ -342,7 +342,9 @@ class BaseSubset:
         token_warmup_min: int,
         token_warmup_step: Union[float, int],
         mask_dir,
-            class_caption = None) -> None:
+        class_caption = None) -> None:
+
+
         self.image_dir = image_dir
         self.num_repeats = num_repeats
         self.shuffle_caption = shuffle_caption
@@ -372,7 +374,6 @@ class DreamBoothSubset(BaseSubset):
         caption_extension: str,
         num_repeats,
         shuffle_caption,
-        caption_separator: str,
         keep_tokens,
         color_aug,
         flip_aug,
@@ -393,7 +394,6 @@ class DreamBoothSubset(BaseSubset):
             image_dir,
             num_repeats,
             shuffle_caption,
-            caption_separator,
             keep_tokens,
             color_aug,
             flip_aug,
@@ -406,7 +406,8 @@ class DreamBoothSubset(BaseSubset):
             caption_suffix,
             token_warmup_min,
             token_warmup_step,
-            mask_dir,class_caption)
+            mask_dir,
+            class_caption)
 
         self.is_reg = is_reg
         self.class_tokens = class_tokens
