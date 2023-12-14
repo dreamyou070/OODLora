@@ -1123,6 +1123,7 @@ class BaseDataset(torch.utils.data.Dataset):
             # captionとtext encoder outputを処理する
             caption = image_info.caption  # default
             trg_concept = image_info.trg_concept     # good
+            print(f'trg_concept : {trg_concept}')
             class_caption = image_info.class_caption #
             if class_caption is None:
                 class_caption = 'good' ## TODO remove
