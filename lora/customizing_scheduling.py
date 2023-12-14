@@ -587,7 +587,7 @@ def main(args):
                    vae=vae,
                    base_folder_dir=image_folder,
                    vae_factor_dict = inference_decoding_factor)
-        
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting

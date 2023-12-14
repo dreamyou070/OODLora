@@ -513,7 +513,7 @@ def main(args) :
     network.to(device)
 
     print(f' (2.4) scheduling factors')
-    vae_factor_dict = r'/data7/sooyeon/Lora/OODLora/result/inference_decoding_factor_txt.txt'
+    vae_factor_dict = r'/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/4_contrastive_learning_eps_change_direction_0.0/inference_scheduling/inference_decoding_factor_txt.txt'
 
     with open(vae_factor_dict, 'r') as f:
         content = f.readlines()
@@ -549,7 +549,7 @@ def main(args) :
         flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
         original_latent = latent.clone().detach()
         for ii, final_time in enumerate(flip_times[1:]):
-            if final_time == 999:
+            if final_time == 300 :
                 timewise_save_base_folder = os.path.join(train_base_folder, f'final_time_{final_time.item()}')
                 os.makedirs(timewise_save_base_folder, exist_ok=True)
                 latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
