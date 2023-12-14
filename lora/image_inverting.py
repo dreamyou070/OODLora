@@ -690,8 +690,8 @@ def main(args) :
                                                                     attention_storer=attention_storer)
                     # timesteps = [0,20]
                     context = init_prompt(tokenizer, text_encoder, device, prompt)
-                    collector = AttentionStore()
-                    register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                    #collector = AttentionStore()
+                    #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                     print(f' (2.3.2) recon')
                     recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                                          context=context,
