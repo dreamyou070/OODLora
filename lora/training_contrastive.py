@@ -840,6 +840,7 @@ class NetworkTrainer:
                             train_indexs.append(i)
                         else:
                             test_indexs.append(i)
+                    print(f'train_indexs: {train_indexs} | test_indexs: {test_indexs}')
 
                     train_latents = good_latents[train_indexs, :, :, :]
                     test_latents = latents[test_indexs, :, :, :]
