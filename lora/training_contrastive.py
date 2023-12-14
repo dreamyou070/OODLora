@@ -254,7 +254,8 @@ class NetworkTrainer:
                             h = int(h.strip()),
                             w = int(w.strip()),
                             class_caption = args.class_caption,
-                            tokenizers = tokenizers)
+                            tokenizers = tokenizers,
+                            tokenizer_max_length=args.tokenizer_max_length,)
 
 
         """

@@ -14,7 +14,8 @@ IMAGE_TRANSFORMS = transforms.Compose([transforms.ToTensor(),
 
 class SYDataset(Dataset):
 
-    def __init__(self, image_dir, masked_dir, h, w, class_caption,tokenizers) -> None:
+    def __init__(self, image_dir, masked_dir, h, w, class_caption,tokenizers,
+                 tokenizer_max_length) -> None:
 
         self.image_dir = image_dir
         self.masked_dir = masked_dir
@@ -35,6 +36,7 @@ class SYDataset(Dataset):
                                   'class_caption' : class_caption})
 
         self.tokenizers = tokenizers
+        self.tokenizer_max_length =tokenizer_max_length
 
     def __len__(self) -> int:
         return len(self.data)
@@ -44,8 +46,8 @@ class SYDataset(Dataset):
         if tokenizer is None:
             tokenizer = self.tokenizers[0]
 
-        tokenizer_output = tokenizer(caption, padding="max_length", truncation=True, max_length=self.tokenizer_max_length,
-                              return_tensors="pt")
+        tokenizer_output = tokenizer(caption, padding="max_length", truncation=True,
+                                     max_length=self.tokenizer_max_length, return_tensors="pt")
 
         input_ids = tokenizer_output.input_ids
         attention_mask = tokenizer_output.attention_mask
