@@ -529,7 +529,7 @@ def main(args) :
     prompt = args.prompt
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
     context = init_prompt(tokenizer, text_encoder, device, prompt)
-
+    """
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
@@ -607,7 +607,7 @@ def main(args) :
                                                      vae_factor_dict = inference_decoding_factor)
                 attention_storer.reset()
 
-        """
+        
         layer_names = attention_storer.self_query_store.keys()
         self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
         for layer in layer_names:
@@ -647,7 +647,7 @@ def main(args) :
 
         with open(os.path.join(train_base_folder, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
-        """
+        
     """
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
@@ -667,10 +667,7 @@ def main(args) :
             mask_img_dir = os.path.join(mask_folder, test_img)
             mask_img_pil = Image.open(mask_img_dir)
             concept_name = test_img.split('.')[0]
-            if args.latent_coupling :
-                save_base_folder = os.path.join(class_base_folder, f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_latent_coupling_p_{args.p}')
-            elif args.classifier_free_guidance_infer :
-                save_base_folder = os.path.join(class_base_folder, f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}_cfg_guidance_{args.cfg_check}')
+            save_base_folder = os.path.join(class_base_folder, f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
             print(f'save_base_folder : {save_base_folder}')
             os.makedirs(save_base_folder, exist_ok=True)
             # inference_times = [980, 960, ..., 0]
@@ -680,81 +677,33 @@ def main(args) :
             flip_times = torch.flip(inference_times, dims=[0]) # [0,20, ..., 980]
             original_latent = latent.clone().detach()
             for ii, final_time in enumerate(flip_times[1:]):
-                timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
-                os.makedirs(timewise_save_base_folder, exist_ok=True)
-                latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
-                                                                context=invers_context,
-                                                                inference_times=flip_times[:ii + 2],
-                                                                scheduler=scheduler,
-                                                                unet=invers_unet,
-                                                                vae=vae,
-                                                                base_folder_dir=timewise_save_base_folder,
-                                                                attention_storer=attention_storer)
-                # timesteps = [0,20]
-                context = init_prompt(tokenizer, text_encoder, device, prompt)
-                collector = AttentionStore()
-                #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                time_steps.reverse()
-                print(f' (2.3.2) recon')
-                recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
-                                                      context = context,
-                                                      inference_times = time_steps, # [20,0]
-                                                      scheduler = scheduler,
-                                                      unet = unet,
-                                                      vae = vae,
-                                                      base_folder_dir=timewise_save_base_folder,)
-                attention_storer.reset()
-    
-            # time_steps = 0,20,..., 980
-            latent_dict, time_steps, pil_images = ddim_loop(latent,
-                                                            invers_context,
-                                                            inference_times,
-                                                            scheduler,
-                                                            invers_unet,
-                                                            vae, save_base_folder,
-                                                            attention_storer)
-            context = init_prompt(tokenizer, text_encoder, device, prompt)
+                if final_time == 300 :
+                    timewise_save_base_folder = os.path.join(save_base_folder,f'final_time_{final_time.item()}')
+                    os.makedirs(timewise_save_base_folder, exist_ok=True)
+                    latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
+                                                                    context=invers_context,
+                                                                    inference_times=flip_times[:ii + 2],
+                                                                    scheduler=scheduler,
+                                                                    unet=invers_unet,
+                                                                    vae=vae,
+                                                                    base_folder_dir=timewise_save_base_folder,
+                                                                    attention_storer=attention_storer)
+                    # timesteps = [0,20]
+                    context = init_prompt(tokenizer, text_encoder, device, prompt)
+                    collector = AttentionStore()
+                    register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                    print(f' (2.3.2) recon')
+                    recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
+                                                         context=context,
+                                                         inference_times=time_steps,  # [20,0]
+                                                         scheduler=scheduler,
+                                                         unet=unet,
+                                                         vae=vae,
+                                                         base_folder_dir=timewise_save_base_folder,
+                                                         vae_factor_dict=inference_decoding_factor)
+                    attention_storer.reset()
 
-            layer_names = attention_storer.self_query_store.keys()
-            self_query_dict, self_key_dict, self_value_dict  = {}, {}, {}
-            for layer in layer_names:
-                self_query_list = attention_storer.self_query_store[layer]
-                self_key_list = attention_storer.self_key_store[layer]
-                self_value_list = attention_storer.self_value_store[layer]
-                i = 1
-                for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
-                    time_step = time_steps[i]
-                    if time_step not in self_query_dict.keys():
-                        self_query_dict[time_step] = {}
-                        self_query_dict[time_step][layer] = self_query
-                    else:
-                        self_query_dict[time_step][layer] = self_query
 
-                    if time_step not in self_key_dict.keys():
-                        self_key_dict[time_step] = {}
-                        self_key_dict[time_step][layer] = self_key
-                    else:
-                        self_key_dict[time_step][layer] = self_key
-                    if time_step not in self_value_dict.keys():
-                        self_value_dict[time_step] = {}
-                        self_value_dict[time_step][layer] = self_value
-                    else:
-                        self_value_dict[time_step][layer] = self_value
-                    i += 1
-            collector = AttentionStore()
-            register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-            time_steps.reverse()
-            print(f' (2.3.2) recon')
-            all_latent, _, _ = recon_loop(latent_dict,
-                                          context,
-                                          time_steps,
-                                          scheduler,
-                                          unet, vae, save_base_folder)
-            attention_storer.reset()
-
-            with open(os.path.join(save_base_folder, 'config.json'), 'w') as f:
-                json.dump(vars(args), f, indent=4)
-    """
     """
         print(f' (2.3.3) heatmap checking')
         org_img_dir = os.path.join(args.concept_image_folder, concept_img)
