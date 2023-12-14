@@ -20,7 +20,7 @@ class SYDataset(Dataset):
         self.masked_dir = masked_dir
         self.w, self.h = w, h
         self.data = []
-        image_classes = os.listdir(self.iamge_dir)
+        image_classes = os.listdir(self.image_dir)
         for image_class in image_classes :
             repeat, caption = image_class.split('_')
             image_class_dir = os.path.join(self.image_dir, image_class)
