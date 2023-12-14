@@ -1107,11 +1107,9 @@ class BaseDataset(torch.utils.data.Dataset):
                 # augmentation
                 aug = self.aug_helper.get_augmentor(subset.color_aug)
                 if aug is not None:
-                    print('no augment')
                     img = aug(image=img)["image"]
                     masked_img = aug(image=masked_img)["image"]
                 if flipped:
-                    print('no flipping')
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                     masked_img = masked_img[:, ::-1, :].copy()
                 latents = None
@@ -1122,6 +1120,7 @@ class BaseDataset(torch.utils.data.Dataset):
             latents_list.append(latents)
             target_size = (image.shape[2], image.shape[1]) if image is not None else (latents.shape[2] * 8, latents.shape[1] * 8)
             if not flipped:
+                print(f'not flipping')
                 crop_left_top = (crop_ltrb[0], crop_ltrb[1])
             else:
                 crop_left_top = (target_size[0] - crop_ltrb[2], crop_ltrb[1])
@@ -1135,7 +1134,10 @@ class BaseDataset(torch.utils.data.Dataset):
             trg_concept = image_info.trg_concept     # good
             train_class = 0
             if caption == trg_concept :
+                print(f'training data !')
                 train_class = 1
+                img_check = torch.equal(image,masked_image)
+                print(f'is image same? : {img_check}')
             train_class_list.append(train_class)
 
             class_caption = image_info.class_caption #
@@ -1220,7 +1222,6 @@ class BaseDataset(torch.utils.data.Dataset):
         example["trg_concepts"] = trg_concepts
         example["absolute_paths"] = absolute_paths
         example["train_class_list"] = train_class_list
-
         example["loss_weights"] = torch.FloatTensor(loss_weights)
         example["caption_attention_mask"] = caption_attention_masks
 #        example["class_caption_attention_mask"] = class_caption_attention_mask
