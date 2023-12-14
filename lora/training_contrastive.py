@@ -221,7 +221,6 @@ class NetworkTrainer:
 
     def get_text_cond(self, args, accelerator, batch, tokenizers, text_encoders, weight_dtype):
         input_ids = batch["input_ids"].to(accelerator.device) # batch, torch_num, sen_len
-        #print(f'input_ids : {input_ids}')
         encoder_hidden_states = train_util.get_hidden_states(args, input_ids,
                                                              tokenizers[0], text_encoders[0],
                                                              weight_dtype)
@@ -811,7 +810,7 @@ class NetworkTrainer:
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
-            loss = 0
+            loss = torch.tensor(0.0, requires_grad=True, device=accelerator.device)
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -912,7 +911,8 @@ class NetworkTrainer:
                 current_loss = loss.detach().item()
                 log_loss["loss/current_loss"] = current_loss
                 # ------------------------------------------------------------------------------------------------------------------------------
-                if epoch == 0: loss_list.append(current_loss)
+                if epoch == 0:
+                    loss_list.append(current_loss)
                 else:
                     loss_total -= loss_list[step]
                     loss_list[step] = current_loss
