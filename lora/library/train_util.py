@@ -1113,7 +1113,6 @@ class BaseDataset(torch.utils.data.Dataset):
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                     masked_img = masked_img[:, ::-1, :].copy()
                 latents = None
-                print(f'self.image_transforms : {self.image_transforms}')
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)
             images.append(image)
@@ -1138,7 +1137,6 @@ class BaseDataset(torch.utils.data.Dataset):
                 train_class = 1
                 img_check = torch.equal(image,masked_image)
             train_class_list.append(train_class)
-
             class_caption = image_info.class_caption #
             if class_caption is None:
                 class_caption = 'good' ## TODO remove
@@ -1255,8 +1253,11 @@ class BaseDataset(torch.utils.data.Dataset):
             example["text_encoder_pool2_list"] = torch.stack(text_encoder_pool2_list)
 
         if images[0] is not None:
-            images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
-            mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
+            print('stacking images ... ')
+            #images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
+            #mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
+            images = torch.stack(images).float()
+            mask_imgs = torch.stack(mask_imgs).float()
         else:
             images = None
         print(f'train_class_list (1 = good, 0 = test image): {train_class_list}')

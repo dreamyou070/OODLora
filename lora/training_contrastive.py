@@ -265,8 +265,7 @@ class NetworkTrainer:
                     user_config = {}
                     user_config['datasets'] = [{"subsets": None}]
                     subsets_dict_list = []
-                    for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
-                                                                                                  args.reg_data_dir):
+                    for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,args.reg_data_dir):
                         if use_class_caption:
                             subsets_dict['class_caption'] = args.class_caption
                         subsets_dict_list.append(subsets_dict)
@@ -280,9 +279,7 @@ class NetworkTrainer:
                     if use_class_caption:
                         for subset in user_config["datasets"][0]["subsets"]:
                             subset["class_caption"] = args.class_caption
-            print(f'User config: {user_config}')
             # blueprint_generator = BlueprintGenerator
-            print('start of generate function ...')
             blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
             train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
         else:
@@ -414,7 +411,8 @@ class NetworkTrainer:
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)  # cpu_count-1 ただし最大で指定された数まで
         train_dataloader = torch.utils.data.DataLoader(train_dataset_group,batch_size=1,
                                                        shuffle=False,
-                                                       collate_fn=collater,num_workers=n_workers,
+                                                       collate_fn=collater,
+                                                       num_workers=n_workers,
                                                        persistent_workers=args.persistent_data_loader_workers,)
         if args.max_train_epochs is not None:
             args.max_train_steps = args.max_train_epochs * math.ceil(
