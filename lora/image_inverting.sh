@@ -5,5 +5,5 @@ python image_inverting.py --device cuda:7 \
   --network_weights '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/4_contrastive_learning_eps_change_direction_0.0/epoch-000019.safetensors' \
   --prompt 'good' --inversion_experiment --sample_sampler ddim --num_ddim_steps 50 \
   --output_dir '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/4_contrastive_learning_eps_change_direction_0.0' \
-  --using_customizing_scheduling --cfg_check 0 --just_scheduling \
-  --concept_image_folder /data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel --repeat_time 51 --self_attn_threshold_time 1000
+  --concept_image_folder /data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel --repeat_time 51 --self_attn_threshold_time 10000 \
+  --using_customizing_scheduling
