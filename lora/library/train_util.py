@@ -1126,6 +1126,7 @@ class BaseDataset(torch.utils.data.Dataset):
             class_caption = image_info.class_caption
             caption = image_info.caption
             train_class = 0
+            print(f'class_caption : {class_caption} | caption : {caption}')
             if class_caption == caption :
                 train_class = 1
                 img_check = torch.equal(image,masked_image)
