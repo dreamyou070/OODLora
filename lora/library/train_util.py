@@ -1120,7 +1120,6 @@ class BaseDataset(torch.utils.data.Dataset):
             latents_list.append(latents)
             target_size = (image.shape[2], image.shape[1]) if image is not None else (latents.shape[2] * 8, latents.shape[1] * 8)
             if not flipped:
-                print(f'not flipping')
                 crop_left_top = (crop_ltrb[0], crop_ltrb[1])
             else:
                 crop_left_top = (target_size[0] - crop_ltrb[2], crop_ltrb[1])
@@ -1215,6 +1214,7 @@ class BaseDataset(torch.utils.data.Dataset):
                         input_ids2_list.append(token_caption2)
 
         example = {}
+        print(f'saving mask dirs : {mask_dirs}')
         example["mask_dirs"] = mask_dirs
         example["trg_indexs_list"] = trg_indexs_list ##########################################################
         example["trg_concepts"] = trg_concepts
@@ -1223,6 +1223,8 @@ class BaseDataset(torch.utils.data.Dataset):
         example["loss_weights"] = torch.FloatTensor(loss_weights)
         example["caption_attention_mask"] = caption_attention_masks
 #        example["class_caption_attention_mask"] = class_caption_attention_mask
+
+        # ---------------------------------------------------------------------------------------------------------------------------------------
         # input_ids
         if len(text_encoder_outputs1_list) == 0:
             if self.token_padding_disabled :
@@ -1256,15 +1258,13 @@ class BaseDataset(torch.utils.data.Dataset):
             example["text_encoder_pool2_list"] = torch.stack(text_encoder_pool2_list)
 
         if images[0] is not None:
-            images = torch.stack(images)
-            images = images.to(memory_format=torch.contiguous_format).float()
-            mask_imgs = torch.stack(mask_imgs)
-            mask_imgs = mask_imgs.to(memory_format=torch.contiguous_format).float()
+            images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
+            mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
         else:
             images = None
 
-        example["mask_imgs"] = mask_imgs
         example["images"] = images
+        example["mask_imgs"] = mask_imgs
         example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
         example["captions"] = captions
         example["original_sizes_hw"] = torch.stack([torch.LongTensor(x) for x in original_sizes_hw])
