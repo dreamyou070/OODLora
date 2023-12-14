@@ -144,8 +144,7 @@ class NetworkTrainer:
         self.is_sdxl = False
 
     # TODO 他のスクリプトと共通化する
-    def generate_step_logs(self, loss_dict, avr_loss, lr_scheduler,
-                           keys_scaled=None, mean_norm=None, maximum_norm=None, **kwargs):
+    def generate_step_logs(self, loss_dict, lr_scheduler, keys_scaled=None, mean_norm=None, maximum_norm=None, **kwargs):
         logs = {"loss/current": loss_dict["loss/current_loss"], "loss/average": loss_dict['loss/avr_loss']}
         # ------------------------------------------------------------------------------------------------------------------------------
         # updating kwargs with new loss logs ...
@@ -925,10 +924,8 @@ class NetworkTrainer:
                 if args.scale_weight_norms:
                     progress_bar.set_postfix(**{**max_mean_logs, **log_loss})
                 if args.logging_dir is not None:
-                    logs = self.generate_step_logs(args,
-                                                   log_loss,
+                    logs = self.generate_step_logs(log_loss,lr_scheduler,keys_scaled, mean_norm, maximum_norm)
 
-                                                   lr_scheduler, keys_scaled, mean_norm, maximum_norm)
                     accelerator.log(logs, step=global_step)
                 if is_main_process:
                     wandb.log(logs)
