@@ -246,10 +246,8 @@ class NetworkTrainer:
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
         h,w = args.resolution.split(',')
-        parent, child = os.path.split(args.train_data_dir)  # bad, 10_combined
-        super_parent, folder_name = os.path.split(parent)  # , bad
-        mask_parent = os.path.join(super_parent, f'corrected')
-        masked_dir = os.path.join(mask_parent, child)
+        parent, child = os.path.split(args.train_data_dir)  # parent, bad
+        masked_dir = os.path.join(parent, f'corrected')
 
         train_dataset_group = SYDataset(image_dir = args.train_data_dir,
                             masked_dir = masked_dir,
