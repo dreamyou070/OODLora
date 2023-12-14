@@ -503,7 +503,9 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
     return subsets_config
 
   subsets_config = []
+  print(f'check train data dir : {train_data_dir}')
   subsets_config += generate(train_data_dir, False)
+
   subsets_config += generate(reg_data_dir, True)
 
   return subsets_config
