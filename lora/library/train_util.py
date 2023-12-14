@@ -1088,7 +1088,6 @@ class BaseDataset(torch.utils.data.Dataset):
                         img = self.crop_target(subset, img, face_cx, face_cy, face_w, face_h)
                         masked_img = self.crop_target(subset, masked_img, face_cx, face_cy, face_w, face_h)
                     """
-                    im_h, im_w = img.shape[0:2]
                     if im_h > self.height or im_w > self.width:
                         assert (subset.random_crop ), f"image too large, but cropping and bucketing are disabled / 画像サイズが大きいのでface_crop_aug_rangeかrandom_crop、またはbucketを有効にしてください: {image_info.absolute_path}"
                         if im_h > self.height:
@@ -1107,9 +1106,11 @@ class BaseDataset(torch.utils.data.Dataset):
                 # augmentation
                 aug = self.aug_helper.get_augmentor(subset.color_aug)
                 if aug is not None:
+                    print('no augment')
                     img = aug(image=img)["image"]
                     masked_img = aug(image=masked_img)["image"]
                 if flipped:
+                    print('no flipping')
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                     masked_img = masked_img[:, ::-1, :].copy()
                 latents = None
@@ -1122,7 +1123,6 @@ class BaseDataset(torch.utils.data.Dataset):
             if not flipped:
                 crop_left_top = (crop_ltrb[0], crop_ltrb[1])
             else:
-                # crop_ltrb[2] is right, so target_size[0] - crop_ltrb[2] is left in flipped image
                 crop_left_top = (target_size[0] - crop_ltrb[2], crop_ltrb[1])
             original_sizes_hw.append((int(original_size[1]), int(original_size[0])))
             crop_top_lefts.append((int(crop_left_top[1]), int(crop_left_top[0])))
