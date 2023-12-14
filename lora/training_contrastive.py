@@ -715,6 +715,10 @@ class NetworkTrainer:
                     test_good_latents = good_latents[test_indexs, :, :, :]
 
                     trg_indexs = batch["trg_indexs_list"]
+                    b_size = len(trg_indexs)
+                    for i in range(b_size):
+                        if i in train_indexs:
+                            trg_indexs[i] = trg_indexs[i] - len(test_indexs)
                     caption = batch['caption']
                     print(f'batch["trg_indexs_list"] : {trg_indexs}')
                     print(f'caption : {caption}')
