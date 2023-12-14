@@ -677,7 +677,7 @@ def main(args) :
             flip_times = torch.flip(inference_times, dims=[0]) # [0,20, ..., 980]
             original_latent = latent.clone().detach()
             for ii, final_time in enumerate(flip_times[1:]):
-                if final_time == 200 :
+                if final_time == 300 :
                     timewise_save_base_folder = os.path.join(save_base_folder,f'{concept_name}/final_time_{final_time.item()}')
                     os.makedirs(timewise_save_base_folder, exist_ok=True)
                     latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
