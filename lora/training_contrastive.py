@@ -266,7 +266,7 @@ class NetworkTrainer:
                     user_config['datasets'] = [{"subsets": None}]
                     subsets_dict_list = []
                     for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
-                                                                                                  args.reg_data_dir):
+                                                                                                  args.reg_data_dir, args.class_caption):
                         if use_class_caption:
                             subsets_dict['class_caption'] = args.class_caption
                         subsets_dict_list.append(subsets_dict)
@@ -284,10 +284,10 @@ class NetworkTrainer:
             # blueprint_generator = BlueprintGenerator
             print('start of generate function ...')
             blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
-            train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
+            train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group, args)
         else:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
-            
+
         current_epoch = Value("i", 0)
         current_step = Value("i", 0)
         ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
