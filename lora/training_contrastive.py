@@ -267,7 +267,7 @@ class NetworkTrainer:
                     subsets_dict_list = []
                     for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
                                                                                                   args.reg_data_dir,
-                                                                                                  class_caption=args.class_concept):
+                                                                                                  class_caption=args.class_caption):
                         if use_class_caption:
                             subsets_dict['class_caption'] = args.class_caption
                         subsets_dict_list.append(subsets_dict)
