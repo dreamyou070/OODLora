@@ -1123,9 +1123,9 @@ class BaseDataset(torch.utils.data.Dataset):
             # captionとtext encoder outputを処理する
             caption = image_info.caption  # default
             class_caption = image_info.class_caption
-            class_token = image_info.class_token
+            class_tokens = image_info.class_tokens
             train_class = 0
-            if class_caption == class_token :
+            if class_caption == class_tokens :
                 train_class = 1
                 img_check = torch.equal(image,masked_image)
                 print(f'check train class 1 image same ? : {img_check}')
