@@ -485,6 +485,7 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
     if base_dir is None:
       return []
     base_dir: Path = Path(base_dir)
+    print(f'base_dir : {base_dir}')
     if not base_dir.is_dir():
       return []
     subsets_config = []
