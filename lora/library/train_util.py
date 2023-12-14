@@ -1132,6 +1132,7 @@ class BaseDataset(torch.utils.data.Dataset):
             caption = image_info.caption  # default
             trg_concept = image_info.trg_concept     # good
             train_class = 0
+            # --------------------------
             if caption == trg_concept :
                 train_class = 1
                 img_check = torch.equal(image,masked_image)
