@@ -341,7 +341,8 @@ class BaseSubset:
         caption_suffix: Optional[str],
         token_warmup_min: int,
         token_warmup_step: Union[float, int],
-        mask_dir, class_caption = None) -> None:
+        mask_dir,
+            class_caption = None) -> None:
         self.image_dir = image_dir
         self.num_repeats = num_repeats
         self.shuffle_caption = shuffle_caption
@@ -384,7 +385,7 @@ class DreamBoothSubset(BaseSubset):
         caption_suffix,
         token_warmup_min,
         token_warmup_step,
-    ) -> None:
+        mask_dir ) -> None:
         assert image_dir is not None, "image_dir must be specified / image_dirは指定が必須です"
 
         super().__init__(
@@ -404,7 +405,7 @@ class DreamBoothSubset(BaseSubset):
             caption_suffix,
             token_warmup_min,
             token_warmup_step,
-        )
+            mask_dir)
 
         self.is_reg = is_reg
         self.class_tokens = class_tokens
