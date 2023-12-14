@@ -1170,11 +1170,11 @@ class BaseDataset(torch.utils.data.Dataset):
                         caption_attention_masks.append(caption_attention_mask)
                     input_ids_list.append(token_caption)
                     class_input_ids_list.append(class_token_caption)
+
                     def generate_text_embedding(caption, tokenizer):
                         cls_token = 49406
                         pad_token = 49407
-                        token_input = tokenizer([class_caption],
-                                                padding="max_length",max_length=tokenizer.model_max_length,
+                        token_input = tokenizer([class_caption], padding="max_length",max_length=tokenizer.model_max_length,
                                                 truncation=True,return_tensors="pt", ) # token_input = 24215
                         token_ids = token_input.input_ids[0]
                         token_attns = token_input.attention_mask[0]
@@ -1206,8 +1206,9 @@ class BaseDataset(torch.utils.data.Dataset):
         example = {}
         example["mask_dirs"] = mask_dirs
         example["trg_indexs_list"] = trg_indexs_list ##########################################################
-        example["absolute_paths"] = absolute_paths
         example["train_class_list"] = train_class_list
+        example["absolute_paths"] = absolute_paths
+
         example["loss_weights"] = torch.FloatTensor(loss_weights)
         example["caption_attention_mask"] = caption_attention_masks
         # ---------------------------------------------------------------------------------------------------------------------------------------
@@ -1248,16 +1249,6 @@ class BaseDataset(torch.utils.data.Dataset):
             images = None
         example["images"] = images
         example["mask_imgs"] = mask_imgs
-        for i in train_class_list:
-            if i == 1:
-                img = images[i]
-                corrected_img = mask_imgs[i]
-                same_check = torch.equal(img, corrected_img)
-            else :
-                img = images[i]
-                corrected_img = mask_imgs[i]
-                same_check = torch.equal(img, corrected_img)
-        example['train_class_list'] = train_class_list
         example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
         example["captions"] = captions
         example["original_sizes_hw"] = torch.stack([torch.LongTensor(x) for x in original_sizes_hw])
