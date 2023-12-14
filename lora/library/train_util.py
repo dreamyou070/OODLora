@@ -107,7 +107,8 @@ TEXT_ENCODER_OUTPUTS_CACHE_SUFFIX = "_te_outputs.npz"
 
 class ImageInfo:
     def __init__(self,
-                 image_key: str, num_repeats: int, caption: str, is_reg: bool, absolute_path: str,
+                 image_key: str,
+                 num_repeats: int, caption: str, is_reg: bool, absolute_path: str,
                  mask_dir:str,
                  class_caption:Optional[str]) -> None:
         self.image_key: str = image_key
@@ -1123,9 +1124,9 @@ class BaseDataset(torch.utils.data.Dataset):
             # captionとtext encoder outputを処理する
             caption = image_info.caption  # default
             class_caption = image_info.class_caption
-            class_tokens = image_info.class_tokens
+            caption = image_info.caption
             train_class = 0
-            if class_caption == class_tokens :
+            if class_caption == caption :
                 train_class = 1
                 img_check = torch.equal(image,masked_image)
                 print(f'check train class 1 image same ? : {img_check}')
