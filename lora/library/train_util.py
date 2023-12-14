@@ -1047,11 +1047,10 @@ class BaseDataset(torch.utils.data.Dataset):
             parent, dir = os.path.split(absolute_path) # 100_hole
             super_parent, class_name = os.path.split(parent)
             super_parent, state = os.path.split(super_parent)
-            mask_dir = image_info.mask_dir
-            if mask_dir is not None:
-                mask_dir = os.path.join(super_parent, 'corrected', class_name, dir)
+            #mask_dir = image_info.mask_dir
+            #if mask_dir is not None:
+            mask_dir = os.path.join(super_parent, 'corrected', class_name, dir)
             mask_dirs.append(mask_dir)
-            print(F'absolute_path: {absolute_path} | mask_dir : {mask_dir}' )
             subset = self.image_to_subset[image_key]
             loss_weights.append(self.prior_loss_weight if image_info.is_reg else 1.0)
             flipped = subset.flip_aug and random.random() < 0.5  # not flipped or flipped with 50% chance
@@ -1082,11 +1081,15 @@ class BaseDataset(torch.utils.data.Dataset):
                 if self.enable_bucket:
                     img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
                     masked_img, _, _ = trim_and_resize_if_required(subset.random_crop, masked_img, image_info.bucket_reso, image_info.resized_size)
-                """
-                else:                    
+
+                else:
+                    """     
                     if face_cx > 0:  # 顔位置情報あり
                         img = self.crop_target(subset, img, face_cx, face_cy, face_w, face_h)
                         masked_img = self.crop_target(subset, masked_img, face_cx, face_cy, face_w, face_h)
+                    """
+                    im_h, im_w = img.shape[0:2]
+                    print(f'im_h : {im_h} | self.height : {self.height}')
                     if im_h > self.height or im_w > self.width:
                         assert (subset.random_crop ), f"image too large, but cropping and bucketing are disabled / 画像サイズが大きいのでface_crop_aug_rangeかrandom_crop、またはbucketを有効にしてください: {image_info.absolute_path}"
                         if im_h > self.height:
@@ -1102,7 +1105,6 @@ class BaseDataset(torch.utils.data.Dataset):
                     assert (im_h == self.height and im_w == self.width), f"image size is small / 画像サイズが小さいようです: {image_info.absolute_path}"
                     original_size = [im_w, im_h]
                     crop_ltrb = (0, 0, 0, 0)
-                """
                 # augmentation
                 aug = self.aug_helper.get_augmentor(subset.color_aug)
                 if aug is not None:
