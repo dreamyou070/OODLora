@@ -721,14 +721,10 @@ class NetworkTrainer:
                     for i in range(b_size):
                         if i in test_indexs:
                             a = trg_indexs[i].tolist()
-                            print(f'trg list : {a}')
                             index_list.append(a)
-
-
                     # (2) text condition checking
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
-
                     # (3.1) contrastive learning
                     log_loss = {}
                     if test_latents.shape[0] != 0 :
