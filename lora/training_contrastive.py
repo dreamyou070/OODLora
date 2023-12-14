@@ -145,7 +145,9 @@ class NetworkTrainer:
 
     # TODO 他のスクリプトと共通化する
     def generate_step_logs(self, loss_dict, lr_scheduler, keys_scaled=None, mean_norm=None, maximum_norm=None, **kwargs):
-        logs = {"loss/current": loss_dict["loss/current_loss"], "loss/average": loss_dict['loss/avr_loss']}
+        logs = {}
+        for k, v in loss_dict.items() :
+            logs[k] = v
         # ------------------------------------------------------------------------------------------------------------------------------
         # updating kwargs with new loss logs ...
         if kwargs is not None:
@@ -839,7 +841,7 @@ class NetworkTrainer:
                         else:
                             test_indexs.append(i)
 
-                    train_latents = latents[train_indexs, :, :, :]
+                    train_latents = good_latents[train_indexs, :, :, :]
                     test_latents = latents[test_indexs, :, :, :]
                     test_good_latents = good_latents[test_indexs, :, :, :]
 
@@ -849,6 +851,7 @@ class NetworkTrainer:
 
                     # (3.1) contrastive learning
                     log_loss = {}
+                    """
                     if test_latents.shape[0] != 0 :
                         input_latents   = torch.cat([test_latents, test_good_latents], dim=0)
                         input_condition = text_encoder_conds[test_indexs, :, :]
@@ -856,22 +859,26 @@ class NetworkTrainer:
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
                         # Predict the noise residual
                         with accelerator.autocast():
-                            noise_pred = unet(noisy_latents,timesteps,input_condition,
-                                              trg_indexs_list=[batch["trg_indexs_list"][i] for i in test_indexs],
-                                              mask_imgs=batch['mask_imgs'][test_indexs, :, :, :],).sample
+                            unet(noisy_latents,timesteps,input_condition,
+                                 trg_indexs_list=[batch["trg_indexs_list"][i] for i in test_indexs],
+                                 mask_imgs=batch['mask_imgs'][test_indexs, :, :, :],).sample
                         losss = attention_storer.loss_list
                         attention_storer.reset()
                         contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
                         log_loss["loss/contrastive_loss"] = contrastive_loss
                         loss = contrastive_loss
-
+                    """
                     if train_latents.shape[0] != 0 :
                         input_latents = train_latents
                         input_condition = text_encoder_conds[train_indexs, :, :]
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
                         with accelerator.autocast():
                             noise_pred = unet(noisy_latents,timesteps,input_condition,None, None).sample
-                        task_loss = torch.nn.functional.mse_loss(noise_pred.float(),noise.float(), reduction="none")
+                        if args.v_parameterization:
+                            target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                        else:
+                            target = noise
+                        task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
                         task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
                         task_loss = task_loss.mean()
                         log_loss["loss/task_loss"] = task_loss
