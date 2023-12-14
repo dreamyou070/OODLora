@@ -816,7 +816,9 @@ class NetworkTrainer:
                     total_batch = latents.shape[0]
                     train_indexs, test_indexs = [], []
                     for i in range(total_batch):
-                        if torch.equal(latents[i,:,:,:], good_latents[i,:,:,:]):
+                        img_check = torch.equal(latents[i,:,:,:], good_latents[i,:,:,:])
+                        print(f'img_check whether img = corrected img : {img_check}')
+                        if img_check :
                             train_indexs.append(i)
                         else:
                             test_indexs.append(i)

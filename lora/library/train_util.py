@@ -1134,10 +1134,8 @@ class BaseDataset(torch.utils.data.Dataset):
             trg_concept = image_info.trg_concept     # good
             train_class = 0
             if caption == trg_concept :
-                print(f'training data !')
                 train_class = 1
                 img_check = torch.equal(image,masked_image)
-                print(f'is image same? : {img_check}')
             train_class_list.append(train_class)
 
             class_caption = image_info.class_caption #
