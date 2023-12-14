@@ -1083,11 +1083,11 @@ class BaseDataset(torch.utils.data.Dataset):
                     masked_img, _, _ = trim_and_resize_if_required(subset.random_crop, masked_img, image_info.bucket_reso, image_info.resized_size)
 
                 else:
-                    """     
+                    """
                     if face_cx > 0:  # 顔位置情報あり
                         img = self.crop_target(subset, img, face_cx, face_cy, face_w, face_h)
                         masked_img = self.crop_target(subset, masked_img, face_cx, face_cy, face_w, face_h)
-                    
+                    """
                     im_h, im_w = img.shape[0:2]
                     if im_h > self.height or im_w > self.width:
                         assert (subset.random_crop ), f"image too large, but cropping and bucketing are disabled / 画像サイズが大きいのでface_crop_aug_rangeかrandom_crop、またはbucketを有効にしてください: {image_info.absolute_path}"
@@ -1103,7 +1103,6 @@ class BaseDataset(torch.utils.data.Dataset):
                     masked_img_h, masked_img_w = masked_img.shape[0:2]
                     assert (im_h == self.height and im_w == self.width), f"image size is small / 画像サイズが小さいようです: {image_info.absolute_path}"
                     original_size = [im_w, im_h]
-                    """
                     crop_ltrb = (0, 0, 0, 0)
                 # augmentation
                 aug = self.aug_helper.get_augmentor(subset.color_aug)
