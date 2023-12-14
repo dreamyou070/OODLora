@@ -485,10 +485,8 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
     if base_dir is None:
       return []
     base_dir: Path = Path(base_dir)
-    print(f'base_dir : {base_dir}')
     if not base_dir.is_dir():
       return []
-    print(f'base_dir : {base_dir}')
     subsets_config = []
     for subdir in base_dir.iterdir():
       if not subdir.is_dir():
@@ -503,13 +501,9 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
                        "class_caption": class_caption,}
       subsets_config.append(subset_config)
     return subsets_config
-
   subsets_config = []
-  print(f'check train data dir : {train_data_dir}')
   subsets_config += generate(train_data_dir, False)
-
   subsets_config += generate(reg_data_dir, True)
-
   return subsets_config
 
 

@@ -8,8 +8,7 @@ accelerate launch --config_file /data7/sooyeon/LyCORIS/gpu_config/gpu_6_7_config
   --optimizer_type AdamW --lr_scheduler cosine_with_restarts --lr_warmup_steps 144 \
   --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 \
   --save_every_n_epochs 1 --sample_every_n_epochs 1 --sample_prompts /data7/sooyeon/MyData/object/bagel_inference.txt \
-  --max_train_steps 48000 \
-  --train_data_dir r'/data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel/contrastive_learning/bad' --resolution 512,512  \
+  --max_train_steps 48000 --train_data_dir /data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel/contrastive_learning/bad --resolution 512,512  \
   --trg_concept 'good' --sample_prompts /data7/sooyeon/MyData/object/bagel_inference.txt --contrastive_eps 0.00005
 
 

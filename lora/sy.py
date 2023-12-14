@@ -15,7 +15,7 @@ for i in range(total_batch):
         test_indexs.append(i)
 print(f"train_indexs: {train_indexs}")
 print(f"test_indexs: {test_indexs}")
-
+"""
 train_latents = latents[train_indexs,:,:,:]
 
 test_latents = latents[test_indexs,:,:,:]
@@ -23,3 +23,9 @@ test_good_latents = good_latents[test_indexs,:,:,:]
 print(f'train_latents: {train_latents.shape}')
 print(f'test_latents: {test_latents.shape}')
 print(f'test_good_latents: {test_good_latents.shape}')
+"""
+trg_indexs_list = [[1], [1]]
+trai = [trg_indexs_list[i] for i in train_indexs]
+test = [trg_indexs_list[i] for i in test_indexs]
+print(f'trai_: {trai}')
+print(f'test_: {test}')

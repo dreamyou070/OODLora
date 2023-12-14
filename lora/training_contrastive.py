@@ -147,9 +147,9 @@ class NetworkTrainer:
         self.is_sdxl = False
 
     # TODO 他のスクリプトと共通化する
-    def generate_step_logs(self, args: argparse.Namespace, current_loss, avr_loss, lr_scheduler,
+    def generate_step_logs(self, loss_dict, avr_loss, lr_scheduler,
                            keys_scaled=None, mean_norm=None, maximum_norm=None, **kwargs):
-        logs = {"loss/current": current_loss, "loss/average": avr_loss}
+        logs = {"loss/current": loss_dict['current_loss'], "loss/average": loss_dict['avr_loss']}
         # ------------------------------------------------------------------------------------------------------------------------------
         # updating kwargs with new loss logs ...
         if kwargs is not None:
@@ -817,6 +817,7 @@ class NetworkTrainer:
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
+            loss = 0
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -853,10 +854,8 @@ class NetworkTrainer:
                         with torch.set_grad_enabled(train_text_encoder):
                             text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
 
-                        print(f'batch["trg_indexs_list"] : {batch["trg_indexs_list"]}')
-                        print(f'batch["mask_imgs"] : {batch["mask_imgs"]}')
-
                         # (3.1) contrastive learning
+                        log_loss = {}
                         if test_latents.shape[0] != 0 :
                             input_latents   = torch.cat([test_latents, test_good_latents], dim=0)
                             input_condition = text_encoder_conds[test_indexs, :, :]
@@ -864,32 +863,26 @@ class NetworkTrainer:
                             noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
                             # Predict the noise residual
                             with accelerator.autocast():
-                                noise_pred = unet(noisy_latents,timesteps,input_condition, trg_indexs_list=batch["trg_indexs_list"], mask_imgs=batch['mask_imgs'],).sample
+                                noise_pred = unet(noisy_latents,timesteps,input_condition,
+                                                  trg_indexs_list=[batch["trg_indexs_list"][i] for i in test_indexs],
+                                                  mask_imgs=batch['mask_imgs'][test_indexs, :, :, :],).sample
                             losss = attention_storer.loss_list
                             attention_storer.reset()
-                            loss = torch.stack(losss, dim=0).mean(dim=0)
-                            contrastive_loss = loss.mean()
-                            attention_losses = {}
-                            attention_losses["loss/contrastive_loss"] = contrastive_loss
+                            contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
+                            log_loss["loss/contrastive_loss"] = contrastive_loss
+                            loss += contrastive_loss
+
                         if train_latents.shape[0] != 0 :
                             input_latents = train_latents
-                            with torch.set_grad_enabled(train_text_encoder):
-                                if args.weighted_captions:
-                                    text_encoder_conds = get_weighted_text_embeddings(tokenizer,text_encoder,
-                                                                                      batch["captions"],accelerator.device,
-                                                                                      args.max_token_length // 75 if args.max_token_length else 1,
-                                                                                      clip_skip=args.clip_skip,)
-                                else:
-                                    train_text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)[train_indexs, :, :]
-                            noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                               noise_scheduler,
-                                                                                                               input_latents)
-                            input_condition = train_text_encoder_conds
+                            input_condition = text_encoder_conds[train_indexs, :, :]
+                            noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
                             with accelerator.autocast():
-                                noise_pred = self.call_unet(args,accelerator,unet,noisy_latents,timesteps,input_condition,
-                                                            batch,weight_dtype,None, None)
-
-
+                                noise_pred = unet(noisy_latents,timesteps,input_condition,None, None).sample
+                            task_loss = torch.nn.functional.mse_loss(noise_pred.float(),noise.float(), reduction="none")
+                            task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
+                            task_loss = task_loss.mean()
+                            log_loss["loss/task_loss"] = task_loss
+                            loss += task_loss
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
@@ -899,64 +892,54 @@ class NetworkTrainer:
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
                 if args.scale_weight_norms:
-                    keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(
-                        args.scale_weight_norms, accelerator.device)
+                    keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(args.scale_weight_norms, accelerator.device)
                     max_mean_logs = {"Keys Scaled": keys_scaled, "Average key norm": mean_norm }
                 else:
                     keys_scaled, mean_norm, maximum_norm = None, None, None
-
-                # Checks if the accelerator has performed an optimization step behind the scenes
                 if accelerator.sync_gradients:
                     progress_bar.update(1)
                     global_step += 1
+                    # (4) sample images
                     self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
-                    if attention_storer is not None:
-                        attention_storer.step_store = {}
-                        # 指定ステップごとにモデルを保存
-                        if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
-                            accelerator.wait_for_everyone()
-                            if accelerator.is_main_process:
-                                ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
-                                save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch)
-
-                                if args.save_state:
-                                    train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
-
-                                remove_step_no = train_util.get_remove_step_no(args, global_step)
-                                if remove_step_no is not None:
-                                    remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as,
-                                                                                     remove_step_no)
-                                    remove_model(remove_ckpt_name)
+                    if attention_storer is not None: attention_storer.step_store = {}
+                    # (5) save or erase model
+                    if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
+                        accelerator.wait_for_everyone()
+                        if accelerator.is_main_process:
+                            ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
+                            save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch)
+                            if args.save_state:
+                                train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
+                            remove_step_no = train_util.get_remove_step_no(args, global_step)
+                            if remove_step_no is not None:
+                                remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as,remove_step_no)
+                                remove_model(remove_ckpt_name)
 
                 current_loss = loss.detach().item()
-                if epoch == 0:
-                    loss_list.append(current_loss)
+                log_loss["loss/current_loss"] = current_loss
+                # ------------------------------------------------------------------------------------------------------------------------------
+                if epoch == 0: loss_list.append(current_loss)
                 else:
                     loss_total -= loss_list[step]
                     loss_list[step] = current_loss
                 loss_total += current_loss
                 avr_loss = loss_total / len(loss_list)
-                logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-                # detach attention_losses dict
-                attention_losses = {k: v.detach().item() for k, v in attention_losses.items()}
-
-                progress_bar.set_postfix(**logs)
+                log_loss["loss/average_loss"] = avr_loss
+                # ------------------------------------------------------------------------------------------------------------------------------
+                progress_bar.set_postfix(**log_loss)
                 if args.scale_weight_norms:
-                    progress_bar.set_postfix(**{**max_mean_logs, **logs})
+                    progress_bar.set_postfix(**{**max_mean_logs, **log_loss})
                 if args.logging_dir is not None:
-                    logs = self.generate_step_logs(args, current_loss, avr_loss, lr_scheduler, keys_scaled, mean_norm,maximum_norm)
+                    logs = self.generate_step_logs(args, log_loss, lr_scheduler, keys_scaled, mean_norm, maximum_norm)
                     accelerator.log(logs, step=global_step)
                 if is_main_process:
                     wandb.log(logs)
-
                 if global_step >= args.max_train_steps:
                     break
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_total / len(loss_list)}
                 accelerator.log(logs, step=epoch + 1)
             accelerator.wait_for_everyone()
-
-            # 指定エポックごとにモデルを保存
             if args.save_every_n_epochs is not None:
                 saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < num_train_epochs
                 if is_main_process and saving:
@@ -983,13 +966,13 @@ class NetworkTrainer:
             ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
             save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
             print("model saved.")
-
             # saving attn loss
             import csv
             attn_loss_save_dir = os.path.join(args.output_dir, 'record', f'{args.wandb_run_name}_attn_loss.csv')
             with open(attn_loss_save_dir, 'w') as f:
                 writer = csv.writer(f)
                 writer.writerows(attn_loss_records)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
