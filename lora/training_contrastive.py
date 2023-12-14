@@ -249,20 +249,32 @@ class NetworkTrainer:
         use_class_caption = args.class_caption is not None
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
-        blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
-        user_config = {}
-        user_config['datasets'] = [{"subsets": None}]
-        subsets_dict_list = []
-        for i, subsets_dict in enumerate(config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,args.reg_data_dir,class_caption=args.class_caption)):
-            subsets_dict['class_caption'] = args.class_caption
-            subsets_dict_list.append(subsets_dict)
-            user_config['datasets'][0]['subsets'] = subsets_dict_list
-        blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
-        train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group, args)
-
-
-        training_started_at = time.time()
-        train_util.verify_training_args(args)
+        # データセットを準備する
+        if args.dataset_class is None:
+            blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
+            if use_user_config:
+                print(f"Loading dataset config from {args.dataset_config}")
+                user_config = config_util.load_user_config(args.dataset_config)
+                ignored = ["train_data_dir", "reg_data_dir", "in_json"]
+                if any(getattr(args, attr) is not None for attr in ignored):
+                    print(
+                        "ignoring the following options because config file is found: {0} / 設定ファイルが利用されるため以下のオプションは無視されます: {0}".format(
+                            ", ".join(ignored)))
+            else:
+                if use_dreambooth_method:
+                    print("Using DreamBooth method.")
+                    user_config = {"datasets": [{"subsets": config_util.generate_dreambooth_subsets_config_by_subdirs(
+                        args.train_data_dir, args.reg_data_dir)}]}
+                else:
+                    print("Training with captions.")
+                    user_config = {"datasets": [
+                        {"subsets": [{"image_dir": args.train_data_dir, "metadata_file": args.in_json, }]}]}
+            blueprint = blueprint_generator.generate(user_config,
+                                                     args,
+                                                     tokenizer=tokenizer)
+            train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
+        else:
+            train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
         current_epoch = Value("i", 0)
         current_step = Value("i", 0)
         ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
@@ -271,10 +283,16 @@ class NetworkTrainer:
             train_util.debug_dataset(train_dataset_group)
             return
         if len(train_dataset_group) == 0:
-            print("No data found. Please verify arguments (train_data_dir must be the parent of folders with images) ）")
+            print(
+                "No data found. Please verify arguments (train_data_dir must be the parent of folders with images) / 画像がありません。引数指定を確認してください（train_data_dirには画像があるフォルダではなく、画像があるフォルダの親フォルダを指定する必要があります）"
+            )
             return
+
         if cache_latents:
-            assert (train_dataset_group.is_latent_cacheable()), "when caching latents, either color_aug or random_crop cannot be used / latentをキャッシュするときはcolor_augとrandom_cropは使えません"
+            assert (
+                train_dataset_group.is_latent_cacheable()
+            ), "when caching latents, either color_aug or random_crop cannot be used / latentをキャッシュするときはcolor_augとrandom_cropは使えません"
+
         self.assert_extra_args(args, train_dataset_group)
 
         print(f'\n step 3. preparing accelerator')
