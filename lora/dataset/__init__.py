@@ -120,7 +120,8 @@ class SYDataset(Dataset):
         sample['mask_imgs'] = masked
 
 
-        caption = sample['caption']
+        #caption = sample['caption']
+        caption = sample['class_caption']
         input_ids, caption_attention_mask = self.get_input_ids(caption, self.tokenizers[0])
         sample['input_ids'] = input_ids
 
