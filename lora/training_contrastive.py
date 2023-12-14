@@ -11,7 +11,6 @@ import json
 from multiprocessing import Value
 from tqdm import tqdm
 import toml
-import tempfile
 from accelerate.utils import set_seed
 from diffusers import DDPMScheduler
 from library import model_util
@@ -21,11 +20,9 @@ import library.config_util as config_util
 from library.config_util import (ConfigSanitizer,BlueprintGenerator,)
 import library.huggingface_util as huggingface_util
 import library.custom_train_functions as custom_train_functions
-from library.custom_train_functions import (apply_snr_weight, get_weighted_text_embeddings,prepare_scheduler_for_custom_training,
-                                            scale_v_prediction_loss_like_noise_prediction,add_v_prediction_like_loss,)
+from library.custom_train_functions import prepare_scheduler_for_custom_training
 import torch
 from torch import nn
-import torch.nn.functional as F
 from functools import lru_cache
 from attention_store import AttentionStore
 try:
@@ -172,8 +169,7 @@ class NetworkTrainer:
                 args.optimizer_type.lower().startswith("DAdapt".lower()) or args.optimizer_type.lower() == "Prodigy".lower()
             ):  # tracking d*lr value of unet.
                 logs["lr/d*lr"] = (
-                    lr_scheduler.optimizers[-1].param_groups[0]["d"] * lr_scheduler.optimizers[-1].param_groups[0]["lr"]
-                )
+                    lr_scheduler.optimizers[-1].param_groups[0]["d"] * lr_scheduler.optimizers[-1].param_groups[0]["lr"])
         else:
             idx = 0
             if not args.network_train_unet_only:
@@ -184,8 +180,7 @@ class NetworkTrainer:
                 logs[f"lr/group{i}"] = float(lrs[i])
                 if args.optimizer_type.lower().startswith("DAdapt".lower()) or args.optimizer_type.lower() == "Prodigy".lower():
                     logs[f"lr/d*lr/group{i}"] = (
-                        lr_scheduler.optimizers[-1].param_groups[i]["d"] * lr_scheduler.optimizers[-1].param_groups[i]["lr"]
-                    )
+                        lr_scheduler.optimizers[-1].param_groups[i]["d"] * lr_scheduler.optimizers[-1].param_groups[i]["lr"])
 
         return logs
 
@@ -822,6 +817,7 @@ class NetworkTrainer:
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
+                    # ---------------------------------------------------------------------------------------------------------------------
                     with torch.no_grad():
                         if "latents" in batch and batch["latents"] is not None:
                             latents = batch["latents"].to(accelerator.device)
@@ -833,56 +829,55 @@ class NetworkTrainer:
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
+                    # ---------------------------------------------------------------------------------------------------------------------
+                    total_batch = latents.shape[0]
+                    train_indexs = []
+                    test_indexs = []
+                    for i in range(total_batch):
+                        bad_latent = latents[i, :, :, :]
+                        good_latent = good_latents[i, :, :, :]
+                        if torch.equal(bad_latent, good_latent):
+                            train_indexs.append(i)
+                        else:
+                            test_indexs.append(i)
 
-                        total_batch = latents.shape[0]
-                        train_indexs = []
-                        test_indexs = []
-                        for i in range(total_batch):
-                            bad_latent = latents[i, :, :, :]
-                            good_latent = good_latents[i, :, :, :]
-                            if torch.equal(bad_latent, good_latent):
-                                train_indexs.append(i)
-                            else:
-                                test_indexs.append(i)
+                    train_latents = latents[train_indexs, :, :, :]
+                    test_latents = latents[test_indexs, :, :, :]
+                    test_good_latents = good_latents[test_indexs, :, :, :]
 
-                        train_latents = latents[train_indexs, :, :, :]
+                    # (2) text condition checking
+                    with torch.set_grad_enabled(train_text_encoder):
+                        text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
 
-                        test_latents = latents[test_indexs, :, :, :]
-                        test_good_latents = good_latents[test_indexs, :, :, :]
+                    # (3.1) contrastive learning
+                    log_loss = {}
+                    if test_latents.shape[0] != 0 :
+                        input_latents   = torch.cat([test_latents, test_good_latents], dim=0)
+                        input_condition = text_encoder_conds[test_indexs, :, :]
+                        input_condition = torch.cat([input_condition] * 2, dim=0)
+                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
+                        # Predict the noise residual
+                        with accelerator.autocast():
+                            noise_pred = unet(noisy_latents,timesteps,input_condition,
+                                              trg_indexs_list=[batch["trg_indexs_list"][i] for i in test_indexs],
+                                              mask_imgs=batch['mask_imgs'][test_indexs, :, :, :],).sample
+                        losss = attention_storer.loss_list
+                        attention_storer.reset()
+                        contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
+                        log_loss["loss/contrastive_loss"] = contrastive_loss
+                        loss += contrastive_loss
 
-                        # (2) text condition checking
-                        with torch.set_grad_enabled(train_text_encoder):
-                            text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
-
-                        # (3.1) contrastive learning
-                        log_loss = {}
-                        if test_latents.shape[0] != 0 :
-                            input_latents   = torch.cat([test_latents, test_good_latents], dim=0)
-                            input_condition = text_encoder_conds[test_indexs, :, :]
-                            input_condition = torch.cat([input_condition] * 2, dim=0)
-                            noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
-                            # Predict the noise residual
-                            with accelerator.autocast():
-                                noise_pred = unet(noisy_latents,timesteps,input_condition,
-                                                  trg_indexs_list=[batch["trg_indexs_list"][i] for i in test_indexs],
-                                                  mask_imgs=batch['mask_imgs'][test_indexs, :, :, :],).sample
-                            losss = attention_storer.loss_list
-                            attention_storer.reset()
-                            contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
-                            log_loss["loss/contrastive_loss"] = contrastive_loss
-                            loss += contrastive_loss
-
-                        if train_latents.shape[0] != 0 :
-                            input_latents = train_latents
-                            input_condition = text_encoder_conds[train_indexs, :, :]
-                            noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
-                            with accelerator.autocast():
-                                noise_pred = unet(noisy_latents,timesteps,input_condition,None, None).sample
-                            task_loss = torch.nn.functional.mse_loss(noise_pred.float(),noise.float(), reduction="none")
-                            task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
-                            task_loss = task_loss.mean()
-                            log_loss["loss/task_loss"] = task_loss
-                            loss += task_loss
+                    if train_latents.shape[0] != 0 :
+                        input_latents = train_latents
+                        input_condition = text_encoder_conds[train_indexs, :, :]
+                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
+                        with accelerator.autocast():
+                            noise_pred = unet(noisy_latents,timesteps,input_condition,None, None).sample
+                        task_loss = torch.nn.functional.mse_loss(noise_pred.float(),noise.float(), reduction="none")
+                        task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
+                        task_loss = task_loss.mean()
+                        log_loss["loss/task_loss"] = task_loss
+                        loss += task_loss
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
