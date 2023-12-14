@@ -388,23 +388,26 @@ class BlueprintGenerator:
     return default_value
 
 
-def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlueprint):
+def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlueprint, args):
   datasets: List[Union[DreamBoothDataset, FineTuningDataset, ControlNetDataset]] = []
   for dataset_blueprint in dataset_group_blueprint.datasets:
+
     if dataset_blueprint.is_controlnet:
       subset_klass = ControlNetSubset
       dataset_klass = ControlNetDataset
+
     elif dataset_blueprint.is_dreambooth:
       subset_klass = DreamBoothSubset
       dataset_klass = DreamBoothDataset
+
     else:
       subset_klass = FineTuningSubset
       dataset_klass = FineTuningDataset
-    # ------------------------------------------------------------------------------------------------------------------
+
     subsets = [subset_klass(**asdict(subset_blueprint.params)) for subset_blueprint in dataset_blueprint.subsets]
-    dataset = dataset_klass(subsets=subsets,
-                            **asdict(dataset_blueprint.params))
+    dataset = dataset_klass(subsets=subsets,  **asdict(dataset_blueprint.params))
     datasets.append(dataset)
+  # ------------------------------------------------------------------------------------------
   info = ""
   for i, dataset in enumerate(datasets):
     is_dreambooth = isinstance(dataset, DreamBoothDataset)
@@ -453,13 +456,10 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
       elif not is_controlnet:
         info += indent(dedent(f"""metadata_file: {subset.metadata_file}\n"""), "    ")
   print(info)
-  seed = random.randint(0, 2**31) # actual seed is seed + epoch_no
   for i, dataset in enumerate(datasets):
     print(f"[Dataset {i}]")
     dataset.make_buckets()
-    # what is make_buckets function ?
-    # datasets = list of dataset
-    dataset.set_seed(seed)
+    dataset.set_seed(args.seed)
   return DatasetGroup(datasets)
 
 

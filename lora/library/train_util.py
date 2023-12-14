@@ -1029,7 +1029,7 @@ class BaseDataset(torch.utils.data.Dataset):
         mask_dirs = []
         caption_attention_masks = []
         for J, image_key in enumerate(bucket[image_index : image_index + bucket_batch_size ]):
-            print(f'j : {J}')
+
             image_info = self.image_data[image_key]
             # --------------------------------------------------------------------------------------------------------------
             # (1) original iamge
@@ -1037,12 +1037,9 @@ class BaseDataset(torch.utils.data.Dataset):
             absolute_paths.append(absolute_path)
             # --------------------------------------------------------------------------------------------------------------
             # (2) mask
-            parent, dir = os.path.split(absolute_path) # 100_hole
-            super_parent, class_name = os.path.split(parent)
-            super_parent, state = os.path.split(super_parent)
-            #mask_dir = image_info.mask_dir
-            #if mask_dir is not None:
-            mask_dir = os.path.join(super_parent, 'corrected', class_name, dir)
+            mask_dir = image_info.mask_dir
+            #if mask_dir is None:
+            #    mask_dir = os.path.join(super_parent, 'corrected', class_name, dir)
             mask_dirs.append(mask_dir)
             subset = self.image_to_subset[image_key]
             loss_weights.append(self.prior_loss_weight if image_info.is_reg else 1.0)
@@ -1109,8 +1106,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)
             images.append(image)
-            mask_imgs.append(image)
-            #mask_imgs.append(masked_image)
+            mask_imgs.append(masked_image)
             latents_list.append(latents)
             target_size = (image.shape[2], image.shape[1]) if image is not None else (latents.shape[2] * 8, latents.shape[1] * 8)
             if not flipped:
@@ -1129,7 +1125,6 @@ class BaseDataset(torch.utils.data.Dataset):
             train_class = 0
             if class_caption == caption :
                 train_class = 1
-                #img_check = torch.equal(image,masked_image)
             train_class_list.append(train_class)
 
             if class_caption is None:
@@ -1205,7 +1200,7 @@ class BaseDataset(torch.utils.data.Dataset):
                         input_ids2_list.append(token_caption2)
         # ------------------------------------------------------------------------------------------------------------
         example = {}
-        """
+
         # ---------------------------------------------------------------------------------------------------------------------------------------
         # input_ids
         if len(text_encoder_outputs1_list) == 0:
@@ -1243,7 +1238,7 @@ class BaseDataset(torch.utils.data.Dataset):
         else:
             images = None
             mask_imgs = None
-        """
+
         example["mask_dirs"] = mask_dirs
         example["trg_indexs_list"] = trg_indexs_list  ##########################################################
         example["train_class_list"] = train_class_list
@@ -1446,21 +1441,15 @@ class DreamBoothDataset(BaseDataset):
                 num_train_images += subset.num_repeats * len(img_paths)
             for img_path, caption in zip(img_paths, captions):
                 parent, neat_path = os.path.split(img_path)
-                name, _ = os.path.splitext(neat_path)
                 if mask_dir:
-
-                    # --------------------------------------------------------------------------------------------
-                    # re.compile = make local functino that finding specific pattern
-                    # find name_{something optional}_mask.{png or jpg}
-                    #mask_re = re.compile(f"{name}(_[^_]+)?_mask\.(png|jpg)$") #matches name_{something optional}_mask.{png or jpg}
-                    mask_re = re.compile(f"{name}\.(png|jpg)$")  # matches name_{something optional}_mask.{png or jpg}
-                    mask_path = None
-                    for mask_name in os.listdir(mask_dir):
-                        # if success on finding specific pattern,
-                        m = mask_re.match(mask_name)
-                        if m:
-                            mask_path = os.path.join(mask_dir, mask_name)
-                            break
+                    #mask_re = re.compile(f"{name}\.(png|jpg)$")  # matches name_{something optional}_mask.{png or jpg}
+                    #mask_path = None
+                    #for mask_name in os.listdir(mask_dir):
+                    #    # if success on finding specific pattern,
+                    #    m = mask_re.match(mask_name)
+                    #    if m:
+                    mask_path = os.path.join(mask_dir, neat_path)
+                    break
                     #validate
                     if mask_path is None:
                         raise FileNotFoundError(f"mask file not found / マスクファイルが見つかりませんでした: {img_path}")
@@ -1469,18 +1458,20 @@ class DreamBoothDataset(BaseDataset):
                 # --------------------------------------------------------------------------------------------
                 # each data
                 info = ImageInfo(img_path,
-                                subset.num_repeats,
-                                caption,
-                                subset.is_reg,
-                                img_path,
-                                mask_path,
-                                subset.class_caption)
+                                 subset.num_repeats,
+                                 caption,
+                                 subset.is_reg,
+                                 img_path,
+                                 mask_path,
+                                 subset.class_caption)
                 if subset.is_reg:
                     reg_infos.append(info)
                 else:
                     self.register_image(info, subset)
             subset.img_count = len(img_paths)
             self.subsets.append(subset)
+        # ----------------------------------------------------------------------------------------------------------
+        # total
         print(f"{num_train_images} train images with repeating.")
         self.num_train_images = num_train_images
         print(f"{num_reg_images} reg images.")

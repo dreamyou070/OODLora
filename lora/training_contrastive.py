@@ -250,20 +250,15 @@ class NetworkTrainer:
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
         blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
-
         user_config = {}
         user_config['datasets'] = [{"subsets": None}]
         subsets_dict_list = []
         for i, subsets_dict in enumerate(config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,args.reg_data_dir,class_caption=args.class_caption)):
             subsets_dict['class_caption'] = args.class_caption
-            print(f' {i}  : {subsets_dict}')
             subsets_dict_list.append(subsets_dict)
-
             user_config['datasets'][0]['subsets'] = subsets_dict_list
-        blueprint = blueprint_generator.generate(user_config,
-                                                 args,
-                                                 tokenizer=tokenizer)
-        train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
+        blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
+        train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group, args)
 
 
         training_started_at = time.time()
@@ -777,7 +772,6 @@ class NetworkTrainer:
             #loss = torch.tensor(0.0, requires_grad=True, device=accelerator.device)
             for step, batch in enumerate(train_dataloader):
                 train_class_list = batch["train_class_list"]
-                print(f'train_class_list: {train_class_list}')
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
@@ -794,31 +788,13 @@ class NetworkTrainer:
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
                     # ---------------------------------------------------------------------------------------------------------------------
-
-                    total_batch = latents.shape[0]
-                    train_indexs, test_indexs = [], []
-                    for i in range(total_batch):
-                        im =latents[i,:,:,:]
-                        if im.dim() < 4 :
-                            im = im.unsqueeze(0)
-                        good_im = good_latents[i,:,:,:]
-                        if good_im.dim() < 4 :
-                            good_im = good_im.unsqueeze(0)
-                        diff = torch.abs(im - good_im)
-                        print(f'diff: {diff}')
-                        img_check = torch.equal(im, good_im)
-                        if img_check :
-                            train_indexs.append(i)
-                        else:
-                            test_indexs.append(i)
-                    print(f'train_indexs: {train_indexs} | test_indexs: {test_indexs}')
-
                     train_indexs = [i for i in train_class_list if i == 1 ]
                     test_indexs = [i for i in train_class_list if i == 0 ]
 
                     train_latents = good_latents[train_indexs, :, :, :]
                     test_latents = latents[test_indexs, :, :, :]
                     test_good_latents = good_latents[test_indexs, :, :, :]
+
 
                     # (2) text condition checking
                     with torch.set_grad_enabled(train_text_encoder):
@@ -827,6 +803,9 @@ class NetworkTrainer:
                     # (3.1) contrastive learning
                     log_loss = {}
                     if test_latents.shape[0] != 0 :
+                        if test_latents.dim() != 4 :
+                            test_latents = test_latents.unsqueeze(0)
+                            test_good_latents = test_good_latents.unsqueeze(0)
                         input_latents   = torch.cat([test_latents, test_good_latents], dim=0)
                         input_condition = text_encoder_conds[test_indexs, :, :]
                         input_condition = torch.cat([input_condition] * 2, dim=0)
@@ -843,6 +822,8 @@ class NetworkTrainer:
                         loss = contrastive_loss
 
                     if train_latents.shape[0] != 0 :
+                        if train_latents.dim() != 4:
+                            train_latents = train_latents.unsqueeze(0)
                         input_latents = train_latents
                         input_condition = text_encoder_conds[train_indexs, :, :]
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
