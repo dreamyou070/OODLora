@@ -81,6 +81,7 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                     vector_diff_list = []
                     for batch_idx, (attention_prob,masked_attention_prob) in enumerate(zip(attention_probs_batch,masked_attention_probs_batch)) :
                         batch_trg_index = trg_indexs_list[batch_idx] # two times
+                        print(f'batch_trg_index : {batch_trg_index}')
                         for word_idx in batch_trg_index :
                             masked_attn_vector = masked_attention_prob[:, :, word_idx]
                             org_attn_vector  = attention_prob[:, :, word_idx]
