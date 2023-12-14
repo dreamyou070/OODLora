@@ -856,7 +856,7 @@ class NetworkTrainer:
                         with accelerator.autocast():
                             unet(noisy_latents,timesteps,input_condition,
                                  trg_indexs_list=[batch["trg_indexs_list"][i] for i in test_indexs],
-                                 mask_imgs=batch['mask_imgs'][test_indexs, :, :, :],).sample
+                                 mask_imgs=batch['mask_imgs'][test_indexs, :, :, :],return_dict=False).sample
                         losss = attention_storer.loss_list
                         attention_storer.reset()
                         contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
@@ -868,7 +868,10 @@ class NetworkTrainer:
                         input_condition = text_encoder_conds[train_indexs, :, :]
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
                         with accelerator.autocast():
-                            noise_pred = unet(noisy_latents,timesteps,input_condition, None, None).sample
+                            noise_pred = unet(noisy_latents,
+                                              timesteps,input_condition,None, None,return_dict=False).sample
+
+
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
