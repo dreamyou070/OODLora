@@ -390,32 +390,34 @@ class BlueprintGenerator:
 
 def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlueprint, args):
   datasets: List[Union[DreamBoothDataset, FineTuningDataset, ControlNetDataset]] = []
-  for dataset_blueprint in dataset_group_blueprint.datasets:
 
+  for dataset_blueprint in dataset_group_blueprint.datasets:
     if dataset_blueprint.is_controlnet:
       subset_klass = ControlNetSubset
       dataset_klass = ControlNetDataset
-
     elif dataset_blueprint.is_dreambooth:
       subset_klass = DreamBoothSubset
       dataset_klass = DreamBoothDataset
-
     else:
       subset_klass = FineTuningSubset
       dataset_klass = FineTuningDataset
 
     subsets = [subset_klass(**asdict(subset_blueprint.params)) for subset_blueprint in dataset_blueprint.subsets]
-    dataset = dataset_klass(subsets=subsets,  **asdict(dataset_blueprint.params))
+    dataset = dataset_klass(subsets=subsets, **asdict(dataset_blueprint.params))
     datasets.append(dataset)
-  # ------------------------------------------------------------------------------------------
+
+  # print info
   info = ""
   for i, dataset in enumerate(datasets):
     is_dreambooth = isinstance(dataset, DreamBoothDataset)
     is_controlnet = isinstance(dataset, ControlNetDataset)
-    info += dedent(f"""[Dataset {i}]
-                  batch_size: {dataset.batch_size}
-                  resolution: {(dataset.width, dataset.height)}
-                  enable_bucket: {dataset.enable_bucket}""")
+    info += dedent(f"""\
+      [Dataset {i}]
+        batch_size: {dataset.batch_size}
+        resolution: {(dataset.width, dataset.height)}
+        enable_bucket: {dataset.enable_bucket}
+    """)
+
     if dataset.enable_bucket:
       info += indent(dedent(f"""\
         min_bucket_reso: {dataset.min_bucket_reso}
@@ -425,6 +427,7 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
       \n"""), "  ")
     else:
       info += "\n"
+
     for j, subset in enumerate(dataset.subsets):
       info += indent(dedent(f"""\
         [Subset {j} of Dataset {i}]
@@ -444,22 +447,29 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
           random_crop: {subset.random_crop}
           token_warmup_min: {subset.token_warmup_min},
           token_warmup_step: {subset.token_warmup_step},
-          mask_dir: "{subset.mask_dir},"
       """), "  ")
+
       if is_dreambooth:
         info += indent(dedent(f"""\
           is_reg: {subset.is_reg}
           class_tokens: {subset.class_tokens}
           caption_extension: {subset.caption_extension}
-          class_caption: {subset.class_caption}
         \n"""), "    ")
       elif not is_controlnet:
-        info += indent(dedent(f"""metadata_file: {subset.metadata_file}\n"""), "    ")
+        info += indent(dedent(f"""\
+          metadata_file: {subset.metadata_file}
+        \n"""), "    ")
+
   print(info)
+
+  # make buckets first because it determines the length of dataset
+  # and set the same seed for all datasets
+  # actual seed is seed + epoch_no
   for i, dataset in enumerate(datasets):
     print(f"[Dataset {i}]")
     dataset.make_buckets()
     dataset.set_seed(args.seed)
+
   return DatasetGroup(datasets)
 
 

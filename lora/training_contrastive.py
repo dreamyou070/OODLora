@@ -271,20 +271,12 @@ class NetworkTrainer:
                             subsets_dict['class_caption'] = args.class_caption
                         subsets_dict_list.append(subsets_dict)
                         user_config['datasets'][0]['subsets'] = subsets_dict_list
-                else:
-                    print("Training with captions.")
-                    user_config = {}
-                    user_config["datasets"] = []
-                    user_config["datasets"].append({"subsets": [{"image_dir": args.train_data_dir,
-                                                                 "metadata_file": args.in_json, }]})
-                    if use_class_caption:
-                        for subset in user_config["datasets"][0]["subsets"]:
-                            subset["class_caption"] = args.class_caption
             print(f'User config: {user_config}')
             # blueprint_generator = BlueprintGenerator
             print('start of generate function ...')
             blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
             train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group, args)
+
         else:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
 
@@ -296,8 +288,7 @@ class NetworkTrainer:
             train_util.debug_dataset(train_dataset_group)
             return
         if len(train_dataset_group) == 0:
-            print(
-                "No data found. Please verify arguments (train_data_dir must be the parent of folders with images) / 画像がありません。引数指定を確認してください（train_data_dirには画像があるフォルダではなく、画像があるフォルダの親フォルダを指定する必要があります）"
+            print("No data found. Please verify arguments (train_data_dir must be the parent of folders with images) / 画像がありません。引数指定を確認してください（train_data_dirには画像があるフォルダではなく、画像があるフォルダの親フォルダを指定する必要があります）"
             )
             return
 
