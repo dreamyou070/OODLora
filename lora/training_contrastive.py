@@ -251,26 +251,16 @@ class NetworkTrainer:
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
         if args.dataset_class is None:
             blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
-            if use_user_config:
-                print(f"Loading dataset config from {args.dataset_config}")
-                user_config = config_util.load_user_config(args.dataset_config)
-                ignored = ["train_data_dir", "reg_data_dir", "in_json"]
-                if any(getattr(args, attr) is not None for attr in ignored):
-                    print(
-                        "ignoring the following options because config file is found: {0} / 設定ファイルが利用されるため以下のオプションは無視されます: {0}".format(
-                            ", ".join(ignored)))
-            else:
-                if use_dreambooth_method:
-                    print("Using DreamBooth method.")
-                    user_config = {}
-                    user_config['datasets'] = [{"subsets": None}]
-                    subsets_dict_list = []
-                    for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
-                                                                                                  args.reg_data_dir, args.class_caption):
-                        if use_class_caption:
-                            subsets_dict['class_caption'] = args.class_caption
-                        subsets_dict_list.append(subsets_dict)
-                        user_config['datasets'][0]['subsets'] = subsets_dict_list
+            print("Using DreamBooth method.")
+            user_config = {}
+            user_config['datasets'] = [{"subsets": None}]
+            subsets_dict_list = []
+            for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
+                                                                                          args.reg_data_dir, args.class_caption):
+                if use_class_caption:
+                    subsets_dict['class_caption'] = args.class_caption
+                subsets_dict_list.append(subsets_dict)
+                user_config['datasets'][0]['subsets'] = subsets_dict_list
             print(f'User config: {user_config}')
             # blueprint_generator = BlueprintGenerator
             print('start of generate function ...')
