@@ -249,45 +249,22 @@ class NetworkTrainer:
         use_class_caption = args.class_caption is not None
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
-        if args.dataset_class is None:
-            blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
-            if use_user_config:
-                print(f"Loading dataset config from {args.dataset_config}")
-                user_config = config_util.load_user_config(args.dataset_config)
-                ignored = ["train_data_dir", "reg_data_dir", "in_json"]
-                if any(getattr(args, attr) is not None for attr in ignored):
-                    print(
-                        "ignoring the following options because config file is found: {0} / 設定ファイルが利用されるため以下のオプションは無視されます: {0}".format(
-                            ", ".join(ignored)))
-            else:
-                if use_dreambooth_method:
-                    print("Using DreamBooth method.")
-                    user_config = {}
-                    user_config['datasets'] = [{"subsets": None}]
-                    subsets_dict_list = []
-                    for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
-                                                                                                  args.reg_data_dir,
-                                                                                                  class_caption=args.class_caption):
-                        if use_class_caption:
-                            subsets_dict['class_caption'] = args.class_caption
-                        subsets_dict_list.append(subsets_dict)
-                        user_config['datasets'][0]['subsets'] = subsets_dict_list
-                else:
-                    print("Training with captions.")
-                    user_config = {}
-                    user_config["datasets"] = []
-                    user_config["datasets"].append({"subsets": [{"image_dir": args.train_data_dir,
-                                                                 "metadata_file": args.in_json, }]})
-                    if use_class_caption:
-                        for subset in user_config["datasets"][0]["subsets"]:
-                            subset["class_caption"] = args.class_caption
-            # blueprint_generator = BlueprintGenerator
-            blueprint = blueprint_generator.generate(user_config,
-                                                     args,
-                                                     tokenizer=tokenizer)
-            train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
-        else:
-            train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
+        blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
+
+        user_config = {}
+        user_config['datasets'] = [{"subsets": None}]
+        subsets_dict_list = []
+        for i, subsets_dict in enumerate(config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,args.reg_data_dir,class_caption=args.class_caption)):
+            subsets_dict['class_caption'] = args.class_caption
+            print(f' {i}  : {subsets_dict}')
+            subsets_dict_list.append(subsets_dict)
+
+            user_config['datasets'][0]['subsets'] = subsets_dict_list
+        blueprint = blueprint_generator.generate(user_config,
+                                                 args,
+                                                 tokenizer=tokenizer)
+        train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
+
 
         training_started_at = time.time()
         train_util.verify_training_args(args)

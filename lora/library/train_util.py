@@ -1030,7 +1030,6 @@ class BaseDataset(torch.utils.data.Dataset):
         caption_attention_masks = []
         for J, image_key in enumerate(bucket[image_index : image_index + bucket_batch_size ]):
             print(f'j : {J}')
-
             image_info = self.image_data[image_key]
             # --------------------------------------------------------------------------------------------------------------
             # (1) original iamge
