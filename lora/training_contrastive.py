@@ -817,7 +817,7 @@ class NetworkTrainer:
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
                     # ---------------------------------------------------------------------------------------------------------------------
-                    """
+
                     total_batch = latents.shape[0]
                     train_indexs, test_indexs = [], []
                     for i in range(total_batch):
@@ -827,13 +827,14 @@ class NetworkTrainer:
                         good_im = good_latents[i,:,:,:]
                         if good_im.dim() < 4 :
                             good_im = good_im.unsqueeze(0)
-                        print(f'im : {im.shape}')
+                        diff = torch.abs(im - good_im)
+                        print(f'diff: {diff}')
                         img_check = torch.equal(im, good_im)
                         if img_check :
                             train_indexs.append(i)
                         else:
                             test_indexs.append(i)
-                    """
+
                     train_indexs = [i for i in train_class_list if i == 1 ]
                     test_indexs = [i for i in train_class_list if i == 0 ]
 
@@ -856,7 +857,7 @@ class NetworkTrainer:
                         with accelerator.autocast():
                             unet(noisy_latents,timesteps,input_condition,
                                  trg_indexs_list=[batch["trg_indexs_list"][i] for i in test_indexs],
-                                 mask_imgs=batch['mask_imgs'][test_indexs, :, :, :],return_dict=False).sample
+                                 mask_imgs=batch['mask_imgs'][test_indexs, :, :, :]).sample
                         losss = attention_storer.loss_list
                         attention_storer.reset()
                         contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
@@ -868,8 +869,10 @@ class NetworkTrainer:
                         input_condition = text_encoder_conds[train_indexs, :, :]
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
                         with accelerator.autocast():
-                            noise_pred = unet(noisy_latents,
-                                              timesteps,input_condition,None, None,return_dict=False).sample
+                            noise_pred = self.call_unet(args, accelerator, unet,
+                                                          noisy_latents, timesteps,
+                                                          input_condition, batch, weight_dtype,
+                                                          None,None)
 
 
                         if args.v_parameterization:
