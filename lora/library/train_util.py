@@ -109,7 +109,6 @@ class ImageInfo:
     def __init__(self,
                  image_key: str, num_repeats: int, caption: str, is_reg: bool, absolute_path: str,
                  mask_dir:str,
-                 trg_concept:str,
                  class_caption:Optional[str]) -> None:
         self.image_key: str = image_key
         self.num_repeats: int = num_repeats
@@ -134,7 +133,6 @@ class ImageInfo:
         self.mask_dir: Optional[str] = mask_dir
         if self.mask_dir is not None:
             assert os.path.exists(self.mask_dir), f"mask_dir {self.mask_dir} does not exist"
-        self.trg_concept: str = trg_concept
         self.class_caption: Optional[str] = class_caption
 
 
@@ -342,9 +340,7 @@ class BaseSubset:
         caption_suffix: Optional[str],
         token_warmup_min: int,
         token_warmup_step: Union[float, int],
-        mask_dir,
-        trg_concept,
-        class_caption = None) -> None:
+        mask_dir, class_caption = None) -> None:
         self.image_dir = image_dir
         self.num_repeats = num_repeats
         self.shuffle_caption = shuffle_caption
@@ -362,7 +358,6 @@ class BaseSubset:
         self.token_warmup_step = token_warmup_step  # N（N<1ならN*max_train_steps）ステップ目でタグの数が最大になる
         self.img_count = 0
         self.mask_dir = mask_dir
-        self.trg_concept = trg_concept
         self.class_caption = class_caption
         if self.class_caption is not None:
             print(f"Using class concept: {self.class_caption}")
@@ -388,7 +383,6 @@ class DreamBoothSubset(BaseSubset):
         token_warmup_min,
         token_warmup_step,
         mask_dir,
-        trg_concept,
         class_caption = None) -> None:
         assert image_dir is not None, "image_dir must be specified / image_dirは指定が必須です"
 
@@ -409,7 +403,6 @@ class DreamBoothSubset(BaseSubset):
             token_warmup_min,
             token_warmup_step,
             mask_dir,
-            trg_concept,
             class_caption)
 
         self.is_reg = is_reg
@@ -1030,7 +1023,6 @@ class BaseDataset(torch.utils.data.Dataset):
         text_encoder_pool2_list = []
         absolute_paths = []
         mask_imgs = []
-        trg_concepts = []
         trg_indexs_list = []
         train_class_list = []
         mask_dirs = []
@@ -1130,17 +1122,17 @@ class BaseDataset(torch.utils.data.Dataset):
 
             # captionとtext encoder outputを処理する
             caption = image_info.caption  # default
-            trg_concept = image_info.trg_concept     # good
+            class_caption = image_info.class_caption
+            class_token = image_info.class_token
             train_class = 0
-            # --------------------------
-            if caption == trg_concept :
+            if class_caption == class_token :
                 train_class = 1
                 img_check = torch.equal(image,masked_image)
+                print(f'check train class 1 image same ? : {img_check}')
             train_class_list.append(train_class)
-            class_caption = image_info.class_caption #
+
             if class_caption is None:
                 class_caption = 'good' ## TODO remove
-            class_caption = caption.replace(trg_concept, class_caption)
             if image_info.text_encoder_outputs1 is not None:
                 text_encoder_outputs1_list.append(image_info.text_encoder_outputs1)
                 text_encoder_outputs2_list.append(image_info.text_encoder_outputs2)
@@ -1154,10 +1146,8 @@ class BaseDataset(torch.utils.data.Dataset):
                 captions.append(caption)
             else:
                 # caption = crack,
-                image_info.caption = trg_concept
                 caption = self.process_caption(subset, image_info.caption)
                 class_caption = self.process_caption(subset, class_caption)
-                concept = self.process_caption(subset, trg_concept)           # only good
 
                 if self.XTI_layers:
                     caption_layer = []
@@ -1184,7 +1174,8 @@ class BaseDataset(torch.utils.data.Dataset):
                     def generate_text_embedding(caption, tokenizer):
                         cls_token = 49406
                         pad_token = 49407
-                        token_input = tokenizer([trg_concept],padding="max_length",max_length=tokenizer.model_max_length,
+                        token_input = tokenizer([class_caption],
+                                                padding="max_length",max_length=tokenizer.model_max_length,
                                                 truncation=True,return_tensors="pt", ) # token_input = 24215
                         token_ids = token_input.input_ids[0]
                         token_attns = token_input.attention_mask[0]
@@ -1216,7 +1207,6 @@ class BaseDataset(torch.utils.data.Dataset):
         example = {}
         example["mask_dirs"] = mask_dirs
         example["trg_indexs_list"] = trg_indexs_list ##########################################################
-        example["trg_concepts"] = trg_concepts
         example["absolute_paths"] = absolute_paths
         example["train_class_list"] = train_class_list
         example["loss_weights"] = torch.FloatTensor(loss_weights)
@@ -1499,7 +1489,6 @@ class DreamBoothDataset(BaseDataset):
                                 subset.is_reg,
                                 img_path,
                                 mask_path,
-                                subset.trg_concept,
                                 subset.class_caption)
                 if subset.is_reg:
                     reg_infos.append(info)

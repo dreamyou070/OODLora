@@ -22,6 +22,7 @@ from .train_util import (
   DatasetGroup,
 )
 
+import os
 
 def add_config_arguments(parser: argparse.ArgumentParser):
   parser.add_argument("--dataset_config", type=Path, default=None, help="config file for detail settings / 詳細な設定用の設定ファイル")
@@ -46,7 +47,6 @@ class BaseSubsetParams:
   token_warmup_min: int = 1
   token_warmup_step: float = 0
   mask_dir: Optional[str] = None
-  trg_concept: Optional[str] = None
 
 @dataclass
 class DreamBoothSubsetParams(BaseSubsetParams):
@@ -346,18 +346,14 @@ class BlueprintGenerator:
       subset_blueprints = []
 
       for subset_config in subsets:
-        #subset_config['mask_dir'] = argparse_namespace.mask_dir
-        import os
-        subset_config['trg_concept'] = argparse_namespace.trg_concept
+        #subset_config['trg_concept'] = argparse_namespace.trg_concept
         parent, child = os.path.split(subset_config['image_dir'])  # bad, 10_combined
         super_parent, folder_name = os.path.split(parent) # , bad
         mask_parent = os.path.join(super_parent, f'corrected')
         subset_config['mask_dir'] = os.path.join(mask_parent, child)
         params = self.generate_params_by_fallbacks(subset_params_klass,
-                                                   [subset_config, # subset_config
-                                                    dataset_config,
-                                                    general_config,
-                                                    argparse_config,
+                                                   [subset_config,dataset_config,
+                                                    general_config, argparse_config,
                                                     runtime_params])
         subset_blueprints.append(SubsetBlueprint(params))
       params = self.generate_params_by_fallbacks(dataset_params_klass,
@@ -445,8 +441,7 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
           random_crop: {subset.random_crop}
           token_warmup_min: {subset.token_warmup_min},
           token_warmup_step: {subset.token_warmup_step},
-          mask_dir: "{subset.mask_dir},
-          trg_concept: "{subset.trg_concept}"
+          mask_dir: "{subset.mask_dir},"
       """), "  ")
       if is_dreambooth:
         info += indent(dedent(f"""\
@@ -469,7 +464,8 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
 
 
 def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] = None,
-                                                  reg_data_dir: Optional[str] = None,):
+                                                  reg_data_dir: Optional[str] = None,
+                                                  class_caption: Optional[str] = None):
   def extract_dreambooth_params(name: str) -> Tuple[int, str]:
     tokens = name.split('_')
     try:
@@ -498,12 +494,12 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
                        "num_repeats": num_repeats,
                        "is_reg": is_reg,
                        "class_tokens": class_tokens,
-                       "class_caption": class_caption,}
+                       "class_caption": class_caption}
       subsets_config.append(subset_config)
     return subsets_config
   subsets_config = []
-  subsets_config += generate(train_data_dir, False)
-  subsets_config += generate(reg_data_dir, True)
+  subsets_config += generate(train_data_dir, False, class_caption)
+  subsets_config += generate(reg_data_dir, True, class_caption)
   return subsets_config
 
 
