@@ -99,7 +99,8 @@ try:
 except:
     pass
 
-IMAGE_TRANSFORMS = transforms.Compose([transforms.ToTensor(),transforms.Normalize([0.5], [0.5]),])
+IMAGE_TRANSFORMS = transforms.Compose([transforms.ToTensor(),
+                                       transforms.Normalize([0.5], [0.5]),])
 
 TEXT_ENCODER_OUTPUTS_CACHE_SUFFIX = "_te_outputs.npz"
 
@@ -1035,13 +1036,18 @@ class BaseDataset(torch.utils.data.Dataset):
         mask_dirs = []
         caption_attention_masks = []
         for image_key in bucket[image_index : image_index + bucket_batch_size ]:
+
             image_info = self.image_data[image_key]
+            # --------------------------------------------------------------------------------------------------------------
+            # (1) original iamge
             absolute_path = image_info.absolute_path
             absolute_paths.append(absolute_path)
-            parent, dir = os.path.split(absolute_path)
-            #name, ext = os.path.splitext(dir)
+            # --------------------------------------------------------------------------------------------------------------
+            # (2) mask
+            #parent, dir = os.path.split(absolute_path)
             mask_dir = image_info.mask_dir
             mask_dirs.append(mask_dir)
+            print(F'absolute_path: {absolute_path} | mask_dir' )
 
             subset = self.image_to_subset[image_key]
             loss_weights.append(self.prior_loss_weight if image_info.is_reg else 1.0)
@@ -1063,7 +1069,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 latents = torch.FloatTensor(latents)
                 image = None
             else:
-
+                print('image processing')
                 img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset, image_info.absolute_path, is_resize = True,trg_h = self.height, trg_w = self.width)
                 if mask_dir is not None:
                     masked_img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset,
@@ -1104,7 +1110,6 @@ class BaseDataset(torch.utils.data.Dataset):
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                     masked_img = masked_img[:, ::-1, :].copy()
                 latents = None
-
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)
             images.append(image)

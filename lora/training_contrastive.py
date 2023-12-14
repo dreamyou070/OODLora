@@ -84,28 +84,10 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                         for word_idx in batch_trg_index :
                             masked_attn_vector = masked_attention_prob[:, :, word_idx]
                             org_attn_vector           = attention_prob[:, :, word_idx]
-                            #vector_diff = torch.nn.functional.mse_loss(org_attn_vector, masked_attn_vector,reduction='none')
                             attention_diff = (masked_attn_vector-org_attn_vector).mean() + args.contrastive_eps
                             standard = torch.zeros_like(attention_diff)
                             loss = torch.max(attention_diff, standard)
                             controller.store_loss(loss)
-                            #vector_diff_list.append(attention_diff)
-
-                    #attn_vectors = torch.stack(vector_diff_list, dim=0) # (word_num, 512, 512)
-                    #attn_loss = attn_vectors.mean([1])
-                    #standard = torch.zeros_like(attn_loss)
-                    #loss = torch.max(attn_loss, standard)
-                    #print(f'attn_loss : {attn_loss}')
-                    #print(f'standard : {standard}')
-                    #loss = max(attn_loss, standard)
-
-
-
-                    #controller.store_loss(loss)
-                elif torch.is_grad_enabled(): # if not, while training, trg_indexs_list should not be None
-                    if mask is None:
-                        raise RuntimeError("mask is None but hooked to cross attention layer. Maybe the dataset does not contain mask properly.")
-                    raise RuntimeError("trg_indexs_list is None but hooked to cross attention layer. Maybe the dataset does not contain trigger token properly.")
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -835,8 +817,6 @@ class NetworkTrainer:
                     total_batch = latents.shape[0]
                     train_indexs = [i for i in train_class_list if i == 1]
                     test_indexs = [i for i in train_class_list if i != 1]
-                    print(f'train_indexs: {train_indexs} | test_indexs: {test_indexs}')
-
                     train_latents = good_latents[train_indexs, :, :, :]
                     test_latents = latents[test_indexs, :, :, :]
                     test_good_latents = good_latents[test_indexs, :, :, :]
@@ -847,7 +827,7 @@ class NetworkTrainer:
 
                     # (3.1) contrastive learning
                     log_loss = {}
-                    """
+
                     if test_latents.shape[0] != 0 :
                         input_latents   = torch.cat([test_latents, test_good_latents], dim=0)
                         input_condition = text_encoder_conds[test_indexs, :, :]
@@ -863,13 +843,13 @@ class NetworkTrainer:
                         contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
                         log_loss["loss/contrastive_loss"] = contrastive_loss
                         loss = contrastive_loss
-                    """
+
                     if train_latents.shape[0] != 0 :
                         input_latents = train_latents
                         input_condition = text_encoder_conds[train_indexs, :, :]
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
                         with accelerator.autocast():
-                            noise_pred = unet(noisy_latents,timesteps,input_condition,None, None).sample
+                            noise_pred = unet(noisy_latents,timesteps,input_condition, None, None).sample
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
