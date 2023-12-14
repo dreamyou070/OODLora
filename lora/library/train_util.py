@@ -1266,6 +1266,10 @@ class BaseDataset(torch.utils.data.Dataset):
                 img = images[i]
                 corrected_img = mask_imgs[i]
                 same_check = torch.equal(img, corrected_img)
+            else :
+                img = images[i]
+                corrected_img = mask_imgs[i]
+                same_check = torch.equal(img, corrected_img)
                 print(f'same check : {same_check}')
 
 
