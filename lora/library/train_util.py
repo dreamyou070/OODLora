@@ -1453,7 +1453,13 @@ class DreamBoothDataset(BaseDataset):
                 num_train_images += subset.num_repeats * len(img_paths)
 
             for img_path, caption in zip(img_paths, captions):
-                info = ImageInfo(img_path, subset.num_repeats, caption, subset.is_reg, img_path)
+
+                class_caption = subset.class_caption
+                name = os.path.split(img_path)[1]
+                mask_dir = os.path.join(subset.mask_dir,name)
+                info = ImageInfo(img_path, subset.num_repeats, caption, subset.is_reg, img_path,
+                                 mask_dir,
+                                 class_caption)
                 if subset.is_reg:
                     reg_infos.append(info)
                 else:
