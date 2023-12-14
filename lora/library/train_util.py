@@ -1122,10 +1122,11 @@ class BaseDataset(torch.utils.data.Dataset):
 
             # captionとtext encoder outputを処理する
             caption = image_info.caption  # default
-            print(f'caption : {caption}')
             trg_concept = image_info.trg_concept     # good
-            print(f'trg_concept : {trg_concept}')
-            
+            train_class = 0
+            if caption == trg_concept :
+                train_class = 1
+
             class_caption = image_info.class_caption #
             if class_caption is None:
                 class_caption = 'good' ## TODO remove
@@ -1207,6 +1208,7 @@ class BaseDataset(torch.utils.data.Dataset):
         example["trg_indexs_list"] = trg_indexs_list ##########################################################
         example["trg_concepts"] = trg_concepts
         example["absolute_paths"] = absolute_paths
+        example["train_class"] = train_class
 
         example["loss_weights"] = torch.FloatTensor(loss_weights)
         example["caption_attention_mask"] = caption_attention_masks

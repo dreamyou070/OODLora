@@ -814,6 +814,9 @@ class NetworkTrainer:
             network.on_epoch_start(text_encoder, unet)
             #loss = torch.tensor(0.0, requires_grad=True, device=accelerator.device)
             for step, batch in enumerate(train_dataloader):
+                train_class = batch["train_class"]
+                print(f"train_class: {train_class}")
+                
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
