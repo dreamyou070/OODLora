@@ -816,7 +816,6 @@ class NetworkTrainer:
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
-            f = 0
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -825,46 +824,71 @@ class NetworkTrainer:
                         if "latents" in batch and batch["latents"] is not None:
                             latents = batch["latents"].to(accelerator.device)
                         else:
-                            latents         = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
+                            latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
                             good_latents = vae.encode(batch['mask_imgs'].to(dtype=vae_dtype)).latent_dist.sample()
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
-                        input_latents = torch.cat([latents, good_latents], dim=0)
-                    with torch.set_grad_enabled(train_text_encoder):
-                        # Get the text embedding for conditioning
-                        if args.weighted_captions:
-                            text_encoder_conds = get_weighted_text_embeddings(tokenizer,text_encoder,
-                                                                              batch["captions"],accelerator.device,
-                                                                              args.max_token_length // 75 if args.max_token_length else 1,
-                                                                              clip_skip=args.clip_skip,)
-                        else:
+
+                        total_batch = latents.shape[0]
+                        train_indexs = []
+                        test_indexs = []
+                        for i in range(total_batch):
+                            bad_latent = latents[i, :, :, :]
+                            good_latent = good_latents[i, :, :, :]
+                            if torch.equal(bad_latent, good_latent):
+                                train_indexs.append(i)
+                            else:
+                                test_indexs.append(i)
+
+                        train_latents = latents[train_indexs, :, :, :]
+
+                        test_latents = latents[test_indexs, :, :, :]
+                        test_good_latents = good_latents[test_indexs, :, :, :]
+
+                        # (2) text condition checking
+                        with torch.set_grad_enabled(train_text_encoder):
                             text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
-                    # Sample noise, sample a random timestep for each image, and add noise to the latents,
-                    # with noise offset and/or multires noise if specified
-                    #noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
-                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                       noise_scheduler,
-                                                                                                       input_latents)
-                    input_condition = torch.cat([text_encoder_conds]*2, dim=0)
-                    # Predict the noise residual
-                    with accelerator.autocast():
-                        noise_pred = self.call_unet(args,
-                                                    accelerator,
-                                                    unet,
-                                                    noisy_latents,timesteps,
-                                                    input_condition,
-                                                    batch,weight_dtype,
-                                                    batch["trg_indexs_list"],
-                                                    batch['mask_imgs'])
-                    losss = attention_storer.loss_list
-                    attention_storer.reset()
-                    loss = torch.stack(losss, dim=0).mean(dim=0)
-                    loss = loss.mean()
-                    attention_losses = {}
-                    attention_losses["loss/cross_attna_loss"] = loss
+
+                        print(f'batch["trg_indexs_list"] : {batch["trg_indexs_list"]}')
+                        print(f'batch["mask_imgs"] : {batch["mask_imgs"]}')
+
+                        # (3.1) contrastive learning
+                        if test_latents.shape[0] != 0 :
+                            input_latents   = torch.cat([test_latents, test_good_latents], dim=0)
+                            input_condition = text_encoder_conds[test_indexs, :, :]
+                            input_condition = torch.cat([input_condition] * 2, dim=0)
+                            noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
+                            # Predict the noise residual
+                            with accelerator.autocast():
+                                noise_pred = unet(noisy_latents,timesteps,input_condition, trg_indexs_list=batch["trg_indexs_list"], mask_imgs=batch['mask_imgs'],).sample
+                            losss = attention_storer.loss_list
+                            attention_storer.reset()
+                            loss = torch.stack(losss, dim=0).mean(dim=0)
+                            contrastive_loss = loss.mean()
+                            attention_losses = {}
+                            attention_losses["loss/contrastive_loss"] = contrastive_loss
+                        if train_latents.shape[0] != 0 :
+                            input_latents = train_latents
+                            with torch.set_grad_enabled(train_text_encoder):
+                                if args.weighted_captions:
+                                    text_encoder_conds = get_weighted_text_embeddings(tokenizer,text_encoder,
+                                                                                      batch["captions"],accelerator.device,
+                                                                                      args.max_token_length // 75 if args.max_token_length else 1,
+                                                                                      clip_skip=args.clip_skip,)
+                                else:
+                                    train_text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)[train_indexs, :, :]
+                            noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                               noise_scheduler,
+                                                                                                               input_latents)
+                            input_condition = train_text_encoder_conds
+                            with accelerator.autocast():
+                                noise_pred = self.call_unet(args,accelerator,unet,noisy_latents,timesteps,input_condition,
+                                                            batch,weight_dtype,None, None)
+
+
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
@@ -1027,12 +1051,10 @@ if __name__ == "__main__":
                         help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率",)
     parser.add_argument("--no_half_vae",action="store_true",
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う",)
-
     parser.add_argument("--trg_concept", type=str, default='haibara')
     parser.add_argument("--net_key_names", type=str, default='text')
     parser.add_argument("--mask_threshold", type=float, default=0.5)
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
-
     # class_caption
     args= parser.parse_args()
     args = train_util.read_config_from_file(args, parser)

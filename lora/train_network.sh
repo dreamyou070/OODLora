@@ -1,9 +1,9 @@
 accelerate launch --config_file /data7/sooyeon/LyCORIS/gpu_config/gpu_6_7_config --main_process_port 26724 train_network_sy.py \
   --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 \
   --seed 42 --pretrained_model_name_or_path /data7/sooyeon/pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
-  --network_weights /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/5_strong_good_training_high_repeat/pre_models/epoch-000022.safetensors \
+  --network_weights /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/1_strong_good_training_high_repeat/pre_models/epoch-000022.safetensors \
   --output_dir ../result/MVTec_experiment/bagel/5_strong_good_training_high_repeat \
-  --train_data_dir /data7/sooyeon/MyData/object/bagel/good \
+  --train_data_dir /data7/sooyeon/MyData/object/bagel/train/good \
   --log_with wandb --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
   --wandb_init_name bagel_normal_concept_trainingiom_pretraining --wandb_run_name 5_strong_good_training_high_repeat \
   --trg_concept 'good' --network_module networks.lora \
