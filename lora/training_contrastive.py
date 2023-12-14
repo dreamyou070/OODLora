@@ -834,6 +834,7 @@ class NetworkTrainer:
                             train_indexs.append(i)
                         else:
                             test_indexs.append(i)
+                    print(f'train_indexs: {train_indexs} | test_indexs: {test_indexs}')
 
                     train_indexs = [i for i in train_class_list if i == 1 ]
                     test_indexs = [i for i in train_class_list if i == 0 ]

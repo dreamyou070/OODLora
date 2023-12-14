@@ -1109,7 +1109,8 @@ class BaseDataset(torch.utils.data.Dataset):
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)
             images.append(image)
-            mask_imgs.append(masked_image)
+            mask_imgs.append(image)
+            #mask_imgs.append(masked_image)
             latents_list.append(latents)
             target_size = (image.shape[2], image.shape[1]) if image is not None else (latents.shape[2] * 8, latents.shape[1] * 8)
             if not flipped:
