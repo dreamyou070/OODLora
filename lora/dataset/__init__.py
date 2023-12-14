@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Sequence
 import torch
 import os
-import torch.utils.data.Dataset as TorchDataset
+from torch.utils.data import Dataset
 from torchvision import transforms
 import numpy as np
 from PIL import Image
@@ -12,7 +12,7 @@ IMAGE_TRANSFORMS = transforms.Compose([transforms.ToTensor(),
                                        transforms.Normalize([0.5], [0.5]),])
 
 
-class SYDataset(TorchDataset):
+class SYDataset(Dataset):
 
     def __init__(self, image_dir, masked_dir, h, w, class_caption,tokenizers) -> None:
 
