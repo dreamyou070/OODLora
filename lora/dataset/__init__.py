@@ -127,6 +127,7 @@ class SYDataset(Dataset):
 
         class_caption = sample['class_caption']
         trg_indexs = self.generate_text_embedding(caption, class_caption, self.tokenizers[0])
+        trg_indexs = [1,2]
         sample['trg_indexs_list'] = trg_indexs
         return sample
 
