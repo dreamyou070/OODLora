@@ -242,13 +242,30 @@ class NetworkTrainer:
         set_seed(args.seed)
 
         print(f'\n step 2. dataset')
+        from dataset import SYDataset
+        tokenizer = self.load_tokenizer(args)
+        tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
+        h,w = args.resolution.split(',')
+        parent, child = os.path.split(args.image_dir)  # bad, 10_combined
+        super_parent, folder_name = os.path.split(parent)  # , bad
+        mask_parent = os.path.join(super_parent, f'corrected')
+        masked_dir = os.path.join(mask_parent, child)
+
+        train_dataset_group = SYDataset(image_dir = args.image_dir,
+                            masked_dir = masked_dir,
+                            h = int(h.strip()),
+                            w = int(w.strip()),
+                            class_caption = args.class_caption,
+                            tokenizers = tokenizers)
+
+
+        """
         train_util.prepare_dataset_args(args, True)
         cache_latents = args.cache_latents
         use_dreambooth_method = args.in_json is None
         use_user_config = args.dataset_config is not None
         use_class_caption = args.class_caption is not None
-        tokenizer = self.load_tokenizer(args)
-        tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
+        
         if args.dataset_class is None:
             blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
             print("Using DreamBooth method.")
@@ -271,9 +288,11 @@ class NetworkTrainer:
 
         else:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
+        """
 
         current_epoch = Value("i", 0)
         current_step = Value("i", 0)
+        """
         ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
         collater = train_util.collater_class(current_epoch, current_step, ds_for_collater)
 
@@ -291,6 +310,7 @@ class NetworkTrainer:
             ), "when caching latents, either color_aug or random_crop cannot be used / latentをキャッシュするときはcolor_augとrandom_cropは使えません"
 
         self.assert_extra_args(args, train_dataset_group)
+        """
 
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
@@ -332,7 +352,7 @@ class NetworkTrainer:
                     multiplier, weight_path, vae, text_encoder, unet, for_inference=True             )
                 module.merge_to(text_encoder, unet, weights_sd, weight_dtype, accelerator.device if args.lowram else "cpu")
             accelerator.print(f"all weights merged: {', '.join(args.base_weights)}")
-
+        """
         # 学習を準備する
         if cache_latents:
             vae.to(accelerator.device, dtype=vae_dtype)
@@ -345,10 +365,10 @@ class NetworkTrainer:
                 torch.cuda.empty_cache()
             gc.collect()
             accelerator.wait_for_everyone()
-
+        
         # 必要ならテキストエンコーダーの出力をキャッシュする: Text Encoderはcpuまたはgpuへ移される
         self.cache_text_encoder_outputs_if_needed(args, accelerator, unet, vae, tokenizers, text_encoders, train_dataset_group, weight_dtype)
-
+        """
         # prepare network
         net_kwargs = {}
         if args.network_args is not None:
@@ -400,9 +420,10 @@ class NetworkTrainer:
         # DataLoaderのプロセス数：0はメインプロセスになる
         print(f' step7. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)  # cpu_count-1 ただし最大で指定された数まで
-        train_dataloader = torch.utils.data.DataLoader(train_dataset_group,batch_size=1,
+        train_dataloader = torch.utils.data.DataLoader(train_dataset_group,
+                                                       batch_size=1,
                                                        shuffle=True,
-                                                       collate_fn=collater,
+                                                       #collate_fn=collater,
                                                        num_workers=n_workers,
                                                        persistent_workers=args.persistent_data_loader_workers,)
         if args.max_train_epochs is not None:
@@ -500,10 +521,10 @@ class NetworkTrainer:
         del t_enc
         network.prepare_grad_etc(text_encoder, unet)
 
-        if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
-            vae.requires_grad_(False)
-            vae.eval()
-            vae.to(accelerator.device, dtype=vae_dtype)
+        #if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
+        vae.requires_grad_(False)
+        vae.eval()
+        vae.to(accelerator.device, dtype=vae_dtype)
 
         # 実験的機能：勾配も含めたfp16学習を行う　PyTorchにパッチを当ててfp16でのgrad scaleを有効にする
         if args.full_fp16:
@@ -583,128 +604,7 @@ class NetworkTrainer:
             "ss_ip_noise_gamma": args.ip_noise_gamma,
         }
 
-        if use_user_config:
-            # save metadata of multiple datasets
-            # NOTE: pack "ss_datasets" value as json one time
-            #   or should also pack nested collections as json?
-            datasets_metadata = []
-            tag_frequency = {}  # merge tag frequency for metadata editor
-            dataset_dirs_info = {}  # merge subset dirs for metadata editor
-
-            for dataset in train_dataset_group.datasets:
-                is_dreambooth_dataset = isinstance(dataset, DreamBoothDataset)
-                dataset_metadata = {
-                    "is_dreambooth": is_dreambooth_dataset,
-                    "batch_size_per_device": dataset.batch_size,
-                    "num_train_images": dataset.num_train_images,  # includes repeating
-                    "num_reg_images": dataset.num_reg_images,
-                    "resolution": (dataset.width, dataset.height),
-                    "enable_bucket": bool(dataset.enable_bucket),
-                    "min_bucket_reso": dataset.min_bucket_reso,
-                    "max_bucket_reso": dataset.max_bucket_reso,
-                    "tag_frequency": dataset.tag_frequency,
-                    "bucket_info": dataset.bucket_info,
-
-                }
-
-                subsets_metadata = []
-                for subset in dataset.subsets:
-                    subset_metadata = {
-                        "img_count": subset.img_count,
-                        "num_repeats": subset.num_repeats,
-                        "color_aug": bool(subset.color_aug),
-                        "flip_aug": bool(subset.flip_aug),
-                        "random_crop": bool(subset.random_crop),
-                        "shuffle_caption": bool(subset.shuffle_caption),
-                        "keep_tokens": subset.keep_tokens,
-                    }
-
-                    image_dir_or_metadata_file = None
-                    if subset.image_dir:
-                        image_dir = os.path.basename(subset.image_dir)
-                        subset_metadata["image_dir"] = image_dir
-                        image_dir_or_metadata_file = image_dir
-
-                    if is_dreambooth_dataset:
-                        subset_metadata["class_tokens"] = subset.class_tokens
-                        subset_metadata["is_reg"] = subset.is_reg
-                        if subset.is_reg:
-                            image_dir_or_metadata_file = None  # not merging reg dataset
-                    else:
-                        metadata_file = os.path.basename(subset.metadata_file)
-                        subset_metadata["metadata_file"] = metadata_file
-                        image_dir_or_metadata_file = metadata_file  # may overwrite
-
-                    subsets_metadata.append(subset_metadata)
-
-                    # merge dataset dir: not reg subset only
-                    # TODO update additional-network extension to show detailed dataset config from metadata
-                    if image_dir_or_metadata_file is not None:
-                        # datasets may have a certain dir multiple times
-                        v = image_dir_or_metadata_file
-                        i = 2
-                        while v in dataset_dirs_info:
-                            v = image_dir_or_metadata_file + f" ({i})"
-                            i += 1
-                        image_dir_or_metadata_file = v
-
-                        dataset_dirs_info[image_dir_or_metadata_file] = {
-                            "n_repeats": subset.num_repeats,
-                            "img_count": subset.img_count,
-                        }
-
-                dataset_metadata["subsets"] = subsets_metadata
-                datasets_metadata.append(dataset_metadata)
-
-                # merge tag frequency:
-                for ds_dir_name, ds_freq_for_dir in dataset.tag_frequency.items():
-                    # あるディレクトリが複数のdatasetで使用されている場合、一度だけ数える
-                    # もともと繰り返し回数を指定しているので、キャプション内でのタグの出現回数と、それが学習で何度使われるかは一致しない
-                    # なので、ここで複数datasetの回数を合算してもあまり意味はない
-                    if ds_dir_name in tag_frequency:
-                        continue
-                    tag_frequency[ds_dir_name] = ds_freq_for_dir
-
-            metadata["ss_datasets"] = json.dumps(datasets_metadata)
-            metadata["ss_tag_frequency"] = json.dumps(tag_frequency)
-            metadata["ss_dataset_dirs"] = json.dumps(dataset_dirs_info)
-        else:
-            # conserving backward compatibility when using train_dataset_dir and reg_dataset_dir
-            assert (len(train_dataset_group.datasets) == 1
-            ), f"There should be a single dataset but {len(train_dataset_group.datasets)} found. This seems to be a bug. / データセットは1個だけ存在するはずですが、実際には{len(train_dataset_group.datasets)}個でした。プログラムのバグかもしれません。"
-            dataset = train_dataset_group.datasets[0]
-            dataset_dirs_info = {}
-            reg_dataset_dirs_info = {}
-            if use_dreambooth_method:
-                for subset in dataset.subsets:
-                    info = reg_dataset_dirs_info if subset.is_reg else dataset_dirs_info
-                    info[os.path.basename(subset.image_dir)] = {"n_repeats": subset.num_repeats,
-                                                                "img_count": subset.img_count}
-            else:
-                for subset in dataset.subsets:
-                    dataset_dirs_info[os.path.basename(subset.metadata_file)] = {
-                        "n_repeats": subset.num_repeats,
-                        "img_count": subset.img_count,}
-            metadata.update(
-                {
-                    "ss_batch_size_per_device": args.train_batch_size,
-                    "ss_total_batch_size": total_batch_size,
-                    "ss_resolution": args.resolution,
-                    "ss_color_aug": bool(args.color_aug),
-                    "ss_flip_aug": bool(args.flip_aug),
-                    "ss_random_crop": bool(args.random_crop),
-                    "ss_shuffle_caption": bool(args.shuffle_caption),
-                    "ss_enable_bucket": bool(dataset.enable_bucket),
-                    "ss_bucket_no_upscale": bool(dataset.bucket_no_upscale),
-                    "ss_min_bucket_reso": dataset.min_bucket_reso,
-                    "ss_max_bucket_reso": dataset.max_bucket_reso,
-                    "ss_keep_tokens": args.keep_tokens,
-                    "ss_dataset_dirs": json.dumps(dataset_dirs_info),
-                    "ss_reg_dataset_dirs": json.dumps(reg_dataset_dirs_info),
-                    "ss_tag_frequency": json.dumps(dataset.tag_frequency),
-                    "ss_bucket_info": json.dumps(dataset.bucket_info),})
-
-        # add extra args
+        metadata = {}
         if args.network_args:
             metadata["ss_network_args"] = json.dumps(net_kwargs)
 
@@ -784,9 +684,7 @@ class NetworkTrainer:
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
-            #loss = torch.tensor(0.0, requires_grad=True, device=accelerator.device)
             for step, batch in enumerate(train_dataloader):
-                train_class_list = batch["train_class_list"]
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
@@ -803,8 +701,15 @@ class NetworkTrainer:
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
                     # ---------------------------------------------------------------------------------------------------------------------
-                    train_indexs = [i for i in train_class_list if i == 1 ]
-                    test_indexs = [i for i in train_class_list if i == 0 ]
+                    train_indexs, test_indexs = [], []
+                    total_batch = latents.shape[0]
+                    for i in range(total_batch):
+                        latent = latents[i, :, :, :]
+                        good_latent = good_latents[i, :, :, :]
+                        if torch.equal(latent, good_latent):
+                            train_indexs.append(i)
+                        else:
+                            test_indexs.append(i)
 
                     train_latents = good_latents[train_indexs, :, :, :]
                     test_latents = latents[test_indexs, :, :, :]
@@ -821,15 +726,22 @@ class NetworkTrainer:
                         if test_latents.dim() != 4 :
                             test_latents = test_latents.unsqueeze(0)
                             test_good_latents = test_good_latents.unsqueeze(0)
+
                         input_latents   = torch.cat([test_latents, test_good_latents], dim=0)
                         input_condition = text_encoder_conds[test_indexs, :, :]
                         input_condition = torch.cat([input_condition] * 2, dim=0)
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,noise_scheduler,input_latents)
                         # Predict the noise residual
+                        trg_indexs = batch["trg_indexs_list"]
+                        print(f'batch["trg_indexs_list"] : {trg_indexs}')
                         with accelerator.autocast():
-                            unet(noisy_latents,timesteps,input_condition,
-                                 trg_indexs_list=[batch["trg_indexs_list"][i] for i in test_indexs],
-                                 mask_imgs=batch['mask_imgs'][test_indexs, :, :, :]).sample
+                            trg_indexs_list=[batch["trg_indexs_list"][i] for i in test_indexs]
+                            self.call_unet(args, accelerator, unet,
+                                      noisy_latents, timesteps,
+                                      input_condition, batch, weight_dtype,
+                                      trg_indexs_list,None)
+
+
                         losss = attention_storer.loss_list
                         attention_storer.reset()
                         contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
