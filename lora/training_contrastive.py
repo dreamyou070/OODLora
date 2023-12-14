@@ -83,7 +83,7 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore, mask
                         batch_trg_index = trg_indexs_list[batch_idx] # two times
                         for word_idx in batch_trg_index :
                             masked_attn_vector = masked_attention_prob[:, :, word_idx]
-                            org_attn_vector           = attention_prob[:, :, word_idx]
+                            org_attn_vector  = attention_prob[:, :, word_idx]
                             attention_diff = (masked_attn_vector-org_attn_vector).mean() + args.contrastive_eps
                             standard = torch.zeros_like(attention_diff)
                             loss = torch.max(attention_diff, standard)
@@ -719,7 +719,7 @@ class NetworkTrainer:
                     b_size = len(trg_indexs)
                     for i in range(b_size):
                         if i in test_indexs:
-                            index_list.append(trg_indexs[i])
+                            index_list.append(trg_indexs[i].tolist())
 
 
                     # (2) text condition checking
