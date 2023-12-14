@@ -371,6 +371,7 @@ class DreamBoothSubset(BaseSubset):
         caption_extension: str,
         num_repeats,
         shuffle_caption,
+        caption_separator: str,
         keep_tokens,
         color_aug,
         flip_aug,
@@ -383,14 +384,14 @@ class DreamBoothSubset(BaseSubset):
         caption_suffix,
         token_warmup_min,
         token_warmup_step,
-        mask_dir,
-        class_caption = None) -> None:
+    ) -> None:
         assert image_dir is not None, "image_dir must be specified / image_dirは指定が必須です"
 
         super().__init__(
             image_dir,
             num_repeats,
             shuffle_caption,
+            caption_separator,
             keep_tokens,
             color_aug,
             flip_aug,
@@ -403,8 +404,7 @@ class DreamBoothSubset(BaseSubset):
             caption_suffix,
             token_warmup_min,
             token_warmup_step,
-            mask_dir,
-            class_caption)
+        )
 
         self.is_reg = is_reg
         self.class_tokens = class_tokens
@@ -416,6 +416,7 @@ class DreamBoothSubset(BaseSubset):
         if not isinstance(other, DreamBoothSubset):
             return NotImplemented
         return self.image_dir == other.image_dir
+
 
 class FineTuningSubset(BaseSubset):
     def __init__(
@@ -1363,6 +1364,7 @@ class DreamBoothDataset(BaseDataset):
             if len(tokens) >= 5:
                 base_name_face_det = "_".join(tokens[:-4])
             cap_paths = [base_name + caption_extension, base_name_face_det + caption_extension]
+
             caption = None
             for cap_path in cap_paths:
                 if os.path.isfile(cap_path):
@@ -1381,9 +1383,7 @@ class DreamBoothDataset(BaseDataset):
             if not os.path.isdir(subset.image_dir):
                 print(f"not directory: {subset.image_dir}")
                 return [], []
-            mask_dir = subset.mask_dir
-            if mask_dir:
-                assert os.path.isdir(mask_dir), f"not directory: {mask_dir}"
+
             img_paths = glob_images(subset.image_dir, "*")
             print(f"found directory {subset.image_dir} contains {len(img_paths)} image files")
 
@@ -1393,7 +1393,9 @@ class DreamBoothDataset(BaseDataset):
             for img_path in img_paths:
                 cap_for_img = read_caption(img_path, subset.caption_extension)
                 if cap_for_img is None and subset.class_tokens is None:
-                    print(f"neither caption file nor class tokens are found. use empty caption for {img_path} / キャプションファイルもclass tokenも見つかりませんでした。空のキャプションを使用します: {img_path}")
+                    print(
+                        f"neither caption file nor class tokens are found. use empty caption for {img_path} / キャプションファイルもclass tokenも見つかりませんでした。空のキャプションを使用します: {img_path}"
+                    )
                     captions.append("")
                     missing_captions.append(img_path)
                 else:
@@ -1409,13 +1411,17 @@ class DreamBoothDataset(BaseDataset):
                 number_of_missing_captions = len(missing_captions)
                 number_of_missing_captions_to_show = 5
                 remaining_missing_captions = number_of_missing_captions - number_of_missing_captions_to_show
-                print(f"No caption file found for {number_of_missing_captions} images. Training will continue without captions for these images. If class token exists, it will be used. / {number_of_missing_captions}枚の画像にキャプションファイルが見つかりませんでした。これらの画像についてはキャプションなしで学習を続行します。class tokenが存在する場合はそれを使います。")
+
+                print(
+                    f"No caption file found for {number_of_missing_captions} images. Training will continue without captions for these images. If class token exists, it will be used. / {number_of_missing_captions}枚の画像にキャプションファイルが見つかりませんでした。これらの画像についてはキャプションなしで学習を続行します。class tokenが存在する場合はそれを使います。"
+                )
                 for i, missing_caption in enumerate(missing_captions):
                     if i >= number_of_missing_captions_to_show:
                         print(missing_caption + f"... and {remaining_missing_captions} more")
                         break
                     print(missing_caption)
-            return img_paths, captions, mask_dir
+            return img_paths, captions
+
         print("prepare images.")
         num_train_images = 0
         num_reg_images = 0
@@ -1423,63 +1429,47 @@ class DreamBoothDataset(BaseDataset):
         for subset in subsets:
             if subset.num_repeats < 1:
                 print(
-                    f"ignore subset with image_dir='{subset.image_dir}': num_repeats is less than 1 / num_repeatsが1を下回っているためサブセットを無視します: {subset.num_repeats}")
+                    f"ignore subset with image_dir='{subset.image_dir}': num_repeats is less than 1 / num_repeatsが1を下回っているためサブセットを無視します: {subset.num_repeats}"
+                )
                 continue
+
             if subset in self.subsets:
-                print(f"ignore duplicated subset with image_dir='{subset.image_dir}': use the first one / 既にサブセットが登録されているため、重複した後発のサブセットを無視します")
+                print(
+                    f"ignore duplicated subset with image_dir='{subset.image_dir}': use the first one / 既にサブセットが登録されているため、重複した後発のサブセットを無視します"
+                )
                 continue
-            img_paths, captions, mask_dir = load_dreambooth_dir(subset)
-            if mask_dir:
-                print(f"found mask directory {mask_dir}")
-                assert os.path.isdir(mask_dir), f"not directory: {mask_dir}"
+
+            img_paths, captions = load_dreambooth_dir(subset)
             if len(img_paths) < 1:
                 print(f"ignore subset with image_dir='{subset.image_dir}': no images found / 画像が見つからないためサブセットを無視します")
                 continue
+
             if subset.is_reg:
                 num_reg_images += subset.num_repeats * len(img_paths)
             else:
                 num_train_images += subset.num_repeats * len(img_paths)
+
             for img_path, caption in zip(img_paths, captions):
-                parent, neat_path = os.path.split(img_path)
-                if mask_dir:
-                    #mask_re = re.compile(f"{name}\.(png|jpg)$")  # matches name_{something optional}_mask.{png or jpg}
-                    #mask_path = None
-                    #for mask_name in os.listdir(mask_dir):
-                    #    # if success on finding specific pattern,
-                    #    m = mask_re.match(mask_name)
-                    #    if m:
-                    mask_path = os.path.join(mask_dir, neat_path)
-                    break
-                    #validate
-                    if mask_path is None:
-                        raise FileNotFoundError(f"mask file not found / マスクファイルが見つかりませんでした: {img_path}")
-                else:
-                    mask_path = None
-                # --------------------------------------------------------------------------------------------
-                # each data
-                info = ImageInfo(img_path,
-                                 subset.num_repeats,
-                                 caption,
-                                 subset.is_reg,
-                                 img_path,
-                                 mask_path,
-                                 subset.class_caption)
+                info = ImageInfo(img_path, subset.num_repeats, caption, subset.is_reg, img_path)
                 if subset.is_reg:
                     reg_infos.append(info)
                 else:
                     self.register_image(info, subset)
+
             subset.img_count = len(img_paths)
             self.subsets.append(subset)
-        # ----------------------------------------------------------------------------------------------------------
-        # total
+
         print(f"{num_train_images} train images with repeating.")
         self.num_train_images = num_train_images
+
         print(f"{num_reg_images} reg images.")
         if num_train_images < num_reg_images:
             print("some of reg images are not used / 正則化画像の数が多いので、一部使用されない正則化画像があります")
+
         if num_reg_images == 0:
             print("no regularization images / 正則化画像が見つかりませんでした")
         else:
+            # num_repeatsを計算する：どうせ大した数ではないのでループで処理する
             n = 0
             first_loop = True
             while n < num_train_images:
@@ -1493,6 +1483,7 @@ class DreamBoothDataset(BaseDataset):
                     if n >= num_train_images:
                         break
                 first_loop = False
+
         self.num_reg_images = num_reg_images
 
 class FineTuningDataset(BaseDataset):
