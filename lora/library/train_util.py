@@ -1028,7 +1028,8 @@ class BaseDataset(torch.utils.data.Dataset):
         train_class_list = []
         mask_dirs = []
         caption_attention_masks = []
-        for image_key in bucket[image_index : image_index + bucket_batch_size ]:
+        for J, image_key in enumerate(bucket[image_index : image_index + bucket_batch_size ]):
+            print(f'j : {J}')
 
             image_info = self.image_data[image_key]
             # --------------------------------------------------------------------------------------------------------------
@@ -1205,13 +1206,7 @@ class BaseDataset(torch.utils.data.Dataset):
                         input_ids2_list.append(token_caption2)
         # ------------------------------------------------------------------------------------------------------------
         example = {}
-        example["mask_dirs"] = mask_dirs
-        example["trg_indexs_list"] = trg_indexs_list ##########################################################
-        example["train_class_list"] = train_class_list
-        example["absolute_paths"] = absolute_paths
-
-        example["loss_weights"] = torch.FloatTensor(loss_weights)
-        example["caption_attention_mask"] = caption_attention_masks
+        """
         # ---------------------------------------------------------------------------------------------------------------------------------------
         # input_ids
         if len(text_encoder_outputs1_list) == 0:
@@ -1248,6 +1243,14 @@ class BaseDataset(torch.utils.data.Dataset):
             mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
         else:
             images = None
+            mask_imgs = None
+        """
+        example["mask_dirs"] = mask_dirs
+        example["trg_indexs_list"] = trg_indexs_list  ##########################################################
+        example["train_class_list"] = train_class_list
+        example["absolute_paths"] = absolute_paths
+        example["loss_weights"] = torch.FloatTensor(loss_weights)
+        example["caption_attention_mask"] = caption_attention_masks
         example["images"] = images
         example["mask_imgs"] = mask_imgs
         example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
