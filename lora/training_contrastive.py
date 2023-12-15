@@ -730,6 +730,7 @@ class NetworkTrainer:
                         good_latent = good_latents[i, :, :, :]
                         if torch.equal(latent, good_latent):
                             train_indexs.append(i)
+                            print(f'i : {i} to train indexs')
                         else:
                             test_indexs.append(i)
 
