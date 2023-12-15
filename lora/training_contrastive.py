@@ -710,8 +710,12 @@ class NetworkTrainer:
                             if img.dim() == 3:
                                 img = img.unsqueeze(0)
                                 mask = mask.unsqueeze(0)
-                            latents = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample()
-                            good_latents = vae.encode(mask.to(dtype=vae_dtype)).latent_dist.sample()
+                            generator = torch.Generator(device=accelerator.device)
+                            generator.manual_seed(args.seed)
+                            latents      = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample(generator = generator)
+                            generator = torch.Generator(device=accelerator.device)
+                            generator.manual_seed(args.seed)
+                            good_latents = vae.encode(mask.to(dtype=vae_dtype)).latent_dist.sample(generator = generator)
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
