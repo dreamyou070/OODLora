@@ -703,19 +703,11 @@ class NetworkTrainer:
                         if "latents" in batch and batch["latents"] is not None:
                             latents = batch["latents"].to(accelerator.device)
                         else:
-                            img = batch["images"][0]
-                            mask = batch["mask_imgs"][0]
-                            equal_check = torch.all(torch.eq(img, mask))
-                            print(f'equal_check: {equal_check}')
-                            if img.dim() == 3:
-                                img = img.unsqueeze(0)
-                                mask = mask.unsqueeze(0)
-                            generator = torch.Generator(device=accelerator.device)
-                            generator.manual_seed(args.seed)
-                            latents      = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample(generator = generator)
-                            generator = torch.Generator(device=accelerator.device)
-                            generator.manual_seed(args.seed)
-                            good_latents = vae.encode(mask.to(dtype=vae_dtype)).latent_dist.sample(generator = generator)
+                            instance_seed = random.randint(0, 2**31)
+                            generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
+                            latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample(generator = generator)
+                            generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
+                            good_latents = vae.encode(batch["mask_imgs"].to(dtype=vae_dtype)).latent_dist.sample(generator = generator)
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)

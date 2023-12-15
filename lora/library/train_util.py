@@ -1204,65 +1204,65 @@ class BaseDataset(torch.utils.data.Dataset):
                         else:
                             token_caption2 = self.get_input_ids(caption, self.tokenizers[1])
                         input_ids2_list.append(token_caption2)
-            # ------------------------------------------------------------------------------------------------------------
-            example = {}
+        # ------------------------------------------------------------------------------------------------------------
+        example = {}
 
-            # ---------------------------------------------------------------------------------------------------------------------------------------
-            # input_ids
-            if len(text_encoder_outputs1_list) == 0:
-                if self.token_padding_disabled :
-                    example["input_ids"] = self.tokenizer[0](captions,
-                                                             padding=True,
-                                                             truncation=True,
-                                                             return_tensors="pt").input_ids  # token idx
-                    example["class_input_ids"] = self.tokenizer[0](class_captions,
-                                                                   padding=True,
-                                                                   truncation=True,
-                                                                   return_tensors="pt").input_ids
-                    if len(self.tokenizers) > 1:
-                        example["input_ids2"] = self.tokenizer[1](
-                            captions, padding=True, truncation=True, return_tensors="pt").input_ids
-                    else:
-                        example["input_ids2"] = None
+        # ---------------------------------------------------------------------------------------------------------------------------------------
+        # input_ids
+        if len(text_encoder_outputs1_list) == 0:
+            if self.token_padding_disabled :
+                example["input_ids"] = self.tokenizer[0](captions,
+                                                         padding=True,
+                                                         truncation=True,
+                                                         return_tensors="pt").input_ids  # token idx
+                example["class_input_ids"] = self.tokenizer[0](class_captions,
+                                                               padding=True,
+                                                               truncation=True,
+                                                               return_tensors="pt").input_ids
+                if len(self.tokenizers) > 1:
+                    example["input_ids2"] = self.tokenizer[1](
+                        captions, padding=True, truncation=True, return_tensors="pt").input_ids
                 else:
-                    example["input_ids"] = torch.stack(input_ids_list)
-                    example["input_ids2"] = torch.stack(input_ids2_list) if len(self.tokenizers) > 1 else None
-                    example["class_input_ids"] = torch.stack(class_input_ids_list)
-                example["text_encoder_outputs1_list"] = None
-                example["text_encoder_outputs2_list"] = None
-                example["text_encoder_pool2_list"] = None
-
+                    example["input_ids2"] = None
             else:
-                example["input_ids"] = None
-                example["input_ids2"] = None
-                example["text_encoder_outputs1_list"] = torch.stack(text_encoder_outputs1_list)
-                example["text_encoder_outputs2_list"] = torch.stack(text_encoder_outputs2_list)
-                example["text_encoder_pool2_list"] = torch.stack(text_encoder_pool2_list)
+                example["input_ids"] = torch.stack(input_ids_list)
+                example["input_ids2"] = torch.stack(input_ids2_list) if len(self.tokenizers) > 1 else None
+                example["class_input_ids"] = torch.stack(class_input_ids_list)
+            example["text_encoder_outputs1_list"] = None
+            example["text_encoder_outputs2_list"] = None
+            example["text_encoder_pool2_list"] = None
 
-            #if images[0] is not None:
-            #    images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
-            #    mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
-            #else:
-            #    images = None
-            #    mask_imgs = None
+        else:
+            example["input_ids"] = None
+            example["input_ids2"] = None
+            example["text_encoder_outputs1_list"] = torch.stack(text_encoder_outputs1_list)
+            example["text_encoder_outputs2_list"] = torch.stack(text_encoder_outputs2_list)
+            example["text_encoder_pool2_list"] = torch.stack(text_encoder_pool2_list)
 
-            example["mask_dirs"] = mask_dirs
-            example["trg_indexs_list"] = trg_indexs_list  ##########################################################
-            example["train_class_list"] = train_class_list
-            example["absolute_paths"] = absolute_paths
-            example["loss_weights"] = torch.FloatTensor(loss_weights)
-            example["caption_attention_mask"] = caption_attention_masks
-            example["images"] = images
-            example["mask_imgs"] = mask_imgs
-            example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
-            example["captions"] = captions
-            example["original_sizes_hw"] = torch.stack([torch.LongTensor(x) for x in original_sizes_hw])
-            example["crop_top_lefts"] = torch.stack([torch.LongTensor(x) for x in crop_top_lefts])
-            example["target_sizes_hw"] = torch.stack([torch.LongTensor(x) for x in target_sizes_hw])
-            example["flippeds"] = flippeds
-            if self.debug_dataset:
-                example["image_keys"] = bucket[image_index : image_index + self.batch_size]
-            return example
+        if images[0] is not None:
+            images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
+            mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
+        else:
+            images = None
+            mask_imgs = None
+
+        example["mask_dirs"] = mask_dirs
+        example["trg_indexs_list"] = trg_indexs_list  ##########################################################
+        example["train_class_list"] = train_class_list
+        example["absolute_paths"] = absolute_paths
+        example["loss_weights"] = torch.FloatTensor(loss_weights)
+        example["caption_attention_mask"] = caption_attention_masks
+        example["images"] = images
+        example["mask_imgs"] = mask_imgs
+        example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
+        example["captions"] = captions
+        example["original_sizes_hw"] = torch.stack([torch.LongTensor(x) for x in original_sizes_hw])
+        example["crop_top_lefts"] = torch.stack([torch.LongTensor(x) for x in crop_top_lefts])
+        example["target_sizes_hw"] = torch.stack([torch.LongTensor(x) for x in target_sizes_hw])
+        example["flippeds"] = flippeds
+        if self.debug_dataset:
+            example["image_keys"] = bucket[image_index : image_index + self.batch_size]
+        return example
 
     def get_item_for_caching(self, bucket, bucket_batch_size, image_index):
         captions = []
