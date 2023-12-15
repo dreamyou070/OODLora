@@ -6,7 +6,7 @@ echo $SLURM_NODELIST
 echo $SLURM_NODEID
 
 source ~/.bashrc
-conda activate ttp
+conda activate venv
 ml purge
 ml load cuda/11.0
 
