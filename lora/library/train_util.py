@@ -1065,9 +1065,8 @@ class BaseDataset(torch.utils.data.Dataset):
                 latents = torch.FloatTensor(latents)
                 image = None
             else:
-                img = load_image(absolute_path, self.height, self.width)
+                img = load_image(absolute_path, self.height, self.width) # ndarray
                 masked_img = load_image(mask_dir, self.height, self.width)
-                print(f'img : {type(img)}')
                 """     
                 img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset,image_info.absolute_path, is_resize = True,trg_h = self.height, trg_w = self.width)
                 if mask_dir is not None:
@@ -1084,7 +1083,6 @@ class BaseDataset(torch.utils.data.Dataset):
                     """
                     im_h, im_w = img.shape[0:2]
                     if im_h > self.height or im_w > self.width:
-                        print(f'size change ???')
                         assert (subset.random_crop ), f"image too large, but cropping and bucketing are disabled / 画像サイズが大きいのでface_crop_aug_rangeかrandom_crop、またはbucketを有効にしてください: {image_info.absolute_path}"
                         if im_h > self.height:
                             p = random.randint(0, im_h - self.height)
@@ -1108,10 +1106,10 @@ class BaseDataset(torch.utils.data.Dataset):
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                     masked_img = masked_img[:, ::-1, :].copy()
                 latents = None
-                print(f'image transform')
-                print(f'self.image_transforms : {self.image_transforms}')
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)
+                torch_equal = torch.equal(image, masked_image)
+                print(f'equal: {torch_equal}')
             images.append(image)
             mask_imgs.append(masked_image)
             latents_list.append(latents)
