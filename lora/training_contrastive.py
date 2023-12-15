@@ -781,7 +781,7 @@ class NetworkTrainer:
                         else:
                             target = noise
                         task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
-                        task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
+                        #task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
                         task_loss = task_loss.mean()
                         log_loss["loss/task_loss"] = task_loss
                         if test_latents.shape[0] != 0 :
