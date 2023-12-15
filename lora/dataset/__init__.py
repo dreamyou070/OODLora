@@ -14,7 +14,7 @@ IMAGE_TRANSFORMS = transforms.Compose([transforms.ToTensor(),
 
 class SYDataset(Dataset):
 
-    def __init__(self, image_dir, masked_dir, h, w, class_caption,tokenizers,
+    def __init__(self, image_dir, masked_dir, h, w, class_caption, tokenizers,
                  tokenizer_max_length) -> None:
 
         self.image_dir = image_dir

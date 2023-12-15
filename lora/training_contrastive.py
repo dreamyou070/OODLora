@@ -257,6 +257,9 @@ class NetworkTrainer:
                             class_caption = args.class_caption,
                             tokenizers = tokenizers,
                             tokenizer_max_length=args.max_token_length,)
+        first_data = train_dataset_group.__getitem__(0)
+        print(f' first_data : {first_data}')
+
 
 
         """
@@ -290,8 +293,8 @@ class NetworkTrainer:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
         """
 
-        current_epoch = Value("i", 0)
-        current_step = Value("i", 0)
+        #current_epoch = Value("i", 0)
+        #current_step = Value("i", 0)
         """
         ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
         collater = train_util.collater_class(current_epoch, current_step, ds_for_collater)
@@ -311,7 +314,7 @@ class NetworkTrainer:
 
         self.assert_extra_args(args, train_dataset_group)
         """
-
+        """
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
         is_main_process = accelerator.is_main_process
@@ -353,6 +356,7 @@ class NetworkTrainer:
                 module.merge_to(text_encoder, unet, weights_sd, weight_dtype, accelerator.device if args.lowram else "cpu")
             accelerator.print(f"all weights merged: {', '.join(args.base_weights)}")
         """
+        """
         # 学習を準備する
         if cache_latents:
             vae.to(accelerator.device, dtype=vae_dtype)
@@ -368,6 +372,7 @@ class NetworkTrainer:
         
         # 必要ならテキストエンコーダーの出力をキャッシュする: Text Encoderはcpuまたはgpuへ移される
         self.cache_text_encoder_outputs_if_needed(args, accelerator, unet, vae, tokenizers, text_encoders, train_dataset_group, weight_dtype)
+        """
         """
         # prepare network
         net_kwargs = {}
@@ -869,7 +874,7 @@ class NetworkTrainer:
             with open(attn_loss_save_dir, 'w') as f:
                 writer = csv.writer(f)
                 writer.writerows(attn_loss_records)
-
+        """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
