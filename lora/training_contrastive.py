@@ -724,7 +724,8 @@ class NetworkTrainer:
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_class_list = batch["train_class_list"]
                     train_indexs, test_indexs = [], []
-                    for index, i in train_class_list:
+
+                    for index, i in enumerate(train_class_list):
                         if i == 1:
                             train_indexs.append(index)
                         else :
