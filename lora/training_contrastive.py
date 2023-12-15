@@ -705,6 +705,9 @@ class NetworkTrainer:
                         else:
                             img = batch["images"][0]
                             mask = batch["mask_imgs"][0]
+                            if img.dim() == 3:
+                                img = img.unsqueeze(0)
+                                mask = mask.unsqueeze(0)
                             latents = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample()
                             good_latents = vae.encode(mask.to(dtype=vae_dtype)).latent_dist.sample()
                             if torch.any(torch.isnan(latents)):

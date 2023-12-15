@@ -1,7 +1,9 @@
 import torch
 
-torch_a = torch.tensor([[1., 2.], [3, 4.]])
-torch_b = torch.tensor([[1., 2.], [3,4.]])
+torch_a = torch.randn((4,64,64))
+a = [torch_a, torch_a]
 
-answer = torch.equal(torch_a, torch_b)
-print(answer)
+img = a[0]
+print(img.shape)
+b= torch.stack(a, dim=0)
+print(b.shape)
