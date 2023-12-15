@@ -1067,17 +1067,15 @@ class BaseDataset(torch.utils.data.Dataset):
             else:
                 img = load_image(absolute_path, self.height, self.width)
                 masked_img = load_image(mask_dir, self.height, self.width)
+                print(f'img : {type(img)}')
                 """     
                 img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset,image_info.absolute_path, is_resize = True,trg_h = self.height, trg_w = self.width)
                 if mask_dir is not None:
                     masked_img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset,mask_dir,is_resize=True,trg_h=self.height,trg_w=self.width)
                 """
                 if self.enable_bucket:
-                    print(f'enable bucket???')
                     img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
                     masked_img, _, _ = trim_and_resize_if_required(subset.random_crop, masked_img, image_info.bucket_reso, image_info.resized_size)
-                    print(f'img : {type(img)}')
-
                 else:
                     """
                     if face_cx > 0:  # 顔位置情報あり
@@ -1104,14 +1102,14 @@ class BaseDataset(torch.utils.data.Dataset):
                 # augmentation
                 aug = self.aug_helper.get_augmentor(subset.color_aug)
                 if aug is not None:
-                    print(f'aug???')
                     img = aug(image=img)["image"]
                     masked_img = aug(image=masked_img)["image"]
                 if flipped:
-                    print(f'flip???')
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                     masked_img = masked_img[:, ::-1, :].copy()
                 latents = None
+                print(f'image transform')
+                print(f'self.image_transforms : {self.image_transforms}')
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)
             images.append(image)
