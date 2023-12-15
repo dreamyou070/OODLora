@@ -758,8 +758,6 @@ class NetworkTrainer:
                                       input_condition, batch, weight_dtype,
                                       index_list,
                                       None)
-
-
                         losss = attention_storer.loss_list
                         attention_storer.reset()
                         contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
