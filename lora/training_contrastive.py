@@ -704,8 +704,11 @@ class NetworkTrainer:
                             latents = batch["latents"].to(accelerator.device)
                         else:
 
-                            img_num = len(batch["images"])
-                            print(f"img_num: {img_num}")
+                            img = batch["images"][0]
+                            mask = batch["mask_imgs"][0]
+                            equal_check = torch.equal(img, mask)
+                            caption = batch["captions"]
+                            print(f'caption : {caption} | equal_check : {equal_check}')
                             time.sleep(10)
                             latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
                             good_latents = vae.encode(batch['mask_imgs'].to(dtype=vae_dtype)).latent_dist.sample()
