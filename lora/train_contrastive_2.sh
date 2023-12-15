@@ -1,11 +1,16 @@
 #!/bin/bash
-# start of the script
-#!/bin/bash
-# sbatch -q big_qos --nodes 2 --output=../result/printing_screen/2_contrastive_learning_eps_0.0_new_code_highrepeat_test.txt training_contrastive.sh
-# sbatch -q big_qos --nodes 2 training_contrastive.sh
-echo $CUDA_VISIBLE_DEVICES
-echo $SLURM_NODELIST
-echo $SLURM_NODEID
+#SBATCH --partition=compute-od-gpu
+#SBATCH --job-name=intelmpi_test
+#SBATCH --nodes 4
+#SBATCH --ntasks-per-node 1
+#SBATCH --cpus-per-gpu=6
+#SBATCH --gres=gpu:8
+#SBATCH --output=%x_%j.out
+#SBATCH --comment "Key=Monitoring,Value=ON"
+#SBATCH --exclusive
+
+
+module load intelmpi
 
 source ~/.bashrc
 conda activate venv
@@ -13,7 +18,7 @@ ml purge
 ml load cuda/11.0
 
 
-accelerate launch --config_file ../../../gpu_config/gpu_6_7_config --main_process_port 57689 training_contrastive.py \
+accelerate launch --config_file ../../../gpu_config/gpu_4_5_config --main_process_port 57689 training_contrastive.py \
   --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 \
   --log_with wandb --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
   --wandb_init_name bagel_training --wandb_run_name 2_contrastive_learning_eps_0.0_new_code_highrepeat \
