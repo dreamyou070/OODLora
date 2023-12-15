@@ -2,7 +2,11 @@
 # start of the script
 
 #SBATCH --job-name=parksooyeon_job
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:4
+#SBTACH --ntasks=4
+#SBATCH --tasks-per-node=4
+#SBATCH --cpus-per-task=1
+#SBATCH --nodes=1
 #SBATCH --output=example.out
 #SBATCH --time 0-23:00:00
 
