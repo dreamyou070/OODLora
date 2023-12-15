@@ -720,27 +720,22 @@ class NetworkTrainer:
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
-                    print(f'latents : {latents.shape}')
-                    print(f'checking train or test')
-                    # ---------------------------------------------------------------------------------------------------------------------
-                    train_indexs, test_indexs = [], []
-                    total_batch = latents.shape[0]
-                    for i in range(total_batch):
-                        latent = latents[i, :, :, :]
-                        good_latent = good_latents[i, :, :, :]
-                        if torch.equal(latent, good_latent):
-                            train_indexs.append(i)
-                            print(f'i : {i} to train indexs')
-                        else:
-                            test_indexs.append(i)
 
-                    time.sleep(1000)
+                    # ---------------------------------------------------------------------------------------------------------------------
+                    train_class_list = batch["train_class_list"]
+                    train_indexs = [i for i in train_class_list if i == 1]
+                    test_indexs = [i for i in train_class_list if i != 1]
+                    print(f' train_indexs : {train_indexs}')
+                    print(f' test_indexs : {test_indexs}')
+                    torch_check = torch.euqal(latents, good_latents)
+                    print(f' torch_check : {torch_check}')
 
                     train_latents = good_latents[train_indexs, :, :, :]
                     test_latents = latents[test_indexs, :, :, :]
                     test_good_latents = good_latents[test_indexs, :, :, :]
-
                     trg_indexs = batch["trg_indexs_list"]
+                    time.sleep(1000)
+
                     index_list = []
                     b_size = len(trg_indexs)
                     for i in range(b_size):
