@@ -1226,16 +1226,17 @@ class BaseDataset(torch.utils.data.Dataset):
                 example["input_ids"] = torch.stack(input_ids_list)
                 example["input_ids2"] = torch.stack(input_ids2_list) if len(self.tokenizers) > 1 else None
                 example["class_input_ids"] = torch.stack(class_input_ids_list)
-            example["text_encoder_outputs1_list"] = None
-            example["text_encoder_outputs2_list"] = None
-            example["text_encoder_pool2_list"] = None
+            #example["text_encoder_outputs1_list"] = None
+            #example["text_encoder_outputs2_list"] = None
+            #example["text_encoder_pool2_list"] = None
+        """
         else:
             example["input_ids"] = None
             example["input_ids2"] = None
             example["text_encoder_outputs1_list"] = torch.stack(text_encoder_outputs1_list)
             example["text_encoder_outputs2_list"] = torch.stack(text_encoder_outputs2_list)
             example["text_encoder_pool2_list"] = torch.stack(text_encoder_pool2_list)
-
+        """
         if images[0] is not None:
             images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
             mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
@@ -1251,7 +1252,7 @@ class BaseDataset(torch.utils.data.Dataset):
         example["caption_attention_mask"] = caption_attention_masks
         example["images"] = images
         example["mask_imgs"] = mask_imgs
-        example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
+        #example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
         example["captions"] = captions
         example["original_sizes_hw"] = torch.stack([torch.LongTensor(x) for x in original_sizes_hw])
         example["crop_top_lefts"] = torch.stack([torch.LongTensor(x) for x in crop_top_lefts])
