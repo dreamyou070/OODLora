@@ -713,6 +713,7 @@ class NetworkTrainer:
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
+                                good_latents = torch.where(torch.isnan(good_latents), torch.zeros_like(good_latents), good_latents)
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
                     # ---------------------------------------------------------------------------------------------------------------------
@@ -723,7 +724,6 @@ class NetworkTrainer:
                             train_indexs.append(index)
                         else :
                             test_indexs.append(index)
-
                     train_latents = latents[train_indexs, :, :, :]
                     train_good_latents = good_latents[train_indexs, :, :, :]
                     diff_sum = (train_latents-train_good_latents).sum()
