@@ -721,7 +721,7 @@ class NetworkTrainer:
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
                     print(f'latents : {latents.shape}')
-
+                    print(f'checking train or test')
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_indexs, test_indexs = [], []
                     total_batch = latents.shape[0]
