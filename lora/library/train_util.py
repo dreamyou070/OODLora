@@ -1136,7 +1136,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 train_class = 0
             print(f'in getitem, class_caption : {class_caption}, caption : {caption}, train_class : {train_class}')
             train_class_list.append(train_class)
-            time.sleep(3)
+            time.sleep(10)
 
             if class_caption is None:
                 class_caption = 'good' ## TODO remove
@@ -1153,8 +1153,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 captions.append(caption)
             else:
                 # ------------------------------------------------------------------------------------------------------------------------------------------------
-                caption = class_caption
-                caption = self.process_caption(subset, caption)
+                caption       = self.process_caption(subset, caption)
                 class_caption = self.process_caption(subset, class_caption)
 
                 if self.XTI_layers:
