@@ -1073,8 +1073,10 @@ class BaseDataset(torch.utils.data.Dataset):
                     masked_img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset,mask_dir,is_resize=True,trg_h=self.height,trg_w=self.width)
                 """
                 if self.enable_bucket:
+                    print(f'enable bucket???')
                     img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
                     masked_img, _, _ = trim_and_resize_if_required(subset.random_crop, masked_img, image_info.bucket_reso, image_info.resized_size)
+                    print(f'img : {type(img)}')
 
                 else:
                     """
@@ -1084,6 +1086,7 @@ class BaseDataset(torch.utils.data.Dataset):
                     """
                     im_h, im_w = img.shape[0:2]
                     if im_h > self.height or im_w > self.width:
+                        print(f'size change ???')
                         assert (subset.random_crop ), f"image too large, but cropping and bucketing are disabled / 画像サイズが大きいのでface_crop_aug_rangeかrandom_crop、またはbucketを有効にしてください: {image_info.absolute_path}"
                         if im_h > self.height:
                             p = random.randint(0, im_h - self.height)
@@ -1101,9 +1104,11 @@ class BaseDataset(torch.utils.data.Dataset):
                 # augmentation
                 aug = self.aug_helper.get_augmentor(subset.color_aug)
                 if aug is not None:
+                    print(f'aug???')
                     img = aug(image=img)["image"]
                     masked_img = aug(image=masked_img)["image"]
                 if flipped:
+                    print(f'flip???')
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                     masked_img = masked_img[:, ::-1, :].copy()
                 latents = None
