@@ -316,6 +316,13 @@ class NetworkTrainer:
         first_one = train_dataset_group.__getitem__(0)
         print(f' first_one : {first_one}')
 
+        images = first_one['images']
+        mask_imgs = first_one['mask_imgs']
+        equal_check = torch.equal(images, mask_imgs)
+        print(f' equal_check : {equal_check}')
+        print(f' images.shape : {images.shape}')
+
+
         """
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
