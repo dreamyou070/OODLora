@@ -725,7 +725,7 @@ class NetworkTrainer:
                     train_class_list = batch["train_class_list"]
                     train_indexs = [i for i in train_class_list if i == 1]
                     test_indexs = [i for i in train_class_list if i != 1]
-                    print(f' train_indexs : {train_indexs} | test_indexs : {test_indexs} | latents : {latents.shape} ')
+                    print(f'train_class_list : {train_class_list} | train_indexs : {train_indexs} | test_indexs : {test_indexs} | latents : {latents.shape} ')
                     torch_check = torch.equal(latents, good_latents)
                     print(f' torch_check : {torch_check}')
 
