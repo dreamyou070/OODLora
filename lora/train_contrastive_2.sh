@@ -12,7 +12,9 @@
 # sbatch -q big_qos --nodes 2 --output=../result/printing_screen/2_contrastive_learning_eps_0.0_new_code_highrepeat_test.txt training_contrastive.sh
 # sbatch --partition=compute-od-gpu -q big_qos --nodes 2 --gres=gpu:4 --ntasks-per-node 1 --cpus-per-gpu=6 train_contrastive_2.sh
 #module load intelmpi
-
+echo $CUDA_VISIBLE_DEVICES
+echo $SLURM_NODELIST
+echo $SLURM_NODEID
 source ~/.bashrc
 conda activate venv
 ml purge
