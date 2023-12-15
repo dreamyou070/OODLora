@@ -697,13 +697,13 @@ class NetworkTrainer:
                     on_step_start(text_encoder, unet)
                     """
                     first_one = train_dataset_group.__getitem__(0)
-        print(f' first_one : {first_one}')
-
-        images = first_one['images']
-        mask_imgs = first_one['mask_imgs']
-        equal_check = torch.equal(images, mask_imgs)
-        print(f' equal_check : {equal_check}')
-        print(f' images.shape : {images.shape}')
+                    print(f' first_one : {first_one}')
+            
+                    images = first_one['images']
+                    mask_imgs = first_one['mask_imgs']
+                    equal_check = torch.equal(images, mask_imgs)
+                    print(f' equal_check : {equal_check}')
+                    print(f' images.shape : {images.shape}')
                     """
                     # ---------------------------------------------------------------------------------------------------------------------
                     with torch.no_grad():
@@ -718,7 +718,7 @@ class NetworkTrainer:
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
                     print(f'latents : {latents.shape}')
-                    
+
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_indexs, test_indexs = [], []
                     total_batch = latents.shape[0]
@@ -890,7 +890,7 @@ class NetworkTrainer:
             with open(attn_loss_save_dir, 'w') as f:
                 writer = csv.writer(f)
                 writer.writerows(attn_loss_records)
-        """
+        
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
