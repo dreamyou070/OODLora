@@ -703,15 +703,10 @@ class NetworkTrainer:
                         if "latents" in batch and batch["latents"] is not None:
                             latents = batch["latents"].to(accelerator.device)
                         else:
-
                             img = batch["images"][0]
                             mask = batch["mask_imgs"][0]
-                            equal_check = torch.equal(img, mask)
-                            caption = batch["captions"]
-                            print(f'caption : {caption} | equal_check : {equal_check}')
-                            time.sleep(10)
-                            latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
-                            good_latents = vae.encode(batch['mask_imgs'].to(dtype=vae_dtype)).latent_dist.sample()
+                            latents = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample()
+                            good_latents = vae.encode(mask.to(dtype=vae_dtype)).latent_dist.sample()
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
@@ -725,7 +720,6 @@ class NetworkTrainer:
                             train_indexs.append(index)
                         else :
                             test_indexs.append(index)
-
 
                     train_latents = latents[train_indexs, :, :, :]
                     train_good_latents = good_latents[train_indexs, :, :, :]
