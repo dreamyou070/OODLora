@@ -724,27 +724,17 @@ class NetworkTrainer:
                             test_indexs.append(index)
                     train_latents = latents[train_indexs, :, :, :]
                     train_good_latents = good_latents[train_indexs, :, :, :]
-                    diff_sum = (train_latents-train_good_latents).sum()
-                    captions = batch["captions"]
-                    print(f' batch captions : {captions}')
-                    print(f'train_class_list : {train_class_list} | train_indexs : {train_indexs} | test_indexs : {test_indexs} | latents : {latents.shape} ')
-                    print(f' train_latents : {train_latents}' )
-                    print(f' train_good_latents : {train_good_latents}')
-                    print(f' diff_sum train {diff_sum}' )
 
                     test_latents = latents[test_indexs, :, :, :]
                     test_good_latents = good_latents[test_indexs, :, :, :]
-                    torch_check = torch.equal(test_latents, test_good_latents)
-                    print(f' test torch_check : {torch_check} | test_latents : {test_latents.shape}' )
 
                     trg_indexs = batch["trg_indexs_list"]
-                    time.sleep(10)
-
+                    print("trg_indexs_list : ", trg_indexs)
                     index_list = []
                     b_size = len(trg_indexs)
                     for i in range(b_size):
                         if i in test_indexs:
-                            a = trg_indexs[i].tolist()
+                            a = trg_indexs[i]
                             index_list.append(a)
                     # (2) text condition checking
                     with torch.set_grad_enabled(train_text_encoder):
