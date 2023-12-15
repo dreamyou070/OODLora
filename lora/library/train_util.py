@@ -1041,7 +1041,11 @@ class BaseDataset(torch.utils.data.Dataset):
             absolute_paths.append(absolute_path)
             # --------------------------------------------------------------------------------------------------------------
             # (2) mask
-            mask_dir = image_info.mask_dir
+            parent, name = os.path.split(absolute_path)      # parent = 120_good , name = 000.png
+            super_parent, class_name = os.path.split(parent) # class_name = 120_good
+            super_super_parent, change = os.path.split(super_parent) # dir = 120
+            mask_dir = os.path.join(super_parent, 'corrected', class_name, name)
+            caption = str(class_name.split('_')[-1]).strip()
             #if mask_dir is None:
             #    mask_dir = os.path.join(super_parent, 'corrected', class_name, dir)
             mask_dirs.append(mask_dir)
@@ -1124,16 +1128,15 @@ class BaseDataset(torch.utils.data.Dataset):
             flippeds.append(flipped)
 
             # captionとtext encoder outputを処理する
-            caption = image_info.caption  # default
             class_caption = image_info.class_caption
-            caption = image_info.caption
 
             if class_caption == caption :
                 train_class = 1
             else :
                 train_class = 0
-            print(f'in getimet, class_caption : {class_caption}, caption : {caption}, train_class : {train_class}')
+            print(f'in getitem, class_caption : {class_caption}, caption : {caption}, train_class : {train_class}')
             train_class_list.append(train_class)
+            time.sleep(3)
 
             if class_caption is None:
                 class_caption = 'good' ## TODO remove
