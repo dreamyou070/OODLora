@@ -1044,7 +1044,7 @@ class BaseDataset(torch.utils.data.Dataset):
             parent, name = os.path.split(absolute_path)      # parent = 120_good , name = 000.png
             super_parent, class_name = os.path.split(parent) # class_name = 120_good
             super_super_parent, change = os.path.split(super_parent) # dir = 120
-            mask_dir = os.path.join(super_parent, 'corrected', class_name, name)
+            mask_dir = os.path.join(super_super_parent, 'corrected', class_name, name)
             caption = str(class_name.split('_')[-1]).strip()
             #if mask_dir is None:
             #    mask_dir = os.path.join(super_parent, 'corrected', class_name, dir)
