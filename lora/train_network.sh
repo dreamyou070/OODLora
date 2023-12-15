@@ -1,4 +1,4 @@
-accelerate launch --config_file /data7/sooyeon/LyCORIS/gpu_config/gpu_6_7_config --main_process_port 26724 train_network_sy.py \
+accelerate launch --config_file /data7/sooyeon/LyCORIS/gpu_config/gpu_4_5_config --main_process_port 24524 train_network_sy.py \
   --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 \
   --seed 42 --pretrained_model_name_or_path /data7/sooyeon/pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_weights /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/1_strong_good_training_high_repeat/pre_models/epoch-000022.safetensors \
@@ -10,5 +10,5 @@ accelerate launch --config_file /data7/sooyeon/LyCORIS/gpu_config/gpu_6_7_config
   --resolution 512,512 --net_key_names text --network_dim 64 --network_alpha 64 --train_batch_size 1 \
   --optimizer_type AdamW --lr_scheduler cosine_with_restarts --lr_warmup_steps 144 \
   --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 \
-  --save_every_n_epochs 1 --sample_every_n_epochs 1 --sample_prompts /data7/sooyeon/MyData/object/bagel_inference.txt \
+  --save_every_n_epochs 1 --sample_every_n_epochs 50 --sample_prompts /data7/sooyeon/MyData/object/bagel_inference.txt \
   --max_train_steps 48000

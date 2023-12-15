@@ -794,7 +794,7 @@ class NetworkTrainer:
                     progress_bar.update(1)
                     global_step += 1
                     # (4) sample images
-                    self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
+                    #self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
                     if attention_storer is not None: attention_storer.step_store = {}
                     # (5) save or erase model
                     if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
@@ -836,7 +836,7 @@ class NetworkTrainer:
                 logs = {"loss/epoch": loss_total / len(loss_list)}
                 accelerator.log(logs, step=epoch + 1)
             accelerator.wait_for_everyone()
-            if args.save_every_n_epochs is not None:
+            if args.save_every_n_epochs is not None and epoch > 100 :
                 saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < num_train_epochs
                 if is_main_process and saving:
                     ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
@@ -847,7 +847,8 @@ class NetworkTrainer:
                         remove_model(remove_ckpt_name)
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
-            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
+            if epoch % args.sample_every_n_epochs == 0 and is_main_process and epoch > 0 :
+                self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
             if attention_storer is not None:
                 attention_storer.step_store = {}
             # end of epoch

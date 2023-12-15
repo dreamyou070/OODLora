@@ -27,13 +27,14 @@ class SYDataset(Dataset):
             image_class_dir = os.path.join(self.image_dir, image_class)
             mask_class_dir = os.path.join(self.masked_dir, image_class)
             image_names = os.listdir(image_class_dir)
-            for image_name in image_names :
-                image_path = os.path.join(image_class_dir, image_name)
-                mask_path = os.path.join(mask_class_dir, image_name)
-                self.data.append({'image': image_path,
-                                  'masked': mask_path,
-                                  'caption' : caption,
-                                  'class_caption' : class_caption})
+            for j in range(repeat) :
+                for image_name in image_names :
+                    image_path = os.path.join(image_class_dir, image_name)
+                    mask_path = os.path.join(mask_class_dir, image_name)
+                    self.data.append({'image': image_path,
+                                      'masked': mask_path,
+                                      'caption' : caption,
+                                      'class_caption' : class_caption})
 
         self.tokenizers = tokenizers
         self.tokenizer_max_length =tokenizer_max_length
