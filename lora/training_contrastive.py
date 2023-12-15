@@ -727,7 +727,7 @@ class NetworkTrainer:
                     test_indexs = [i for i in train_class_list if i != 1]
                     print(f' train_indexs : {train_indexs}')
                     print(f' test_indexs : {test_indexs}')
-                    torch_check = torch.euqal(latents, good_latents)
+                    torch_check = torch.equal(latents, good_latents)
                     print(f' torch_check : {torch_check}')
 
                     train_latents = good_latents[train_indexs, :, :, :]
@@ -747,7 +747,7 @@ class NetworkTrainer:
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
                     # (3.1) contrastive learning
                     log_loss = {}
-                    if test_latents.shape[0] != 0 :
+                    if len(test_indexs) > 0 :
                         if test_latents.dim() != 4 :
                             test_latents = test_latents.unsqueeze(0)
                             test_good_latents = test_good_latents.unsqueeze(0)
@@ -772,7 +772,7 @@ class NetworkTrainer:
                         log_loss["loss/contrastive_loss"] = contrastive_loss
                         loss = contrastive_loss
 
-                    if train_latents.shape[0] != 0 :
+                    if len(train_indexs) > 0:
                         if train_latents.dim() != 4:
                             train_latents = train_latents.unsqueeze(0)
                         input_latents = train_latents
