@@ -729,7 +729,6 @@ class NetworkTrainer:
                     test_good_latents = good_latents[test_indexs, :, :, :]
 
                     trg_indexs = batch["trg_indexs_list"]
-                    print("trg_indexs_list : ", trg_indexs)
                     index_list = []
                     b_size = len(trg_indexs)
                     for i in range(b_size):
