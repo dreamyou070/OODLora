@@ -11,7 +11,7 @@ ml purge
 ml load cuda/11.0
 
 
-accelerate -u launch --config_file /home/dreamyou070/gpu_config/gpu_4_config training_contrastive.py >> output.txt 2>&1 \
+accelerate launch --config_file /home/dreamyou070/gpu_config/gpu_4_config -u training_contrastive.py >> output.txt 2>&1 \
   --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 \
   --log_with wandb --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
   --wandb_init_name bagel_training --wandb_run_name 2_contrastive_learning_eps_0.0_new_code_highrepeat \
