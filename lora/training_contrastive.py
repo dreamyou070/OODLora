@@ -737,6 +737,8 @@ class NetworkTrainer:
                     train_latents = latents[train_indexs, :, :, :]
                     train_good_latents = good_latents[train_indexs, :, :, :]
                     torch_check = torch.equal(train_latents, train_good_latents)
+                    print(f' train_latents : {train_latents}' )
+                    print(f' train_good_latents : {train_good_latents}')
                     print(f' train torch_check : {torch_check} | train_latents : {train_latents.shape}' )
 
                     test_latents = latents[test_indexs, :, :, :]
