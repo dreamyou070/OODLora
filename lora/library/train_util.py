@@ -1239,12 +1239,12 @@ class BaseDataset(torch.utils.data.Dataset):
                 example["text_encoder_outputs2_list"] = torch.stack(text_encoder_outputs2_list)
                 example["text_encoder_pool2_list"] = torch.stack(text_encoder_pool2_list)
 
-            if images[0] is not None:
-                images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
-                mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
-            else:
-                images = None
-                mask_imgs = None
+            #if images[0] is not None:
+            #    images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
+            #    mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
+            #else:
+            #    images = None
+            #    mask_imgs = None
 
             example["mask_dirs"] = mask_dirs
             example["trg_indexs_list"] = trg_indexs_list  ##########################################################
