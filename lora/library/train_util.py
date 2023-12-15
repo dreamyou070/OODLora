@@ -1113,7 +1113,6 @@ class BaseDataset(torch.utils.data.Dataset):
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)
                 torch_equal = torch.equal(image, masked_image)
-                print(f'equal: {torch_equal}')
             images.append(image)
             mask_imgs.append(masked_image)
             latents_list.append(latents)
@@ -1129,14 +1128,11 @@ class BaseDataset(torch.utils.data.Dataset):
 
             # captionとtext encoder outputを処理する
             class_caption = image_info.class_caption
-
             if class_caption == caption :
                 train_class = 1
             else :
                 train_class = 0
-            print(f'in getitem, class_caption : {class_caption}, caption : {caption}, train_class : {train_class}')
             train_class_list.append(train_class)
-            time.sleep(10)
 
             if class_caption is None:
                 class_caption = 'good' ## TODO remove

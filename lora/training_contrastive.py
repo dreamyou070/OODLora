@@ -698,16 +698,6 @@ class NetworkTrainer:
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
-                    """
-                    first_one = train_dataset_group.__getitem__(0)
-                    print(f' first_one : {first_one}')
-            
-                    images = first_one['images']
-                    mask_imgs = first_one['mask_imgs']
-                    equal_check = torch.equal(images, mask_imgs)
-                    print(f' equal_check : {equal_check}')
-                    print(f' images.shape : {images.shape}')
-                    """
                     # ---------------------------------------------------------------------------------------------------------------------
                     with torch.no_grad():
                         if "latents" in batch and batch["latents"] is not None:
@@ -720,18 +710,14 @@ class NetworkTrainer:
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
-
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_class_list = batch["train_class_list"]
                     train_indexs, test_indexs = [], []
-
                     for index, i in enumerate(train_class_list):
                         if i == 1:
                             train_indexs.append(index)
                         else :
                             test_indexs.append(index)
-                    print(f'train_class_list : {train_class_list} | train_indexs : {train_indexs} | test_indexs : {test_indexs} | latents : {latents.shape} ')
-
 
 
                     train_latents = latents[train_indexs, :, :, :]
@@ -739,6 +725,7 @@ class NetworkTrainer:
                     diff_sum = (train_latents-train_good_latents).sum()
                     captions = batch["captions"]
                     print(f' batch captions : {captions}')
+                    print(f'train_class_list : {train_class_list} | train_indexs : {train_indexs} | test_indexs : {test_indexs} | latents : {latents.shape} ')
                     print(f' train_latents : {train_latents}' )
                     print(f' train_good_latents : {train_good_latents}')
                     print(f' diff_sum train {diff_sum}' )
@@ -749,7 +736,7 @@ class NetworkTrainer:
                     print(f' test torch_check : {torch_check} | test_latents : {test_latents.shape}' )
 
                     trg_indexs = batch["trg_indexs_list"]
-                    time.sleep(1000)
+                    time.sleep(10)
 
                     index_list = []
                     b_size = len(trg_indexs)
