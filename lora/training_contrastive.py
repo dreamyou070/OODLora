@@ -313,17 +313,10 @@ class NetworkTrainer:
 
         self.assert_extra_args(args, train_dataset_group)
 
-        first_one = train_dataset_group.__getitem__(0)
-        print(f' first_one : {first_one}')
-
-        images = first_one['images']
-        mask_imgs = first_one['mask_imgs']
-        equal_check = torch.equal(images, mask_imgs)
-        print(f' equal_check : {equal_check}')
-        print(f' images.shape : {images.shape}')
 
 
-        """
+
+
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
         is_main_process = accelerator.is_main_process
@@ -364,8 +357,8 @@ class NetworkTrainer:
                     multiplier, weight_path, vae, text_encoder, unet, for_inference=True             )
                 module.merge_to(text_encoder, unet, weights_sd, weight_dtype, accelerator.device if args.lowram else "cpu")
             accelerator.print(f"all weights merged: {', '.join(args.base_weights)}")
-        """
-        """
+
+
         # 学習を準備する
         if cache_latents:
             vae.to(accelerator.device, dtype=vae_dtype)
@@ -435,7 +428,7 @@ class NetworkTrainer:
         print(f' step7. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)  # cpu_count-1 ただし最大で指定された数まで
         train_dataloader = torch.utils.data.DataLoader(train_dataset_group,
-                                                       batch_size=args.train_batch_size,
+                                                       batch_size=2,
                                                        shuffle=True,
                                                        #collate_fn=collater,
                                                        num_workers=n_workers,
@@ -702,6 +695,16 @@ class NetworkTrainer:
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
+                    """
+                    first_one = train_dataset_group.__getitem__(0)
+        print(f' first_one : {first_one}')
+
+        images = first_one['images']
+        mask_imgs = first_one['mask_imgs']
+        equal_check = torch.equal(images, mask_imgs)
+        print(f' equal_check : {equal_check}')
+        print(f' images.shape : {images.shape}')
+                    """
                     # ---------------------------------------------------------------------------------------------------------------------
                     with torch.no_grad():
                         if "latents" in batch and batch["latents"] is not None:
@@ -714,6 +717,8 @@ class NetworkTrainer:
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
+                    print(f'latents : {latents.shape}')
+                    
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_indexs, test_indexs = [], []
                     total_batch = latents.shape[0]
@@ -724,6 +729,8 @@ class NetworkTrainer:
                             train_indexs.append(i)
                         else:
                             test_indexs.append(i)
+
+                    time.sleep(1000)
 
                     train_latents = good_latents[train_indexs, :, :, :]
                     test_latents = latents[test_indexs, :, :, :]
