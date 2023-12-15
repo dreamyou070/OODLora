@@ -243,9 +243,11 @@ class NetworkTrainer:
         set_seed(args.seed)
 
         print(f'\n step 2. dataset')
-        from dataset import SYDataset
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
+        """
+        from dataset import SYDataset
+        
         h,w = args.resolution.split(',')
         parent, child = os.path.split(args.train_data_dir)  # parent, bad
         masked_dir = os.path.join(parent, f'corrected')
@@ -259,9 +261,6 @@ class NetworkTrainer:
                             tokenizer_max_length=args.max_token_length,)
         first_data = train_dataset_group.__getitem__(0)
         print(f' first_data : {first_data}')
-
-
-
         """
         train_util.prepare_dataset_args(args, True)
         cache_latents = args.cache_latents
@@ -291,11 +290,11 @@ class NetworkTrainer:
 
         else:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
-        """
 
-        #current_epoch = Value("i", 0)
-        #current_step = Value("i", 0)
-        """
+
+        current_epoch = Value("i", 0)
+        current_step = Value("i", 0)
+
         ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
         collater = train_util.collater_class(current_epoch, current_step, ds_for_collater)
 
@@ -313,7 +312,9 @@ class NetworkTrainer:
             ), "when caching latents, either color_aug or random_crop cannot be used / latentをキャッシュするときはcolor_augとrandom_cropは使えません"
 
         self.assert_extra_args(args, train_dataset_group)
-        """
+
+        first_one = train_dataset_group.__getitem__(0)
+        
         """
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
