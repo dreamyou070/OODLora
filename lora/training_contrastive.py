@@ -314,7 +314,8 @@ class NetworkTrainer:
         self.assert_extra_args(args, train_dataset_group)
 
         first_one = train_dataset_group.__getitem__(0)
-        
+        print(f' first_one : {first_one}')
+
         """
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
