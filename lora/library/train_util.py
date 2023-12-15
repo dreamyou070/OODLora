@@ -1126,9 +1126,12 @@ class BaseDataset(torch.utils.data.Dataset):
             caption = image_info.caption  # default
             class_caption = image_info.class_caption
             caption = image_info.caption
-            train_class = 0
+
             if class_caption == caption :
                 train_class = 1
+            else :
+                train_class = 0
+            print(f'in getimet, class_caption : {class_caption}, caption : {caption}, train_class : {train_class}')
             train_class_list.append(train_class)
 
             if class_caption is None:
