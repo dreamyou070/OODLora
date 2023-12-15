@@ -6,6 +6,6 @@ accelerate launch --config_file /data7/sooyeon/LyCORIS/gpu_config/gpu_4_5_config
   --network_module networks.lora --network_dim 64 --network_alpha 4 --train_batch_size 2 \
   --optimizer_type AdamW --lr_scheduler cosine_with_restarts --lr_warmup_steps 144 \
   --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 --resolution 512,512 \
-  --save_every_n_epochs 1 --sample_every_n_epochs 100 --sample_prompts /data7/sooyeon/MyData/object/bagel_inference.txt \
+  --save_every_n_epochs 1 --sample_every_n_epochs 1 --sample_prompts /data7/sooyeon/MyData/object/bagel_inference.txt \
   --max_train_steps 48000 --train_data_dir /data7/sooyeon/MyData/anomaly_detection/MVTecAD/paired_data/bad \
   --resolution 512,512 --class_caption 'good' --sample_prompts /data7/sooyeon/MyData/object/bagel_inference.txt --contrastive_eps 0.0
