@@ -705,6 +705,8 @@ class NetworkTrainer:
                         else:
                             img = batch["images"][0]
                             mask = batch["mask_imgs"][0]
+                            equal_check = torch.all(torch.eq(img, mask))
+                            print(f'equal_check: {equal_check}')
                             if img.dim() == 3:
                                 img = img.unsqueeze(0)
                                 mask = mask.unsqueeze(0)
