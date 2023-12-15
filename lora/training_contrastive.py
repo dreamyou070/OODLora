@@ -730,12 +730,19 @@ class NetworkTrainer:
                         else :
                             test_indexs.append(index)
                     print(f'train_class_list : {train_class_list} | train_indexs : {train_indexs} | test_indexs : {test_indexs} | latents : {latents.shape} ')
-                    torch_check = torch.equal(latents, good_latents)
-                    print(f' torch_check : {torch_check}')
 
-                    train_latents = good_latents[train_indexs, :, :, :]
+
+
+                    train_latents = latents[train_indexs, :, :, :]
+                    train_good_latents = good_latents[train_indexs, :, :, :]
+                    torch_check = torch.equal(train_latents, train_good_latents)
+                    print(f' train torch_check : {torch_check} | train_latents : {train_latents.shape}' )
+
                     test_latents = latents[test_indexs, :, :, :]
                     test_good_latents = good_latents[test_indexs, :, :, :]
+                    torch_check = torch.equal(test_latents, test_good_latents)
+                    print(f' test torch_check : {torch_check} | test_latents : {test_latents.shape}' )
+
                     trg_indexs = batch["trg_indexs_list"]
                     time.sleep(1000)
 
