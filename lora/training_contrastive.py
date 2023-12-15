@@ -737,6 +737,8 @@ class NetworkTrainer:
                     train_latents = latents[train_indexs, :, :, :]
                     train_good_latents = good_latents[train_indexs, :, :, :]
                     diff_sum = (train_latents-train_good_latents).sum()
+                    captions = batch["captions"]
+                    print(f' batch captions : {captions}')
                     print(f' train_latents : {train_latents}' )
                     print(f' train_good_latents : {train_good_latents}')
                     print(f' diff_sum train {diff_sum}' )
