@@ -438,24 +438,25 @@ class NetworkTrainer:
             gen_epoch_loss = 0
             disc_epoch_loss = 0
             for step, batch in enumerate(train_dataloader):
+                with torch.autograd.set_detect_anomaly(True) :
                 # ------------------------------------------------------------------------------------------
                 # generator training
-                optimizer.zero_grad(set_to_none=True)
-                with autocast(enabled=True):
-                    reconstruction = vae(batch['images']).sample
-                    recons_loss = l1_loss(reconstruction.float(), batch['images'].float())
-                    p_loss = perceptual_loss(reconstruction.float(), batch['images'].float())
-                    logits_fake = discriminator(reconstruction.contiguous().float())[-1]
-                    generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
-                    loss_g = recons_loss + p_loss * perceptual_weight + generator_loss * adv_weight
-                with autocast(enabled=True):
-                    loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
-                    logits_real = discriminator(batch['images'].contiguous().detach())[-1]
-                    loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
-                    loss_d = (loss_d_fake + loss_d_real) * 0.5
-                total_loss = loss_g + loss_d
-                total_loss.backward()
-                optimizer.step()
+                    optimizer.zero_grad(set_to_none=True)
+                    with autocast(enabled=True):
+                        reconstruction = vae(batch['images']).sample
+                        recons_loss = l1_loss(reconstruction.float(), batch['images'].float())
+                        p_loss = perceptual_loss(reconstruction.float(), batch['images'].float())
+                        logits_fake = discriminator(reconstruction.contiguous().float())[-1]
+                        generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
+                        loss_g = recons_loss + p_loss * perceptual_weight + generator_loss * adv_weight
+                    with autocast(enabled=True):
+                        loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
+                        logits_real = discriminator(batch['images'].contiguous().detach())[-1]
+                        loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
+                        loss_d = (loss_d_fake + loss_d_real) * 0.5
+                    total_loss = loss_g + loss_d
+                    total_loss.backward()
+                    optimizer.step()
                 """
                 # ------------------------------------------------------------------------------------------
             if (epoch + 1) % val_interval == 0:
