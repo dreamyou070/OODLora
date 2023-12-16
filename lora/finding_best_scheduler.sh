@@ -12,11 +12,3 @@
 # run on back = 2>&1
 # sbatch -p suma_rtx4090 -q big_qos --nodes 1 --output=../result/printing_screen/noising_scheduler_log.log finding_best_scheduler.sh 2>&1
 
-echo $CUDA_VISIBLE_DEVICES
-echo $SLURM_NODELIST
-echo $SLURM_NODEID
-
-source ~/.bashrc
-conda activate venv
-ml purge
-ml load cuda/11.0
