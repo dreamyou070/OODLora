@@ -10,7 +10,7 @@
 #--nodes=1 --ntasks-per-node 1
 # sbatch -q big_qos --nodes 2 --output=../result/printing_screen/2_contrastive_learning_eps_0.0_new_code_highrepeat_test.txt training_contrastive.sh
 # run on back = 2>&1
-# sbatch -p suma_rtx4090 -q big_qos --nodes 1 --output=../result/printing_screen/noising_scheduler_log.log training_contrastive.sh 2>&1
+# sbatch -job-name=parksooyeon_finding_best_scheduler -p suma_rtx4090 -q big_qos --nodes 1 --output=../result/printing_screen/noising_scheduler_log.log finding_best_scheduler.sh 2>&1
 
 echo $CUDA_VISIBLE_DEVICES
 echo $SLURM_NODELIST
@@ -23,11 +23,18 @@ ml load cuda/11.0
 
 python finding_best_scheduler.py  --device cuda \
   --process_title parksooyeon \
-  --pretrained_model_name_or_path /data7/sooyeon/pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
-  --network_module networks.lora --network_dim 64 --network_alpha 4 --prompt 'good' --sample_sampler ddim --num_ddim_steps 50 \
+  --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
+  --network_module networks.lora \
+  --network_dim 64 \
+  --network_alpha 4 \
+  --prompt 'good' \
+  --sample_sampler ddim \
+  --num_ddim_steps 50 \
   --output_dir '/data7/sooyeon/Lora/OODLora/result' \
   --network_weights ../result/MVTec_experiment/bagel/2_contrastive_learning_eps_0.0_new_code_highrepeat/epoch-000002.safetensors \
   --concept_image_folder ../../../MyData/anomaly_detection/MVTecAD/bagel
+
+
 
 
 
