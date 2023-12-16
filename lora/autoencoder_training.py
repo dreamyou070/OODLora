@@ -278,6 +278,10 @@ class NetworkTrainer:
         # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
         vae.requires_grad_(True)
         vae.train()
+        vae.to(dtype=weight_dtype)
+        discriminator.requires_grad_(True)
+        discriminator.train()
+        discriminator.to(dtype=weight_dtype)
 
         l1_loss = L1Loss()
         adv_loss = PatchAdversarialLoss(criterion="least_squares")
@@ -447,6 +451,7 @@ class NetworkTrainer:
                         recons_loss = l1_loss(reconstruction.float(), batch['images'].float())
                         p_loss = perceptual_loss(reconstruction.float(), batch['images'].float())
                         logits_fake = discriminator(reconstruction.contiguous().float())[-1]
+
                         generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
                         loss_g = recons_loss + p_loss * perceptual_weight + generator_loss * adv_weight
                     with autocast(enabled=True):
