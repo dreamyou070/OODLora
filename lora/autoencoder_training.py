@@ -252,13 +252,13 @@ class NetworkTrainer:
                                            in_channels=3,
                                            out_channels=3,
                                            kernel_size=4,
-                                           activation=(Act.LEAKYRELU(inplace=False), {"negative_slope": 0.2}),
+                                           activation=(torch.nn.LeakyReLU(inplace=False), {"negative_slope": 0.2}),
                                            norm="BATCH",
                                            bias=False,
                                            padding=1,)
         perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
         optimizer_d = torch.optim.Adam(params=discriminator.parameters(), lr=5e-4)
-        
+
 
 
         unet.requires_grad_(False)
