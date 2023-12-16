@@ -430,7 +430,7 @@ def main(args):
         org_latent = image2latent(load_512(org_img_dir), vae,device, weight_dtype)
         org_latent = org_latent * vae_scale_factor
 
-        rec_latent = image2latent(load_512(rec_img_dir), vae)
+        rec_latent = image2latent(load_512(rec_img_dir),vae,device, weight_dtype)
         rec_latent = rec_latent * vae_scale_factor
 
         input_latent = torch.cat([org_latent, rec_latent], dim=0)
