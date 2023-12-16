@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=suma_rtx4090
+
 #SBATCH --qos big_qos
 #SBATCH --job-name=parksooyeon_finding_best_scheduler
 #SBATCH --nodes 1
