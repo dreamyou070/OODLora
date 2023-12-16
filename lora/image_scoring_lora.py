@@ -451,8 +451,10 @@ def main(args):
     image = 255 * maps / maps.max()
     image = image.unsqueeze(-1).expand(*image.shape, 3)
     image = image.numpy().astype(np.uint8)
+    max_score = image.max()
     image = Image.fromarray(image).resize((256, 256))
     image.save('normal.png')
+    print(f'anomaly score : {max_score}')
 
 
 
@@ -500,8 +502,10 @@ def main(args):
     image = 255 * maps / maps.max()
     image = image.unsqueeze(-1).expand(*image.shape, 3)
     image = image.numpy().astype(np.uint8)
+    max_score = image.max()
     image = Image.fromarray(image).resize((256, 256))
     image.save('abnormal.png')
+    print(f'anomaly score : {max_score}')
 
 
 
