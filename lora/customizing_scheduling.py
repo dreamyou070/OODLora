@@ -457,13 +457,13 @@ def main(args):
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
 
     attention_storer = AttentionStore()
-    register_attention_control(invers_unet, attention_storer)
+    register_attention_control(unet, attention_storer)
 
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
     decoding_factor = 1 / 0.18215
-
+    vae_factor_dict = r'../result/lora_noising_pretrained_denoising_decoding_factor_txt.txt'
     for train_img in train_images:
         train_img_dir = os.path.join(train_img_folder, train_img)
         print(f' (2.3.1) get suber image')
@@ -483,7 +483,7 @@ def main(args):
             #print(f'present_t : {present_t}')
             next_t = flip_times[i + 1]
             with torch.no_grad():
-                noise_pred = call_unet(invers_unet, latent, present_t, uncon, next_t, present_t)
+                noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
             layer_names = attention_storer.self_query_store.keys()
             self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
             t_ = next_t.item()
@@ -510,9 +510,9 @@ def main(args):
             attention_storer.reset()
             latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
             collector = AttentionStore()
-            register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+            register_self_condition_giver(invers_unet, collector, self_query_dict, self_key_dict, self_value_dict)
             #noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t.item(), next_t.item())
-            noise_pred_next = call_unet(unet, latent_next, next_t, uncon, next_t.item(), next_t.item())
+            noise_pred_next = call_unet(invers_unet, latent_next, next_t, uncon, next_t.item(), next_t.item())
             recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next, scheduler)
             pixel_origin = latent2image(latent, vae, return_type='torch')
             alpha = torch.Tensor([copy.deepcopy(decoding_factor)],).to(vae.device)
@@ -540,12 +540,10 @@ def main(args):
             #pil_img = Image.fromarray(np_img)
             #pil_img.save(os.path.join(save_base_folder, f'recon_{int(present_t.item())}.png'))  # 999
             line = f'{int(present_t.item())} : {alpha.clone().detach().item()}'
-            with open(os.path.join(save_base_folder, f'inference_decoding_factor_txt.txt'), 'a') as ff:
+            with open(vae_factor_dict, 'a') as ff:
                 ff.write(line + '\n')
         break
 
-
-    vae_factor_dict = os.path.join(save_base_folder, f'inference_decoding_factor_txt.txt')
     with open(vae_factor_dict, 'r') as f:
         content = f.readlines()
     inference_decoding_factor = {}
@@ -575,7 +573,7 @@ def main(args):
                                                        context=invers_context,
                                                        inference_times = flip_times,
                                                        scheduler=scheduler,
-                                                       unet=invers_unet,
+                                                       unet=unet,
                                                        vae=vae,
                                                        base_folder_dir=image_folder,)
         time_steps.reverse()
@@ -583,7 +581,7 @@ def main(args):
                    context=invers_context,
                    inference_times=time_steps,
                    scheduler=scheduler,
-                   unet=invers_unet,
+                   unet=unet,
                    vae=vae,
                    base_folder_dir=image_folder,
                    vae_factor_dict = inference_decoding_factor)
