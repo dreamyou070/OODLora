@@ -11,4 +11,4 @@ ml purge
 ml load cuda/11.0
 
 
-python data_check.py
+python data_check.py --device cuda
