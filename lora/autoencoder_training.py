@@ -213,7 +213,7 @@ class NetworkTrainer:
 
 
         trainable_params = vae.parameters()
-        optimizer_name, optimizer_args, optimizer_g = train_util.get_optimizer(args, trainable_params)
+        optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         # dataloaderを準備する
         # DataLoaderのプロセス数：0はメインプロセスになる
@@ -433,7 +433,7 @@ class NetworkTrainer:
                 loss_g = recons_loss + perceptual_weight * p_loss + adv_weight * generator_loss
 
                 loss_g.backward()
-                optimizer_g.step()
+                optimizer.step()
 
                 # Discriminator part
                 optimizer_d.zero_grad(set_to_none=True)
