@@ -212,8 +212,6 @@ class NetworkTrainer:
             vae.set_use_memory_efficient_attention_xformers(args.xformers)
 
 
-        trainable_params = vae.parameters()
-        optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         # dataloaderを準備する
         # DataLoaderのプロセス数：0はメインプロセスになる
@@ -234,6 +232,23 @@ class NetworkTrainer:
         # train_dataset_group.set_max_train_steps(args.max_train_steps)
 
         # lr schedulerを用意する
+        discriminator = PatchDiscriminator(spatial_dims=2,
+                                           num_layers_d=3,
+                                           num_channels=64,
+                                           in_channels=3,
+                                           out_channels=3,
+                                           kernel_size=4,
+                                           activation=(Act.LEAKYRELU, {"negative_slope": 0.2, }),
+                                           norm="BATCH",
+                                           bias=False,
+                                           padding=1, )
+        perceptual_loss = PerceptualLoss(spatial_dims=2,
+                                         network_type="alex")
+        #optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args,
+        #                                                                     trainable_params)
+        optimizer = torch.optim.AdamW([{'params' : vae.parameters(),'lr' :1e-4 },
+                                       {'params' : discriminator.parameters(),'lr' :5e-4 }],)
+
         lr_scheduler = train_util.get_scheduler_fix(args,
                                                     optimizer, accelerator.num_processes)
 
@@ -246,19 +261,7 @@ class NetworkTrainer:
         # resumeする
         train_util.resume_from_local_or_hf_if_specified(accelerator, args)
 
-        discriminator = PatchDiscriminator(spatial_dims=2,
-                                           num_layers_d=3,
-                                           num_channels=64,
-                                           in_channels=3,
-                                           out_channels=3,
-                                           kernel_size=4,
-                                           activation=(Act.LEAKYRELU, {"negative_slope": 0.2,}),
-                                           norm="BATCH",
-                                           bias=False,
-                                           padding=1,)
-        perceptual_loss = PerceptualLoss(spatial_dims=2,
-                                         network_type="alex")
-        optimizer_d = torch.optim.Adam(params=discriminator.parameters(), lr=5e-4)
+
 
 
 
@@ -438,7 +441,6 @@ class NetworkTrainer:
                 # ------------------------------------------------------------------------------------------
                 # generator training
                 optimizer.zero_grad(set_to_none=True)
-                optimizer_d.zero_grad(set_to_none=True)
                 with autocast(enabled=True):
                     reconstruction = vae(batch['images']).sample
                     recons_loss = l1_loss(reconstruction.float(), batch['images'].float())
@@ -451,10 +453,9 @@ class NetworkTrainer:
                     logits_real = discriminator(batch['images'].contiguous().detach())[-1]
                     loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
                     loss_d = (loss_d_fake + loss_d_real) * 0.5
-                loss_d.backward()
-                loss_g.backward()
+                total_loss = loss_g + loss_d
+                total_loss.backward()
                 optimizer.step()
-                optimizer_d.step()
                 """
                 # ------------------------------------------------------------------------------------------
             if (epoch + 1) % val_interval == 0:
