@@ -338,11 +338,6 @@ def main(args):
     else:
         model_epoch = 'last'
 
-    output_dir = args.output_dir
-    os.makedirs(output_dir, exist_ok=True)
-    output_dir = os.path.join(output_dir, f'recon_check')
-    os.makedirs(output_dir, exist_ok=True)
-
     print(f' \n step 2. make stable diffusion model')
     device = args.device
     print(f' (2.1) tokenizer')
