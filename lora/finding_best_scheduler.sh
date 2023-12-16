@@ -1,10 +1,8 @@
 #!/bin/bash
 
-
 #SBATCH --qos big_qos
 #SBATCH --job-name=parksooyeon_finding_best_scheduler
 #SBATCH --nodes 1
-#SBATCH --ntasks-per-node 1
 #SBATCH --gres=gpu:1
 #SBATCH --output=../result/printing_screen/noising_scheduler_log.log
 
