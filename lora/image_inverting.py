@@ -163,7 +163,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if not is_cross_attention:
-                if trg_indexs_list > args.self_attn_threshold_time or mask == 0 and 'down' in layer_name :
+                if 'down' in layer_name and (trg_indexs_list > args.self_attn_threshold_time or mask == 0 )  :
                     if hidden_states.shape[0] == 2 :
                         uncon_key, con_key = key.chunk(2)
                         uncon_value, con_value = value.chunk(2)
