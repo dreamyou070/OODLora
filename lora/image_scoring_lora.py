@@ -459,7 +459,7 @@ def main(args):
 
 
 
-    """
+
 
 
 
@@ -498,17 +498,17 @@ def main(args):
         if pix_num == 64 * 64:
             vectors.append(heatmap_vector)
 
+    from matplotlib import pyplot as plt
+    import cv2
+
     maps = torch.cat(vectors, dim=0)
     maps = maps.sum(0) / maps.shape[0]
     maps = maps.reshape(64, 64).cpu()
     image = 255 * maps / maps.max()
-    image = image.unsqueeze(-1).expand(*image.shape, 3)
-    image = image.numpy().astype(np.uint8)
-    from matplotlib import pyplot as plt
-    image = Image.fromarray(image).resize((256, 256)).to('RGB')
-    plt.imshow(np.array(image), cmap='jet', vmin=0.0, vmax=1.0)
-    plt.savefig('abnormal.png')
-    """
+    gray = image.unsqueeze(-1).expand(*image.shape, 3)
+    heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
+    pil_image = Image.fromarray(heatmap).resize((512, 512))
+    pil_image.save('abnormal.png')
 
 
 if __name__ == "__main__":
