@@ -453,7 +453,7 @@ def main(args):
     image = image.numpy().astype(np.uint8)
     from matplotlib import pyplot as plt
     image = Image.fromarray(image).resize((256, 256))
-    plt.imshow(np.array(image).squeeze().cpu().numpy(), cmap='jet', vmin=0.0, vmax=1.0)
+    plt.imshow(np.array(image), cmap='jet', vmin=0.0, vmax=1.0)
     plt.savefig('normal.png')
 
 
@@ -504,7 +504,7 @@ def main(args):
     image = image.numpy().astype(np.uint8)
     from matplotlib import pyplot as plt
     image = Image.fromarray(image).resize((256, 256))
-    plt.imshow(np.array(image).squeeze().cpu().numpy(), cmap='jet', vmin=0.0, vmax=1.0)
+    plt.imshow(np.array(image), cmap='jet', vmin=0.0, vmax=1.0)
     plt.savefig('abnormal.png')
 
 
