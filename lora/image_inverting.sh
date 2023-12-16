@@ -11,4 +11,5 @@ python image_inverting.py --device cuda:5 \
   --concept_image_folder ../../../MyData/anomaly_detection/MVTecAD/bagel \
   --repeat_time 51 \
   --self_attn_threshold_time 0 \
+  --final_time 980 \
   --using_customizing_scheduling
