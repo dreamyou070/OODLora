@@ -1,6 +1,8 @@
 import argparse
-import gc
-import re
+from generative.losses import PatchAdversarialLoss, PerceptualLoss
+from generative.networks.nets import AutoencoderKL, PatchDiscriminator
+from monai.networks.layers import Act
+from torch.nn import L1Loss
 import math
 import os
 import sys
@@ -251,6 +253,7 @@ class NetworkTrainer:
         # resumeする
         train_util.resume_from_local_or_hf_if_specified(accelerator, args)
 
+
         discriminator = PatchDiscriminator(
             spatial_dims=2,
             num_layers_d=3,
@@ -261,16 +264,11 @@ class NetworkTrainer:
             activation=(Act.LEAKYRELU, {"negative_slope": 0.2}),
             norm="BATCH",
             bias=False,
-            padding=1,
-        )
-        discriminator.to(device)
+            padding=1,)
+
 
         perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
-        perceptual_loss.to(device)
-
-        optimizer_g = torch.optim.Adam(params=model.parameters(), lr=1e-4)
         optimizer_d = torch.optim.Adam(params=discriminator.parameters(), lr=5e-4)
-
         l1_loss = L1Loss()
         adv_loss = PatchAdversarialLoss(criterion="least_squares")
         adv_weight = 0.01
@@ -284,8 +282,6 @@ class NetworkTrainer:
         if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
             args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
 
-        attention_storer = AttentionStore()
-        register_attention_control(unet, attention_storer, mask_threshold=args.mask_threshold)
 
         # 学習する
         # TODO: find a way to handle total batch size when there are multiple datasets
