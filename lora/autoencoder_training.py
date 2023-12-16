@@ -213,7 +213,7 @@ class NetworkTrainer:
 
 
         trainable_params = vae.parameters()
-        optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
+        optimizer_name, optimizer_args, optimizer_g = train_util.get_optimizer(args, trainable_params)
 
         # dataloaderを準備する
         # DataLoaderのプロセス数：0はメインプロセスになる
@@ -237,14 +237,7 @@ class NetworkTrainer:
         lr_scheduler = train_util.get_scheduler_fix(args,
                                                     optimizer, accelerator.num_processes)
 
-        unet.requires_grad_(False)
-        unet.to(dtype=weight_dtype)
-        for t_enc in text_encoders: t_enc.requires_grad_(False)
-        vae, optimizer, train_dataloader, lr_scheduler, = accelerator.prepare(vae, optimizer, train_dataloader,lr_scheduler, )
 
-        # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
-        vae.requires_grad_(True)
-        vae.train()
 
         # 実験的機能：勾配も含めたfp16学習を行う　PyTorchにパッチを当ててfp16でのgrad scaleを有効にする
         if args.full_fp16:
@@ -253,27 +246,34 @@ class NetworkTrainer:
         # resumeする
         train_util.resume_from_local_or_hf_if_specified(accelerator, args)
 
-
-        discriminator = PatchDiscriminator(
-            spatial_dims=2,
-            num_layers_d=3,
-            num_channels=64,
-            in_channels=1,
-            out_channels=1,
-            kernel_size=4,
-            activation=(Act.LEAKYRELU, {"negative_slope": 0.2}),
-            norm="BATCH",
-            bias=False,
-            padding=1,)
-
-
+        discriminator = PatchDiscriminator(spatial_dims=2,
+                                           num_layers_d=3,
+                                           num_channels=64,
+                                           in_channels=1,
+                                           out_channels=1,
+                                           kernel_size=4,
+                                           activation=(Act.LEAKYRELU, {"negative_slope": 0.2}),
+                                           norm="BATCH",
+                                           bias=False,
+                                           padding=1,)
         perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
         optimizer_d = torch.optim.Adam(params=discriminator.parameters(), lr=5e-4)
+
+
+        unet.requires_grad_(False)
+        unet.to(dtype=weight_dtype)
+        for t_enc in text_encoders: t_enc.requires_grad_(False)
+        vae, optimizer, train_dataloader, lr_scheduler, discriminator, perceptual_loss= accelerator.prepare(vae, optimizer, train_dataloader,
+                                                                              lr_scheduler,discriminator,perceptual_loss )
+
+        # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
+        vae.requires_grad_(True)
+        vae.train()
+
         l1_loss = L1Loss()
         adv_loss = PatchAdversarialLoss(criterion="least_squares")
         adv_weight = 0.01
         perceptual_weight = 0.001
-
 
 
         # epoch数を計算する
@@ -423,9 +423,31 @@ class NetworkTrainer:
             metadata["ss_epoch"] = str(epoch + 1)
             for step, batch in enumerate(train_dataloader):
                 images = batch['images']
-                reconstruction = vae(images)
+                reconstruction = vae(images).sample
                 recons_loss = l1_loss(reconstruction.float(), images.float())
-                recons_loss = recons_loss.mean()
+
+
+                logits_fake = discriminator(reconstruction.contiguous().float())[-1]
+                p_loss = perceptual_loss(reconstruction.float(), images.float())
+                generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
+                loss_g = recons_loss + perceptual_weight * p_loss + adv_weight * generator_loss
+
+                loss_g.backward()
+                optimizer_g.step()
+
+                # Discriminator part
+                optimizer_d.zero_grad(set_to_none=True)
+
+                logits_fake = discriminator(reconstruction.contiguous().detach())[-1]
+                loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
+                logits_real = discriminator(images.contiguous().detach())[-1]
+                loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
+                discriminator_loss = (loss_d_fake + loss_d_real) * 0.5
+
+                loss_d = adv_weight * discriminator_loss
+
+                loss_d.backward()
+                optimizer_d.step()
 
 
 if __name__ == "__main__":
