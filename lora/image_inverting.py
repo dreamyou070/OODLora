@@ -513,7 +513,7 @@ def main(args) :
     network.to(device)
 
     print(f' (2.4) scheduling factors')
-    vae_factor_dict = r'../../../result/inference_decoding_factor_txt.txt'
+    vae_factor_dict = r'../result/inference_decoding_factor_txt.txt'
 
     with open(vae_factor_dict, 'r') as f:
         content = f.readlines()
