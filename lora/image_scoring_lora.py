@@ -450,9 +450,10 @@ def main(args):
     maps = maps.reshape(64, 64).cpu()
     image = 255 * maps / maps.max()
     image = image.unsqueeze(-1).expand(*image.shape, 3)
+    print(f'image.shape : {image.shape} | type : {type(image)}')
     image = image.numpy().astype(np.uint8)
     from matplotlib import pyplot as plt
-    image = Image.fromarray(image).resize((256, 256))
+    image = Image.fromarray(image).resize((256, 256)).to('RGB')
     plt.imshow(np.array(image), cmap='jet', vmin=0.0, vmax=1.0)
     plt.savefig('normal.png')
 
@@ -503,7 +504,7 @@ def main(args):
     image = image.unsqueeze(-1).expand(*image.shape, 3)
     image = image.numpy().astype(np.uint8)
     from matplotlib import pyplot as plt
-    image = Image.fromarray(image).resize((256, 256))
+    image = Image.fromarray(image).resize((256, 256)).to('RGB')
     plt.imshow(np.array(image), cmap='jet', vmin=0.0, vmax=1.0)
     plt.savefig('abnormal.png')
 
