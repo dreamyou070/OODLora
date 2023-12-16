@@ -4,4 +4,4 @@ python customizing_scheduling.py --device cuda:5 \
   --network_module networks.lora --network_dim 64 --network_alpha 4 --prompt 'good' --sample_sampler ddim --num_ddim_steps 50 \
   --output_dir '/data7/sooyeon/Lora/OODLora/result' \
   --network_weights /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/model/epoch-000003.safetensors \
-  --concept_image_folder /data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel
+  --concept_image_folder /data7/sooyeon/MyData/anomaly_detection/autoencoder_training/bad/100_good

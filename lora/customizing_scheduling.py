@@ -460,7 +460,7 @@ def main(args):
     register_attention_control(unet, attention_storer)
 
     print(f' (3.2) train images')
-    train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
+    train_img_folder = os.path.join(args.concept_image_folder)
     train_images = os.listdir(train_img_folder)
     decoding_factor = 1 / 0.18215
     vae_factor_dict = r'../result/lora_noising_pretrained_denoising_decoding_factor_txt.txt'
