@@ -451,7 +451,9 @@ def main(args):
     image = 255 * maps / maps.max()
     image = image.unsqueeze(-1).expand(*image.shape, 3)
     image = image.numpy().astype(np.uint8)
-    image = np.array(Image.fromarray(image).resize((256, 256)))
+    image = Image.fromarray(image).resize((256, 256))
+    image.save('normal.png')
+
 
 
 
