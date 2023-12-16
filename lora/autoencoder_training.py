@@ -263,8 +263,12 @@ class NetworkTrainer:
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders: t_enc.requires_grad_(False)
-        vae, optimizer, train_dataloader, lr_scheduler, discriminator, perceptual_loss= accelerator.prepare(vae, optimizer, train_dataloader,
-                                                                              lr_scheduler,discriminator,perceptual_loss )
+        vae, optimizer, train_dataloader, lr_scheduler, discriminator, perceptual_loss= accelerator.prepare(vae,
+                                                                                                            optimizer,
+                                                                                                            train_dataloader,
+                                                                                                            lr_scheduler,
+                                                                                                            discriminator,
+                                                                                                            perceptual_loss )
 
         # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
         vae.requires_grad_(True)
@@ -272,7 +276,7 @@ class NetworkTrainer:
 
         l1_loss = L1Loss()
         adv_loss = PatchAdversarialLoss(criterion="least_squares")
-        adv_weight = 0.01
+        adv_weight = 0.005
         perceptual_weight = 0.001
 
 
@@ -429,21 +433,17 @@ class NetworkTrainer:
             gen_epoch_loss = 0
             disc_epoch_loss = 0
             for step, batch in enumerate(train_dataloader):
-
                 # ------------------------------------------------------------------------------------------
                 # batch, 3, 512, 512
                 images = batch['images']
                 reconstruction = vae(images).sample
                 recons_loss = l1_loss(reconstruction.float(), images.float())
                 p_loss = perceptual_loss(reconstruction.float(), images.float())
-
                 # ------------------------------------------------------------------------------------------
                 # input = Batch, 3, 512, 512
                 # logits_fake = [3batch, 3output channel, 62, 62]
                 logits_fake = discriminator(reconstruction.contiguous().float())[-1]
-                generator_loss = adv_loss(logits_fake,
-                                          target_is_real=True,
-                                          for_discriminator=False)
+                generator_loss = adv_loss(logits_fake,target_is_real=True,for_discriminator=False)
                 loss_g = recons_loss + perceptual_weight * p_loss + adv_weight * generator_loss
                 optimizer.zero_grad(set_to_none=True)
                 loss_g.backward()
@@ -452,35 +452,13 @@ class NetworkTrainer:
                 # ------------------------------------------------------------------------------------------
                 # Discriminator part
                 optimizer_d.zero_grad(set_to_none=True)
-                loss_d_fake = adv_loss(discriminator(reconstruction.contiguous().detach())[-1],
-                                       target_is_real=False,
-                                       for_discriminator=True)
-                print(f'loss_d_fake: {loss_d_fake.shape}')
-                loss_d_real = adv_loss(discriminator(images.contiguous().detach())[-1],
-                                       target_is_real=True,
-                                       for_discriminator=True)
-                print(f'loss_d_real: {loss_d_real.shape}')
-                discriminator_loss = (loss_d_fake + loss_d_real) * 0.5
-                loss_d = adv_weight * discriminator_loss
+                loss_d_fake = adv_loss(discriminator(reconstruction.contiguous().detach())[-1],target_is_real=False,for_discriminator=True)
+                loss_d_real = adv_loss(discriminator(images.contiguous().detach())[-1], target_is_real=True,for_discriminator=True)
+                loss_d = adv_weight * (loss_d_fake + loss_d_real)
                 loss_d.backward()
                 optimizer_d.step()
-    """
+                """
                 # ------------------------------------------------------------------------------------------
-                epoch_loss += recons_loss.item()
-                gen_epoch_loss += generator_loss.item()
-                disc_epoch_loss += discriminator_loss.item()
-
-                progress_bar.set_postfix(
-                    {
-                        "recons_loss": epoch_loss / (step + 1),
-                        "gen_loss": gen_epoch_loss / (step + 1),
-                        "disc_loss": disc_epoch_loss / (step + 1),
-                    }
-                )
-            epoch_recon_loss_list.append(epoch_loss / (step + 1))
-            epoch_gen_loss_list.append(gen_epoch_loss / (step + 1))
-            epoch_disc_loss_list.append(disc_epoch_loss / (step + 1))
-    
             if (epoch + 1) % val_interval == 0:
                 vae.eval()
                 val_loss = 0
@@ -500,9 +478,9 @@ class NetworkTrainer:
 
                 val_loss /= val_step
                 val_recon_epoch_loss_list.append(val_loss)
-        #total_time = time.time() - total_start
-        #print(f"train completed, total time: {total_time}.")
-    """
+                #total_time = time.time() - total_start
+                #print(f"train completed, total time: {total_time}.")
+                 """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
