@@ -416,11 +416,18 @@ class NetworkTrainer:
                 os.remove(old_ckpt_file)
 
         # training loop
-        attn_loss_records = [['epoch', 'global_step', 'attn_loss']]
+        epoch_recon_loss_list = []
+        epoch_gen_loss_list = []
+        epoch_disc_loss_list = []
         for epoch in range(num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
+            vae.train()
+            discriminator.train()
+            epoch_loss = 0
+            gen_epoch_loss = 0
+            disc_epoch_loss = 0
             for step, batch in enumerate(train_dataloader):
 
                 # ------------------------------------------------------------------------------------------
@@ -432,17 +439,14 @@ class NetworkTrainer:
 
                 # ------------------------------------------------------------------------------------------
                 # input = Batch, 3, 512, 512
+                # logits_fake = [3batch, 3output channel, 62, 62]
                 logits_fake = discriminator(reconstruction.contiguous().float())[-1]
-                print(f'logits_fake: {logits_fake.shape}')
-
-                time.sleep(10)
-                """
-                
-                
-                generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
+                generator_loss = adv_loss(logits_fake,
+                                          target_is_real=True,
+                                          for_discriminator=False)
                 loss_g = recons_loss + perceptual_weight * p_loss + adv_weight * generator_loss
-
                 loss_g.backward()
+
                 optimizer.step()
 
                 # Discriminator part
@@ -458,7 +462,44 @@ class NetworkTrainer:
 
                 loss_d.backward()
                 optimizer_d.step()
-                """
+
+                epoch_loss += recons_loss.item()
+                gen_epoch_loss += generator_loss.item()
+                disc_epoch_loss += discriminator_loss.item()
+
+                progress_bar.set_postfix(
+                    {
+                        "recons_loss": epoch_loss / (step + 1),
+                        "gen_loss": gen_epoch_loss / (step + 1),
+                        "disc_loss": disc_epoch_loss / (step + 1),
+                    }
+                )
+            epoch_recon_loss_list.append(epoch_loss / (step + 1))
+            epoch_gen_loss_list.append(gen_epoch_loss / (step + 1))
+            epoch_disc_loss_list.append(disc_epoch_loss / (step + 1))
+            """
+            if (epoch + 1) % val_interval == 0:
+                vae.eval()
+                val_loss = 0
+                with torch.no_grad():
+                    for val_step, batch in enumerate(val_loader, start=1):
+                        images = batch["image"].to(device)
+                        reconstruction, _, _ = model(images)
+
+                        # get the first sammple from the first validation batch for visualisation
+                        # purposes
+                        if val_step == 1:
+                            intermediary_images.append(reconstruction[:n_example_images, 0])
+
+                        recons_loss = l1_loss(reconstruction.float(), images.float())
+
+                        val_loss += recons_loss.item()
+
+                val_loss /= val_step
+                val_recon_epoch_loss_list.append(val_loss)
+            """
+        #total_time = time.time() - total_start
+        #print(f"train completed, total time: {total_time}.")
 
 
 if __name__ == "__main__":
