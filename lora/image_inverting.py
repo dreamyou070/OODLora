@@ -486,8 +486,9 @@ def main(args) :
         invers_text_encoders = [invers_text_encoder]
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
-    attention_storer = AttentionStore()
-    register_attention_control(invers_unet, attention_storer)
+    #attention_storer = AttentionStore()
+    attention_storer = None
+    #register_attention_control(invers_unet, attention_storer)
     print(f' (2.5) network')
     sys.path.append(os.path.dirname(__file__))
     network_module = importlib.import_module(args.network_module)
@@ -563,6 +564,7 @@ def main(args) :
                                                                     base_folder_dir=timewise_save_base_folder,
                                                                     attention_storer=attention_storer)
                     # self query / key / value dictionary
+                    """
                     layer_names = attention_storer.self_query_store.keys()
                     self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
                     for layer in layer_names:
@@ -592,12 +594,14 @@ def main(args) :
                             i += 1
                     collector = AttentionStore()
                     register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                    """
                     time_steps.reverse()
 
                     # timesteps = [0,20]
                     context = init_prompt(tokenizer, text_encoder, device, prompt)
-                    collector = AttentionStore()
-                    register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+
+                    #collector = AttentionStore()
+                    #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                     print(f' (2.3.2) recon')
                     recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                                          context=context,
