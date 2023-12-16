@@ -29,7 +29,7 @@ from diffusers import (DDPMScheduler, EulerAncestralDiscreteScheduler, DPMSolver
                        KDPM2DiscreteScheduler, KDPM2AncestralDiscreteScheduler)
 from diffusers import DDIMScheduler
 
-def register_attention_control(unet : nn.Module, controller:AttentionStore, mask_threshold:float=1): #if mask_threshold is 1, use itself
+def register_attention_control(unet : nn.Module, controller:AttentionStore):
 
     def ca_forward(self, layer_name):
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
@@ -419,7 +419,7 @@ def main(args):
     vae_scale_factor = 0.18215
 
     attention_storer = AttentionStore()
-    register_attention_control(unet, attention_storer, mask_threshold=args.mask_threshold)
+    register_attention_control(unet, attention_storer)
 
     with torch.no_grad():
 
