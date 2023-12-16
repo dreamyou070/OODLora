@@ -533,6 +533,7 @@ def main(args):
 
             alpha_cumprod_t = customizing_alphas_cumprod_dict[present_t.item()]
             alpha = scheduler.alphas_cumprod[next_t.item()].detach()
+            print(f'alpha : {alpha} | type of alpha : {type(alpha)}')
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.001)
             for j in range(10000):
@@ -540,7 +541,8 @@ def main(args):
                 latent_next = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
                 next_noise_pred = call_unet(unet, latent_next, next_t, uncon, next_t, present_t)
                 recon_latent = prev_step(next_noise_pred, next_t.item(), sample = latent_next, scheduler=scheduler)
-                loss = torch.nn.functional.mse_loss(latent, recon_latent).mean()
+                loss = torch.nn.functional.mse_loss(latent.float(), recon_latent.float(), reduction = None)
+                loss = loss.mean([1,2,3]).mean()
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
