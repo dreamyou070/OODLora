@@ -649,7 +649,9 @@ def main(args) :
                                                                         vae=vae,
                                                                         base_folder_dir=timewise_save_base_folder,
                                                                         attention_storer=attention_storer)
+
                         # timesteps = [0,20]
+                        attention_storer.reset()
                         context = init_prompt(tokenizer, text_encoder, device, prompt)
                         #collector = AttentionStore()
                         #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
