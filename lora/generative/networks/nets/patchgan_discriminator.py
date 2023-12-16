@@ -226,6 +226,7 @@ class PatchDiscriminator(nn.Sequential):
 
         for submodel in self.children():
             intermediate_output = submodel(out[-1])
+            print(f'intermediate_output : {intermediate_output.shape}')
             out.append(intermediate_output)
 
         return out[1:]
