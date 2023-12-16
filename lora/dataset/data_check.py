@@ -8,8 +8,7 @@ def main(args):
     print(f'\n step 1. make model')
     device = args.device
     pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",
-                                                          cache_dir=r'../../../../pretrained_stable_diffusion').to(
-        device)
+                                                          cache_dir=r'../../../../pretrained_stable_diffusion').to(device)
 
     print(f'\n step 2. dataset')
     parent, _ = os.path.split(args.data_folder)
@@ -66,7 +65,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--device', type=str, default='a bagel')
+    parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--data_folder', type=str, default='../../../../MyData/anomaly_detection/MVTec')
     args = parser.parse_args()
     main(args)
