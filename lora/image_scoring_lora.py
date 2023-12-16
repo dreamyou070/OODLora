@@ -441,7 +441,7 @@ def main(args):
         layer_names = heatmap_stores.keys()
         for layer_name in layer_names:
             heatmap_vector = heatmap_stores[layer_name][0]
-            max_score = max(heatmap_vector)
+            max_score = torch.max(heatmap_vector).item()
             print(f'{layer_name} : max_score : {max_score}')
 
     print(f' \n step 4. Test Sample')
@@ -474,7 +474,7 @@ def main(args):
         layer_names = heatmap_stores.keys()
         for layer_name in layer_names:
             heatmap_vector = heatmap_stores[layer_name][0]
-            max_score = max(heatmap_vector)
+            max_score = torch.max(heatmap_vector).item()
             print(f'{layer_name} : max_score : {max_score}')
 
 
