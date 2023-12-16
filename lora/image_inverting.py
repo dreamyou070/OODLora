@@ -609,47 +609,6 @@ def main(args) :
                     attention_storer.reset()
 
 
-            layer_names = attention_storer.self_query_store.keys()
-            self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
-            for layer in layer_names:
-                self_query_list = attention_storer.self_query_store[layer]
-                self_key_list = attention_storer.self_key_store[layer]
-                self_value_list = attention_storer.self_value_store[layer]
-                i = 1
-                for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
-                    time_step = time_steps[i]
-                    if time_step not in self_query_dict.keys():
-                        self_query_dict[time_step] = {}
-                        self_query_dict[time_step][layer] = self_query
-                    else:
-                        self_query_dict[time_step][layer] = self_query
-
-                    if time_step not in self_key_dict.keys():
-                        self_key_dict[time_step] = {}
-                        self_key_dict[time_step][layer] = self_key
-                    else:
-                        self_key_dict[time_step][layer] = self_key
-
-                    if time_step not in self_value_dict.keys():
-                        self_value_dict[time_step] = {}
-                        self_value_dict[time_step][layer] = self_value
-                    else:
-                        self_value_dict[time_step][layer] = self_value
-                    i += 1
-            collector = AttentionStore()
-            register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-            time_steps.reverse()
-            print(f' (2.3.2) recon')
-            all_latent, _, _ = recon_loop(latent_dict,
-                                          context,
-                                          time_steps,
-                                          scheduler, unet, vae, train_base_folder)
-            attention_storer.reset()
-
-            with open(os.path.join(train_base_folder, 'config.json'), 'w') as f:
-                json.dump(vars(args), f, indent=4)
-
-
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
     test_base_folder = os.path.join(output_dir, 'test')
