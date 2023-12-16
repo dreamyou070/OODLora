@@ -208,9 +208,7 @@ class PatchDiscriminator(nn.Sequential):
                 conv_only=True,
                 padding=int((last_conv_kernel_size - 1) / 2),
                 dropout=0.0,
-                strides=1,
-            ),
-        )
+                strides=1,            ),        )
 
         self.apply(self.initialise_weights)
 
@@ -226,9 +224,7 @@ class PatchDiscriminator(nn.Sequential):
 
         for submodel in self.children():
             intermediate_output = submodel(out[-1])
-            print(f'intermediate_output : {intermediate_output.shape}')
             out.append(intermediate_output)
-
         return out[1:]
 
     def initialise_weights(self, m: nn.Module) -> None:

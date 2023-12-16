@@ -252,12 +252,12 @@ class NetworkTrainer:
                                            in_channels=3,
                                            out_channels=3,
                                            kernel_size=4,
-                                           activation=(Act.LEAKYRELU, {"negative_slope": 0.2,
-                                                                       'inplace': False}),
+                                           activation=(Act.LEAKYRELU, {"negative_slope": 0.2,}),
                                            norm="BATCH",
                                            bias=False,
                                            padding=1,)
-        perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
+        perceptual_loss = PerceptualLoss(spatial_dims=2,
+                                         network_type="alex")
         optimizer_d = torch.optim.Adam(params=discriminator.parameters(), lr=5e-4)
 
 
@@ -278,7 +278,7 @@ class NetworkTrainer:
 
         l1_loss = L1Loss()
         adv_loss = PatchAdversarialLoss(criterion="least_squares")
-        adv_weight = 0.005
+        adv_weight = 0.01
         perceptual_weight = 0.001
 
 
@@ -448,20 +448,23 @@ class NetworkTrainer:
                 generator_loss = adv_loss(logits_fake,target_is_real=True,for_discriminator=False)
                 loss_g = recons_loss + perceptual_weight * p_loss + adv_weight * generator_loss
                 optimizer.zero_grad(set_to_none=True)
-                loss_g.backward()
-                optimizer.step()
+
 
                 # ------------------------------------------------------------------------------------------
                 # Discriminator part
                 torch.autograd.set_detect_anomaly(True)
                 optimizer_d.zero_grad(set_to_none=True)
                 recon_f = discriminator(reconstruction.contiguous().detach())[-1]
+
+
+
                 loss_d_fake = adv_loss(recon_f,target_is_real=False,for_discriminator=True)
                 image_f = discriminator(images.contiguous().detach())[-1]
                 loss_d_real = adv_loss(image_f,target_is_real=True,for_discriminator=True)
-                #loss_d = adv_weight * (loss_d_fake + loss_d_real)
-                loss_d = loss_d_fake
+                loss_d = adv_weight * (loss_d_fake + loss_d_real) * 0.5
                 loss_d.backward()
+                loss_g.backward()
+                optimizer.step()
                 optimizer_d.step()
                 """
                 # ------------------------------------------------------------------------------------------
