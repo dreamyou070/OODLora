@@ -29,26 +29,30 @@ def main(args):
 
         prompt = cls
         test_folder = os.path.join(class_dir, 'test')
-        mask_folder = os.path.join(class_dir, 'ground_truth')
+        ground_truth_folder = os.path.join(class_dir, 'ground_truth')
         categories = os.listdir(test_folder)
         for category in categories:
             if category != 'good':
-                categori_dir = os.path.join(test_folder, category)
-                mask_dir = os.path.join(mask_folder, category)
+                test_cat         = os.path.join(test_folder, category)
+                ground_truth_cat = os.path.join(ground_truth_folder, category)
+
                 original_categori_dir = os.path.join(original_img_save_folder, category)
                 os.makedirs(original_categori_dir, exist_ok=True)
                 inpaint_categori_dir = os.path.join(inpaint_img_save_folder, category)
                 os.makedirs(inpaint_categori_dir, exist_ok=True)
-                images = os.listdir(categori_dir)
-                for i in images:
-                    image_path = os.path.join(categori_dir, i)
-                    mask_path = os.path.join(mask_dir, i)
+
+                images = os.listdir(test_cat)
+                for name_ in images:
+                    name, ext = os.path.splitext(name_)
+
+                    image_path = os.path.join(test_cat, i)
+                    mask_path = os.path.join(ground_truth_cat, f'{name}_mask{ext}')
                     image = pipe(prompt=prompt,
                                  image=Image.open(image_path),
                                  mask_image=Image.open(mask_path).convert('L'), ).images[0]
-                    image.save(os.path.join(inpaint_categori_dir, i))
+                    image.save(os.path.join(inpaint_categori_dir, name))
                     original_image = Image.open(image_path)
-                    original_image.save(os.path.join(original_categori_dir, i))
+                    original_image.save(os.path.join(original_categori_dir, name))
 
         train_folder = os.path.join(class_dir, 'train', 'good')
         train_images = os.listdir(train_folder)
