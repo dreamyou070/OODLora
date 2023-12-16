@@ -1,7 +1,7 @@
-python customizing_scheduling.py --device cuda:7 \
+python customizing_scheduling.py --device cuda:5 \
   --process_title parksooyeon \
   --pretrained_model_name_or_path /data7/sooyeon/pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 --prompt 'good' --sample_sampler ddim --num_ddim_steps 50 \
   --output_dir '/data7/sooyeon/Lora/OODLora/result' \
-  --network_weights '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/4_contrastive_learning_eps_change_direction_0.0/epoch-000019.safetensors' \
+  --network_weights /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/2_contrastive_learning_eps_0.0_new_code_highrepeat/epoch-000005.safetensors \
   --concept_image_folder /data7/sooyeon/MyData/anomaly_detection/MVTecAD/bagel
