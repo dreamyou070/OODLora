@@ -456,7 +456,8 @@ class NetworkTrainer:
                 optimizer_d.zero_grad(set_to_none=True)
                 loss_d_fake = adv_loss(discriminator(reconstruction.contiguous().detach())[-1],target_is_real=False,for_discriminator=True)
                 loss_d_real = adv_loss(discriminator(images.contiguous().detach())[-1], target_is_real=True,for_discriminator=True)
-                loss_d = adv_weight * (loss_d_fake + loss_d_real)
+                #loss_d = adv_weight * (loss_d_fake + loss_d_real)
+                loss_d = loss_d_fake
                 loss_d.backward()
                 optimizer_d.step()
                 """
