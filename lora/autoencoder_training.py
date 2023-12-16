@@ -117,6 +117,9 @@ class NetworkTrainer:
             batch_index_list.append(index_list)
         return batch_index_list
 
+    def load_tokenizer(self, args):
+        tokenizer = train_util.load_tokenizer(args)
+        return tokenizer
 
     def train(self, args):
 
