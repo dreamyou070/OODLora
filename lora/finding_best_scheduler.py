@@ -507,9 +507,9 @@ def main(args):
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
     noising_alphas_cumprod_text_file = r'../result/lora_noising_scheduler_alphas_cumprod.txt'
-    customizing_alpha_cumprod_dict = {}
-    customizing_alpha_cumprod_dict[0] = scheduler.cumprod_alpha[0]
-    line = f'0 : {scheduler.cumprod_alpha[0].clone().detach().item()}'
+    customizing_alphas_cumprod_dict = {}
+    customizing_alphas_cumprod_dict[0] = scheduler.alphas_cumprod[0]
+    line = f'0 : {scheduler.alphas_cumprod[0].clone().detach().item()}'
     with open(noising_alphas_cumprod_text_file, 'a') as ff:
         ff.write(line + '\n')
     for train_img in train_images:
@@ -531,8 +531,8 @@ def main(args):
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
 
-            alpha_cumprod_t = customizing_alpha_cumprod_dict[present_t.item()]
-            alpha = scheduler.cumprod_alpha[next_t.item()].detach()
+            alpha_cumprod_t = customizing_alphas_cumprod_dict[present_t.item()]
+            alpha = scheduler.alphas_cumprod[next_t.item()].detach()
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.001)
             for j in range(10000):
@@ -549,7 +549,7 @@ def main(args):
                 if torch.isnan(alpha).any():
                     alpha = alpha_before
                     break
-            customizing_alpha_cumprod_dict[next_t.item()] = alpha.clone().detach().item()
+            customizing_alphas_cumprod_dict[next_t.item()] = alpha.clone().detach().item()
             latent = latent_next
             # ----------------------------------------------------------------------------------------------- #
             # Testing
