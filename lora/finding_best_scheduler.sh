@@ -9,7 +9,7 @@ conda activate venv
 ml purge
 ml load cuda/11.0
 
-python finding_best_scheduler.py \
+python finding_best_scheduler.py  --device cuda \
   --process_title parksooyeon \
   --pretrained_model_name_or_path /data7/sooyeon/pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 --prompt 'good' --sample_sampler ddim --num_ddim_steps 50 \
