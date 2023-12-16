@@ -452,14 +452,14 @@ class NetworkTrainer:
                 # ------------------------------------------------------------------------------------------
                 # Discriminator part
                 optimizer_d.zero_grad(set_to_none=True)
-                logits_fake = discriminator(reconstruction.contiguous().detach())[-1]
-                loss_d_fake = adv_loss(logits_fake,
+                loss_d_fake = adv_loss(discriminator(reconstruction.contiguous().detach())[-1],
                                        target_is_real=False,
                                        for_discriminator=True)
-                logits_real = discriminator(images.contiguous().detach())[-1]
-                loss_d_real = adv_loss(logits_real,
+                print(f'loss_d_fake: {loss_d_fake.shape}')
+                loss_d_real = adv_loss(discriminator(images.contiguous().detach())[-1],
                                        target_is_real=True,
                                        for_discriminator=True)
+                print(f'loss_d_real: {loss_d_real.shape}')
                 discriminator_loss = (loss_d_fake + loss_d_real) * 0.5
                 loss_d = adv_weight * discriminator_loss
                 loss_d.backward()
