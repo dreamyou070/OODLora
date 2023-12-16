@@ -5,7 +5,7 @@ from monai.networks.layers import Act
 from torch.nn import L1Loss
 import math
 import os
-import sys
+from torch.cuda.amp import GradScaler, autocast
 import random
 import time
 import json
@@ -436,33 +436,21 @@ class NetworkTrainer:
             disc_epoch_loss = 0
             for step, batch in enumerate(train_dataloader):
                 # ------------------------------------------------------------------------------------------
-                # batch, 3, 512, 512
-                images = batch['images']
-                image_f = discriminator(images.contiguous().detach())[-1]
-                reconstruction = vae(images).sample
-                recons_loss = l1_loss(reconstruction.float(), images.float())
-                p_loss = perceptual_loss(reconstruction.float(), images.float())
-                # ------------------------------------------------------------------------------------------
-                # input = Batch, 3, 512, 512
-                # logits_fake = [3batch, 3output channel, 62, 62]
-                logits_fake = discriminator(reconstruction.contiguous().float())[-1]
-                generator_loss = adv_loss(logits_fake,target_is_real=True,for_discriminator=False)
-                loss_g = recons_loss + perceptual_weight * p_loss + adv_weight * generator_loss
+                # generator training
                 optimizer.zero_grad(set_to_none=True)
-
-
-                # ------------------------------------------------------------------------------------------
-                # Discriminator part
-                torch.autograd.set_detect_anomaly(True)
                 optimizer_d.zero_grad(set_to_none=True)
-                recon_f = discriminator(reconstruction.contiguous().detach())[-1]
-
-
-
-                loss_d_fake = adv_loss(recon_f,target_is_real=False,for_discriminator=True)
-                image_f = discriminator(images.contiguous().detach())[-1]
-                loss_d_real = adv_loss(image_f,target_is_real=True,for_discriminator=True)
-                loss_d = adv_weight * (loss_d_fake + loss_d_real) * 0.5
+                with autocast(enabled=True):
+                    reconstruction = vae(batch['images']).sample
+                    recons_loss = l1_loss(reconstruction.float(), batch['images'].float())
+                    p_loss = perceptual_loss(reconstruction.float(), batch['images'].float())
+                    logits_fake = discriminator(reconstruction.contiguous().float())[-1]
+                    generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
+                    loss_g = recons_loss + p_loss * perceptual_weight + generator_loss * adv_weight
+                with autocast(enabled=True):
+                    loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
+                    logits_real = discriminator(batch['images'].contiguous().detach())[-1]
+                    loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
+                    loss_d = (loss_d_fake + loss_d_real) * 0.5
                 loss_d.backward()
                 loss_g.backward()
                 optimizer.step()
