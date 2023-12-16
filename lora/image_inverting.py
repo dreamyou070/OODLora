@@ -348,7 +348,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
-            pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
+            #pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
             repeat_time += 1
     #time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
@@ -383,9 +383,10 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
                 np_img = latent2image_customizing(latent, vae, factor,return_type='np')
             else :
                 np_img = latent2image(latent, vae, return_type='np')
-        pil_img = Image.fromarray(np_img)
-        pil_images.append(pil_img)
-        pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+        if prev_time == 0 :
+            pil_img = Image.fromarray(np_img)
+            pil_images.append(pil_img)
+            pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
         all_latent_dict[prev_time] = latent
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
@@ -550,7 +551,7 @@ def main(args) :
             flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
             original_latent = latent.clone().detach()
             for ii, final_time in enumerate(flip_times[1:]):
-                if final_time == 300 :
+                if final_time == args.final_time :
                     timewise_save_base_folder = os.path.join(train_base_folder, f'final_time_{final_time.item()}')
                     os.makedirs(timewise_save_base_folder, exist_ok=True)
                     latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
@@ -638,7 +639,7 @@ def main(args) :
                 flip_times = torch.flip(inference_times, dims=[0]) # [0,20, ..., 980]
                 original_latent = latent.clone().detach()
                 for ii, final_time in enumerate(flip_times[1:]):
-                    if final_time == 300 :
+                    if final_time == args.final_time :
                         timewise_save_base_folder = os.path.join(save_base_folder,f'{concept_name}/final_time_{final_time.item()}')
                         os.makedirs(timewise_save_base_folder, exist_ok=True)
                         latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
@@ -774,6 +775,7 @@ if __name__ == "__main__":
     parser.add_argument("--repeat_time", type=int, default=1)
     parser.add_argument("--self_attn_threshold_time", type=int, default=1)
     parser.add_argument("--using_customizing_scheduling", action="store_true",)
+    parser.add_argument("--final_time", type=int, default = 600)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
