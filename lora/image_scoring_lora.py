@@ -430,7 +430,6 @@ def main(args):
 
         input_latent = torch.cat([org_latent, rec_latent], dim=0)
         input_cond = torch.cat([con, con], dim=0)
-
         noise_pred = unet(input_latent,
                           0,
                           input_cond,
@@ -439,11 +438,25 @@ def main(args):
         heatmap_stores = attention_storer.heatmap_store
         attention_storer.reset()
         layer_names = heatmap_stores.keys()
-        for layer_name in layer_names:
-            heatmap_vector = heatmap_stores[layer_name][0]
-            max_score = torch.max(heatmap_vector).item()
-            print(f'{layer_name} : max_score : {max_score}')
+    vectors = []
+    for layer_name in layer_names:
+        heatmap_vector = heatmap_stores[layer_name][0]
+        heat, pix_num = heatmap_vector.shape
+        if pix_num == 64 * 64 :
+            vectors.append(heatmap_vector)
 
+    maps = torch.cat(vectors, dim=0)
+    maps = maps.sum(0) / maps.shape[0]
+    maps = maps.reshape(64, 64).cpu()
+    image = 255 * maps / maps.max()
+    image = image.unsqueeze(-1).expand(*image.shape, 3)
+    image = image.numpy().astype(np.uint8)
+    image = np.array(Image.fromarray(image).resize((256, 256)))
+
+
+
+
+    """
     print(f' \n step 4. Test Sample')
     base_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/recon_check/test/crack/noising_inverse_unet_denoising_lora_inference_time_50_model_epoch_3/010/final_time_980'
     org_img_dir = os.path.join(base_dir, 'original_sample.png')
@@ -476,7 +489,7 @@ def main(args):
             heatmap_vector = heatmap_stores[layer_name][0]
             max_score = torch.max(heatmap_vector).item()
             print(f'{layer_name} : max_score : {max_score}')
-
+    """
 
 
 
