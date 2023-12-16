@@ -63,7 +63,7 @@ def register_attention_control(unet : nn.Module, controller:AttentionStore):
                             word_idx = int(word_idx)
                             org_attn_vector = org_prob[:, :, word_idx] # bad
                             rec_attn_vector = rec_prob[:, :, word_idx]          # good
-                            attention_diff = (rec_attn_vector-org_attn_vector)#.mean()
+                            attention_diff = abs(rec_attn_vector-org_attn_vector)#.mean()
                             controller.save(attention_diff, layer_name)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
