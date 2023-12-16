@@ -248,7 +248,7 @@ class NetworkTrainer:
 
         discriminator = PatchDiscriminator(spatial_dims=2,
                                            num_layers_d=3,
-                                           num_channels=512,
+                                           num_channels=64,
                                            in_channels=3,
                                            out_channels=3,
                                            kernel_size=4,
