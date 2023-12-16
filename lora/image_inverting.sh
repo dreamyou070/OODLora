@@ -10,5 +10,5 @@ python image_inverting.py --device cuda:5 \
   --output_dir /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/2_contrastive_learning_eps_0.0_new_code_highrepeat \
   --concept_image_folder ../../../MyData/anomaly_detection/MVTecAD/bagel \
   --repeat_time 51 \
-  --self_attn_threshold_time 10000 \
+  --self_attn_threshold_time 0 \
   --using_customizing_scheduling

@@ -163,7 +163,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if not is_cross_attention:
-                if trg_indexs_list > args.self_attn_threshold_time or mask == 0 and 'up' in layer_name :
+                if trg_indexs_list > args.self_attn_threshold_time or mask == 0 and 'down' in layer_name :
                     if hidden_states.shape[0] == 2 :
                         uncon_key, con_key = key.chunk(2)
                         uncon_value, con_value = value.chunk(2)
@@ -635,7 +635,7 @@ def main(args) :
                     mask_img_dir = os.path.join(mask_folder, test_img)
                     mask_img_pil = Image.open(mask_img_dir)
                     concept_name = test_img.split('.')[0]
-                    save_base_folder = os.path.join(class_base_folder, f'upstream_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
+                    save_base_folder = os.path.join(class_base_folder, f'downstream_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
                     print(f'save_base_folder : {save_base_folder}')
                     os.makedirs(save_base_folder, exist_ok=True)
                     # inference_times = [980, 960, ..., 0]
@@ -659,7 +659,7 @@ def main(args) :
                             layer_names = attention_storer.self_query_store.keys()
                             self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
                             for layer in layer_names:
-                                if 'up' in layer:
+                                if 'down' in layer:
                                     self_query_list = attention_storer.self_query_store[layer]
                                     self_key_list = attention_storer.self_key_store[layer]
                                     self_value_list = attention_storer.self_value_store[layer]
