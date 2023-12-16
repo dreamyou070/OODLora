@@ -502,11 +502,10 @@ def main(args):
     image = 255 * maps / maps.max()
     image = image.unsqueeze(-1).expand(*image.shape, 3)
     image = image.numpy().astype(np.uint8)
-    max_score = image.max()
+    from matplotlib import pyplot as plt
     image = Image.fromarray(image).resize((256, 256))
-    image.save('abnormal.png')
-    print(f'anomaly score : {max_score}')
-
+    plt.imshow(np.array(image).squeeze().cpu().numpy(), cmap='jet', vmin=0.0, vmax=1.0)
+    plt.savefig('abnormal.png')
 
 
 if __name__ == "__main__":
