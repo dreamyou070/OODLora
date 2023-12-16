@@ -407,12 +407,10 @@ def main(args):
         t, f = int(line[0]), float(line[1])
         inference_decoding_factor[t] = f
 
-    print(f' \n step 3. ground-truth image preparing')
+    print(f' \n step 3. Normal Sample')
     base_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/recon_check/train/noising_inverse_unet_denoising_lora_50_model_epoch_3/044/final_time_980'
     org_img_dir = os.path.join(base_dir, 'original_sample.png')
     rec_img_dir = os.path.join(base_dir, 'recon_0.png')
-
-    print(f' (3.1) prompt condition')
     prompt = 'good'
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = context.chunk(2)
@@ -425,11 +423,8 @@ def main(args):
 
         trg_indexs_list = generate_text_embedding(prompt, prompt, tokenizer)
         trg_indexs_list = [trg_indexs_list]
-        print(f'trg_indexs_list : {trg_indexs_list}')
-
         org_latent = image2latent(load_512(org_img_dir), vae,device, weight_dtype)
         org_latent = org_latent * vae_scale_factor
-
         rec_latent = image2latent(load_512(rec_img_dir),vae,device, weight_dtype)
         rec_latent = rec_latent * vae_scale_factor
 
@@ -446,7 +441,42 @@ def main(args):
         layer_names = heatmap_stores.keys()
         for layer_name in layer_names:
             heatmap_vector = heatmap_stores[layer_name][0]
-            print(f'{layer_name} : heatmap_vector : {heatmap_vector.shape}')
+            max_score = max(heatmap_vector)
+            print(f'{layer_name} : max_score : {max_score}')
+
+    print(f' \n step 4. Test Sample')
+    base_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/recon_check/test/crack/noising_inverse_unet_denoising_lora_inference_time_50_model_epoch_3/010/final_time_980'
+    org_img_dir = os.path.join(base_dir, 'original_sample.png')
+    rec_img_dir = os.path.join(base_dir, 'recon_0.png')
+
+    context = init_prompt(tokenizer, text_encoder, device, prompt)
+    uncon, con = context.chunk(2)
+    vae_scale_factor = 0.18215
+    attention_storer = AttentionStore()
+    register_attention_control(unet, attention_storer)
+
+    with torch.no_grad():
+        trg_indexs_list = generate_text_embedding(prompt, prompt, tokenizer)
+        trg_indexs_list = [trg_indexs_list]
+        org_latent = image2latent(load_512(org_img_dir), vae, device, weight_dtype)
+        org_latent = org_latent * vae_scale_factor
+        rec_latent = image2latent(load_512(rec_img_dir), vae, device, weight_dtype)
+        rec_latent = rec_latent * vae_scale_factor
+        input_latent = torch.cat([org_latent, rec_latent], dim=0)
+        input_cond = torch.cat([con, con], dim=0)
+        noise_pred = unet(input_latent,
+                          0,
+                          input_cond,
+                          trg_indexs_list=trg_indexs_list,
+                          mask_imgs=None).sample
+        heatmap_stores = attention_storer.heatmap_store
+        attention_storer.reset()
+        layer_names = heatmap_stores.keys()
+        for layer_name in layer_names:
+            heatmap_vector = heatmap_stores[layer_name][0]
+            max_score = max(heatmap_vector)
+            print(f'{layer_name} : max_score : {max_score}')
+
 
 
 
