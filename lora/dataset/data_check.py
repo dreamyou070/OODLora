@@ -50,9 +50,9 @@ def main(args):
                     image = pipe(prompt=prompt,
                                  image=Image.open(image_path),
                                  mask_image=Image.open(mask_path).convert('L'), ).images[0]
-                    image.save(os.path.join(inpaint_categori_dir, name))
+                    image.save(os.path.join(inpaint_categori_dir, name_))
                     original_image = Image.open(image_path)
-                    original_image.save(os.path.join(original_categori_dir, name))
+                    original_image.save(os.path.join(original_categori_dir, name_))
 
         train_folder = os.path.join(class_dir, 'train', 'good')
         train_images = os.listdir(train_folder)
