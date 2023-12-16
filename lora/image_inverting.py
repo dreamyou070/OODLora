@@ -163,7 +163,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if not is_cross_attention:
-                if 'up' in layer_name and (trg_indexs_list > args.self_attn_threshold_time or mask == 0 )  :
+                if trg_indexs_list > args.self_attn_threshold_time or mask == 0 :
                     if hidden_states.shape[0] == 2 :
                         uncon_key, con_key = key.chunk(2)
                         uncon_value, con_value = value.chunk(2)
@@ -635,7 +635,7 @@ def main(args) :
                     mask_img_dir = os.path.join(mask_folder, test_img)
                     mask_img_pil = Image.open(mask_img_dir)
                     concept_name = test_img.split('.')[0]
-                    save_base_folder = os.path.join(class_base_folder, f'upstream_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
+                    save_base_folder = os.path.join(class_base_folder, f'all_layers_stream_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
                     print(f'save_base_folder : {save_base_folder}')
                     os.makedirs(save_base_folder, exist_ok=True)
                     # inference_times = [980, 960, ..., 0]
@@ -659,32 +659,32 @@ def main(args) :
                             layer_names = attention_storer.self_query_store.keys()
                             self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
                             for layer in layer_names:
-                                if 'up' in layer:
-                                    self_query_list = attention_storer.self_query_store[layer]
-                                    self_key_list = attention_storer.self_key_store[layer]
-                                    self_value_list = attention_storer.self_value_store[layer]
-                                    i = 0
-                                    for self_query, self_key, self_value in zip(self_query_list, self_key_list,
-                                                                                self_value_list):
-                                        t_ = time_steps[i]
-                                        if t_ not in self_query_dict.keys():
-                                            self_query_dict[t_] = {}
-                                            self_query_dict[t_][layer] = self_query
-                                        else:
-                                            self_query_dict[t_][layer] = self_query
 
-                                        if t_ not in self_key_dict.keys():
-                                            self_key_dict[t_] = {}
-                                            self_key_dict[t_][layer] = self_key
-                                        else:
-                                            self_key_dict[t_][layer] = self_key
+                                self_query_list = attention_storer.self_query_store[layer]
+                                self_key_list = attention_storer.self_key_store[layer]
+                                self_value_list = attention_storer.self_value_store[layer]
+                                i = 0
+                                for self_query, self_key, self_value in zip(self_query_list, self_key_list,
+                                                                            self_value_list):
+                                    t_ = time_steps[i]
+                                    if t_ not in self_query_dict.keys():
+                                        self_query_dict[t_] = {}
+                                        self_query_dict[t_][layer] = self_query
+                                    else:
+                                        self_query_dict[t_][layer] = self_query
 
-                                        if t_ not in self_value_dict.keys():
-                                            self_value_dict[t_] = {}
-                                            self_value_dict[t_][layer] = self_value
-                                        else:
-                                            self_value_dict[t_][layer] = self_value
-                                        i += 1
+                                    if t_ not in self_key_dict.keys():
+                                        self_key_dict[t_] = {}
+                                        self_key_dict[t_][layer] = self_key
+                                    else:
+                                        self_key_dict[t_][layer] = self_key
+
+                                    if t_ not in self_value_dict.keys():
+                                        self_value_dict[t_] = {}
+                                        self_value_dict[t_][layer] = self_value
+                                    else:
+                                        self_value_dict[t_][layer] = self_value
+                                    i += 1
                             attention_storer.reset()
                             collector = AttentionStore()
                             register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
