@@ -535,7 +535,7 @@ def main(args) :
     prompt = args.prompt
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
     context = init_prompt(tokenizer, text_encoder, device, prompt)
-
+    """
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
@@ -569,8 +569,9 @@ def main(args) :
                                                                     vae=vae,
                                                                     base_folder_dir=timewise_save_base_folder,
                                                                     attention_storer=attention_storer)
+    
                     # self query / key / value dictionary
-                    """
+                    
                     layer_names = attention_storer.self_query_store.keys()
                     self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
                     for layer in layer_names:
@@ -601,15 +602,15 @@ def main(args) :
                                 i += 1
                     collector = AttentionStore()
                     register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                    """
+                    
                     time_steps.reverse()
 
                     # timesteps = [0,20]
                     context = init_prompt(tokenizer, text_encoder, device, prompt)
-                    """
+                    
                     collector = AttentionStore()
                     register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                    """
+                    
                     print(f' (2.3.2) recon')
                     recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                                          context=context,
@@ -620,7 +621,7 @@ def main(args) :
                                                          base_folder_dir=timewise_save_base_folder,
                                                          vae_factor_dict = inference_decoding_factor)
                     attention_storer.reset()
-
+    """
 
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
@@ -628,7 +629,7 @@ def main(args) :
     os.makedirs(test_base_folder, exist_ok=True)
     classes = os.listdir(test_img_folder)
     for class_name in classes:
-        if 'good' in class_name:
+        if 'good' not in class_name:
             class_folder = os.path.join(test_img_folder, class_name)
             class_base_folder = os.path.join(test_base_folder, class_name)
             os.makedirs(class_base_folder, exist_ok=True)
