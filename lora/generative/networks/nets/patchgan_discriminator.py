@@ -162,23 +162,18 @@ class PatchDiscriminator(nn.Sequential):
 
         self.add_module(
             "initial_conv",
-            Convolution(
-                spatial_dims=spatial_dims,
-                kernel_size=kernel_size,
-                in_channels=in_channels,
-                out_channels=num_channels,
-                act=activation,
-                bias=True,
-                norm=None,
-                dropout=dropout,
-                padding=padding,
-                strides=2,
-            ),
-        )
-
+            Convolution(spatial_dims=spatial_dims, # 2
+                        kernel_size=kernel_size,
+                        in_channels=in_channels,   # 3
+                        out_channels=num_channels, #
+                        act=activation,
+                        bias=True,
+                        norm=None,
+                        dropout=dropout,
+                        padding=padding,
+                        strides=2,),)
         input_channels = num_channels
         output_channels = num_channels * 2
-
         # Initial Layer
         for l_ in range(self.num_layers_d):
             if l_ == self.num_layers_d - 1:
@@ -221,7 +216,6 @@ class PatchDiscriminator(nn.Sequential):
 
     def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
         """
-
         Args:
             x: input tensor
             feature-matching loss (regulariser loss) on the discriminators as well (see Pix2Pix paper).
@@ -229,6 +223,7 @@ class PatchDiscriminator(nn.Sequential):
             list of intermediate features, with the last element being the output.
         """
         out = [x]
+
         for submodel in self.children():
             intermediate_output = submodel(out[-1])
             out.append(intermediate_output)

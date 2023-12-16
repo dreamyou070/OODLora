@@ -248,7 +248,7 @@ class NetworkTrainer:
 
         discriminator = PatchDiscriminator(spatial_dims=2,
                                            num_layers_d=3,
-                                           num_channels=64,
+                                           num_channels=512,
                                            in_channels=3,
                                            out_channels=3,
                                            kernel_size=4,
@@ -422,15 +422,21 @@ class NetworkTrainer:
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             for step, batch in enumerate(train_dataloader):
+
+                # ------------------------------------------------------------------------------------------
+                # batch, 3, 512, 512
                 images = batch['images']
                 reconstruction = vae(images).sample
-                print(f'images : {images.shape} | reconstruction : {reconstruction.shape}')
                 recons_loss = l1_loss(reconstruction.float(), images.float())
                 time.sleep(100)
 
-                """
+                # ------------------------------------------------------------------------------------------
+                # input = Batch, 3, 512, 512
                 logits_fake = discriminator(reconstruction.contiguous().float())[-1]
                 p_loss = perceptual_loss(reconstruction.float(), images.float())
+                """
+                
+                
                 generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
                 loss_g = recons_loss + perceptual_weight * p_loss + adv_weight * generator_loss
 
