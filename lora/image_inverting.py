@@ -597,8 +597,8 @@ def main(args) :
                                 else:
                                     self_value_dict[t_][layer] = self_value
                                 i += 1
-                    collector = AttentionStore()
-                    register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                    #collector = AttentionStore()
+                    #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                     
                     time_steps.reverse()
 
@@ -694,8 +694,8 @@ def main(args) :
                                         self_value_dict[t_][layer] = self_value
                                     i += 1
                             attention_storer.reset()
-                            collector = AttentionStore()
-                            register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                            #collector = AttentionStore()
+                            #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                             
                             print(f' (2.3.2) recon')
                             recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,

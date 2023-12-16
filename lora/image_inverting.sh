@@ -1,4 +1,4 @@
-python image_inverting.py --device cuda:5 \
+python image_inverting.py --device cuda:4 \
   --process_title parksooyeon \
   --pretrained_model_name_or_path /data7/sooyeon/pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 \
