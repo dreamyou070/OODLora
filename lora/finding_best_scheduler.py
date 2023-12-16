@@ -536,6 +536,7 @@ def main(args):
             print(f'alpha : {alpha} | type of alpha : {type(alpha)}')
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.001)
+
             for j in range(10000):
                 alpha_before = alpha.clone().detach()
                 latent_next = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
@@ -544,8 +545,9 @@ def main(args):
                 loss = torch.nn.functional.mse_loss(latent.float(), recon_latent.float(), reduction="none")
                 loss = loss.mean([1,2,3]).mean()
                 optimizer.zero_grad()
-                loss.backward()
+                loss.backward(retain_graph=True)
                 optimizer.step()
+                print(f'loss : {loss.item()}')
                 if loss.item() < 0.00005 :
                     break
                 if torch.isnan(alpha).any():
