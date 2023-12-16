@@ -380,6 +380,8 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
 
 def main(args):
 
+    print(f' ------- finding best scheduler for noising -------')
+
     print(f' \n step 1. setting')
     if args.process_title:
         setproctitle(args.process_title)
