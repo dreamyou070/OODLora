@@ -432,7 +432,7 @@ class NetworkTrainer:
         epoch_recon_loss_list = []
         epoch_gen_loss_list = []
         epoch_disc_loss_list = []
-        autoencoder_warm_up_n_epochs = 10
+        autoencoder_warm_up_n_epochs = 2
         for epoch in range(num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
@@ -465,30 +465,19 @@ class NetworkTrainer:
                         total_loss += loss_d
                     total_loss.backward()
                     optimizer.step()
-                """
+
                 # ------------------------------------------------------------------------------------------
-            if (epoch + 1) % val_interval == 0:
-                vae.eval()
-                val_loss = 0
-                with torch.no_grad():
-                    for val_step, batch in enumerate(val_loader, start=1):
-                        images = batch["image"].to(device)
-                        reconstruction, _, _ = model(images)
-
-                        # get the first sammple from the first validation batch for visualisation
-                        # purposes
-                        if val_step == 1:
-                            intermediary_images.append(reconstruction[:n_example_images, 0])
-
-                        recons_loss = l1_loss(reconstruction.float(), images.float())
-
-                        val_loss += recons_loss.item()
-
-                val_loss /= val_step
-                val_recon_epoch_loss_list.append(val_loss)
-                #total_time = time.time() - total_start
-                #print(f"train completed, total time: {total_time}.")
-                 """
+            if epoch > int(num_train_epochs/2) :
+                # vae save
+                vae_save_dir = os.path.join(args.output_dir, f'vae_epoch_{epoch+1}.pt')
+                torch.save({'model_state_dict': vae.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),},
+                           vae_save_dir)
+                # discriminator save
+                discriminator_save_dir = os.path.join(args.output_dir, f'discriminator_epoch_{epoch+1}.pt')
+                torch.save({'model_state_dict': discriminator.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),},
+                           discriminator_save_dir)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
