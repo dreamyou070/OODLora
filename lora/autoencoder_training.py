@@ -247,7 +247,7 @@ class NetworkTrainer:
         #optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args,
         #                                                                     trainable_params)
         optimizer = torch.optim.AdamW([{'params' : vae.parameters(),'lr' :1e-4 },
-                                       {'params' : discriminator.parameters(),'lr' :5e-4 }],)
+                                       {'params' : discriminator.parameters(),'lr':1e-4 }],)
 
         lr_scheduler = train_util.get_scheduler_fix(args,
                                                     optimizer, accelerator.num_processes)
@@ -432,6 +432,7 @@ class NetworkTrainer:
         epoch_recon_loss_list = []
         epoch_gen_loss_list = []
         epoch_disc_loss_list = []
+        autoencoder_warm_up_n_epochs = 10
         for epoch in range(num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
@@ -444,7 +445,7 @@ class NetworkTrainer:
             for step, batch in enumerate(train_dataloader):
                 with torch.autograd.set_detect_anomaly(True) :
                 # ------------------------------------------------------------------------------------------
-                # generator training
+                    # generator training
                     optimizer.zero_grad(set_to_none=True)
                     with autocast(enabled=True):
                         reconstruction = vae(batch['images']).sample
@@ -454,12 +455,14 @@ class NetworkTrainer:
 
                         generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
                         loss_g = recons_loss + p_loss * perceptual_weight + generator_loss * adv_weight
-                    with autocast(enabled=True):
-                        loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
-                        logits_real = discriminator(batch['images'].contiguous().detach())[-1]
-                        loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
-                        loss_d = (loss_d_fake + loss_d_real) * 0.5
-                    total_loss = loss_g + loss_d
+                        total_loss = loss_g
+                    if epoch > autoencoder_warm_up_n_epochs:
+                        with autocast(enabled=True):
+                            loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
+                            logits_real = discriminator(batch['images'].contiguous().detach())[-1]
+                            loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
+                            loss_d = (loss_d_fake + loss_d_real) * 0.5
+                        total_loss += loss_d
                     total_loss.backward()
                     optimizer.step()
                 """
