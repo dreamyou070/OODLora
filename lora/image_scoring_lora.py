@@ -453,7 +453,7 @@ def main(args):
     print(f'image.shape : {image.shape} | type : {type(image)}')
     image = image.numpy().astype(np.uint8)
     from matplotlib import pyplot as plt
-    image = Image.fromarray(image).resize((256, 256)).to('RGB')
+    image = Image.fromarray(image).resize((256, 256)).convert("RGB")
     plt.imshow(np.array(image), cmap='jet', vmin=0.0, vmax=1.0)
     plt.savefig('normal.png')
 
