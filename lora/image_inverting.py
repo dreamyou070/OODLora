@@ -531,7 +531,7 @@ def main(args) :
     prompt = args.prompt
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
     context = init_prompt(tokenizer, text_encoder, device, prompt)
-
+    """
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
@@ -634,7 +634,7 @@ def main(args) :
                 mask_img_dir = os.path.join(mask_folder, test_img)
                 mask_img_pil = Image.open(mask_img_dir)
                 concept_name = test_img.split('.')[0]
-                save_base_folder = os.path.join(class_base_folder, f'inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
+                save_base_folder = os.path.join(class_base_folder, f'downstream_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
                 print(f'save_base_folder : {save_base_folder}')
                 os.makedirs(save_base_folder, exist_ok=True)
                 # inference_times = [980, 960, ..., 0]
@@ -655,12 +655,38 @@ def main(args) :
                                                                         vae=vae,
                                                                         base_folder_dir=timewise_save_base_folder,
                                                                         attention_storer=attention_storer)
+                        layer_names = attention_storer.self_query_store.keys()
+                        self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
+                        for layer in layer_names:
+                            if 'down' in layer:
+                                self_query_list = attention_storer.self_query_store[layer]
+                                self_key_list = attention_storer.self_key_store[layer]
+                                self_value_list = attention_storer.self_value_store[layer]
+                                i = 0
+                                for self_query, self_key, self_value in zip(self_query_list, self_key_list,
+                                                                            self_value_list):
+                                    t_ = time_steps[i]
+                                    if t_ not in self_query_dict.keys():
+                                        self_query_dict[t_] = {}
+                                        self_query_dict[t_][layer] = self_query
+                                    else:
+                                        self_query_dict[t_][layer] = self_query
 
-                        # timesteps = [0,20]
-                        #attention_storer.reset()
-                        context = init_prompt(tokenizer, text_encoder, device, prompt)
-                        #collector = AttentionStore()
-                        #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                                    if t_ not in self_key_dict.keys():
+                                        self_key_dict[t_] = {}
+                                        self_key_dict[t_][layer] = self_key
+                                    else:
+                                        self_key_dict[t_][layer] = self_key
+
+                                    if t_ not in self_value_dict.keys():
+                                        self_value_dict[t_] = {}
+                                        self_value_dict[t_][layer] = self_value
+                                    else:
+                                        self_value_dict[t_][layer] = self_value
+                                    i += 1
+                        attention_storer.reset()
+                        collector = AttentionStore()
+                        register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                         print(f' (2.3.2) recon')
                         recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                                              context=context,
@@ -670,10 +696,10 @@ def main(args) :
                                                              vae=vae,
                                                              base_folder_dir=timewise_save_base_folder,
                                                              vae_factor_dict=inference_decoding_factor)
-                        #attention_storer.reset()
+                        attention_storer.reset()
 
 
-    
+        """
         print(f' (2.3.3) heatmap checking')
         org_img_dir = os.path.join(args.concept_image_folder, concept_img)
         orgin_latent = image2latent(load_512(org_img_dir), vae, device, weight_dtype)
@@ -728,7 +754,7 @@ def main(args) :
             pil_image = Image.fromarray(heatmap).resize((512, 512))
             heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
             pil_image.save(heatmap_save_dir)
-    """
+        """
 
 
 if __name__ == "__main__":
