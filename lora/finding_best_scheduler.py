@@ -528,12 +528,12 @@ def main(args):
         vae.requires_grad_(False)
         for i, present_t in enumerate(flip_times[:-1]):
             next_t = flip_times[i + 1] # torch
+            print(f'Finding {next_t.item()} noising alpha vaue')
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
 
             alpha_cumprod_t = customizing_alphas_cumprod_dict[present_t.item()]
             alpha = scheduler.alphas_cumprod[next_t.item()].detach()
-            print(f'alpha : {alpha} | type of alpha : {type(alpha)}')
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.001)
 
@@ -547,7 +547,6 @@ def main(args):
                 optimizer.zero_grad()
                 loss.backward(retain_graph=True)
                 optimizer.step()
-                print(f'loss : {loss.item()}')
                 if loss.item() < 0.00005 :
                     break
                 if torch.isnan(alpha).any():
