@@ -163,7 +163,7 @@ def register_self_condition_giver(unet: nn.Module, collector, self_query_dict, s
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if not is_cross_attention:
-                if trg_indexs_list > args.self_attn_threshold_time or mask == 0 :
+                if trg_indexs_list > args.self_attn_threshold_time or mask == 0 and 'down' in layer_name :
                     if hidden_states.shape[0] == 2 :
                         uncon_key, con_key = key.chunk(2)
                         uncon_value, con_value = value.chunk(2)
@@ -486,9 +486,9 @@ def main(args) :
         invers_text_encoders = [invers_text_encoder]
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
-    #attention_storer = AttentionStore()
-    attention_storer = None
-    #register_attention_control(invers_unet, attention_storer)
+    attention_storer = AttentionStore()
+    #attention_storer = None
+    register_attention_control(invers_unet, attention_storer)
     print(f' (2.5) network')
     sys.path.append(os.path.dirname(__file__))
     network_module = importlib.import_module(args.network_module)
@@ -543,7 +543,7 @@ def main(args) :
             image_gt_np = load_512(train_img_dir)
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
             save_base_folder = os.path.join(output_dir,
-                                            f'train/self_guidance_scheduling_{args.num_ddim_steps}_model_epoch_{model_epoch}')
+                                            f'train/downstream_self_guidance_scheduling_{args.num_ddim_steps}_model_epoch_{model_epoch}')
             print(f' - save_base_folder : {save_base_folder}')
             os.makedirs(save_base_folder, exist_ok=True)
             train_base_folder = os.path.join(save_base_folder, concept_name)
@@ -564,44 +564,45 @@ def main(args) :
                                                                     base_folder_dir=timewise_save_base_folder,
                                                                     attention_storer=attention_storer)
                     # self query / key / value dictionary
-                    """
+
                     layer_names = attention_storer.self_query_store.keys()
                     self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
                     for layer in layer_names:
-                        self_query_list = attention_storer.self_query_store[layer]
-                        self_key_list = attention_storer.self_key_store[layer]
-                        self_value_list = attention_storer.self_value_store[layer]
-                        i = 0
-                        for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
-                            t_ = time_steps[i]
-                            if t_ not in self_query_dict.keys():
-                                self_query_dict[t_] = {}
-                                self_query_dict[t_][layer] = self_query
-                            else:
-                                self_query_dict[t_][layer] = self_query
+                        if 'down' in layer:
+                            self_query_list = attention_storer.self_query_store[layer]
+                            self_key_list = attention_storer.self_key_store[layer]
+                            self_value_list = attention_storer.self_value_store[layer]
+                            i = 0
+                            for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
+                                t_ = time_steps[i]
+                                if t_ not in self_query_dict.keys():
+                                    self_query_dict[t_] = {}
+                                    self_query_dict[t_][layer] = self_query
+                                else:
+                                    self_query_dict[t_][layer] = self_query
 
-                            if t_ not in self_key_dict.keys():
-                                self_key_dict[t_] = {}
-                                self_key_dict[t_][layer] = self_key
-                            else:
-                                self_key_dict[t_][layer] = self_key
+                                if t_ not in self_key_dict.keys():
+                                    self_key_dict[t_] = {}
+                                    self_key_dict[t_][layer] = self_key
+                                else:
+                                    self_key_dict[t_][layer] = self_key
 
-                            if t_ not in self_value_dict.keys():
-                                self_value_dict[t_] = {}
-                                self_value_dict[t_][layer] = self_value
-                            else:
-                                self_value_dict[t_][layer] = self_value
-                            i += 1
+                                if t_ not in self_value_dict.keys():
+                                    self_value_dict[t_] = {}
+                                    self_value_dict[t_][layer] = self_value
+                                else:
+                                    self_value_dict[t_][layer] = self_value
+                                i += 1
                     collector = AttentionStore()
                     register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                    """
+
                     time_steps.reverse()
 
                     # timesteps = [0,20]
                     context = init_prompt(tokenizer, text_encoder, device, prompt)
 
-                    #collector = AttentionStore()
-                    #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
+                    collector = AttentionStore()
+                    register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                     print(f' (2.3.2) recon')
                     recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                                          context=context,
@@ -611,9 +612,9 @@ def main(args) :
                                                          vae=vae,
                                                          base_folder_dir=timewise_save_base_folder,
                                                          vae_factor_dict = inference_decoding_factor)
-                    #attention_storer.reset()
+                    attention_storer.reset()
 
-
+    """
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
     test_base_folder = os.path.join(output_dir, 'test')
@@ -672,7 +673,7 @@ def main(args) :
                         #attention_storer.reset()
 
 
-    """
+    
         print(f' (2.3.3) heatmap checking')
         org_img_dir = os.path.join(args.concept_image_folder, concept_img)
         orgin_latent = image2latent(load_512(org_img_dir), vae, device, weight_dtype)
