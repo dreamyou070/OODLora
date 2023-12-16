@@ -428,12 +428,13 @@ class NetworkTrainer:
                 images = batch['images']
                 reconstruction = vae(images).sample
                 recons_loss = l1_loss(reconstruction.float(), images.float())
-
+                p_loss = perceptual_loss(reconstruction.float(), images.float())
 
                 # ------------------------------------------------------------------------------------------
                 # input = Batch, 3, 512, 512
                 logits_fake = discriminator(reconstruction.contiguous().float())[-1]
-                p_loss = perceptual_loss(reconstruction.float(), images.float())
+                print(f'logits_fake: {logits_fake.shape}')
+
                 time.sleep(10)
                 """
                 
