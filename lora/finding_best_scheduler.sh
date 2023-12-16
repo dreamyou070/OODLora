@@ -18,7 +18,6 @@ conda activate venv
 ml purge
 ml load cuda/11.0
 
-
 python finding_best_scheduler.py \
   --process_title parksooyeon \
   --pretrained_model_name_or_path /data7/sooyeon/pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
