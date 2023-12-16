@@ -438,6 +438,7 @@ class NetworkTrainer:
                 # ------------------------------------------------------------------------------------------
                 # batch, 3, 512, 512
                 images = batch['images']
+                image_f = discriminator(images.contiguous().detach())[-1]
                 reconstruction = vae(images).sample
                 recons_loss = l1_loss(reconstruction.float(), images.float())
                 p_loss = perceptual_loss(reconstruction.float(), images.float())
