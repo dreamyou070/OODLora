@@ -428,10 +428,10 @@ def main(args):
         print(f'trg_indexs_list : {trg_indexs_list}')
 
         org_img = Image.open(org_img_dir).convert('RGB')
-        org_latent = image2latent(org_img, vae, device, weight_dtype)
+        org_latent = image2latent(org_img, vae)
         org_latent = org_latent * vae_scale_factor
         rec_img = Image.open(rec_img_dir).convert('RGB')
-        rec_latent = image2latent(rec_img, vae, device, weight_dtype)
+        rec_latent = image2latent(rec_img, vae)
         rec_latent = rec_latent * vae_scale_factor
         input_latent = torch.cat([org_latent, rec_latent], dim=0)
         input_cond = torch.cat([con, con], dim=0)
