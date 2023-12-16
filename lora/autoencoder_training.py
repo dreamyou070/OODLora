@@ -424,9 +424,11 @@ class NetworkTrainer:
             for step, batch in enumerate(train_dataloader):
                 images = batch['images']
                 reconstruction = vae(images).sample
+                print(f'images : {images.shape} | reconstruction : {reconstruction.shape}')
                 recons_loss = l1_loss(reconstruction.float(), images.float())
+                time.sleep(100)
 
-
+                """
                 logits_fake = discriminator(reconstruction.contiguous().float())[-1]
                 p_loss = perceptual_loss(reconstruction.float(), images.float())
                 generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
@@ -448,6 +450,7 @@ class NetworkTrainer:
 
                 loss_d.backward()
                 optimizer_d.step()
+                """
 
 
 if __name__ == "__main__":
