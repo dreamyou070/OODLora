@@ -252,8 +252,8 @@ class NetworkTrainer:
                                            in_channels=3,
                                            out_channels=3,
                                            kernel_size=4,
-                                           activation=(torch.nn.LeakyReLU(inplace=False,
-                                                                          negative_slope=0.02)),
+                                           activation=(Act.LEAKYRELU, {"negative_slope": 0.2,
+                                                                       'inplace': False}),
                                            norm="BATCH",
                                            bias=False,
                                            padding=1,)
