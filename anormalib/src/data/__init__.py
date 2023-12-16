@@ -232,7 +232,7 @@ def get_datamodule(config: DictConfig | ListConfig) -> AnomalibDataModule:
         raise ValueError(
             "Unknown dataset! \n"
             "If you use a custom dataset make sure you initialize it in"
-            "`get_datamodule` in `anomalib.data.__init__.py"
+            "`get_datamodule` in `anomalib.data.data_check.sh"
         )
     return datamodule
 

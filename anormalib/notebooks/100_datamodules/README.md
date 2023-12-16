@@ -19,9 +19,9 @@ Overall, a data implementation has the following structure:
 
 ```bash
 anomalib
-├── __init__.py
+├── data_check.sh
 ├── data
-│   ├── __init__.py
+│   ├── data_check.sh
 │   ├── btech.py
 │   │   ├── BTechDataset
 │   │   └── BTech

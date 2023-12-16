@@ -11,12 +11,12 @@ from types import ModuleType
 
 from setuptools import find_packages, setup
 
-def load_module(name: str = "src/anomalib/__init__.py") -> ModuleType:
+def load_module(name: str = "src/anomalib/data_check.sh") -> ModuleType:
     """Load Python Module.
 
     Args:
         name (str, optional): Name of the module to load.
-            Defaults to "anomalib/__init__.py".
+            Defaults to "anomalib/data_check.sh".
 
     Returns:
         _type_: _description_
@@ -44,7 +44,7 @@ def get_version() -> str:
     Returns:
         str: `anomalib` version.
     """
-    anomalib = load_module(name="src/anomalib/__init__.py")
+    anomalib = load_module(name="src/anomalib/data_check.sh")
     version = anomalib.__version__
     return version
 

@@ -3,12 +3,13 @@ import torch, os
 from PIL import Image
 import argparse
 
-def main(args):
 
+def main(args):
     print(f'\n step 1. make model')
     device = args.device
     pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",
-                                                          cache_dir = r'../../../../pretrained_stable_diffusion').to(device)
+                                                          cache_dir=r'../../../../pretrained_stable_diffusion').to(
+        device)
 
     print(f'\n step 2. dataset')
     parent, _ = os.path.split(args.data_folder)
@@ -45,12 +46,12 @@ def main(args):
                     mask_path = os.path.join(mask_dir, i)
                     image = pipe(prompt=prompt,
                                  image=Image.open(image_path),
-                                 mask_image=Image.open(mask_path).convert('L'),).images[0]
+                                 mask_image=Image.open(mask_path).convert('L'), ).images[0]
                     image.save(os.path.join(inpaint_categori_dir, i))
                     original_image = Image.open(image_path)
                     original_image.save(os.path.join(original_categori_dir, i))
 
-        train_folder = os.path.join(class_dir, 'train','good')
+        train_folder = os.path.join(class_dir, 'train', 'good')
         train_images = os.listdir(train_folder)
         original_save_folder = os.path.join(original_img_save_folder, 'good')
         copy_save_folder = os.path.join(inpaint_img_save_folder, 'good')
@@ -61,7 +62,8 @@ def main(args):
             image = Image.open(image_path)
             image.save(os.path.join(original_save_folder, i))
             image.save(os.path.join(copy_save_folder, i))
-            
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='a bagel')

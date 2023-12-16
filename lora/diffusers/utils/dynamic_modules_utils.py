@@ -56,7 +56,7 @@ def init_hf_modules():
 
     sys.path.append(HF_MODULES_CACHE)
     os.makedirs(HF_MODULES_CACHE, exist_ok=True)
-    init_path = Path(HF_MODULES_CACHE) / "__init__.py"
+    init_path = Path(HF_MODULES_CACHE) / "data_check.sh"
     if not init_path.exists():
         init_path.touch()
 
@@ -71,7 +71,7 @@ def create_dynamic_module(name: Union[str, os.PathLike]):
     if not dynamic_module_path.parent.exists():
         create_dynamic_module(dynamic_module_path.parent)
     os.makedirs(dynamic_module_path, exist_ok=True)
-    init_path = dynamic_module_path / "__init__.py"
+    init_path = dynamic_module_path / "data_check.sh"
     if not init_path.exists():
         init_path.touch()
 
