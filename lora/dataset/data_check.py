@@ -45,7 +45,7 @@ def main(args):
                 for name_ in images:
                     name, ext = os.path.splitext(name_)
 
-                    image_path = os.path.join(test_cat, i)
+                    image_path = os.path.join(test_cat, name_)
                     mask_path = os.path.join(ground_truth_cat, f'{name}_mask{ext}')
                     image = pipe(prompt=prompt,
                                  image=Image.open(image_path),
