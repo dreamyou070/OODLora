@@ -445,24 +445,27 @@ class NetworkTrainer:
                                           target_is_real=True,
                                           for_discriminator=False)
                 loss_g = recons_loss + perceptual_weight * p_loss + adv_weight * generator_loss
+                optimizer.zero_grad(set_to_none=True)
                 loss_g.backward()
-
                 optimizer.step()
 
+                # ------------------------------------------------------------------------------------------
                 # Discriminator part
                 optimizer_d.zero_grad(set_to_none=True)
-
                 logits_fake = discriminator(reconstruction.contiguous().detach())[-1]
-                loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
+                loss_d_fake = adv_loss(logits_fake,
+                                       target_is_real=False,
+                                       for_discriminator=True)
                 logits_real = discriminator(images.contiguous().detach())[-1]
-                loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
+                loss_d_real = adv_loss(logits_real,
+                                       target_is_real=True,
+                                       for_discriminator=True)
                 discriminator_loss = (loss_d_fake + loss_d_real) * 0.5
-
                 loss_d = adv_weight * discriminator_loss
-
                 loss_d.backward()
                 optimizer_d.step()
-
+    """
+                # ------------------------------------------------------------------------------------------
                 epoch_loss += recons_loss.item()
                 gen_epoch_loss += generator_loss.item()
                 disc_epoch_loss += discriminator_loss.item()
@@ -477,7 +480,7 @@ class NetworkTrainer:
             epoch_recon_loss_list.append(epoch_loss / (step + 1))
             epoch_gen_loss_list.append(gen_epoch_loss / (step + 1))
             epoch_disc_loss_list.append(disc_epoch_loss / (step + 1))
-            """
+    
             if (epoch + 1) % val_interval == 0:
                 vae.eval()
                 val_loss = 0
@@ -497,10 +500,9 @@ class NetworkTrainer:
 
                 val_loss /= val_step
                 val_recon_epoch_loss_list.append(val_loss)
-            """
         #total_time = time.time() - total_start
         #print(f"train completed, total time: {total_time}.")
-
+    """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
