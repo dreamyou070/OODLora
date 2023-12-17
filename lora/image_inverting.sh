@@ -11,5 +11,5 @@ python image_inverting.py --device cuda:5 \
   --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel \
   --repeat_time 51 \
   --self_attn_threshold_time 1000 \
-  --final_time 250 \
+  --final_time 280 \
   --with_new_noising_alphas_cumprod
