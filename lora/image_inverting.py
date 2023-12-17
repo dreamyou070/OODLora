@@ -358,7 +358,9 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[int(t.item())] = noise_pred
             if args.with_new_noising_alphas_cumprod :
-                latent = customizing_next_step(noise_pred, int(t.item()), int(next_time), latent, alphas_cumprod_dict)
+                latent = customizing_next_step(noise_pred, int(t.item()),
+                                               int(next_time), latent, alphas_cumprod_dict).to(noise_pred.dtype)
+                latent = latent.to(vae.device)
             else :
                 latent = next_step(noise_pred, int(t.item()), latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')
