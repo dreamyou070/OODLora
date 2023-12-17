@@ -72,6 +72,7 @@ class PatchAdversarialLoss(_Loss):
                 self.activation = None
             else:
                 self.activation = get_act_layer(name=("LEAKYRELU", {"negative_slope": 0.05}))
+            # mse loss ########
             self.loss_fct = torch.nn.MSELoss(reduction=reduction)
 
         self.criterion = criterion
@@ -105,9 +106,9 @@ class PatchAdversarialLoss(_Loss):
         zero_label_tensor.requires_grad_(False)
         return zero_label_tensor.expand_as(input)
 
-    def forward(
-        self, input: torch.FloatTensor | list, target_is_real: bool, for_discriminator: bool
-    ) -> torch.Tensor | list[torch.Tensor]:
+    def forward(self, input: torch.FloatTensor | list,
+                target_is_real: bool,
+                for_discriminator: bool) -> torch.Tensor | list[torch.Tensor]:
         """
 
         Args:
@@ -134,7 +135,9 @@ class PatchAdversarialLoss(_Loss):
         target_ = []
         for _, disc_out in enumerate(input):
             if self.criterion != AdversarialCriterions.HINGE.value:
-                target_.append(self.get_target_tensor(disc_out, target_is_real))
+                trg_value = self.get_target_tensor(disc_out, target_is_real)
+
+                target_.append(trg_value)
             else:
                 target_.append(self.get_zero_tensor(disc_out))
 

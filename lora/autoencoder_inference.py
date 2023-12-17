@@ -94,14 +94,7 @@ def main(args):
     with torch.no_grad():
         img = img.to(vae.device)
         latents = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample()
-        print(f'latent: {latents.shape}')
         recon_img = vae.decode(latents).sample
-
-        reconstruction = vae(img.to(dtype=vae_dtype)).sample
-        print(f'reconstruction: {reconstruction.shape}')
-        logits_fake = discriminator(reconstruction.contiguous().float())[-1]
-
-
         recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
         image = (recon_img * 255).astype(np.uint8)
         image = Image.fromarray(image)

@@ -263,6 +263,13 @@ class NetworkTrainer:
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders: t_enc.requires_grad_(False)
+
+        if args.resume :
+            vae_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000001/pytorch_model.bin'
+            discriminator_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/discriminator_model/discriminator_epoch_000001/pytorch_model.bin'
+            vae.load_state_dict(torch.load(vae_pretrained_dir))
+            discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
+
         vae, optimizer, train_dataloader, lr_scheduler, discriminator, perceptual_loss= accelerator.prepare(vae,
                                                                                                             optimizer,
                                                                                                             train_dataloader,
@@ -424,7 +431,9 @@ class NetworkTrainer:
                     p_loss = perceptual_loss(reconstruction.float(), batch['images'].float())
                     logits_fake = discriminator(reconstruction.contiguous().float())[-1]
 
-                    generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
+                    generator_loss = adv_loss(logits_fake,
+                                              target_is_real=True,
+                                              for_discriminator=False)
                     loss_g = recons_loss + p_loss * perceptual_weight + generator_loss * adv_weight
                     total_loss = loss_g
                     log_loss['loss/recons_loss'] = recons_loss
@@ -433,6 +442,9 @@ class NetworkTrainer:
                 if epoch > autoencoder_warm_up_n_epochs:
                     with autocast(enabled=True):
                         loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
+
+
+
                         logits_real = discriminator(batch['images'].contiguous().detach())[-1]
                         loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
                         loss_d = (loss_d_fake + loss_d_real) * 0.5
@@ -447,11 +459,11 @@ class NetworkTrainer:
                     if is_main_process:
                         wandb.log(log_loss, step=global_step)
             # ------------------------------------------------------------------------------------------
-            if args.save_every_n_epochs is not None and epoch+1 % args.save_every_n_epochs == 0:
+            if args.save_every_n_epochs is not None:
                 print('saving model')
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
-                    trg_epoch = str(epoch+1).zfill(6)
+                    trg_epoch = str(epoch+2).zfill(6)
                     # ------------------------------------------------------------------------
                     ckpt_name = f'vae_epoch_{trg_epoch}'
                     save_directory = os.path.join(args.output_dir, 'vae_model')
@@ -464,7 +476,7 @@ class NetworkTrainer:
                     os.makedirs(d_save_directory, exist_ok=True)
                     accelerator.save_model(discriminator, os.path.join(d_save_directory, f'discriminator_epoch_{trg_epoch}'))
 
-            if args.sample_every_n_epochs is not None and epoch+1 % args.sample_every_n_epochs == 0 :
+            if args.sample_every_n_epochs is not None :
                 print('sampling')
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
                 h,w = args.resolution
@@ -480,7 +492,7 @@ class NetworkTrainer:
                         image = Image.fromarray(image)
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch}.png'))
+                        image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch+2}.png'))
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png'
                 img = load_image(sample_data_dir, int(h), int(w))
                 img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
@@ -494,7 +506,7 @@ class NetworkTrainer:
                         image = Image.fromarray(image)
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch}.png'))
+                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch+2}.png'))
 
 
 if __name__ == "__main__":
@@ -560,6 +572,7 @@ if __name__ == "__main__":
     parser.add_argument("--net_key_names", type=str, default='text')
     parser.add_argument("--mask_threshold", type=float, default=0.5)
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
+    parser.add_argument("--resume", action="store_true",)
     # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
