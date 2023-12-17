@@ -52,7 +52,6 @@ class Inference(object):
         self.gt_transforms = transforms.Compose([
                         transforms.Resize((resize, resize)),
                         transforms.ToTensor()])
-
     def load_model(self,):
         teacher_ckpt = torch.load(self.model_path+'/best_teacher.pth',map_location=torch.device(self.device))
         #student_ckpt = torch.load(self.model_path+'/{}_student.pth'.format(self.category),map_location=torch.device(self.device))
