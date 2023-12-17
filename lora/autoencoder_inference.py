@@ -111,5 +111,4 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", type=str, default=None)
     parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
-    args = train_util.read_config_from_file(args, parser)
     main(args)
