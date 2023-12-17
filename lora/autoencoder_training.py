@@ -265,8 +265,8 @@ class NetworkTrainer:
         for t_enc in text_encoders: t_enc.requires_grad_(False)
 
         if args.resume_vae_training :
-            vae_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000001/pytorch_model.bin'
-            discriminator_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/discriminator_model/discriminator_epoch_000001/pytorch_model.bin'
+            vae_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000003/pytorch_model.bin'
+            discriminator_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/discriminator_model/discriminator_epoch_000003/pytorch_model.bin'
             vae.load_state_dict(torch.load(vae_pretrained_dir))
             discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
 
@@ -463,7 +463,7 @@ class NetworkTrainer:
                 print('saving model')
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
-                    trg_epoch = str(epoch+2).zfill(6)
+                    trg_epoch = str(epoch+4).zfill(6)
                     # ------------------------------------------------------------------------
                     ckpt_name = f'vae_epoch_{trg_epoch}'
                     save_directory = os.path.join(args.output_dir, 'vae_model')
@@ -506,7 +506,7 @@ class NetworkTrainer:
                         image = Image.fromarray(image)
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch+2}.png'))
+                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch+5}.png'))
 
 
 if __name__ == "__main__":
