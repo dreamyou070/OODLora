@@ -137,7 +137,17 @@ class PatchDiscriminator(nn.Sequential):
         padding: padding to be applied to the convolutional layers
         dropout: proportion of dropout applied, defaults to 0.
         last_conv_kernel_size: kernel size of the last convolutional layer.
-    """
+
+        discriminator = PatchDiscriminator(spatial_dims=2,
+                                           num_layers_d=3,
+                                           num_channels=64,
+                                           in_channels=3,
+                                           out_channels=3,
+                                           kernel_size=4,
+                                           activation=(Act.LEAKYRELU, {"negative_slope": 0.2, }),
+                                           norm="BATCH",
+                                           bias=False,
+                                           padding=1, )    """
 
     def __init__(
         self,
@@ -160,18 +170,16 @@ class PatchDiscriminator(nn.Sequential):
         if last_conv_kernel_size is None:
             last_conv_kernel_size = kernel_size
 
-        self.add_module(
-            "initial_conv",
-            Convolution(spatial_dims=spatial_dims, # 2
-                        kernel_size=kernel_size,
-                        in_channels=in_channels,   # 3
-                        out_channels=num_channels, #
-                        act=activation,
-                        bias=True,
-                        norm=None,
-                        dropout=dropout,
-                        padding=padding,
-                        strides=2,),)
+        self.add_module("initial_conv",Convolution(spatial_dims=spatial_dims,  # 2
+                                                   kernel_size=kernel_size,    # 4
+                                                   in_channels=in_channels,    # 3
+                                                   out_channels=num_channels,  # 64
+                                                   act=activation, # leakyrelu
+                                                   bias=True,
+                                                   norm=None,
+                                                   dropout=dropout,
+                                                   padding=padding,            # 1
+                                                   strides=2,),)
         input_channels = num_channels
         output_channels = num_channels * 2
         # Initial Layer
@@ -199,8 +207,7 @@ class PatchDiscriminator(nn.Sequential):
         # Final layer
         self.add_module(
             "final_conv",
-            Convolution(
-                spatial_dims=spatial_dims,
+            Convolution(spatial_dims=spatial_dims,
                 kernel_size=last_conv_kernel_size,
                 in_channels=input_channels,
                 out_channels=out_channels,
@@ -208,7 +215,8 @@ class PatchDiscriminator(nn.Sequential):
                 conv_only=True,
                 padding=int((last_conv_kernel_size - 1) / 2),
                 dropout=0.0,
-                strides=1,            ),        )
+                strides=1,))
+
 
         self.apply(self.initialise_weights)
 
@@ -222,10 +230,20 @@ class PatchDiscriminator(nn.Sequential):
         """
         out = [x]
 
+        """
         for submodel in self.children():
             intermediate_output = submodel(out[-1])
+            submodel_name = submodel.__class__.__name__
+            print(f'[{submodel_name}] : {intermediate_output.shape}')
             out.append(intermediate_output)
         return out[1:]
+        """
+        for name, submodel in self.named_children():
+            intermediate_output = submodel(out[-1])
+            print(f'[{name}] : {intermediate_output.shape}')
+            out.append(intermediate_output)
+
+
 
     def initialise_weights(self, m: nn.Module) -> None:
         """
