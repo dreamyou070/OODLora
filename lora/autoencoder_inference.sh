@@ -14,7 +14,6 @@ ml load cuda/11.0
 
 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 50189 autoencoder_inference.py \
   --device 'cuda:4' \
-  --logging_dir ../result/logs \
   --process_title parksooyeon \
   --log_with wandb \
   --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \

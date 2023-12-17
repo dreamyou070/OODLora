@@ -100,6 +100,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
+    train_util.add_sd_models_arguments(parser)
     parser.add_argument("--process_title", type=str, default='parksooyeon')
     parser.add_argument("--wandb_log_template_path", type=str)
     parser.add_argument("--wandb_key", type=str)
