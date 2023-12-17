@@ -102,8 +102,6 @@ if __name__ == "__main__":
     # step 1. setting
     train_util.add_sd_models_arguments(parser)
     parser.add_argument("--process_title", type=str, default='parksooyeon')
-    parser.add_argument("--wandb_log_template_path", type=str)
-    parser.add_argument("--wandb_key", type=str)
     config_util.add_config_arguments(parser)
     parser.add_argument("--save_model_as", type=str, default="safetensors",
                         choices=[None, "ckpt", "pt", "safetensors"],
