@@ -280,7 +280,11 @@ class NetworkTrainer:
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders: t_enc.requires_grad_(False)
 
-
+        if args.resume_vae_training :
+            vae_pretrained_dir = args.vae_pretrained_dir
+            discriminator_pretrained_dir = args.discriminator_pretrained_dir
+            vae.load_state_dict(torch.load(vae_pretrained_dir))
+            discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
         vae_decoder, vae_decoder_quantize, optimizer, train_dataloader, lr_scheduler, discriminator, perceptual_loss= accelerator.prepare(vae_decoder, vae_decoder_quantize,
                                                                                                             optimizer,
                                                                                                             train_dataloader,
@@ -427,7 +431,7 @@ class NetworkTrainer:
         epoch_recon_loss_list = []
         epoch_gen_loss_list = []
         epoch_disc_loss_list = []
-        autoencoder_warm_up_n_epochs = 2
+        autoencoder_warm_up_n_epochs = args.autoencoder_warm_up_n_epochs
         for epoch in range(num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
@@ -459,14 +463,15 @@ class NetworkTrainer:
                     log_loss['loss/recons_loss'] = recons_loss
                     log_loss['loss/perceptual_loss'] = p_loss
                     log_loss['loss/discriminator_g_loss'] = generator_loss
-                if epoch > autoencoder_warm_up_n_epochs:
-                    with autocast(enabled=True):
-                        loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
-                        logits_real = discriminator(batch['images'].contiguous().detach())[-1]
-                        loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
-                        loss_d = (loss_d_fake + loss_d_real) * 0.5
-                        log_loss['loss/discriminator_d_fake_loss'] = loss_d_fake
-                        log_loss['loss/discriminator_d_real_loss'] = loss_d_real
+                with torch.autograd.detect_anomaly():
+                    if epoch > autoencoder_warm_up_n_epochs:
+                        with autocast(enabled=True):
+                            loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
+                            logits_real = discriminator(batch['images'].contiguous().detach())[-1]
+                            loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
+                            loss_d = (loss_d_fake + loss_d_real) * 0.5
+                            log_loss['loss/discriminator_d_fake_loss'] = loss_d_fake
+                            log_loss['loss/discriminator_d_real_loss'] = loss_d_real
                     total_loss += loss_d
                 total_loss.backward()
                 optimizer.step()
@@ -591,6 +596,9 @@ if __name__ == "__main__":
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
     parser.add_argument("--resume_vae_training", action = "store_true")
     parser.add_argument("--perceptual_weight", type = float, default = 0.001)
+    parser.add_argument("--autoencoder_warm_up_n_epochs", type=int, default=2)
+    parser.add_argument("--vae_pretrained_dir", type=str)
+    parser.add_argument("--discriminator_pretrained_dir", type=str)
     # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)

@@ -25,4 +25,7 @@ accelerate launch --config_file ../../../gpu_config/gpu_6_7_config --main_proces
   --train_data_dir ../../../MyData/anomaly_detection/autoencoder_training/bad \
   --class_caption 'good' \
   --contrastive_eps 0.0 \
-  --perceptual_weight 0.08
+  --perceptual_weight 0.08 \
+  --resume_vae_training \
+  --vae_pretrained_dir /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_decoder_training/vae_model/vae_epoch_000003/pytorch_model.bin \
+  --discriminator_pretrained_dir /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_decoder_training/discriminator_model/discriminator_epoch_000003/pytorch_model.bin
