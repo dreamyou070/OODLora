@@ -486,7 +486,7 @@ class NetworkTrainer:
 
             if args.sample_every_n_epochs is not None and epoch+1 % args.sample_every_n_epochs == 0 :
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
-                h,w = args.resolution.split(',')
+                h,w = args.resolution
                 img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
                 img = IMAGE_TRANSFORMS(img)
                 latents = vae.encode(img)['sample']
