@@ -486,6 +486,8 @@ class NetworkTrainer:
                 h,w = args.resolution
                 img = load_image(sample_data_dir, int(h), int(w))
                 img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype)
+                print(f'img shape : {img.shape}')
+                """
                 with torch.no_grad():
                     if accelerator.is_main_process:
                         inf_vae = accelerator.unwrap_model(vae)
@@ -497,6 +499,7 @@ class NetworkTrainer:
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
                         image.save(os.path.join(save_dir, f'recon_{epoch}.png'))
+                """
 
 
 
