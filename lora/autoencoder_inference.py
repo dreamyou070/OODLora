@@ -74,14 +74,15 @@ def main(args):
     discriminator_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/discriminator_model/discriminator_epoch_000001/pytorch_model.bin'
     vae.load_state_dict(torch.load(vae_pretrained_dir))
     discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
+
     vae.requires_grad_(False)
     vae.eval()
-    vae.to(dtype=vae_dtype)
-    vae.to(args.device)
+    vae.to(accelerator.device, dtype=vae_dtype)
+
     discriminator.requires_grad_(False)
     discriminator.eval()
-    discriminator.to(dtype=vae_dtype)
-    discriminator.to(args.device)
+    discriminator.to(accelerator.device, dtype=vae_dtype)
+    #discriminator.to(args.device)
 
     print(f'\n step 3. inference')
     print('sampling')

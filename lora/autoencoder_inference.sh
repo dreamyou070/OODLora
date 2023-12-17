@@ -12,7 +12,7 @@ conda activate venv
 ml purge
 ml load cuda/11.0
 
-accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 50189 autoencoder_inference.py \
+accelerate launch --config_file ../../../gpu_config/gpu_3_4_config --main_process_port 53489 autoencoder_inference.py \
   --device 'cuda:4' \
   --process_title parksooyeon \
   --seed 42 --output_dir ../result/MVTec_experiment/bagel/vae_training \
