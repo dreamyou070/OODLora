@@ -406,7 +406,7 @@ class NetworkTrainer:
         epoch_disc_loss_list = []
         autoencoder_warm_up_n_epochs = 2
         for epoch in range(num_train_epochs):
-            """
+
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
@@ -438,7 +438,7 @@ class NetworkTrainer:
                         total_loss += loss_d
                     total_loss.backward()
                     optimizer.step()
-            """
+
             # ------------------------------------------------------------------------------------------
             if args.save_every_n_epochs is not None and epoch+1 % args.save_every_n_epochs == 0:
                 print('saving model')
@@ -488,9 +488,6 @@ class NetworkTrainer:
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
                         image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch}.png'))
-
-
-
 
 
 if __name__ == "__main__":
