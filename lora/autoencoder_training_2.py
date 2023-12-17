@@ -311,7 +311,7 @@ class NetworkTrainer:
         num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
         if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
             args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
-            
+
         vae_encoder.to(accelerator.device, dtype=vae_dtype)
         vae_encoder_quantize.to(accelerator.device, dtype=vae_dtype)
 
@@ -442,7 +442,7 @@ class NetworkTrainer:
                 # generator training
                 optimizer.zero_grad(set_to_none=True)
                 with torch.no_grad():
-                    h = vae_encoder(img.to(dtype=vae_dtype))
+                    h = vae_encoder(batch['images'].to(dtype=vae_dtype))
                     latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
 
                 with autocast(enabled=True):
