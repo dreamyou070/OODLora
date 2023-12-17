@@ -161,7 +161,7 @@ if __name__ == "__main__":
     parser.add_argument("--anormal_sample_data_dir", type=str,
                         default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png')
     parser.add_argument("--normal_sample_data_dir", type=str,
-                        default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/train/good/rgb/000.png')
+                        default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png')
     parser.add_argument("--vae_pretrained_dir", type=str,
                         default='../result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000005/pytorch_model.bin')
     args = parser.parse_args()
