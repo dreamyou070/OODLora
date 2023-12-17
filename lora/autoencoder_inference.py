@@ -93,7 +93,14 @@ def main(args):
     img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
     with torch.no_grad():
         img = img.to(vae.device)
-        recon_img = vae(img).sample
+        latents = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample()
+        print(f'latent: {latents.shape}')
+
+        recon_img = vae.decode(latents).sample
+
+
+
+
         recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
         image = (recon_img * 255).astype(np.uint8)
         image = Image.fromarray(image)
