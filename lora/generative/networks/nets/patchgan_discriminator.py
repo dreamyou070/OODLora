@@ -230,18 +230,11 @@ class PatchDiscriminator(nn.Sequential):
         """
         out = [x]
 
-        """
+
         for submodel in self.children():
             intermediate_output = submodel(out[-1])
-            submodel_name = submodel.__class__.__name__
-            print(f'[{submodel_name}] : {intermediate_output.shape}')
             out.append(intermediate_output)
         return out[1:]
-        """
-        for name, submodel in self.named_children():
-            intermediate_output = submodel(out[-1])
-            print(f'[{name}] : {intermediate_output.shape}')
-            out.append(intermediate_output)
 
 
 
