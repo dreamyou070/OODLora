@@ -71,12 +71,14 @@ def main(args):
 
     print(f' (3) making encoder of vae')
     vae_encoder = vae.encoder
+    vae_encoder_quantize = vae.quant_conv
 
     print(f' (4) making decoder of vae')
-    vae_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000001/pytorch_model.bin'
-    discriminator_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/discriminator_model/discriminator_epoch_000001/pytorch_model.bin'
+    vae_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000004/pytorch_model.bin'
+    discriminator_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/discriminator_model/discriminator_epoch_000004/pytorch_model.bin'
     vae.load_state_dict(torch.load(vae_pretrained_dir))
     vae_decoder = vae.decoder
+    vae_decoder_quantize = vae.post_quant_conv
     discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
 
     vae.requires_grad_(False)
@@ -102,12 +104,10 @@ def main(args):
         latents = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample()
         from diffusers.models.vae import DiagonalGaussianDistribution
         h = vae_encoder(img.to(dtype=vae_dtype))
-        moments = vae.quant_conv(h)
-        posterior = DiagonalGaussianDistribution(moments)
-        latent = posterior.sample()
+        latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
 
         # (2) decoder
-        z = vae.post_quant_conv(latent)
+        z = vae_decoder_quantize(latent)
         recon_img = vae_decoder(z)#.sample
         recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
         image = (recon_img * 255).astype(np.uint8)
