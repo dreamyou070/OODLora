@@ -20,4 +20,4 @@ python finding_best_scheduler.py --device cuda:3 \
    --prompt 'good' \
    --sample_sampler ddim --num_ddim_steps 50 --output_dir ../../../result \
    --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
-   --concept_image_folder ../../../MyData/anomaly_detection/MVTecAD/bagel
+   --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel

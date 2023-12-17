@@ -540,7 +540,7 @@ def main(args):
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.001)
 
-            for j in range(10000):
+            for j in range(500):
                 alpha_before = alpha.clone().detach()
                 latent_next = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
                 next_noise_pred = call_unet(unet, latent_next, next_t, uncon, None, None)
@@ -550,7 +550,7 @@ def main(args):
                 optimizer.zero_grad()
                 loss.backward(retain_graph=True)
                 optimizer.step()
-                if loss.item() < 0.00005 :
+                if loss.item() < 0.00001 :
                     break
                 if torch.isnan(alpha).any():
                     alpha = alpha_before
