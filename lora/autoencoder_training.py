@@ -400,30 +400,6 @@ class NetworkTrainer:
         del train_dataset_group
         on_step_start = lambda *args, **kwargs: None
 
-        # function for saving/removing
-        def save_model(ckpt_name, unwrapped_nw, steps, epoch_no, force_sync_upload=False):
-            os.makedirs(args.output_dir, exist_ok=True)
-            ckpt_file = os.path.join(args.output_dir, ckpt_name)
-
-            accelerator.print(f"\nsaving checkpoint: {ckpt_file}")
-            metadata["ss_training_finished_at"] = str(time.time())
-            metadata["ss_steps"] = str(steps)
-            metadata["ss_epoch"] = str(epoch_no)
-
-            metadata_to_save = minimum_metadata if args.no_metadata else metadata
-            sai_metadata = train_util.get_sai_model_spec(None, args, self.is_sdxl, True, False)
-            metadata_to_save.update(sai_metadata)
-
-            unwrapped_nw.save_weights(ckpt_file, save_dtype, metadata_to_save)
-            if args.huggingface_repo_id is not None:
-                huggingface_util.upload(args, ckpt_file, "/" + ckpt_name, force_sync_upload=force_sync_upload)
-
-        def remove_model(old_ckpt_name):
-            old_ckpt_file = os.path.join(args.output_dir, old_ckpt_name)
-            if os.path.exists(old_ckpt_file):
-                accelerator.print(f"removing old checkpoint: {old_ckpt_file}")
-                os.remove(old_ckpt_file)
-
         # training loop
         epoch_recon_loss_list = []
         epoch_gen_loss_list = []
@@ -465,6 +441,7 @@ class NetworkTrainer:
             """
             # ------------------------------------------------------------------------------------------
             if args.save_every_n_epochs is not None and epoch+1 % args.save_every_n_epochs == 0:
+                print('saving model')
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
                     trg_epoch = str(epoch+1).zfill(6)

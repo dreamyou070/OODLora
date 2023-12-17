@@ -72,7 +72,10 @@ def main(args):
     vae_pretrained_dir = r'/data7/sooyeon/result/MVTec_experiment/bagel/vae_training/'
     discriminator_pretrained_dir = r'/data7/sooyeon/result/MVTec_experiment/bagel/vae_training'
 
-    vae# if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
+
+
+
+
     vae.requires_grad_(True)
     vae.train()
     vae.to(dtype=vae_dtype)

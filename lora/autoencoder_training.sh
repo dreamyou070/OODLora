@@ -24,7 +24,6 @@ accelerate launch --config_file ../../../gpu_config/gpu_6_7_config --main_proces
   --resolution 512,512 \
   --save_every_n_epochs 1 \
   --sample_every_n_epochs 1 \
-  --sample_prompts ../../../MyData/object/bagel_inference.txt \
   --max_train_steps 48000 \
   --train_data_dir ../../../MyData/anomaly_detection/autoencoder_training/bad \
   --class_caption 'good' \
