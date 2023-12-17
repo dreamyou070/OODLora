@@ -489,14 +489,17 @@ class NetworkTrainer:
                 h,w = args.resolution
                 img = load_image(sample_data_dir, int(h), int(w))
                 img = IMAGE_TRANSFORMS(img)
-                latents = vae.encode(img).latent_dist.mode()
-                recon_img = vae.decode(latents).sample
-                recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                image = (recon_img * 255).astype(np.uint8)
-                image = Image.fromarray(image)
-                save_dir = os.path.join(args.output_dir, 'sample')
-                os.makedirs(save_dir, exist_ok=True)
-                image.save(os.path.join(save_dir, f'recon_{epoch}.png'))
+                with torch.no_grad():
+                    if accelerator.is_main_process:
+                        inf_vae = accelerator.unwrap_model(vae)
+                        latents = inf_vae.encode(img).latent_dist.mode()
+                        recon_img = inf_vae.decode(latents).sample
+                        recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        image = (recon_img * 255).astype(np.uint8)
+                        image = Image.fromarray(image)
+                        save_dir = os.path.join(args.output_dir, 'sample')
+                        os.makedirs(save_dir, exist_ok=True)
+                        image.save(os.path.join(save_dir, f'recon_{epoch}.png'))
 
 
 
