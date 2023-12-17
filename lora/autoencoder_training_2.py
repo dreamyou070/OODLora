@@ -472,7 +472,7 @@ class NetworkTrainer:
                             loss_d = (loss_d_fake + loss_d_real) * 0.5
                             log_loss['loss/discriminator_d_fake_loss'] = loss_d_fake
                             log_loss['loss/discriminator_d_real_loss'] = loss_d_real
-                    total_loss += loss_d
+                            total_loss += loss_d
                 total_loss.backward()
                 optimizer.step()
                 if accelerator.sync_gradients:
