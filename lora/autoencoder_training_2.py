@@ -303,7 +303,7 @@ class NetworkTrainer:
         l1_loss = L1Loss()
         adv_loss = PatchAdversarialLoss(criterion="least_squares")
         adv_weight = 0.01
-        perceptual_weight = 0.001
+        perceptual_weight = args.perceptual_weight
 
 
         # epoch数を計算する
@@ -590,6 +590,7 @@ if __name__ == "__main__":
     parser.add_argument("--mask_threshold", type=float, default=0.5)
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
     parser.add_argument("--resume_vae_training", action = "store_true")
+    parser.add_argument("--perceptual_weight", type = float, default = 0.001)
     # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
