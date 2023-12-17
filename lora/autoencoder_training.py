@@ -433,6 +433,7 @@ class NetworkTrainer:
         epoch_disc_loss_list = []
         autoencoder_warm_up_n_epochs = 2
         for epoch in range(num_train_epochs):
+            """
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
@@ -465,8 +466,9 @@ class NetworkTrainer:
                     total_loss.backward()
                     optimizer.step()
 
-                # ------------------------------------------------------------------------------------------
-            if args.save_every_n_epochs is not None and global_step % args.save_every_n_epochs == 0:
+            # ------------------------------------------------------------------------------------------
+            """
+            if args.save_every_n_epochs is not None and epoch+1 % args.save_every_n_epochs == 0:
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
                     trg_epoch = str(epoch+1).zfill(6)
@@ -474,8 +476,8 @@ class NetworkTrainer:
                     save_model(ckpt_name, accelerator.unwrap_model(vae), global_step, epoch)
                     ckpt_name = f'discriminator_epoch_{trg_epoch}.safetensors'
                     save_model(ckpt_name, accelerator.unwrap_model(discriminator), global_step, epoch)
-            if args.sample_every_n_epochs is not None and epoch % args.sample_every_n_epochs == 0 :
-                sample_data_dir = os.path.join(args.output_dir, 'sample_data')
+            if args.sample_every_n_epochs is not None and epoch+1 % args.sample_every_n_epochs == 0 :
+                sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
                 h,w = args.resolution.split(',')
                 img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
                 img = IMAGE_TRANSFORMS(img)
