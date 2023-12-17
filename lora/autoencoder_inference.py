@@ -90,31 +90,43 @@ def main(args):
     discriminator.to(accelerator.device, dtype=vae_dtype)
     #discriminator.to(args.device)
 
-    print(f'\n step 3. inference')
-    print('sampling')
-    sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
-    print(f'args.resolution: {args.resolution}')
-    h,w = args.resolution.split(',')[0], args.resolution.split(',')[1]
-    img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
-    img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
-    with torch.no_grad():
-        img = img.to(vae.device)
-        # ------------------
-        # (1) encoder
-        latents = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample()
-        from diffusers.models.vae import DiagonalGaussianDistribution
-        h = vae_encoder(img.to(dtype=vae_dtype))
-        latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
+    def recon(sample_data_dir, save_dir, compare_save_dir):
+        Image.open(sample_data_dir).save(compare_save_dir)
+        h, w = args.resolution.split(',')[0], args.resolution.split(',')[1]
+        img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
+        img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
+        with torch.no_grad():
+            img = img.to(vae.device)
+            # ------------------
+            # (1) encoder
+            latents = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample()
+            from diffusers.models.vae import DiagonalGaussianDistribution
+            h = vae_encoder(img.to(dtype=vae_dtype))
+            latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
 
-        # (2) decoder
-        z = vae_decoder_quantize(latent)
-        recon_img = vae_decoder(z)#.sample
-        recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-        image = (recon_img * 255).astype(np.uint8)
-        image = Image.fromarray(image)
-        save_dir = os.path.join(args.output_dir, 'test')
-        os.makedirs(save_dir, exist_ok=True)
-        image.save(os.path.join(save_dir, f'original_encoder_trained_decoder_anormal_recon_test.png'))
+            # (2) decoder
+            z = vae_decoder_quantize(latent)
+            recon_img = vae_decoder(z)  # .sample
+            recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+            image = (recon_img * 255).astype(np.uint8)
+            image = Image.fromarray(image)
+            image.save(save_dir)
+
+    print(f'\n step 3. inference')
+    save_dir = os.path.join(args.output_dir, 'test')
+    os.makedirs(save_dir, exist_ok=True)
+    print(' (3.1) anormal test')
+    anormal_sample_data_dir = args.anormal_sample_data_dir
+    compare_save_dir = os.path.join(save_dir, 'anormal.png')
+    anormal_save_dir = os.path.join(save_dir, 'original_encoder_trained_decoder_anormal_recon_test.png')
+    recon(anormal_sample_data_dir, anormal_save_dir, compare_save_dir)
+
+    print(f' (3.2) normal test')
+    normal_sample_data_dir = args.normal_sample_data_dir
+    compare_save_dir = os.path.join(save_dir, 'normal.png')
+    normal_save_dir = os.path.join(save_dir, 'original_encoder_trained_decoder_normal_recon_test.png')
+    recon(normal_sample_data_dir, normal_save_dir, compare_save_dir)
+
 
 
 if __name__ == "__main__":
@@ -142,5 +154,10 @@ if __name__ == "__main__":
                         help="enable low RAM optimization. e.g. load models to VRAM instead of RAM ",)
     parser.add_argument("--vae", type=str, default=None,
                         help="path to checkpoint of vae to replace / VAEを入れ替える場合、VAEのcheckpointファイルまたはディレクトリ")
+    parser.add_argument("--anormal_sample_data_dir", type=str,
+                        default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png')
+    parser.add_argument("--normal_sample_data_dir", type=str,
+                        default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/train/good/rgb/000.png')
+
     args = parser.parse_args()
     main(args)
