@@ -97,7 +97,10 @@ def main(args):
         print(f'latent: {latents.shape}')
         recon_img = vae.decode(latents).sample
 
-        discriminator(latents)
+        reconstruction = vae(img.to(dtype=vae_dtype)).sample
+        print(f'reconstruction: {reconstruction.shape}')
+        logits_fake = discriminator(reconstruction.contiguous().float())[-1]
+
 
         recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
         image = (recon_img * 255).astype(np.uint8)
