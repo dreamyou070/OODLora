@@ -8,7 +8,7 @@ python image_inverting.py --device cuda:5 \
   --sample_sampler ddim \
   --num_ddim_steps 50 \
   --output_dir ../result/MVTec_experiment/bagel/unet_training/new_alphas_cumprod_noising \
-  --concept_image_folder ../../../MyData/anomaly_detection/MVTecAD/bagel \
+  --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel \
   --repeat_time 51 \
   --self_attn_threshold_time 1000 \
   --final_time 700 \
