@@ -32,194 +32,99 @@ except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
 try:
     import intel_extension_for_pytorch as ipex
-
     if torch.xpu.is_available():
         from library.ipex import ipex_init
-
         ipex_init()
 except Exception:
     pass
 
+def main(args):
 
-class NetworkTrainer:
+    print(f'\n step 1. setting')
+    print(f' (1) session')
+    if args.process_title:
+        setproctitle(args.process_title)
+    else:
+        setproctitle('parksooyeon')
+    session_id = random.randint(0, 2 ** 32)
 
-    def __init__(self):
-        self.vae_scale_factor = 0.18215
-        self.is_sdxl = False
+    print(f' (2) seed')
+    if args.seed is None:
+        args.seed = random.randint(0, 2 ** 32)
+    set_seed(args.seed)
 
-    def generate_step_logs(self, loss_dict, lr_scheduler, keys_scaled=None, mean_norm=None, maximum_norm=None,
-                           **kwargs):
-        logs = {}
-        for k, v in loss_dict.items():
-            logs[k] = v
-        # ------------------------------------------------------------------------------------------------------------------------------
-        # updating kwargs with new loss logs ...
-        if kwargs is not None:
-            logs.update(kwargs)
-        if keys_scaled is not None:
-            logs["max_norm/keys_scaled"] = keys_scaled
-            logs["max_norm/average_key_norm"] = mean_norm
-            logs["max_norm/max_key_norm"] = maximum_norm
-        lrs = lr_scheduler.get_last_lr()
-        if args.network_train_text_encoder_only or len(lrs) <= 2:  # not block lr (or single block)
-            if args.network_train_unet_only:
-                logs["lr/unet"] = float(lrs[0])
-            elif args.network_train_text_encoder_only:
-                logs["lr/textencoder"] = float(lrs[0])
-            else:
-                logs["lr/textencoder"] = float(lrs[0])
-                logs["lr/unet"] = float(lrs[-1])  # may be same to textencoder
+    print(f' (3) accelerator')
+    accelerator = train_util.prepare_accelerator(args)
+    is_main_process = accelerator.is_main_process
 
-            if (
-                    args.optimizer_type.lower().startswith(
-                        "DAdapt".lower()) or args.optimizer_type.lower() == "Prodigy".lower()
-            ):  # tracking d*lr value of unet.
-                logs["lr/d*lr"] = (
-                        lr_scheduler.optimizers[-1].param_groups[0]["d"] * lr_scheduler.optimizers[-1].param_groups[0][
-                    "lr"])
-        else:
-            idx = 0
-            if not args.network_train_unet_only:
-                logs["lr/textencoder"] = float(lrs[0])
-                idx = 1
+    print(f'\n step 2. model')
+    print(f' (1) mixed precision and model')
+    weight_dtype, save_dtype = train_util.prepare_dtype(args)
+    vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
+    print(f' (2) model')
+    text_encoder, vae, unet, _ = train_util.load_target_model(weight_dtype, accelerator)
+    # lr schedulerを用意する
+    discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=3,
+                                       out_channels=3,kernel_size=4, activation=(Act.LEAKYRELU, {"negative_slope": 0.2, }),
+                                       norm="BATCH", bias=False, padding=1, )
 
-            for i in range(idx, len(lrs)):
-                logs[f"lr/group{i}"] = float(lrs[i])
-                if args.optimizer_type.lower().startswith(
-                        "DAdapt".lower()) or args.optimizer_type.lower() == "Prodigy".lower():
-                    logs[f"lr/d*lr/group{i}"] = (
-                            lr_scheduler.optimizers[-1].param_groups[i]["d"] *
-                            lr_scheduler.optimizers[-1].param_groups[i]["lr"])
+    print(f' (3) loading state')
+    vae_pretrained_dir = r'/data7/sooyeon/result/MVTec_experiment/bagel/vae_training/'
+    discriminator_pretrained_dir = r'/data7/sooyeon/result/MVTec_experiment/bagel/vae_training'
 
-        return logs
+    vae# if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
+    vae.requires_grad_(True)
+    vae.train()
+    vae.to(dtype=vae_dtype)
+    #vae.to(dtype=weight_dtype)
+    discriminator.requires_grad_(True)
+    discriminator.train()
+    discriminator.to(dtype=weight_dtype)
 
-    def assert_extra_args(self, args, train_dataset_group):
-        pass
-
-    def load_target_model(self, args, weight_dtype, accelerator):
-        text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
-        return model_util.get_model_version_str_for_sd1_sd2(args.v2, args.v_parameterization), text_encoder, vae, unet
+    l1_loss = L1Loss()
+    adv_loss = PatchAdversarialLoss(criterion="least_squares")
+    adv_weight = 0.01
+    perceptual_weight = 0.001
 
 
-    def extract_triggerword_index(self, input_ids):
-        cls_token = 49406
-        pad_token = 49407
-        if input_ids.dim() == 3:
-            input_ids = torch.flatten(input_ids, start_dim=1)
-        batch_num, sen_len = input_ids.size()
-        batch_index_list = []
-
-        for batch_index in range(batch_num):
-            token_ids = input_ids[batch_index, :].squeeze()
-            index_list = []
-            for index, token_id in enumerate(token_ids):
-                if token_id != cls_token and token_id != pad_token:
-                    index_list.append(index)
-            batch_index_list.append(index_list)
-        return batch_index_list
-
-    def load_tokenizer(self, args):
-        tokenizer = train_util.load_tokenizer(args)
-        return tokenizer
-
-    def train(self, args):
-
-        print(f'\n step 1. setting')
-        print(f' (1) session')
-        if args.process_title:
-            setproctitle(args.process_title)
-        else:
-            setproctitle('parksooyeon')
-        session_id = random.randint(0, 2 ** 32)
-
-        print(f' (2) seed')
-        if args.seed is None:
-            args.seed = random.randint(0, 2 ** 32)
-        set_seed(args.seed)
-
-        print(f'\n step 2. dataset')
-        tokenizer = self.load_tokenizer(args)
-        tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
-
-        train_util.prepare_dataset_args(args, True)
-        cache_latents = args.cache_latents
-        use_dreambooth_method = args.in_json is None
-        use_user_config = args.dataset_config is not None
-        use_class_caption = args.class_caption is not None
-
-        print(f'\n step 5. mixed precision and model')
-        weight_dtype, save_dtype = train_util.prepare_dtype(args)
-        vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
-        print(f' weight_dtype : {weight_dtype} | save_dtype : {save_dtype} | vae_dtype : {vae_dtype}')
-        model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
-
-        # lr schedulerを用意する
-        discriminator = PatchDiscriminator(spatial_dims=2,
-                                           num_layers_d=3,
-                                           num_channels=64,
-                                           in_channels=3,
-                                           out_channels=3,
-                                           kernel_size=4,
-                                           activation=(Act.LEAKYRELU, {"negative_slope": 0.2, }),
-                                           norm="BATCH",
-                                           bias=False,
-                                           padding=1, )
-
-        print(f'\n step 6. vae loading state dict')
-
-        vae# if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
-        vae.requires_grad_(True)
-        vae.train()
-        vae.to(dtype=vae_dtype)
-        #vae.to(dtype=weight_dtype)
-        discriminator.requires_grad_(True)
-        discriminator.train()
-        discriminator.to(dtype=weight_dtype)
-
-        l1_loss = L1Loss()
-        adv_loss = PatchAdversarialLoss(criterion="least_squares")
-        adv_weight = 0.01
-        perceptual_weight = 0.001
+    # epoch数を計算する
+    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
+    num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
+    if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
+        args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
 
 
-        # epoch数を計算する
-        num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
-        num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
-        if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
-            args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
-
-
-        if args.sample_every_n_epochs is not None and epoch+1 % args.sample_every_n_epochs == 0 :
-            print('sampling')
-            sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
-            h,w = args.resolution
-            img = load_image(sample_data_dir, int(h), int(w))
-            img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
-            with torch.no_grad():
-                if accelerator.is_main_process:
-                    inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
-                    img = img.to(inf_vae.device)
-                    recon_img = inf_vae(img).sample
-                    recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                    image = (recon_img * 255).astype(np.uint8)
-                    image = Image.fromarray(image)
-                    save_dir = os.path.join(args.output_dir, 'sample')
-                    os.makedirs(save_dir, exist_ok=True)
-                    image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch}.png'))
-            sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png'
-            img = load_image(sample_data_dir, int(h), int(w))
-            img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
-            with torch.no_grad():
-                if accelerator.is_main_process:
-                    inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
-                    img = img.to(inf_vae.device)
-                    recon_img = inf_vae(img).sample
-                    recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                    image = (recon_img * 255).astype(np.uint8)
-                    image = Image.fromarray(image)
-                    save_dir = os.path.join(args.output_dir, 'sample')
-                    os.makedirs(save_dir, exist_ok=True)
-                    image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch}.png'))
+    if args.sample_every_n_epochs is not None and epoch+1 % args.sample_every_n_epochs == 0 :
+        print('sampling')
+        sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
+        h,w = args.resolution
+        img = load_image(sample_data_dir, int(h), int(w))
+        img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
+        with torch.no_grad():
+            if accelerator.is_main_process:
+                inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
+                img = img.to(inf_vae.device)
+                recon_img = inf_vae(img).sample
+                recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                image = (recon_img * 255).astype(np.uint8)
+                image = Image.fromarray(image)
+                save_dir = os.path.join(args.output_dir, 'sample')
+                os.makedirs(save_dir, exist_ok=True)
+                image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch}.png'))
+        sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png'
+        img = load_image(sample_data_dir, int(h), int(w))
+        img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
+        with torch.no_grad():
+            if accelerator.is_main_process:
+                inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
+                img = img.to(inf_vae.device)
+                recon_img = inf_vae(img).sample
+                recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                image = (recon_img * 255).astype(np.uint8)
+                image = Image.fromarray(image)
+                save_dir = os.path.join(args.output_dir, 'sample')
+                os.makedirs(save_dir, exist_ok=True)
+                image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch}.png'))
 
 
 
@@ -292,5 +197,4 @@ if __name__ == "__main__":
     # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
-    trainer = NetworkTrainer()
-    trainer.train(args)
+    main(args)
