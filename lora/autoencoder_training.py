@@ -204,6 +204,7 @@ class NetworkTrainer:
         print(f'\n step 5. mixed precision and model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
+        print(f' weight_dtype : {weight_dtype} | save_dtype : {save_dtype} | vae_dtype : {vae_dtype}')
         model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
         train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
@@ -259,11 +260,6 @@ class NetworkTrainer:
 
         # resumeする
         train_util.resume_from_local_or_hf_if_specified(accelerator, args)
-
-
-
-
-
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders: t_enc.requires_grad_(False)
@@ -277,7 +273,8 @@ class NetworkTrainer:
         # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
         vae.requires_grad_(True)
         vae.train()
-        vae.to(dtype=weight_dtype)
+        vae.to(dtype=vae_dtype)
+        #vae.to(dtype=weight_dtype)
         discriminator.requires_grad_(True)
         discriminator.train()
         discriminator.to(dtype=weight_dtype)
@@ -488,8 +485,7 @@ class NetworkTrainer:
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
                 h,w = args.resolution
                 img = load_image(sample_data_dir, int(h), int(w))
-                img = IMAGE_TRANSFORMS(img).to(dtype=weight_dtype)
-
+                img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype)
                 with torch.no_grad():
                     if accelerator.is_main_process:
                         inf_vae = accelerator.unwrap_model(vae)
