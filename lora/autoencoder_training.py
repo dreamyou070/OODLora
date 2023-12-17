@@ -485,6 +485,7 @@ class NetworkTrainer:
                     accelerator.save_model(discriminator, os.path.join(save_directory, ckpt_name))
 
             if args.sample_every_n_epochs is not None and epoch+1 % args.sample_every_n_epochs == 0 :
+                print('sampling')
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
                 h,w = args.resolution
                 img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
