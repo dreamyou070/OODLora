@@ -49,7 +49,10 @@ from itertools import cycle
 
 class DistillationTraining(object):
 
-    def __init__(self,imagenet_dir,channel_size,batch_size,save_path,normalize_iter,iteration=10000,resize=512,model_size='S', 
+    def __init__(self,
+                 imagenet_dir,
+                 channel_size,batch_size,save_path,normalize_iter,iteration=10000,resize=512,
+                 model_size='S',
                 wide_resnet_101_arch="Wide_ResNet101_2_Weights.IMAGENET1K_V2", print_freq=25,with_bn=False) -> None:
         self.channel_size = channel_size
         self.mean = torch.empty(channel_size)
@@ -57,7 +60,7 @@ class DistillationTraining(object):
         self.save_path = save_path
         self.imagenet_dir = imagenet_dir
         self.iteration = iteration
-        self.model_size = model_size
+        self.model_size = model_size # S, M, L
         self.batch_size = batch_size
         self.normalize_iter = normalize_iter
         self.wide_resnet_101_arch = wide_resnet_101_arch
@@ -69,21 +72,6 @@ class DistillationTraining(object):
                         transforms.RandomGrayscale(p=0.1), #6: Convert Idist to gray scale with a probability of 0.1 and 18: Convert Idist to gray scale with a probability of 0.1
                         transforms.ToTensor(),
                         ])
-
-    # def global_channel_normalize(self,dataloader):
-    #     # iterator = iter(dataloader)
-    #     iterator = cycle(iter(dataloader)) 
-    #     # for c in range(self.channel_size):
-    #     # x_mean = torch.empty(0)
-    #     # x_std = torch.empty(0)
-    #     x = torch.empty(0)
-    #     for iteration in tqdm.tqdm(range(self.normalize_iter)):
-    #         ldist = next(iterator)[0]
-    #         ldist = ldist.cuda()
-    #         y = self.pretrain(ldist).detach().cpu()
-    #         x = torch.cat((x,y),dim=0)
-    #     self.mean = x.mean(dim=[0,2,3],keepdim=True).cuda()
-    #     self.std = x.std(dim=[0,2,3],keepdim=True).cuda()
 
     def global_channel_normalize(self,dataloader):
         num = 0
@@ -119,36 +107,43 @@ class DistillationTraining(object):
         return loss
 
     def train(self,):
+
+        # ------------------------------------------------------------------------------------------------------------------------
+        # (1) loading pretrained model
         self.load_pretrain()
-        imagenet_dataset = ImageNetDataset(self.imagenet_dir, self.data_transforms)
+
+        # ------------------------------------------------------------------------------------------------------------------------
+        # (2) loading dataset and dataloader
+        imagenet_dataset = ImageNetDataset(self.imagenet_dir,
+                                           self.data_transforms)
         dataloader = DataLoader(imagenet_dataset, batch_size=self.batch_size, shuffle=True,num_workers=4, pin_memory=True)
         dataloader = load_infinite(dataloader)
+
+        # ------------------------------------------------------------------------------------------------------------------------
+        # (3) make teacher model (S)
         teacher = Teacher(self.model_size)
         teacher = teacher.cuda()
-        # mean_param_path = '{}/imagenet_channel_std.pth'.format(self.save_path)
-        # if os.path.exists(mean_param_path):
-        #     mean_param = torch.load(mean_param_path)
-        #     self.mean = mean_param['mean'].cuda()
-        #     self.std = mean_param['std'].cuda()
-        # else:
+
         self.mean,self.std = self.global_channel_normalize(dataloader)
-        # torch.save({
-        #     'mean': self.mean,
-        #     'std': self.std
-        # }, '{}/imagenet_channel_std.pth'.format(self.save_path))
+
         optimizer = torch.optim.Adam(teacher.parameters(), lr=0.0001, weight_decay=0.00001)
-        scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, step_size=int(0.95 * self.train_iter), gamma=0.1)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=int(0.95 * self.train_iter), gamma=0.1)
         best_loss = 1000
         loss_accum = 0
         iteration = 0
+
+        # ------------------------------------------------------------------------------------------------------------------------
+        # (4) training teacher model to make student model
         print('start train iter:{}'.format(self.train_iter))
         for iteration in range(self.iteration):
             # for batch_index, batch_sample in enumerate():
             batch_sample = next(dataloader).cuda()
             teacher.train()
             optimizer.zero_grad()
-            loss = self.compute_mse_loss(teacher,batch_sample)
+            # ------------------------------------------------------------------------------------------------------------------------
+            # feature matching loss
+            loss = self.compute_mse_loss(teacher,
+                                         batch_sample)
             loss.backward()
             optimizer.step()
             loss_accum += loss.item()
@@ -175,13 +170,13 @@ if __name__ == '__main__':
     imagenet_dir = './data/ImageNet'
     channel_size = 384
     save_path = 'ckptSmall'
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    distillation_training = DistillationTraining(
-        imagenet_dir,channel_size,16,save_path,
-        normalize_iter=500, 
-        model_size='S',
-        iteration=10000,
-        wide_resnet_101_arch="Wide_ResNet101_2_Weights.IMAGENET1K_V2",
-        )
+    if not os.path.exists(save_path): os.makedirs(save_path)
+    distillation_training = DistillationTraining(imagenet_dir,
+                                                 channel_size,
+                                                 16,
+                                                 save_path, # skptSmall
+                                                 normalize_iter=500,
+                                                 model_size='S',
+                                                 iteration=10000,
+                                                 wide_resnet_101_arch="Wide_ResNet101_2_Weights.IMAGENET1K_V2",)
     distillation_training.train()

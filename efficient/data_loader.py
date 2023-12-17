@@ -287,7 +287,8 @@ class ImageNetDataset(Dataset):
         super().__init__()
         self.imagenet_dir = imagenet_dir
         self.transform = transform
-        self.dataset = ImageFolder(self.imagenet_dir, transform=self.transform)
+        self.dataset = ImageFolder(self.imagenet_dir,
+                                   transform=self.transform)
 
     def __len__(self):
         return 1000
