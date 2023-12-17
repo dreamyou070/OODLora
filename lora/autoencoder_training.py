@@ -489,8 +489,8 @@ class NetworkTrainer:
                 h,w = args.resolution
                 img = load_image(sample_data_dir, int(h), int(w))
                 img = IMAGE_TRANSFORMS(img)
-                latents = vae.encode(img)['sample']
-                recon_img = vae.decode(latents)['sample']
+                latents = vae.encode(img).latent_dist.mode()
+                recon_img = vae.decode(latents).sample
                 recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                 image = (recon_img * 255).astype(np.uint8)
                 image = Image.fromarray(image)
