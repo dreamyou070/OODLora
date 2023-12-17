@@ -118,5 +118,6 @@ if __name__ == "__main__":
     parser.add_argument("--full_fp16", action="store_true",
                         help="fp16 training including gradients / 勾配も含めてfp16で学習する")
     parser.add_argument("--full_bf16", action="store_true", help="bf16 training including gradients / 勾配も含めてbf16で学習する")
+    parser.add_argument("--save_precision", type=str, default="no", choices=["no", "fp16", "bf16"],)
     args = parser.parse_args()
     main(args)
