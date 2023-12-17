@@ -29,6 +29,3 @@ accelerate launch --config_file ../../../gpu_config/gpu_6_7_config --main_proces
   --train_data_dir ../../../MyData/anomaly_detection/autoencoder_training/bad \
   --class_caption 'good' \
   --contrastive_eps 0.0
-
-
-
