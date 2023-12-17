@@ -74,7 +74,7 @@ def main(args):
     vae_encoder_quantize = vae.quant_conv
 
     print(f' (4) making decoder of vae')
-    vae_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000004/pytorch_model.bin'
+    vae_pretrained_dir = args.vae_pretrained_dir
     discriminator_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/discriminator_model/discriminator_epoch_000004/pytorch_model.bin'
     vae.load_state_dict(torch.load(vae_pretrained_dir))
     vae_decoder = vae.decoder
@@ -89,6 +89,10 @@ def main(args):
     discriminator.eval()
     discriminator.to(accelerator.device, dtype=vae_dtype)
     #discriminator.to(args.device)
+
+    vae_epoch = os.path.split(args.vae_pretrained_dir)[0]
+    vae_epoch = os.path.split(vae_epoch)[-1]
+    vae_epoch = int(vae_epoch.split('_')[-1])
 
     def recon(sample_data_dir, save_dir, compare_save_dir):
         Image.open(sample_data_dir).save(compare_save_dir)
@@ -118,13 +122,13 @@ def main(args):
     print(' (3.1) anormal test')
     anormal_sample_data_dir = args.anormal_sample_data_dir
     compare_save_dir = os.path.join(save_dir, 'anormal.png')
-    anormal_save_dir = os.path.join(save_dir, 'original_encoder_trained_decoder_anormal_recon_test.png')
+    anormal_save_dir = os.path.join(save_dir, f'model_{vae_epoch}_original_encoder_trained_decoder_anormal_recon_test.png')
     recon(anormal_sample_data_dir, anormal_save_dir, compare_save_dir)
 
     print(f' (3.2) normal test')
     normal_sample_data_dir = args.normal_sample_data_dir
     compare_save_dir = os.path.join(save_dir, 'normal.png')
-    normal_save_dir = os.path.join(save_dir, 'original_encoder_trained_decoder_normal_recon_test.png')
+    normal_save_dir = os.path.join(save_dir, f'model_{vae_epoch}_original_encoder_trained_decoder_normal_recon_test.png')
     recon(normal_sample_data_dir, normal_save_dir, compare_save_dir)
 
 
@@ -158,6 +162,8 @@ if __name__ == "__main__":
                         default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png')
     parser.add_argument("--normal_sample_data_dir", type=str,
                         default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/train/good/rgb/000.png')
-
+    parser.add_argument("--vae_pretrained_dir", type=str,
+                        default='../../../result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000005/pytorch_model.bin')
     args = parser.parse_args()
     main(args)
+
