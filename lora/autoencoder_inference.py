@@ -37,6 +37,7 @@ try:
         ipex_init()
 except Exception:
     pass
+from accelerate import Accelerator
 
 def main(args):
 
@@ -54,7 +55,7 @@ def main(args):
     set_seed(args.seed)
 
     print(f' (3) accelerator')
-    accelerator = train_util.prepare_accelerator(args)
+    accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps,)
     is_main_process = accelerator.is_main_process
 
     print(f'\n step 2. model')
@@ -112,5 +113,6 @@ if __name__ == "__main__":
     parser.add_argument("--log_with", type=str, default=None, choices=["tensorboard", "wandb", "all"],)
     parser.add_argument("--output_dir", type=str, default=None)
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument("--gradient_accumulation_steps", type=int,default=1,)
     args = parser.parse_args()
     main(args)
