@@ -61,7 +61,7 @@ def main(args):
     print(f'\n step 2. model')
     print(f' (1) mixed precision and model')
     weight_dtype, save_dtype = train_util.prepare_dtype(args)
-    vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
+    vae_dtype = torch.float32
     print(f' (2) model')
     text_encoder, vae, unet, _ = train_util.load_target_model(weight_dtype, accelerator)
     # lr schedulerを用意する
