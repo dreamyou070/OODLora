@@ -498,7 +498,7 @@ class NetworkTrainer:
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
                         image.save(os.path.join(save_dir, f'recon_{epoch}.png'))
-                
+
 
 
 
