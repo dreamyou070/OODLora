@@ -63,7 +63,7 @@ def main(args):
     weight_dtype, save_dtype = train_util.prepare_dtype(args)
     vae_dtype = torch.float32
     print(f' (2) model')
-    text_encoder, vae, unet, _ = train_util.load_target_model(weight_dtype, accelerator)
+    text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
     # lr schedulerを用意する
     discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=3,
                                        out_channels=3,kernel_size=4, activation=(Act.LEAKYRELU, {"negative_slope": 0.2, }),
