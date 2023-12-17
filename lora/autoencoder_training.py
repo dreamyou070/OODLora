@@ -489,6 +489,7 @@ class NetworkTrainer:
                 with torch.no_grad():
                     if accelerator.is_main_process:
                         inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
+                        img = img.to(inf_vae.device)
 
                         recon_img = inf_vae(img).sample
 
