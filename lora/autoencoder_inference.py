@@ -71,7 +71,7 @@ def main(args):
 
     print(f' (3) loading state')
     vae_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000001/pytorch_model.bin'
-    discriminator_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/discriminator_model_model/discriminator_model_epoch_000001/pytorch_model.bin'
+    discriminator_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/discriminator_model/discriminator_epoch_000001/pytorch_model.bin'
     vae.load_state_dict(torch.load(vae_pretrained_dir))
     discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
     vae.requires_grad_(False)
