@@ -430,7 +430,6 @@ class NetworkTrainer:
         epoch_disc_loss_list = []
         autoencoder_warm_up_n_epochs = 2
         for epoch in range(num_train_epochs):
-            """
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
@@ -464,7 +463,6 @@ class NetworkTrainer:
                     optimizer.step()
 
             # ------------------------------------------------------------------------------------------
-            """
             if args.save_every_n_epochs is not None and epoch+1 % args.save_every_n_epochs == 0:
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
@@ -490,17 +488,13 @@ class NetworkTrainer:
                     if accelerator.is_main_process:
                         inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
                         img = img.to(inf_vae.device)
-
                         recon_img = inf_vae(img).sample
-
-                        #latents = inf_vae.encode(img).latent_dist.sample()
-                        #recon_img = inf_vae.decode(latents).sample
                         recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                         image = (recon_img * 255).astype(np.uint8)
                         image = Image.fromarray(image)
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'recon_{epoch}.png'))
+                        image.save(os.path.join(save_dir, f'recon_epoch_{epoch}.png'))
 
 
 
