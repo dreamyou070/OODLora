@@ -572,7 +572,6 @@ if __name__ == "__main__":
     parser.add_argument("--net_key_names", type=str, default='text')
     parser.add_argument("--mask_threshold", type=float, default=0.5)
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
-    parser.add_argument("--resume", action="store_true",)
     # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
