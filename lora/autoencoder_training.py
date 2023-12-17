@@ -472,10 +472,18 @@ class NetworkTrainer:
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
                     trg_epoch = str(epoch+1).zfill(6)
+                    # ------------------------------------------------------------------------
                     ckpt_name = f'vae_epoch_{trg_epoch}.safetensors'
-                    save_model(ckpt_name, accelerator.unwrap_model(vae), global_step, epoch)
+                    save_directory = os.path.join(args.output_dir, 'vae_model')
+                    os.makedirs(save_directory, exist_ok=True)
+                    accelerator.save_model(vae, os.path.join(save_directory, ckpt_name))
+
+                    # ------------------------------------------------------------------------
                     ckpt_name = f'discriminator_epoch_{trg_epoch}.safetensors'
-                    save_model(ckpt_name, accelerator.unwrap_model(discriminator), global_step, epoch)
+                    save_directory = os.path.join(args.output_dir, 'discriminator_model')
+                    os.makedirs(save_directory, exist_ok=True)
+                    accelerator.save_model(discriminator, os.path.join(save_directory, ckpt_name))
+
             if args.sample_every_n_epochs is not None and epoch+1 % args.sample_every_n_epochs == 0 :
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
                 h,w = args.resolution.split(',')
