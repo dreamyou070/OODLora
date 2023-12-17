@@ -15,7 +15,9 @@ ml load cuda/11.0
 
 python finding_best_scheduler.py --device cuda:3 \
    --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
-   --network_module networks.lora --network_dim 64 --network_alpha 4 --prompt 'good' --sample_sampler ddim --num_ddim_steps 50 --output_dir ../../../result \
-   --network_weights ../result/MVTec_experiment/bagel/3_contrastive_learning_eps_0.0_increase_generality/epoch-000003.safetensors \
+   --network_module networks.lora \
+   --network_dim 64 --network_alpha 4 \
+   --prompt 'good' \
+   --sample_sampler ddim --num_ddim_steps 50 --output_dir ../../../result \
+   --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
    --concept_image_folder ../../../MyData/anomaly_detection/MVTecAD/bagel
-
