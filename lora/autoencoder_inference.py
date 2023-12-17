@@ -88,8 +88,8 @@ def main(args):
     print('sampling')
     sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
     print(f'args.resolution: {args.resolution}')
-    h,w = args.resolution
-    img = load_image(sample_data_dir, int(h), int(w))
+    h,w = args.resolution.split(',')[0], args.resolution.split(',')[1]
+    img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
     img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
     with torch.no_grad():
         img = img.to(vae.device)
