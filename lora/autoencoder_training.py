@@ -494,7 +494,21 @@ class NetworkTrainer:
                         image = Image.fromarray(image)
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'recon_epoch_{epoch}.png'))
+                        image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch}.png'))
+                sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png'
+                img = load_image(sample_data_dir, int(h), int(w))
+                img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
+                with torch.no_grad():
+                    if accelerator.is_main_process:
+                        inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
+                        img = img.to(inf_vae.device)
+                        recon_img = inf_vae(img).sample
+                        recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        image = (recon_img * 255).astype(np.uint8)
+                        image = Image.fromarray(image)
+                        save_dir = os.path.join(args.output_dir, 'sample')
+                        os.makedirs(save_dir, exist_ok=True)
+                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch}.png'))
 
 
 
