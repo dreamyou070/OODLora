@@ -119,5 +119,7 @@ if __name__ == "__main__":
                         help="fp16 training including gradients / 勾配も含めてfp16で学習する")
     parser.add_argument("--full_bf16", action="store_true", help="bf16 training including gradients / 勾配も含めてbf16で学習する")
     parser.add_argument("--save_precision", type=str, default="no", choices=["no", "fp16", "bf16"],)
+    parser.add_argument("--lowram",action="store_true",
+                        help="enable low RAM optimization. e.g. load models to VRAM instead of RAM ",)
     args = parser.parse_args()
     main(args)
