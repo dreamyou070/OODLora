@@ -12,4 +12,4 @@ python image_inverting.py --device cuda:5 \
   --repeat_time 51 \
   --self_attn_threshold_time 1000 \
   --final_time 700 \
-  --using_customizing_scheduling
+  --with_new_noising_alphas_cumprod
