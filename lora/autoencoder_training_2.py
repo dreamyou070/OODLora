@@ -248,7 +248,9 @@ class NetworkTrainer:
         #optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args,
         #                                                                     trainable_params)
         vae_encoder = vae.encoder
+
         vae_encoder_quantize = vae.quant_conv
+
         vae_encoder.requires_grad_(False)
         vae_encoder_quantize.requires_grad_(False)
         vae_encoder.eval()
@@ -309,7 +311,9 @@ class NetworkTrainer:
         num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
         if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
             args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
-
+            
+        vae_encoder.to(accelerator.device, dtype=vae_dtype)
+        vae_encoder_quantize.to(accelerator.device, dtype=vae_dtype)
 
         # 学習する
         # TODO: find a way to handle total batch size when there are multiple datasets
@@ -476,7 +480,7 @@ class NetworkTrainer:
                 print('saving model')
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
-                    trg_epoch = str(epoch+4).zfill(6)
+                    trg_epoch = str(epoch+1).zfill(6)
                     # ------------------------------------------------------------------------
                     ckpt_name = f'vae_epoch_{trg_epoch}'
                     save_directory = os.path.join(args.output_dir, 'vae_model')
@@ -505,7 +509,7 @@ class NetworkTrainer:
                         image = Image.fromarray(image)
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch+2}.png'))
+                        image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch+1}.png'))
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png'
                 img = load_image(sample_data_dir, int(h), int(w))
                 img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
@@ -519,7 +523,7 @@ class NetworkTrainer:
                         image = Image.fromarray(image)
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch+5}.png'))
+                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch+1}.png'))
 
 
 if __name__ == "__main__":
