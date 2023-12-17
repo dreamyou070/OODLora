@@ -289,6 +289,20 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     next_sample = alpha_prod_t_next_matrix ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
+def customizing_next_step(model_output: Union[torch.FloatTensor, np.ndarray],
+                          timestep: int,
+                          next_timestep: int,
+                          sample: Union[torch.FloatTensor, np.ndarray],
+                          alphas_cumprod_dict):
+    alpha_prod_t = alphas_cumprod_dict[timestep]
+    alpha_prod_t_next = alphas_cumprod_dict[next_timestep]
+    beta_prod_t = 1 - alpha_prod_t
+    next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+    next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
+    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
+    return next_sample
+
+
 def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
@@ -321,7 +335,7 @@ def latent2image_customizing(latents, vae, factor, return_type='np'):
 
 
 @torch.no_grad()
-def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer):
+def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer,alphas_cumprod_dict):
     uncond_embeddings, cond_embeddings = context.chunk(2)
     time_steps = []
     latent = latent.clone().detach()
@@ -343,12 +357,14 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             time_steps.append(t.item())
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[int(t.item())] = noise_pred
-            latent = next_step(noise_pred, int(t.item()), latent, scheduler)
-
+            if args.with_new_noising_alphas_cumprod :
+                latent = customizing_next_step(noise_pred, int(t.item()), int(next_time), latent, alphas_cumprod_dict)
+            else :
+                latent = next_step(noise_pred, int(t.item()), latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
-            #pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
+            pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
             repeat_time += 1
     #time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
@@ -376,9 +392,6 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
-
-
-
         with torch.no_grad():
             noise_pred = call_unet(unet, latent, t, con, t, prev_time)
             latent = prev_step(noise_pred, int(t), latent, scheduler)
@@ -519,16 +532,30 @@ def main(args) :
     network.to(device)
 
     print(f' (2.4) scheduling factors')
-    vae_factor_dict = r'../result/inference_decoding_factor_txt.txt'
+    if args.with_new_vae_factor :
+        vae_factor_dict = r'../result/inference_decoding_factor_txt.txt'
 
-    with open(vae_factor_dict, 'r') as f:
-        content = f.readlines()
-    inference_decoding_factor = {}
-    for line in content:
-        line = line.strip()
-        line = line.split(' : ')
-        t, f = int(line[0]), float(line[1])
-        inference_decoding_factor[t] = f
+        with open(vae_factor_dict, 'r') as f:
+            content = f.readlines()
+        inference_decoding_factor = {}
+        for line in content:
+            line = line.strip()
+            line = line.split(' : ')
+            t, f = int(line[0]), float(line[1])
+            inference_decoding_factor[t] = f
+    elif args.with_new_noising_alphas_cumprod :
+        inference_decoding_factor = {}
+        alphas_cumprod_dict_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/record/lora_noising_pretrained_denoising_decoding_factor_txt.txt'
+        alphas_cumprod_dict = {}
+        with open(alphas_cumprod_dict_dir, 'r') as f:
+            content = f.readlines()
+        for line in content:
+            line = line.strip()
+            line = line.split(' : ')
+            t, f = int(line[0]), float(line[1])
+            alphas_cumprod_dict[t] = f
+
+
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
@@ -566,7 +593,8 @@ def main(args) :
                                                                     unet=invers_unet,
                                                                     vae=vae,
                                                                     base_folder_dir=timewise_save_base_folder,
-                                                                    attention_storer=attention_storer)
+                                                                    attention_storer=attention_storer,
+                                                                    alphas_cumprod_dict=alphas_cumprod_dict,)
 
                     # self query / key / value dictionary
                     layer_names = attention_storer.self_query_store.keys()
@@ -817,6 +845,11 @@ if __name__ == "__main__":
     parser.add_argument("--self_attn_threshold_time", type=int, default=1)
     parser.add_argument("--using_customizing_scheduling", action="store_true",)
     parser.add_argument("--final_time", type=int, default = 600)
+    parser.add_argument("--with_new_vae_factor", action='store_true')
+    parser.add_argument("--with_new_noising_alphas_cumprod", action='store_true')
+
+
+
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)

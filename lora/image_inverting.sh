@@ -2,14 +2,14 @@ python image_inverting.py --device cuda:5 \
   --process_title parksooyeon \
   --pretrained_model_name_or_path /data7/sooyeon/pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 \
-  --network_weights /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/3_contrastive_learning_eps_0.0_increase_generality/epoch-000005.safetensors \
+  --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
   --prompt 'good' \
   --inversion_experiment \
   --sample_sampler ddim \
   --num_ddim_steps 50 \
-  --output_dir /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/3_contrastive_learning_eps_0.0_increase_generality \
+  --output_dir ../result/MVTec_experiment/bagel/unet_training/new_alphas_cumprod_noising \
   --concept_image_folder ../../../MyData/anomaly_detection/MVTecAD/bagel \
   --repeat_time 51 \
-  --self_attn_threshold_time 0 \
-  --final_time 980 \
+  --self_attn_threshold_time 1000 \
+  --final_time 700 \
   --using_customizing_scheduling
