@@ -87,6 +87,7 @@ def main(args):
     print(f'\n step 3. inference')
     print('sampling')
     sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
+    print(f'args.resolution: {args.resolution}')
     h,w = args.resolution
     img = load_image(sample_data_dir, int(h), int(w))
     img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
