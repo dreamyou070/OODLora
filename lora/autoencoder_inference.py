@@ -95,8 +95,10 @@ def main(args):
     vae_epoch = int(vae_epoch.split('_')[-1])
 
     def recon(sample_data_dir, save_dir, compare_save_dir):
-        Image.open(sample_data_dir).save(compare_save_dir)
+        pil_img = Image.open(sample_data_dir)
         h, w = args.resolution.split(',')[0], args.resolution.split(',')[1]
+        pil_img = pil_img.resize((h,w), Image.BICUBIC)
+        pil_img.save(compare_save_dir)
         img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
         img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
         with torch.no_grad():
