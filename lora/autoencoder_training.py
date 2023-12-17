@@ -406,7 +406,6 @@ class NetworkTrainer:
         epoch_disc_loss_list = []
         autoencoder_warm_up_n_epochs = 2
         for epoch in range(num_train_epochs):
-
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
@@ -416,29 +415,37 @@ class NetworkTrainer:
             gen_epoch_loss = 0
             disc_epoch_loss = 0
             for step, batch in enumerate(train_dataloader):
-                with torch.autograd.set_detect_anomaly(True) :
-                # ------------------------------------------------------------------------------------------
-                    # generator training
-                    optimizer.zero_grad(set_to_none=True)
+                log_loss = {}
+                # generator training
+                optimizer.zero_grad(set_to_none=True)
+                with autocast(enabled=True):
+                    reconstruction = vae(batch['images']).sample
+                    recons_loss = l1_loss(reconstruction.float(), batch['images'].float())
+                    p_loss = perceptual_loss(reconstruction.float(), batch['images'].float())
+                    logits_fake = discriminator(reconstruction.contiguous().float())[-1]
+
+                    generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
+                    loss_g = recons_loss + p_loss * perceptual_weight + generator_loss * adv_weight
+                    total_loss = loss_g
+                    log_loss['loss/recons_loss'] = recons_loss
+                    log_loss['loss/perceptual_loss'] = p_loss
+                    log_loss['loss/discriminator_g_loss'] = generator_loss
+                if epoch > autoencoder_warm_up_n_epochs:
                     with autocast(enabled=True):
-                        reconstruction = vae(batch['images']).sample
-                        recons_loss = l1_loss(reconstruction.float(), batch['images'].float())
-                        p_loss = perceptual_loss(reconstruction.float(), batch['images'].float())
-                        logits_fake = discriminator(reconstruction.contiguous().float())[-1]
-
-                        generator_loss = adv_loss(logits_fake, target_is_real=True, for_discriminator=False)
-                        loss_g = recons_loss + p_loss * perceptual_weight + generator_loss * adv_weight
-                        total_loss = loss_g
-                    if epoch > autoencoder_warm_up_n_epochs:
-                        with autocast(enabled=True):
-                            loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
-                            logits_real = discriminator(batch['images'].contiguous().detach())[-1]
-                            loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
-                            loss_d = (loss_d_fake + loss_d_real) * 0.5
-                        total_loss += loss_d
-                    total_loss.backward()
-                    optimizer.step()
-
+                        loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
+                        logits_real = discriminator(batch['images'].contiguous().detach())[-1]
+                        loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
+                        loss_d = (loss_d_fake + loss_d_real) * 0.5
+                        log_loss['loss/discriminator_d_fake_loss'] = loss_d_fake
+                        log_loss['loss/discriminator_d_real_loss'] = loss_d_real
+                    total_loss += loss_d
+                total_loss.backward()
+                optimizer.step()
+                if accelerator.sync_gradients:
+                    progress_bar.update(1)
+                    global_step += 1
+                    if is_main_process:
+                        wandb.log(log_loss, step=global_step)
             # ------------------------------------------------------------------------------------------
             if args.save_every_n_epochs is not None and epoch+1 % args.save_every_n_epochs == 0:
                 print('saving model')
