@@ -55,17 +55,17 @@ class Inference(object):
 
     def load_model(self,):
         teacher_ckpt = torch.load(self.model_path+'/best_teacher.pth',map_location=torch.device(self.device))
-        student_ckpt = torch.load(self.model_path+'/{}_student.pth'.format(self.category),map_location=torch.device(self.device))
-        ae_ckpt = torch.load(self.model_path+'/{}_autoencoder.pth'.format(self.category),map_location=torch.device(self.device))
+        #student_ckpt = torch.load(self.model_path+'/{}_student.pth'.format(self.category),map_location=torch.device(self.device))
+        #ae_ckpt = torch.load(self.model_path+'/{}_autoencoder.pth'.format(self.category),map_location=torch.device(self.device))
         self.teacher.load_state_dict(teacher_ckpt)
-        self.student.load_state_dict(student_ckpt)
-        self.ae.load_state_dict(ae_ckpt)
+        #self.student.load_state_dict(student_ckpt)
+        #self.ae.load_state_dict(ae_ckpt)
         self.teacher.eval()
-        self.student.eval()
-        self.ae.eval()
+        #self.student.eval()
+        #self.ae.eval()
         self.teacher.to(self.device)
-        self.student.to(self.device)
-        self.ae.to(self.device)
+        #self.student.to(self.device)
+        #self.ae.to(self.device)
         quantiles = np.load(self.model_path+'/{}_quantiles.npy'.format(self.category),allow_pickle=True).item()
         self.qa_st = torch.tensor(quantiles['qa_st'],device=self.device)
         self.qb_st = torch.tensor(quantiles['qb_st'],device=self.device)
@@ -142,17 +142,23 @@ class Inference(object):
             name = sample_batched['name'][0]
             label = sample_batched['type'][0]
             total_gt_pixel_scores = torch.cat((total_gt_pixel_scores,sample_batched['gt'].view(-1)))
+
             combined_map,image_score = self.infer_single(sample_batched)
             scores.append(image_score.item())
             total_pixel_scores = torch.cat((total_pixel_scores,combined_map.detach().cpu().view(-1)))
             out_dir = '{}/{}'.format(self.result_path,label)
             if not os.path.exists(out_dir):
                 os.makedirs(out_dir)
-            out_im_path = "{}/{}.png".format(out_dir,name)
-            out_im_np = combined_map[0,0,:,:].cpu().detach().numpy()
-            out_im_np = ((out_im_np).clip(0,1)*255).astype(np.uint8)
+            #out_im_path = "{}/{}.png".format(out_dir,name)
+            # -----------------------------------------------------------------------------------------------------
+            # (1)
+            out_im_np = ((combined_map[0,0,:,:].cpu().detach().numpy()).clip(0,1)*255).astype(np.uint8)
             out_im_np_rgb = cv2.cvtColor(out_im_np,cv2.COLOR_GRAY2RGB)
+            # -----------------------------------------------------------------------------------------------------
+            # (2) mask map
             out_im_thresh = cv2.threshold(out_im_np, 100, 255, cv2.THRESH_BINARY )[1]
+            # -----------------------------------------------------------------------------------------------------
+            # (3) mask map in color
             out_im_thresh = cv2.cvtColor(out_im_thresh,cv2.COLOR_GRAY2RGB)
 
             origin_img = sample_batched['image'][0].cpu().detach().numpy()
@@ -163,9 +169,12 @@ class Inference(object):
             origin_with_fmap = cv2.addWeighted(origin_img_np,0.5,color_fmap,0.5,0)
             gt_np = sample_batched['gt'][0].cpu().detach().numpy()
             gt_rgb = cv2.cvtColor((gt_np[0,:,:]*255).astype(np.uint8),cv2.COLOR_GRAY2RGB)
+
             # pdb.set_trace()
             out_hstack = np.hstack((origin_img_np,gt_rgb,origin_with_fmap,out_im_np_rgb,out_im_thresh))
+
             cv2.imwrite(out_im_path,out_hstack)
+
         gtnp = np.array(gts)
         scorenp = np.array(scores)
         total_gt_pixel_scoresnp = total_gt_pixel_scores.cpu().detach().numpy().astype('uint8')
