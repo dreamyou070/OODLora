@@ -187,7 +187,7 @@ if __name__ == "__main__":
     # val_dir = 'data/uniad224data/'
     # model_path = 'ckptS_T'
     # label = "HC_35IL1CROP"
-    val_dir = 'data/MVTec_AD/'
+    val_dir = '/data7/sooyeon/MyData/anomaly_detection/VisA/MVTec_AD'
     model_path = 'ckptSmall'
     label = "bottle"
     infer = Inference(label,
