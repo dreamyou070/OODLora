@@ -526,6 +526,8 @@ if __name__ == "__main__":
     parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")
     parser.add_argument("--text_encoder_lr", type=float, default=None,
                         help="learning rate for Text Encoder / Text Encoderの学習率")
+    parser.add_argument("--vae", type=str, default=None,
+                        help="path to checkpoint of vae to replace / VAEを入れ替える場合、VAEのcheckpointファイルまたはディレクトリ")
 
     # step 5. optimizer
     train_util.add_optimizer_arguments(parser)
