@@ -12,7 +12,7 @@ conda activate venv
 ml purge
 ml load cuda/11.0
 
-accelerate launch --config_file ../../../gpu_config/gpu_4_5_config --main_process_port 54589 autoencoder_training_2.py \
+accelerate launch --config_file ../../../gpu_config/gpu_6_7_config --main_process_port 56789 autoencoder_training_2.py \
   --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 \
   --log_with wandb --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
   --wandb_init_name bagel_training --wandb_run_name vae_decoder_training \
@@ -25,7 +25,7 @@ accelerate launch --config_file ../../../gpu_config/gpu_4_5_config --main_proces
   --train_data_dir ../../../MyData/anomaly_detection/autoencoder_training/bad \
   --class_caption 'good' \
   --contrastive_eps 0.0 \
-  --perceptual_weight 0.08 \
+  --perceptual_weight 0.001 \
   --resume_vae_training \
   --vae_pretrained_dir /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_decoder_training/vae_model/vae_epoch_000003/pytorch_model.bin \
   --discriminator_pretrained_dir /data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_decoder_training/discriminator_model/discriminator_epoch_000003/pytorch_model.bin
