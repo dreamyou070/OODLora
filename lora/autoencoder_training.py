@@ -473,22 +473,21 @@ class NetworkTrainer:
                 if accelerator.is_main_process:
                     trg_epoch = str(epoch+1).zfill(6)
                     # ------------------------------------------------------------------------
-                    ckpt_name = f'vae_epoch_{trg_epoch}.safetensors'
+                    ckpt_name = f'vae_epoch_{trg_epoch}'
                     save_directory = os.path.join(args.output_dir, 'vae_model')
                     os.makedirs(save_directory, exist_ok=True)
                     accelerator.save_model(vae, os.path.join(save_directory, ckpt_name))
 
                     # ------------------------------------------------------------------------
-                    ckpt_name = f'discriminator_epoch_{trg_epoch}.safetensors'
-                    save_directory = os.path.join(args.output_dir, 'discriminator_model')
-                    os.makedirs(save_directory, exist_ok=True)
-                    accelerator.save_model(discriminator, os.path.join(save_directory, ckpt_name))
+                    d_save_directory = os.path.join(args.output_dir, 'discriminator_model')
+                    os.makedirs(d_save_directory, exist_ok=True)
+                    accelerator.save_model(discriminator, os.path.join(d_save_directory, f'discriminator_epoch_{trg_epoch}'))
 
             if args.sample_every_n_epochs is not None and epoch+1 % args.sample_every_n_epochs == 0 :
                 print('sampling')
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
                 h,w = args.resolution
-                img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
+                img = load_image(sample_data_dir, int(h), int(w))
                 img = IMAGE_TRANSFORMS(img)
                 latents = vae.encode(img)['sample']
                 recon_img = vae.decode(latents)['sample']
