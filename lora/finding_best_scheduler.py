@@ -132,17 +132,17 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     next_sample = alpha_prod_t_next_matrix ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
+
+
 def customizing_next_step(model_output: Union[torch.FloatTensor, np.ndarray],
-                          alpha_cumprod_t,
-                          alpha_cumprod_t_next,
+                          alpha_prod_t,
+                          alpha_prod_t_next,
                           sample: Union[torch.FloatTensor, np.ndarray],):
-    sample_coefficient = (alpha_cumprod_t_next/alpha_cumprod_t)**0.5
-    model_output_coefficient = sample_coefficient * ((1-alpha_cumprod_t)**0.5) - (1-alpha_cumprod_t_next)**0.5
-    next_sample = sample_coefficient * sample - model_output_coefficient * model_output
+    beta_prod_t = 1 - alpha_prod_t
+    next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+    next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
+    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
-
-
-
 
 
 
@@ -531,7 +531,7 @@ def main(args):
         vae.requires_grad_(False)
         for i, present_t in enumerate(flip_times[:-1]):
             next_t = flip_times[i + 1] # torch
-            print(f'Finding {next_t.item()} noising alpha vaue')
+            print(f'Finding {next_t.item()} noising alpha value')
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, present_t, uncon, None, None)
 
@@ -543,9 +543,7 @@ def main(args):
             for j in range(10000):
                 alpha_before = alpha.clone().detach()
                 latent_next = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
-
-
-                next_noise_pred = call_unet(unet, latent_next, next_t, uncon, next_t, present_t)
+                next_noise_pred = call_unet(unet, latent_next, next_t, uncon, None, None)
                 recon_latent = prev_step(next_noise_pred, next_t.item(), sample = latent_next, scheduler=scheduler)
                 loss = torch.nn.functional.mse_loss(latent.float(), recon_latent.float(), reduction="none")
                 loss = loss.mean([1,2,3]).mean()
@@ -558,7 +556,7 @@ def main(args):
                     alpha = alpha_before
                     break
             customizing_alphas_cumprod_dict[next_t.item()] = alpha.clone().detach().item()
-            latent = latent_next
+            latent = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
             # ----------------------------------------------------------------------------------------------- #
             # Testing
             #np_img = latent2image(recon_latent , vae, return_type='np')

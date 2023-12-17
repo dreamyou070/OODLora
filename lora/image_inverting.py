@@ -289,19 +289,17 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     next_sample = alpha_prod_t_next_matrix ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
-
 def customizing_next_step(model_output: Union[torch.FloatTensor, np.ndarray],
                           timestep: int,
                           next_timestep: int,
                           sample: Union[torch.FloatTensor, np.ndarray],
                           alphas_cumprod_dict):
-    alpha_cumprod_t = alphas_cumprod_dict[timestep]
-    alpha_cumprod_t_next = alphas_cumprod_dict[next_timestep]
-    beta_prod_t = 1 - alpha_cumprod_t
-    sample_coefficient = (alpha_cumprod_t_next / alpha_cumprod_t) ** 0.5
-    model_output_coefficient = sample_coefficient * ((1 - alpha_cumprod_t) ** 0.5) - (1 - alpha_cumprod_t_next) ** 0.5
-    next_sample = sample_coefficient * sample - model_output_coefficient * model_output
-
+    alpha_prod_t = alphas_cumprod_dict[timestep]
+    alpha_prod_t_next = alphas_cumprod_dict[next_timestep]
+    beta_prod_t = 1 - alpha_prod_t
+    next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+    next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
+    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
 
@@ -580,7 +578,7 @@ def main(args) :
             latent = image2latent(image_gt_np, vae, device, weight_dtype)
             save_base_folder = os.path.join(output_dir,
                                             f'train/noising_inverse_unet_denoising_lora_{args.num_ddim_steps}_model_epoch_{model_epoch}')
-            print(f' - save_base_folder : {save_base_folder}')
+
             os.makedirs(save_base_folder, exist_ok=True)
             train_base_folder = os.path.join(save_base_folder, concept_name)
             os.makedirs(train_base_folder, exist_ok=True)
@@ -590,6 +588,7 @@ def main(args) :
             for ii, final_time in enumerate(flip_times[1:]):
                 if final_time == args.final_time :
                     timewise_save_base_folder = os.path.join(train_base_folder, f'final_time_{final_time.item()}')
+                    print(f' - save_base_folder : {timewise_save_base_folder}')
                     os.makedirs(timewise_save_base_folder, exist_ok=True)
                     latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
                                                                     context=invers_context,
