@@ -13,18 +13,14 @@ from PIL import Image
 import sys, importlib
 from typing import Union
 import numpy as np
-import copy
-
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
 try:
     import intel_extension_for_pytorch as ipex
-
     if torch.xpu.is_available():
         from library.ipex import ipex_init
-
         ipex_init()
 except Exception:
     pass
@@ -137,12 +133,19 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     return next_sample
 
 def customizing_next_step(model_output: Union[torch.FloatTensor, np.ndarray],
-                          alpha_cumprod_t, alpha_cumprod_t_next,
+                          alpha_cumprod_t,
+                          alpha_cumprod_t_next,
                           sample: Union[torch.FloatTensor, np.ndarray],):
     sample_coefficient = (alpha_cumprod_t_next/alpha_cumprod_t)**0.5
     model_output_coefficient = sample_coefficient * ((1-alpha_cumprod_t)**0.5) - (1-alpha_cumprod_t_next)**0.5
     next_sample = sample_coefficient * sample - model_output_coefficient * model_output
     return next_sample
+
+
+
+
+
+
 
 def register_attention_control(unet : nn.Module, controller:AttentionStore) :
     """ Register cross attention layers to controller. """
@@ -530,7 +533,7 @@ def main(args):
             next_t = flip_times[i + 1] # torch
             print(f'Finding {next_t.item()} noising alpha vaue')
             with torch.no_grad():
-                noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
+                noise_pred = call_unet(unet, latent, present_t, uncon, None, None)
 
             alpha_cumprod_t = customizing_alphas_cumprod_dict[present_t.item()]
             alpha = scheduler.alphas_cumprod[next_t.item()].detach()
@@ -540,6 +543,8 @@ def main(args):
             for j in range(10000):
                 alpha_before = alpha.clone().detach()
                 latent_next = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
+
+
                 next_noise_pred = call_unet(unet, latent_next, next_t, uncon, next_t, present_t)
                 recon_latent = prev_step(next_noise_pred, next_t.item(), sample = latent_next, scheduler=scheduler)
                 loss = torch.nn.functional.mse_loss(latent.float(), recon_latent.float(), reduction="none")

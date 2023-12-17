@@ -289,17 +289,19 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     next_sample = alpha_prod_t_next_matrix ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
+
 def customizing_next_step(model_output: Union[torch.FloatTensor, np.ndarray],
                           timestep: int,
                           next_timestep: int,
                           sample: Union[torch.FloatTensor, np.ndarray],
                           alphas_cumprod_dict):
-    alpha_prod_t = alphas_cumprod_dict[timestep]
-    alpha_prod_t_next = alphas_cumprod_dict[next_timestep]
-    beta_prod_t = 1 - alpha_prod_t
-    next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
-    next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
-    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
+    alpha_cumprod_t = alphas_cumprod_dict[timestep]
+    alpha_cumprod_t_next = alphas_cumprod_dict[next_timestep]
+    beta_prod_t = 1 - alpha_cumprod_t
+    sample_coefficient = (alpha_cumprod_t_next / alpha_cumprod_t) ** 0.5
+    model_output_coefficient = sample_coefficient * ((1 - alpha_cumprod_t) ** 0.5) - (1 - alpha_cumprod_t_next) ** 0.5
+    next_sample = sample_coefficient * sample - model_output_coefficient * model_output
+
     return next_sample
 
 
