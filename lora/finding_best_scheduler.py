@@ -509,7 +509,7 @@ def main(args):
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
     train_images = os.listdir(train_img_folder)
-    noising_alphas_cumprod_text_file = r'../result/lora_noising_scheduler_alphas_cumprod.txt'
+    noising_alphas_cumprod_text_file = r'../result/lora_noising_scheduler_alphas_cumprod_2_20231218.txt'
     customizing_alphas_cumprod_dict = {}
     customizing_alphas_cumprod_dict[0] = scheduler.alphas_cumprod[0]
     line = f'0 : {scheduler.alphas_cumprod[0].clone().detach().item()}'
@@ -522,7 +522,7 @@ def main(args):
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         parent, network_name = os.path.split(args.network_weights)
         name, ext = os.path.splitext(network_name)
-        save_base_folder = os.path.join(parent, f'inference_scheduling')
+        save_base_folder = os.path.join(parent, f'inference_scheduling_2_20231218')
         os.makedirs(save_base_folder, exist_ok=True)
         flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
         uncon, con = invers_context.chunk(2)
@@ -559,9 +559,9 @@ def main(args):
             latent = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
             # ----------------------------------------------------------------------------------------------- #
             # Testing
-            #np_img = latent2image(recon_latent , vae, return_type='np')
-            #pil_img = Image.fromarray(np_img)
-            #pil_img.save(os.path.join(save_base_folder, f'recon_{int(present_t.item())}.png'))  # 999
+            np_img = latent2image(latent , vae, return_type='np')
+            pil_img = Image.fromarray(np_img)
+            pil_img.save(os.path.join(save_base_folder, f'noising_{int(present_t.item())}.png'))  # 999
             line = f'{next_t.item()} : {alpha.clone().detach()}'
             with open(noising_alphas_cumprod_text_file, 'a') as ff:
                 ff.write(line + '\n')
