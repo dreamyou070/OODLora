@@ -117,7 +117,7 @@ if __name__ == "__main__":
                         choices=[None, "ckpt", "pt", "safetensors"],
                         help="format to save the model (default is .safetensors) / モデル保存時の形式（デフォルトはsafetensors）", )
     parser.add_argument("--device", type=str, default='cuda:0')
-
+    parser.add_argument("--resolution", type=str, default=None, help="resolution in training ('size' or 'width,height') ", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)

@@ -3281,7 +3281,7 @@ def add_dataset_arguments(parser: argparse.ArgumentParser, support_dreambooth: b
     parser.add_argument("--random_crop", action="store_true",
                         help="enable random crop (for style training in face-centered crop augmentation) / ランダムな切り出しを有効にする（顔を中心としたaugmentationを行うときに画風の学習用に指定する）",    )
     parser.add_argument("--debug_dataset", action="store_true", help="show images for debugging (do not train) / デバッグ用に学習データを画面表示する（学習は行わない）"    )
-    parser.add_argument( "--resolution", type=str,        default=None,
+    parser.add_argument( "--resolution", type=str, default=None,
                          help="resolution in training ('size' or 'width,height') / 学習時の画像解像度（'サイズ'指定、または'幅,高さ'指定）",    )
     parser.add_argument("--cache_latents",        action="store_true",        help="cache latents to main memory to reduce VRAM usage (augmentations must be disabled) / VRAM削減のためにlatentをメインメモリにcacheする（augmentationは使用不可） ",)
     parser.add_argument("--vae_batch_size", type=int, default=1, help="batch size for caching latents / latentのcache時のバッチサイズ")
