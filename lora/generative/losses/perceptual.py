@@ -20,21 +20,18 @@ from torchvision.models.feature_extraction import create_feature_extractor
 
 class PerceptualLoss(nn.Module):
     """
-    Perceptual loss using features from pretrained deep neural networks trained. The function supports networks
-    pretrained on: ImageNet that use the LPIPS approach from Zhang, et al. "The unreasonable effectiveness of deep
-    features as a perceptual metric." https://arxiv.org/abs/1801.03924 ; RadImagenet from Mei, et al. "RadImageNet: An
-    Open Radiologic Deep Learning Research Dataset for Effective Transfer Learning"
-    https://pubs.rsna.org/doi/full/10.1148/ryai.210315 ; MedicalNet from Chen et al. "Med3D: Transfer Learning for
-    3D Medical Image Analysis" https://arxiv.org/abs/1904.00625 ;
+    Perceptual loss using features from pretrained deep neural networks trained.
+    The function supports networks pretrained on: ImageNet that use the LPIPS approach from Zhang, et al.
+    "The unreasonable effectiveness of deep features as a perceptual metric." https://arxiv.org/abs/1801.03924 ; RadImagenet from Mei, et al.
+    "RadImageNet: An Open Radiologic Deep Learning Research Dataset for Effective Transfer Learning"
+    https://pubs.rsna.org/doi/full/10.1148/ryai.210315 ; MedicalNet from Chen et al.
+    "Med3D: Transfer Learning for 3D Medical Image Analysis" https://arxiv.org/abs/1904.00625 ;
     and ResNet50 from Torchvision: https://pytorch.org/vision/main/models/generated/torchvision.models.resnet50.html .
-
-    The fake 3D implementation is based on a 2.5D approach where we calculate the 2D perceptual on slices from the
-    three axis.
-
+    The fake 3D implementation is based on a 2.5D approach where we calculate the 2D perceptual on slices from the three axis.
     Args:
         spatial_dims: number of spatial dimensions.
         network_type: {``"alex"``, ``"vgg"``, ``"squeeze"``, ``"radimagenet_resnet50"``,
-        ``"medicalnet_resnet10_23datasets"``, ``"medicalnet_resnet50_23datasets"``, ``"resnet50"``}
+                       ``"medicalnet_resnet10_23datasets"``, ``"medicalnet_resnet50_23datasets"``, ``"resnet50"``}
             Specifies the network architecture to use. Defaults to ``"alex"``.
         is_fake_3d: if True use 2.5D approach for a 3D perceptual loss.
         fake_3d_ratio: ratio of how many slices per axis are used in the 2.5D approach.
@@ -84,10 +81,10 @@ class PerceptualLoss(nn.Module):
                 net=network_type,
                 pretrained=pretrained,
                 pretrained_path=pretrained_path,
-                pretrained_state_dict_key=pretrained_state_dict_key,
-            )
+                pretrained_state_dict_key=pretrained_state_dict_key, )
         else:
-            self.perceptual_function = LPIPS(pretrained=pretrained, net=network_type, verbose=False)
+            self.perceptual_function = LPIPS(pretrained=pretrained,
+                                             net=network_type, verbose=False)
         self.is_fake_3d = is_fake_3d
         self.fake_3d_ratio = fake_3d_ratio
 
