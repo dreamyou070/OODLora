@@ -23,10 +23,9 @@ import library.huggingface_util as huggingface_util
 import library.custom_train_functions as custom_train_functions
 from library.custom_train_functions import prepare_scheduler_for_custom_training
 import torch
-from torch import nn
-from functools import lru_cache
-from attention_store import AttentionStore
-
+from utils.image_utils import load_image, latent2image, IMAGE_TRANSFORMS
+import numpy as np
+from PIL import Image
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -467,17 +466,30 @@ class NetworkTrainer:
                     optimizer.step()
 
                 # ------------------------------------------------------------------------------------------
-            if epoch > int(num_train_epochs/2) :
-                # vae save
-                vae_save_dir = os.path.join(args.output_dir, f'vae_epoch_{epoch+1}.pt')
-                torch.save({'model_state_dict': vae.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict(),},
-                           vae_save_dir)
-                # discriminator save
-                discriminator_save_dir = os.path.join(args.output_dir, f'discriminator_epoch_{epoch+1}.pt')
-                torch.save({'model_state_dict': discriminator.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict(),},
-                           discriminator_save_dir)
+            if args.save_every_n_epochs is not None and global_step % args.save_every_n_epochs == 0:
+                accelerator.wait_for_everyone()
+                if accelerator.is_main_process:
+                    trg_epoch = str(epoch+1).zfill(6)
+                    ckpt_name = f'vae_epoch_{trg_epoch}.safetensors'
+                    save_model(ckpt_name, accelerator.unwrap_model(vae), global_step, epoch)
+                    ckpt_name = f'discriminator_epoch_{trg_epoch}.safetensors'
+                    save_model(ckpt_name, accelerator.unwrap_model(discriminator), global_step, epoch)
+            if args.sample_every_n_epochs is not None and epoch % args.sample_every_n_epochs == 0 :
+                sample_data_dir = os.path.join(args.output_dir, 'sample_data')
+                h,w = args.resolution.split(',')
+                img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
+                img = IMAGE_TRANSFORMS(img)
+                latents = vae.encode(img)['sample']
+                recon_img = vae.decode(latents)['sample']
+                recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                image = (recon_img * 255).astype(np.uint8)
+                image = Image.fromarray(image)
+                save_dir = os.path.join(args.output_dir, 'sample')
+                os.makedirs(save_dir, exist_ok=True)
+                image.save(os.path.join(save_dir, f'recon_{epoch}.png'))
+
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
