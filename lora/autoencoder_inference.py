@@ -114,5 +114,9 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", type=str, default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--gradient_accumulation_steps", type=int,default=1,)
+    parser.add_argument("--mixed_precision", type=str, default="no", choices=["no", "fp16", "bf16"],)
+    parser.add_argument("--full_fp16", action="store_true",
+                        help="fp16 training including gradients / 勾配も含めてfp16で学習する")
+    parser.add_argument("--full_bf16", action="store_true", help="bf16 training including gradients / 勾配も含めてbf16で学習する")
     args = parser.parse_args()
     main(args)
