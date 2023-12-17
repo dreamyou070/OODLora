@@ -449,6 +449,7 @@ class NetworkTrainer:
                     ckpt_name = f'vae_epoch_{trg_epoch}'
                     save_directory = os.path.join(args.output_dir, 'vae_model')
                     os.makedirs(save_directory, exist_ok=True)
+                    print(f'saving model to {save_directory}')
                     accelerator.save_model(vae, os.path.join(save_directory, ckpt_name))
 
                     # ------------------------------------------------------------------------
