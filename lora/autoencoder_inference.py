@@ -121,5 +121,7 @@ if __name__ == "__main__":
     parser.add_argument("--save_precision", type=str, default="no", choices=["no", "fp16", "bf16"],)
     parser.add_argument("--lowram",action="store_true",
                         help="enable low RAM optimization. e.g. load models to VRAM instead of RAM ",)
+    parser.add_argument("--vae", type=str, default=None,
+                        help="path to checkpoint of vae to replace / VAEを入れ替える場合、VAEのcheckpointファイルまたはディレクトリ")
     args = parser.parse_args()
     main(args)
