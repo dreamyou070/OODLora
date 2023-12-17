@@ -69,10 +69,14 @@ def main(args):
                                        out_channels=3,kernel_size=4, activation=(Act.LEAKYRELU, {"negative_slope": 0.2, }),
                                        norm="BATCH", bias=False, padding=1, )
 
-    print(f' (3) loading state')
+    print(f' (3) making encoder of vae')
+    vae_encoder = vae.encoder
+
+    print(f' (4) making decoder of vae')
     vae_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000001/pytorch_model.bin'
     discriminator_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/discriminator_model/discriminator_epoch_000001/pytorch_model.bin'
     vae.load_state_dict(torch.load(vae_pretrained_dir))
+    vae_decoder = vae.decoder
     discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
 
     vae.requires_grad_(False)
@@ -93,14 +97,24 @@ def main(args):
     img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
     with torch.no_grad():
         img = img.to(vae.device)
+        # ------------------
+        # (1) encoder
         latents = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample()
-        recon_img = vae.decode(latents).sample
+        from diffusers.models.vae import DiagonalGaussianDistribution
+        h = vae_encoder(img.to(dtype=vae_dtype))
+        moments = vae.quant_conv(h)
+        posterior = DiagonalGaussianDistribution(moments)
+        latent = posterior.sample()
+
+        # (2) decoder
+        z = vae.post_quant_conv(latent)
+        recon_img = vae_decoder(z).sample
         recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
         image = (recon_img * 255).astype(np.uint8)
         image = Image.fromarray(image)
         save_dir = os.path.join(args.output_dir, 'test')
         os.makedirs(save_dir, exist_ok=True)
-        image.save(os.path.join(save_dir, f'anormal_recon_test.png'))
+        image.save(os.path.join(save_dir, f'original_encoder_trained_decoder_anormal_recon_test.png'))
 
 
 if __name__ == "__main__":
