@@ -586,7 +586,8 @@ def main(args) :
             flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
             original_latent = latent.clone().detach()
             for ii, final_time in enumerate(flip_times[1:]):
-                if final_time == args.final_time :
+                print(f' - final_time : {final_time.item()}')
+                if final_time.item() == args.final_time :
                     timewise_save_base_folder = os.path.join(train_base_folder, f'final_time_{final_time.item()}')
                     print(f' - save_base_folder : {timewise_save_base_folder}')
                     os.makedirs(timewise_save_base_folder, exist_ok=True)
