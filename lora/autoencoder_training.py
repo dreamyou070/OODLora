@@ -488,11 +488,12 @@ class NetworkTrainer:
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
                 h,w = args.resolution
                 img = load_image(sample_data_dir, int(h), int(w))
-                img = IMAGE_TRANSFORMS(img)
+                img = IMAGE_TRANSFORMS(img).to(dtype=weight_dtype)
+
                 with torch.no_grad():
                     if accelerator.is_main_process:
                         inf_vae = accelerator.unwrap_model(vae)
-                        latents = inf_vae.encode(img).latent_dist.mode()
+                        latents = inf_vae.encode(img).latent_dist.sample()
                         recon_img = inf_vae.decode(latents).sample
                         recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                         image = (recon_img * 255).astype(np.uint8)
