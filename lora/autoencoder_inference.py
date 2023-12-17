@@ -101,17 +101,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
     parser.add_argument("--process_title", type=str, default='parksooyeon')
-    # parser.add_argument("--wandb_init_name", type=str)
     parser.add_argument("--wandb_log_template_path", type=str)
     parser.add_argument("--wandb_key", type=str)
-
-    # step 2. dataset
-    train_util.add_dataset_arguments(parser, True, True, True)
-    parser.add_argument("--mask_dir", type=str, default='')
-    parser.add_argument("--no_metadata", action="store_true",
-                        help="do not save metadata in output model / メタデータを出力先モデルに保存しない")
-
-    # step 5. optimizer
     config_util.add_config_arguments(parser)
     parser.add_argument("--save_model_as", type=str, default="safetensors",
                         choices=[None, "ckpt", "pt", "safetensors"],
