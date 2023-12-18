@@ -223,7 +223,10 @@ class NetworkTrainer:
         for name, child in student.named_children():
             try :
                 for n, c in child.named_children() :
-                    print(f' {name} : {n} : {c.__class__.__name__}')
+                    try :
+                        c.named_children()
+                    except :
+                        print(f'{n} : {c.__class__.__name__} does not have named children')
             except :
                 print(f'not having child name : {name}')
 
