@@ -353,8 +353,7 @@ class Student(nn.Module):
         self.quant_layer = base_quant_layer
         self.model = base_model
 
-
-
+    """
     def init_model(self):  # if mask_threshold is 1, use itself
 
         def _init_weights(module):
@@ -377,6 +376,7 @@ class Student(nn.Module):
                 print(f'{name} : {module.__class__.__name__}')
             else:
                 self._init_model(module)
+    """
 
     def forward(self, x):
         x = self.quant_layer(x)
