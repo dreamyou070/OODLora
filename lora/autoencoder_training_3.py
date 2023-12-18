@@ -229,8 +229,8 @@ class NetworkTrainer:
                     #if module.weight.
                     #print('no more')
                     #print(f'{name} : {module.__class__.__name__}')
-                    weight_data = module.weight.data
-                    print(f'{name} : {weight_data.shape}')
+                    #weight_data = module.weight.data
+                    print(f'{name} : no have child')
         init_model(student)
         """
         init_model(student)
