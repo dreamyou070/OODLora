@@ -221,9 +221,10 @@ class NetworkTrainer:
 
         for name, module in student.named_modules():
             try :
-                module.named_modules()
+                for name, m in module.named_modules() :
+                    print(f'{name} : {m.__class__.__name__}')
             except :
-                print(f'not haing modules, name : {name}')
+                print(f'not having modules, name : {name}')
         """        
         def init_model(model):  # if mask_threshold is 1, use itself
             for name, module in model.named_modules():
