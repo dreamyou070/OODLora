@@ -288,7 +288,7 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     #next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     next_sample = alpha_prod_t_next_matrix ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
-
+"""
 def customizing_next_step(model_output: Union[torch.FloatTensor, np.ndarray],
                           timestep: int,
                           next_timestep: int,
@@ -301,7 +301,16 @@ def customizing_next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
     next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
-
+"""
+def customizing_next_step(model_output: Union[torch.FloatTensor, np.ndarray],
+                          alpha_prod_t,
+                          alpha_prod_t_next,
+                          sample: Union[torch.FloatTensor, np.ndarray],):
+    beta_prod_t = 1 - alpha_prod_t
+    next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+    next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
+    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
+    return next_sample
 
 def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
@@ -358,8 +367,10 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
             noise_pred_dict[int(t.item())] = noise_pred
             if args.with_new_noising_alphas_cumprod :
-                latent = customizing_next_step(noise_pred, int(t.item()),
-                                               int(next_time), latent, alphas_cumprod_dict).to(noise_pred.dtype)
+                latent = customizing_next_step(noise_pred,
+                                               alphas_cumprod_dict[int(t.item())],
+                                               alphas_cumprod_dict[int(next_time)],
+                                               latent).to(noise_pred.dtype)
                 latent = latent.to(vae.device)
             else :
                 latent = next_step(noise_pred, int(t.item()), latent, scheduler)
