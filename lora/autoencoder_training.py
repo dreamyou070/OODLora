@@ -213,7 +213,7 @@ class NetworkTrainer:
         vae_decoder_quantize = vae.post_quant_conv
 
         teacher = Teacher(vae_decoder, vae_decoder_quantize)
-        original_state_dict = teacher.state_dict().clone().detach()
+        original_state_dict = teacher.state_dict().detach()
 
         student = Student(vae_decoder, vae_decoder_quantize)
         new_state_dict = {}
@@ -226,7 +226,7 @@ class NetworkTrainer:
                 new_state_dict[k] = v * 0
         student.load_state_dict(new_state_dict)
         teacher.load_state_dict(original_state_dict)
-        
+
         teacher.requires_grad_(False)
         teacher.eval()
         teacher.to(dtype=weight_dtype)
