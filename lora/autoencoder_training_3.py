@@ -225,7 +225,7 @@ class NetworkTrainer:
 
         print(f' step 6. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
-        train_dataloader = torch.utils.data.DataLoader(train_dataset_group, batch_size=1, shuffle=True,
+        train_dataloader = torch.utils.data.DataLoader(train_dataset_group, batch_size=args.train_batch_size, shuffle=True,
                                                        collate_fn=collater, num_workers=n_workers,
                                                        persistent_workers=args.persistent_data_loader_workers, )
         if args.max_train_epochs is not None:
