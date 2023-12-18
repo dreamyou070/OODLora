@@ -536,6 +536,8 @@ def main(args):
             alpha_cumprod_t = customizing_alphas_cumprod_dict[present_t.item()]
             if next_t.item() in customizing_alphas_cumprod_dict.keys():
                 alpha = customizing_alphas_cumprod_dict[next_t.item()]
+                with torch.no_grad():
+                    noise_pred = call_unet(unet, latent, present_t, uncon, None, None)
             else :
                 print(f'Finding {next_t.item()} noising alpha value')
                 with torch.no_grad():
