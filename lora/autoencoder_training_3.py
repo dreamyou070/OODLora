@@ -5,7 +5,6 @@ from monai.networks.layers import Act
 from torch.nn import L1Loss
 import math
 import os
-from torch.cuda.amp import GradScaler, autocast
 import random
 import time
 import json
@@ -16,10 +15,8 @@ from accelerate.utils import set_seed
 from diffusers import DDPMScheduler
 from library import model_util
 import library.train_util as train_util
-from library.train_util import (DreamBoothDataset, )
 import library.config_util as config_util
 from library.config_util import (ConfigSanitizer, BlueprintGenerator, )
-import library.huggingface_util as huggingface_util
 import library.custom_train_functions as custom_train_functions
 from library.custom_train_functions import prepare_scheduler_for_custom_training
 import torch
@@ -27,6 +24,7 @@ from utils.image_utils import load_image, latent2image, IMAGE_TRANSFORMS
 import numpy as np
 from PIL import Image
 from diffusers.models.vae import DiagonalGaussianDistribution
+from STTraining import Teacher, Student
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -138,24 +136,19 @@ class NetworkTrainer:
             args.seed = random.randint(0, 2 ** 32)
         set_seed(args.seed)
 
+
         print(f'\n step 2. dataset')
         tokenizer = self.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
-
         train_util.prepare_dataset_args(args, True)
-        cache_latents = args.cache_latents
-        use_dreambooth_method = args.in_json is None
-        use_user_config = args.dataset_config is not None
         use_class_caption = args.class_caption is not None
-
         if args.dataset_class is None:
             blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
             print("Using DreamBooth method.")
             user_config = {}
             user_config['datasets'] = [{"subsets": None}]
             subsets_dict_list = []
-            for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
-                                                                                          args.reg_data_dir,
+            for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,args.reg_data_dir,
                                                                                           args.class_caption):
                 if use_class_caption:
                     subsets_dict['class_caption'] = args.class_caption
@@ -168,24 +161,20 @@ class NetworkTrainer:
             blueprint.dataset_group
             print(f'blueprint.dataset_group : {blueprint.dataset_group}')
             train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
-
         else:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
 
         current_epoch = Value("i", 0)
         current_step = Value("i", 0)
-
         ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
         collater = train_util.collater_class(current_epoch, current_step, ds_for_collater)
-
         if args.debug_dataset:
             train_util.debug_dataset(train_dataset_group)
             return
         if len(train_dataset_group) == 0:
-            print(
-                "No data found. Please verify arguments (train_data_dir must be the parent of folders with images) / 画像がありません。引数指定を確認してください（train_data_dirには画像があるフォルダではなく、画像があるフォルダの親フォルダを指定する必要があります）"
-                )
+            print("No data found. (train_data_dir must be the parent of folders with images) ")
             return
+
 
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
@@ -193,6 +182,7 @@ class NetworkTrainer:
         if args.log_with == 'wandb' and is_main_process:
             import wandb
             wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
+
 
         print(f'\n step 4. save directory')
         save_base_dir = args.output_dir
@@ -202,51 +192,15 @@ class NetworkTrainer:
         with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
 
+
         print(f'\n step 5. mixed precision and model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
-        print(f' weight_dtype : {weight_dtype} | save_dtype : {save_dtype} | vae_dtype : {vae_dtype}')
         model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
         train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
         if torch.__version__ >= "2.0.0":  # PyTorch 2.0.0 以上対応のxformersなら以下が使える
             vae.set_use_memory_efficient_attention_xformers(args.xformers)
-
-
-
-        # dataloaderを準備する
-        # DataLoaderのプロセス数：0はメインプロセスになる
-        print(f' step7. dataloader')
-        n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)  # cpu_count-1 ただし最大で指定された数まで
-        train_dataloader = torch.utils.data.DataLoader(train_dataset_group,
-                                                       batch_size=1,
-                                                       shuffle=True,
-                                                       collate_fn=collater,
-                                                       num_workers=n_workers,
-                                                       persistent_workers=args.persistent_data_loader_workers, )
-        if args.max_train_epochs is not None:
-            args.max_train_steps = args.max_train_epochs * math.ceil(
-                len(train_dataloader) / accelerator.num_processes / args.gradient_accumulation_steps)
-            accelerator.print(
-                f"override steps. steps for {args.max_train_epochs} epochs is / 指定エポックまでのステップ数: {args.max_train_steps}")
-        # データセット側にも学習ステップを送信
-        # train_dataset_group.set_max_train_steps(args.max_train_steps)
-
-        # lr schedulerを用意する
-        discriminator = PatchDiscriminator(spatial_dims=2,
-                                           num_layers_d=3,
-                                           num_channels=64,
-                                           in_channels=3,
-                                           out_channels=3,
-                                           kernel_size=4,
-                                           activation=(Act.LEAKYRELU, {"negative_slope": 0.2, }),
-                                           norm="BATCH",
-                                           bias=False,
-                                           padding=1, )
-        perceptual_loss = PerceptualLoss(spatial_dims=2,
-                                         network_type="alex")
-        #optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args,
-        #                                                                     trainable_params)
         vae_encoder = vae.encoder
         vae_encoder_quantize = vae.quant_conv
         vae_encoder.requires_grad_(False)
@@ -255,35 +209,39 @@ class NetworkTrainer:
         vae_encoder_quantize.eval()
         vae_encoder.to(dtype=weight_dtype)
         vae_encoder_quantize.to(dtype=weight_dtype)
-
         vae_decoder = vae.decoder
         vae_decoder_quantize = vae.post_quant_conv
-        from STTraining import Teacher, Student
         teacher = Teacher(vae_decoder, vae_decoder_quantize)
-
         teacher.requires_grad_(False)
         teacher.eval()
         teacher.to(dtype=weight_dtype)
-
         student = Student(vae_decoder, vae_decoder_quantize)
         modules = student.children()
         for module in modules:
             student._init_weights(module)
-
-        optimizer = torch.optim.AdamW([{'params' : student.parameters(),'lr' :1e-4 },
-                                       {'params' : discriminator.parameters(),'lr':5e-4 }],)
-        lr_scheduler = train_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
-
-
-        # 実験的機能：勾配も含めたfp16学習を行う　PyTorchにパッチを当ててfp16でのgrad scaleを有効にする
-        if args.full_fp16:
-            train_util.patch_accelerator_for_fp16_training(accelerator)
-
-        # resumeする
-        train_util.resume_from_local_or_hf_if_specified(accelerator, args)
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders: t_enc.requires_grad_(False)
+
+        print(f' step 6. dataloader')
+        n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
+        train_dataloader = torch.utils.data.DataLoader(train_dataset_group, batch_size=1, shuffle=True,
+                                                       collate_fn=collater, num_workers=n_workers,
+                                                       persistent_workers=args.persistent_data_loader_workers, )
+        if args.max_train_epochs is not None:
+            args.max_train_steps = args.max_train_epochs * math.ceil(len(train_dataloader) / accelerator.num_processes / args.gradient_accumulation_steps)
+            accelerator.print( f"override steps. steps for {args.max_train_epochs} epochs is / 指定エポックまでのステップ数: {args.max_train_steps}")
+
+        print(f'\n step 7. optimizer and lr')
+        optimizer = torch.optim.AdamW([{'params' : student.parameters(),'lr' :1e-4 },],)
+        lr_scheduler = train_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
+
+
+        if args.full_fp16:
+            train_util.patch_accelerator_for_fp16_training(accelerator)
+
+        print(f'\n step 8. resume')
+        train_util.resume_from_local_or_hf_if_specified(accelerator, args)
         """
         if args.resume_vae_training :
             vae_pretrained_dir = args.vae_pretrained_dir
@@ -450,11 +408,12 @@ class NetworkTrainer:
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad(set_to_none=True)
-            if accelerator.sync_gradients:
-                progress_bar.update(1)
-                global_step += 1
-                if is_main_process:
-                    wandb.log(log_loss, step=global_step)
+                log_loss['loss'] = loss.mean().item()
+                if accelerator.sync_gradients:
+                    progress_bar.update(1)
+                    global_step += 1
+                    if is_main_process:
+                        wandb.log(log_loss, step=global_step)
             # ------------------------------------------------------------------------------------------
             if args.save_every_n_epochs is not None:
                 print('saving model')
