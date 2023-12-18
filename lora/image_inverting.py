@@ -609,7 +609,8 @@ def main(args) :
                                                                     base_folder_dir=timewise_save_base_folder,
                                                                     attention_storer=attention_storer,
                                                                     alphas_cumprod_dict=alphas_cumprod_dict,)
-
+                    attention_storer.reset()
+                    """
                     # self query / key / value dictionary
                     layer_names = attention_storer.self_query_store.keys()
                     self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
@@ -641,12 +642,11 @@ def main(args) :
                                 i += 1
                     #collector = AttentionStore()
                     #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                    
+                    """
                     time_steps.reverse()
-
+                    print(f'time_steps : {time_steps}')
                     # timesteps = [0,20]
                     context = init_prompt(tokenizer, text_encoder, device, prompt)
-                    
                     #collector = AttentionStore()
                     #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
                     
