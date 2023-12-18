@@ -214,9 +214,9 @@ class NetworkTrainer:
 
         teacher = Teacher(vae_decoder, vae_decoder_quantize)
 
-        config_dict = vae.config_dict
+        config_dict = vae.config
         from diffusers import AutoencoderKL
-        student_vae = AutoencoderKL.from_config_dict(config_dict)
+        student_vae = AutoencoderKL.from_config(config_dict)
         student_vae_decoder = student_vae.decoder
         student_vae_decoder_quantize = student_vae.post_quant_conv
         student = Student(student_vae_decoder, student_vae_decoder_quantize)
