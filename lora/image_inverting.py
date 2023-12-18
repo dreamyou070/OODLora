@@ -547,7 +547,7 @@ def main(args) :
 
     print(f' (2.4) scheduling factors')
     if args.with_new_vae_factor :
-        vae_factor_dict = r'../result/lora_noising_scheduler_alphas_cumprod_2_20231218.txt'
+        vae_factor_dict = '../result/lora_noising_pretrained_denoising_decoding_factor_txt.txt'
         with open(vae_factor_dict, 'r') as f:
             content = f.readlines()
         inference_decoding_factor = {}
@@ -558,7 +558,7 @@ def main(args) :
             inference_decoding_factor[t] = f
     elif args.with_new_noising_alphas_cumprod :
         inference_decoding_factor = {}
-        alphas_cumprod_dict_dir = '../result/lora_noising_pretrained_denoising_decoding_factor_txt.txt'
+        alphas_cumprod_dict_dir = r'../result/lora_noising_scheduler_alphas_cumprod_2_20231218.txt'
         alphas_cumprod_dict = {}
         with open(alphas_cumprod_dict_dir, 'r') as f:
             content = f.readlines()
