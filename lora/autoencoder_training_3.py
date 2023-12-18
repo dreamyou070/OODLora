@@ -226,9 +226,11 @@ class NetworkTrainer:
                     module.named_childern()
                     init_model(module)
                 except :
-                    print('no more')
-                    print(f'{name} : {module.__class__.__name__}')
-
+                    #if module.weight.
+                    #print('no more')
+                    #print(f'{name} : {module.__class__.__name__}')
+                    weight_data = module.weight.data
+                    print(f'{name} : {weight_data.shape}')
         init_model(student)
         """
         init_model(student)
