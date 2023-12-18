@@ -395,10 +395,10 @@ class NetworkTrainer:
                 # generator training
                 optimizer.zero_grad(set_to_none=True)
                 with torch.no_grad():
-                    h = vae_encoder(batch['images'].to(dtype=vae_dtype))
+                    h = vae_encoder(batch['images'].to(dtype=weight_dtype))
                     latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
-                    y = teacher(latent)
-                y_hat = student(latent)
+                    y = teacher(latent.to(dtype=weight_dtype))
+                y_hat = student(latent.to(dtype=weight_dtype))
                 loss = torch.nn.functional.mse_loss(y_hat, y, reduction = 'none')
                 loss = loss.mean([1,2,3])
                 loss = loss.mean()
