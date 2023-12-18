@@ -25,6 +25,6 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config --main_proc
   --resolution 512,512 \
   --save_every_n_epochs 1 \
   --sample_every_n_epochs 1 \
-  --train_batch_size 2 \
+  --train_batch_size 1 \
   --max_train_steps 100000 \
   --train_data_dir ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/train/good/rgb
