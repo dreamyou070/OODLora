@@ -224,6 +224,7 @@ class NetworkTrainer:
         teacher.requires_grad_(False)
         teacher.eval()
         teacher.to(dtype=weight_dtype)
+        teacher.to(accelerator.device)
 
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
