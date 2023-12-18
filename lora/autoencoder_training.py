@@ -220,9 +220,9 @@ class NetworkTrainer:
         new_state_dict = {}
         for k, v in student.state_dict().items():
             if 'weight' in k :
-                new_state_dict[k] = torch.nn.init.normal_(torch.empty(v.shape))
+                new_state_dict[k] = torch.nn.init.normal_(torch.empty(v.shape)) *0
             else :
-                new_state_dict[k] = torch.nn.init.ones_(torch.empty(v.shape))
+                new_state_dict[k] = torch.nn.init.ones_(torch.empty(v.shape)) *0
         student.load_state_dict(new_state_dict)
 
         unet.requires_grad_(False)
