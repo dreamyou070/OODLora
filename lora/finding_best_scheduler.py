@@ -513,10 +513,10 @@ def main(args):
     customizing_alphas_cumprod_dict = {}
     customizing_alphas_cumprod_dict[0] = scheduler.alphas_cumprod[0]
     customizing_alphas_cumprod_dict[20] = 0.8318988084793091
-
-    line = f'0 : {scheduler.alphas_cumprod[0].clone().detach().item()}'
-    with open(noising_alphas_cumprod_text_file, 'a') as ff:
-        ff.write(line + '\n')
+    customizing_alphas_cumprod_dict[40] = 0.4213506579399109
+    #line = f'0 : {scheduler.alphas_cumprod[0].clone().detach().item()}'
+    #with open(noising_alphas_cumprod_text_file, 'a') as ff:
+    #    ff.write(line + '\n')
     for train_img in train_images:
         train_img_dir = os.path.join(train_img_folder, train_img)
         print(f' (2.3.1) get suber image')
@@ -554,7 +554,7 @@ def main(args):
                         loss = torch.nn.functional.mse_loss(latent.float(), recon_latent.float(), reduction="none")
                         loss = loss.mean([1,2,3]).mean()
                         optimizer.zero_grad()
-                        loss.backward(retain_graph=True)
+                        loss.backward()
                         optimizer.step()
                         if loss.item() < 0.00001 :
                             break
