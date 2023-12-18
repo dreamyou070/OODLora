@@ -222,18 +222,19 @@ class NetworkTrainer:
         # named_children = right child
         for name, child in student.named_children():
             try :
-                child.named_children()
+                for n, c in child.named_children() :
+                    print(f' {name} : {n} : {c.__class__.__name__}')
             except :
                 print(f'not having child name : {name}')
-        """        
+
         def init_model(model):  # if mask_threshold is 1, use itself
-            for name, module in model.named_modules():
-                
+            for name, module in model.named_children():
                 try :
-                    weight = module.weight.data
-                    print(f'{name} finish : {weight}')
+                    module.named_children()
+                    init_model(module)
                 except :
                     init_model(module)
+        """
         init_model(student)
         """
 
