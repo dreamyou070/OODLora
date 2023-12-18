@@ -217,10 +217,16 @@ class NetworkTrainer:
         teacher.to(dtype=weight_dtype)
         student = Student(vae_decoder, vae_decoder_quantize)
 
-        for name , module in student.named_children():
-            print(f'{name} ')
-            #student._init_weights(module)
-            #print(f'[{name} ')
+        def init_model(model):  # if mask_threshold is 1, use itself
+            for name, net in model.named_children():
+                if net.named_childer() :
+                    print(f'{name} still have children')
+                    init_model(net)
+                else :
+                    print(f'{name} finish')
+        init_model(student)
+        """
+        
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders: t_enc.requires_grad_(False)
@@ -245,11 +251,13 @@ class NetworkTrainer:
         print(f'\n step 8. resume')
         train_util.resume_from_local_or_hf_if_specified(accelerator, args)
         """
+        """
         if args.resume_vae_training :
             vae_pretrained_dir = args.vae_pretrained_dir
             discriminator_pretrained_dir = args.discriminator_pretrained_dir
             vae.load_state_dict(torch.load(vae_pretrained_dir))
             discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
+        """
         """
         student, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student, optimizer, train_dataloader, lr_scheduler,)
 
@@ -419,7 +427,8 @@ class NetworkTrainer:
                     os.makedirs(save_directory, exist_ok=True)
                     print(f'saving model to {save_directory}')
                     accelerator.save_model(student, os.path.join(save_directory, ckpt_name))
-            """
+        """
+        """
 
             if args.sample_every_n_epochs is not None:
                 print('sampling')
