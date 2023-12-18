@@ -221,12 +221,12 @@ class NetworkTrainer:
 
 
         def init_model(model):  # if mask_threshold is 1, use itself
-            for name, child in model.named_children():
+            for name, module in model.named_module():
                 try :
-                    for name, module in child.named_childeren() :
-                        init_model(module)
+                    weight = module.weight.data
+                    print(f'{name} finish : {weight}')
                 except :
-                    print(f'{name} finish')
+                    init_model(module)
         init_model(student)
 
 
