@@ -219,16 +219,22 @@ class NetworkTrainer:
         #for name, module in student.named_modules():
         #    print(f'{name} : {module.__class__.__name__}')
 
-
+        for name, module in student.named_modules():
+            try :
+                module.named_modules()
+            except :
+                print(f'not haing modules, name : {name}')
+        """        
         def init_model(model):  # if mask_threshold is 1, use itself
             for name, module in model.named_modules():
+                
                 try :
                     weight = module.weight.data
                     print(f'{name} finish : {weight}')
                 except :
                     init_model(module)
         init_model(student)
-
+        """
 
         """
         
