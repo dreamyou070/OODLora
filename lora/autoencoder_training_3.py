@@ -220,7 +220,7 @@ class NetworkTrainer:
         new_state_dict = {}
         for k, v in student.state_dict().items():
             print(f'k : {k} | {v.shape}')
-            
+
         """
         def init_model(model):  # if mask_threshold is 1, use itself
             for name, module in model.named_children():
@@ -444,7 +444,7 @@ class NetworkTrainer:
                     accelerator.save_model(student, os.path.join(save_directory, ckpt_name))
 
         """
-            """
+        """
             if args.sample_every_n_epochs is not None:
                 print('sampling')
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
