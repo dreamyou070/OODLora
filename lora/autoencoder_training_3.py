@@ -216,18 +216,14 @@ class NetworkTrainer:
         teacher.eval()
         teacher.to(dtype=weight_dtype)
         student = Student(vae_decoder, vae_decoder_quantize)
-        #for name, module in student.named_modules():
-        #    print(f'{name} : {module.__class__.__name__}')
-        #def get_child(model) :
-        #    for name, module in model.named_children():
 
-
-        for name, module in student.named_children():
-            submodules = module.named_modules()
-            print(f'type of submodules : {type(submodules)}')
-            if len(list(submodules)) == 1:
-                print(f'{name} : {module.__class__.__name__}')
-
+        def init_model(model):  # if mask_threshold is 1, use itself
+            for name, module in model.named_children():
+                if len(list(module.named_modules())) == 1 :
+                    print(f'{name} : {module.__class__.__name__}')
+                else :
+                    init_model(module)
+        init_model(student)
         """
         def init_model(model):  # if mask_threshold is 1, use itself
             for name, module in model.named_children():
@@ -241,7 +237,7 @@ class NetworkTrainer:
                     #print(f'{name} : {module.__class__.__name__}')
                     #weight_data = module.weight.data
                     print(f'{name} : no have child')
-        init_model(student)
+        
         """
         """
         init_model(student)
