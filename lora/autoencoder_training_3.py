@@ -219,10 +219,11 @@ class NetworkTrainer:
         #for name, module in student.named_modules():
         #    print(f'{name} : {module.__class__.__name__}')
 
-        for name, module in student.named_modules():
+        for name, child in student.named_children():
             try :
-                for name, m in module.named_modules() :
-                    print(f'{name} : {m.__class__.__name__}')
+                child.named_modules()
+                #for name, m in  :
+                #    print(f'{name} : {m.__class__.__name__}')
             except :
                 print(f'not having modules, name : {name}')
         """        

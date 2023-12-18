@@ -354,10 +354,10 @@ class Student(nn.Module):
         self.model = base_model
 
     def _init_weights(self, module):
-        module.weight.data.normal_(mean=0.0, std=1.0)
-        if module.bias is not None:
-            module.bias.data.zero_()
-
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=1.0)
+            if module.bias is not None:
+                module.bias.data.zero_()
 
     def forward(self, x):
         x = self.quant_layer(x)
