@@ -227,7 +227,7 @@ class NetworkTrainer:
                     init_model(module)
                 except :
                     print('no more')
-                    init_model(module)
+                    print(f'{name} : {module.__class__.__name__}')
 
         init_model(student)
         """
