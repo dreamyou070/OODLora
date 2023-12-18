@@ -257,7 +257,7 @@ class NetworkTrainer:
         vae_encoder_quantize.to(dtype=weight_dtype)
 
         vae_decoder = vae.decoder
-        decoder_stat_dict = vae_decoder.state_dict
+        decoder_stat_dict = vae_decoder.state_dict()
         for k, v in decoder_stat_dict.items():
             print(f'key : {k} | value : {v}')
         #vae_decoder.reset_parameters()
