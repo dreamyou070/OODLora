@@ -216,7 +216,9 @@ class NetworkTrainer:
         teacher.eval()
         teacher.to(dtype=weight_dtype)
         student = Student(vae_decoder, vae_decoder_quantize)
-
+        for name, module in student.named_modules():
+            print(f'{name} : {module.__class__.__name__}')
+        """
         def init_model(model):  # if mask_threshold is 1, use itself
             for name, net in model.named_children():
                 if net.named_childeren() :
@@ -225,6 +227,8 @@ class NetworkTrainer:
                 else :
                     print(f'{name} finish')
         init_model(student)
+        """
+
         """
         
         unet.requires_grad_(False)
