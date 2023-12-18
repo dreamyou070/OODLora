@@ -10,7 +10,7 @@ import time
 import json
 from multiprocessing import Value
 from tqdm import tqdm
-import tomlp
+import toml
 from accelerate.utils import set_seed
 from diffusers import DDPMScheduler
 from library import model_util
