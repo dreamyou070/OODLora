@@ -220,11 +220,9 @@ class NetworkTrainer:
         #    print(f'{name} : {module.__class__.__name__}')
         for name, module in student.named_children():
             print(f'{name} : {module.__class__.__name__}')
-            if len(module.named_children()) > 0 :
-                for n,m in module.named_children():
-                    print(f'  - {n} : {m.__class__.__name__}')
-            else :
-                print(f'{name} does not have child')
+            for n,m in module.named_children():
+                print(f'  - {n} : {m.__class__.__name__}')
+            
 
         """
         def init_model(model):  # if mask_threshold is 1, use itself
