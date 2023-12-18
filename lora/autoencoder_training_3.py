@@ -226,57 +226,11 @@ class NetworkTrainer:
                                 torch.nn.init.normal_(param.data, 0, 0.01)
                             elif param_name == 'bias':
                                 torch.nn.init.constant_(param.data, 0)
-                        print(f'{name} : {module.__class__.__name__}')
                 else :
                     init_model(module)
         init_model(student)
-        """
 
-        def init_model(self):  # if mask_threshold is 1, use itself
 
-            def _init_weights(module):
-                for name, param in module.named_parameters():
-                    if name == 'weight':
-                        nn.init.normal_(param.data, 0, 0.01)
-                    elif name == 'bias':
-                        nn.init.constant_(param.data, 0)
-
-                if isinstance(module, nn.Linear):
-                    module.weight.data.normal_(mean=0.0, std=1.0)
-                    if module.bias is not None:
-                        module.bias.data.zero_()
-
-            for name, module in self.named_children():
-
-                if len(list(module.named_modules())) == 1:
-                    module.weight.data = module.weight.data
-                    module.
-                    print(f'{name} : {module.__class__.__name__}')
-                else:
-                    self._init_model(module)
-                    
-        """
-        """
-        def init_model(model):  # if mask_threshold is 1, use itself
-            for name, module in model.named_children():
-                print(f'{name} : no have child')
-                try :
-                    module.named_childern()
-                    init_model(module)
-                except :
-                    #if module.weight.
-                    #print('no more')
-                    #print(f'{name} : {module.__class__.__name__}')
-                    #weight_data = module.weight.data
-                    print(f'{name} : no have child')
-        
-        """
-        """
-        init_model(student)
-        """
-
-        """
-        
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders: t_enc.requires_grad_(False)
@@ -300,7 +254,7 @@ class NetworkTrainer:
 
         print(f'\n step 8. resume')
         train_util.resume_from_local_or_hf_if_specified(accelerator, args)
-        """
+
         """
         if args.resume_vae_training :
             vae_pretrained_dir = args.vae_pretrained_dir
@@ -308,7 +262,7 @@ class NetworkTrainer:
             vae.load_state_dict(torch.load(vae_pretrained_dir))
             discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
         """
-        """
+
         student, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student, optimizer, train_dataloader, lr_scheduler,)
 
         # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
@@ -477,7 +431,7 @@ class NetworkTrainer:
                     os.makedirs(save_directory, exist_ok=True)
                     print(f'saving model to {save_directory}')
                     accelerator.save_model(student, os.path.join(save_directory, ckpt_name))
-        """
+        
         """
 
             if args.sample_every_n_epochs is not None:
