@@ -234,7 +234,7 @@ class NetworkTrainer:
 
         student_dict = student.state_dict()
         teacher_dict = teacher.state_dict()
-        for k, v in student_dict.item() :
+        for k, v in student_dict.items() :
             t = teacher_dict[k]
             print(f'{k} : torch.equal(v, t) : {torch.equal(v, t)}')
         #for name, param in student.named_parameters():
