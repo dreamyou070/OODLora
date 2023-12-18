@@ -217,7 +217,10 @@ class NetworkTrainer:
         student = Student(vae_decoder, vae_decoder_quantize)
         print(f'student.named_parameters() : {type(student.named_parameters())}')
         #for name, param in student.named_parameters():
-        #    print(name, param.shape)
+        #    if 'weight' in name:
+        #        student.named_parameters()[name].data = torch.nn.init.normal_(torch.empty(param.shape)) * 100
+                #print(name, param.shape)
+            #print(name, param.shape)
         """
 
         import copy
