@@ -260,23 +260,14 @@ class NetworkTrainer:
         decoder_init_state_dict = {}
         decoder_stat_dict = vae_decoder.state_dict()
         for k, v in decoder_stat_dict.items():
-            print(f'key : {k} | value : {v}')
             decoder_init_state_dict[k] = torch.nn.init.normal_(v, mean=0.0, std=0.02)
         vae_decoder.load_state_dict(decoder_init_state_dict)
-        #vae_decoder.reset_parameters()
-        #torch.nn.init.normal_(vae_decoder.parameters(), mean=0.0, std=0.02)
         vae_decoder_quantize = vae.post_quant_conv
         decoder_quantize_init_state_dict = {}
         decoder_quantize_stat_dict = vae_decoder_quantize.state_dict()
         for k, v in decoder_quantize_stat_dict.items():
-            print(f'[quatized] key : {k} | value : {v}')
             decoder_quantize_init_state_dict[k] = torch.nn.init.normal_(v, mean=0.0, std=0.02)
         vae_decoder_quantize.load_state_dict(decoder_quantize_init_state_dict)
-        #vae_decoder_quantize.reset_parameters()
-        #torch.nn.init.normal_(vae_decoder_quantize.parameters(), mean=0.0, std=0.02)
-
-
-
 
         optimizer = torch.optim.AdamW([{'params' : vae_decoder.parameters(),'lr' :1e-4 },
                                        {'params' : vae_decoder_quantize.parameters(),'lr' :1e-4 },
@@ -460,10 +451,7 @@ class NetworkTrainer:
                 with autocast(enabled=True):
                     z = vae_decoder_quantize(latent)
                     reconstruction = vae_decoder(z)
-                    if args.l1_loss :
-                        recons_loss = l1_loss(reconstruction.float(), batch['images'].float())
-                    else :
-                        recons_loss = torch.nn.mse_loss(reconstruction.float(), batch['images'].float())
+                    recons_loss = l1_loss(reconstruction.float(), batch['images'].float())
                     p_loss = perceptual_loss(reconstruction.float(), batch['images'].float())
                     """
                     logits_fake = discriminator(reconstruction.contiguous().float())[-1]
