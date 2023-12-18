@@ -514,6 +514,7 @@ def main(args):
     customizing_alphas_cumprod_dict[0] = scheduler.alphas_cumprod[0]
     customizing_alphas_cumprod_dict[20] = 0.8318988084793091
     customizing_alphas_cumprod_dict[40] = 0.4213502109050751
+    customizing_alphas_cumprod_dict[60] = 0.4381713569164276
     #line = f'0 : {scheduler.alphas_cumprod[0].clone().detach().item()}'
     #with open(noising_alphas_cumprod_text_file, 'a') as ff:
     #    ff.write(line + '\n')
@@ -549,7 +550,11 @@ def main(args):
                     for j in range(500):
                         with torch.autograd.set_detect_anomaly(True):
                             #alpha_before = alpha.clone().detach()
-                            latent_next = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
+                            #latent_next = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
+
+                            beta_prod_t = 1 - alpha_cumprod_t
+                            next_original_sample = (latent - beta_prod_t ** 0.5 * noise_pred) / alpha_cumprod_t ** 0.5
+                            latent_next = alpha ** 0.5 * next_original_sample + (1 - alpha) ** 0.5 * noise_pred
                             next_noise_pred = call_unet(unet, latent_next, next_t, uncon, None, None)
                             recon_latent = prev_step(next_noise_pred, next_t.item(), sample = latent_next, scheduler=scheduler)
                             loss = torch.nn.functional.mse_loss(latent.float(), recon_latent.float(), reduction="none")
@@ -562,8 +567,9 @@ def main(args):
                             #if torch.isnan(alpha).any():
                             #    alpha = alpha_before
                             #    break
-                    customizing_alphas_cumprod_dict[next_t.item()] = alpha.clone().detach().item()
-                    line = f'{next_t.item()} : {alpha.clone().detach()}'
+                    a = alpha.clone().detach().item()
+                    customizing_alphas_cumprod_dict[next_t.item()] = a
+                    line = f'{next_t.item()} : {a}'
                     with open(noising_alphas_cumprod_text_file, 'a') as ff:
                         ff.write(line + '\n')
                 latent = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
