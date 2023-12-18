@@ -218,7 +218,7 @@ class NetworkTrainer:
         student = Student(vae_decoder, vae_decoder_quantize)
 
         for name , module in student.named_children():
-            print(f'{name} : {module.weight}')
+            print(f'{name} ')
             #student._init_weights(module)
             #print(f'[{name} ')
         unet.requires_grad_(False)
