@@ -218,11 +218,15 @@ class NetworkTrainer:
         student = Student(vae_decoder, vae_decoder_quantize)
         #for name, module in student.named_modules():
         #    print(f'{name} : {module.__class__.__name__}')
+        #def get_child(model) :
+        #    for name, module in model.named_children():
+
+
         for name, module in student.named_children():
-            print(f'{name} : {module.__class__.__name__}')
-            for n,m in module.named_children():
-                print(f'  - {n} : {m.__class__.__name__}')
-            
+            submodules = module.named_modules()
+            print(f'type of submodules : {type(submodules)}')
+            if len(list(submodules)) == 1:
+                print(f'{name} : {module.__class__.__name__}')
 
         """
         def init_model(model):  # if mask_threshold is 1, use itself
