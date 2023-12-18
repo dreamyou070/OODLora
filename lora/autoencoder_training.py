@@ -215,8 +215,9 @@ class NetworkTrainer:
         teacher = Teacher(vae_decoder, vae_decoder_quantize)
 
         student = Student(vae_decoder, vae_decoder_quantize)
-        for name, param in student.named_parameters():
-            print(name, param.shape)
+        print(f'student.named_parameters() : {type(student.named_parameters())}')
+        #for name, param in student.named_parameters():
+        #    print(name, param.shape)
         """
 
         import copy
