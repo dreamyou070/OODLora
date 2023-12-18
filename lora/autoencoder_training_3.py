@@ -257,10 +257,13 @@ class NetworkTrainer:
         vae_encoder_quantize.to(dtype=weight_dtype)
 
         vae_decoder = vae.decoder
-        vae_decoder.reset_parameters()
+        decoder_stat_dict = vae_decoder.state_dict
+        for k, v in decoder_stat_dict.items():
+            print(f'key : {k} | value : {v}')
+        #vae_decoder.reset_parameters()
         #torch.nn.init.normal_(vae_decoder.parameters(), mean=0.0, std=0.02)
         vae_decoder_quantize = vae.post_quant_conv
-        vae_decoder_quantize.reset_parameters()
+        #vae_decoder_quantize.reset_parameters()
         #torch.nn.init.normal_(vae_decoder_quantize.parameters(), mean=0.0, std=0.02)
 
 
