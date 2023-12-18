@@ -428,9 +428,6 @@ class NetworkTrainer:
         on_step_start = lambda *args, **kwargs: None
 
         # training loop
-        epoch_recon_loss_list = []
-        epoch_gen_loss_list = []
-        epoch_disc_loss_list = []
         autoencoder_warm_up_n_epochs = args.autoencoder_warm_up_n_epochs
         for epoch in range(num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
@@ -438,9 +435,6 @@ class NetworkTrainer:
             metadata["ss_epoch"] = str(epoch + 1)
             vae.train()
             discriminator.train()
-            epoch_loss = 0
-            gen_epoch_loss = 0
-            disc_epoch_loss = 0
             for step, batch in enumerate(train_dataloader):
                 log_loss = {}
                 # generator training

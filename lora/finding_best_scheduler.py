@@ -513,6 +513,7 @@ def main(args):
     customizing_alphas_cumprod_dict = {}
     customizing_alphas_cumprod_dict[0] = scheduler.alphas_cumprod[0]
     customizing_alphas_cumprod_dict[20] = 0.8318988084793091
+    customizing_alphas_cumprod_dict[40] = 0.4213502109050751
     #line = f'0 : {scheduler.alphas_cumprod[0].clone().detach().item()}'
     #with open(noising_alphas_cumprod_text_file, 'a') as ff:
     #    ff.write(line + '\n')
@@ -547,7 +548,7 @@ def main(args):
                     optimizer = torch.optim.Adam([alpha], lr=0.001)
                     for j in range(500):
                         with torch.autograd.set_detect_anomaly(True):
-                            alpha_before = alpha.clone().detach()
+                            #alpha_before = alpha.clone().detach()
                             latent_next = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
                             next_noise_pred = call_unet(unet, latent_next, next_t, uncon, None, None)
                             recon_latent = prev_step(next_noise_pred, next_t.item(), sample = latent_next, scheduler=scheduler)
@@ -558,9 +559,9 @@ def main(args):
                             optimizer.step()
                             if loss.item() < 0.00001 :
                                 break
-                            if torch.isnan(alpha).any():
-                                alpha = alpha_before
-                                break
+                            #if torch.isnan(alpha).any():
+                            #    alpha = alpha_before
+                            #    break
                     customizing_alphas_cumprod_dict[next_t.item()] = alpha.clone().detach().item()
                     line = f'{next_t.item()} : {alpha.clone().detach()}'
                     with open(noising_alphas_cumprod_text_file, 'a') as ff:
@@ -570,7 +571,7 @@ def main(args):
                 # Testing
                 np_img = latent2image(latent , vae, return_type='np')
                 pil_img = Image.fromarray(np_img)
-                pil_img.save(os.path.join(output_dir, f'noising_{int(present_t.item())}.png'))  # 999
+                pil_img.save(os.path.join(output_dir, f'noising_{int(next_t.item())}.png'))  # 999
 
 
 
