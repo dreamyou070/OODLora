@@ -216,21 +216,29 @@ class NetworkTrainer:
         teacher.eval()
         teacher.to(dtype=weight_dtype)
         student = Student(vae_decoder, vae_decoder_quantize)
-
+        student_state_dict = student.state_dict()
+        new_state_dict = {}
+        for k, v in student.state_dict().items():
+            print(f'k : {k} | {v.shape}')
+            
+        """
         def init_model(model):  # if mask_threshold is 1, use itself
             for name, module in model.named_children():
                 if len(list(module.named_modules())) == 1 :
                     if len(list(module.named_parameters())) > 0 :
-                        for param_name, param in module.named_parameters():
-                            print(f'param_name : {param_name} : {param}' )
+                        for param_name, param in module.named_parameters():                            
                             if param_name == 'weight':
                                 torch.nn.init.normal_(param.data, 0, 0.01)
                             elif param_name == 'bias':
+                                print(f'[before] param_name : {param_name} : {param.data}')
                                 torch.nn.init.constant_(param.data, 0)
+                                print(f'[after] param_name : {param_name} : {param.data}')
                 else :
                     init_model(module)
-
+        
         init_model(student)
+        
+        
 
 
         unet.requires_grad_(False)
@@ -257,13 +265,13 @@ class NetworkTrainer:
         print(f'\n step 8. resume')
         train_util.resume_from_local_or_hf_if_specified(accelerator, args)
 
-        """
+
         if args.resume_vae_training :
             vae_pretrained_dir = args.vae_pretrained_dir
             discriminator_pretrained_dir = args.discriminator_pretrained_dir
             vae.load_state_dict(torch.load(vae_pretrained_dir))
             discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
-        """
+        
 
         student, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student, optimizer, train_dataloader, lr_scheduler,)
 
@@ -436,7 +444,7 @@ class NetworkTrainer:
                     accelerator.save_model(student, os.path.join(save_directory, ckpt_name))
 
         """
-
+            """
             if args.sample_every_n_epochs is not None:
                 print('sampling')
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
