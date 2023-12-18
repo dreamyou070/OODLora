@@ -548,7 +548,6 @@ def main(args) :
     print(f' (2.4) scheduling factors')
     if args.with_new_vae_factor :
         vae_factor_dict = r'../result/lora_noising_scheduler_alphas_cumprod_2_20231218.txt'
-
         with open(vae_factor_dict, 'r') as f:
             content = f.readlines()
         inference_decoding_factor = {}
