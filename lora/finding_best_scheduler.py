@@ -554,7 +554,7 @@ def main(args):
                         loss = torch.nn.functional.mse_loss(latent.float(), recon_latent.float(), reduction="none")
                         loss = loss.mean([1,2,3]).mean()
                         optimizer.zero_grad()
-                        loss.backward()
+                        loss.backward(retain_graph=True)
                         optimizer.step()
                         if loss.item() < 0.00001 :
                             break
