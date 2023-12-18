@@ -342,6 +342,7 @@ class Teacher(nn.Module):
         super().__init__()
         self.quant_layer = base_quant_layer
         self.model = base_model
+
     def forward(self, x):
         x = self.quant_layer(x)
         x = self.model(x)

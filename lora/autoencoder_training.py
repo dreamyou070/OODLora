@@ -211,19 +211,25 @@ class NetworkTrainer:
         vae_encoder_quantize.to(dtype=weight_dtype)
         vae_decoder = vae.decoder
         vae_decoder_quantize = vae.post_quant_conv
+
         teacher = Teacher(vae_decoder, vae_decoder_quantize)
-        teacher.requires_grad_(False)
-        teacher.eval()
-        teacher.to(dtype=weight_dtype)
+        original_state_dict = teacher.state_dict().clone().detach()
+
         student = Student(vae_decoder, vae_decoder_quantize)
-        student_state_dict = student.state_dict()
         new_state_dict = {}
         for k, v in student.state_dict().items():
             if 'weight' in k :
-                new_state_dict[k] = torch.nn.init.normal_(torch.empty(v.shape)) *0
+                #new_state_dict[k] = torch.nn.init.normal_(torch.empty(v.shape)) *0
+                new_state_dict[k] = v * 0
             else :
-                new_state_dict[k] = torch.nn.init.ones_(torch.empty(v.shape)) *0
+                #new_state_dict[k] = torch.nn.init.ones_(torch.empty(v.shape)) *0
+                new_state_dict[k] = v * 0
         student.load_state_dict(new_state_dict)
+        teacher.load_state_dict(original_state_dict)
+        
+        teacher.requires_grad_(False)
+        teacher.eval()
+        teacher.to(dtype=weight_dtype)
 
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
@@ -399,7 +405,7 @@ class NetworkTrainer:
                     latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
                     y = teacher(latent)
                 print(f'y : {y}')
-                
+
                 y_hat = student(latent)
                 print(f'y_hat : {y_hat}')
                 loss = torch.nn.functional.mse_loss(y_hat, y, reduction = 'none')
