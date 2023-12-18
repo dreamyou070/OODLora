@@ -263,13 +263,13 @@ class NetworkTrainer:
         teacher.eval()
 
 
-        def init_weights(m):
-            if isinstance(m, torch.nn):
-                torch.nn.init.xavier_uniform(m.weight)
-                m.bias.data.fill_(0.01)
+
 
         student = Student(vae_decoder, vae_decoder_quantize)
-        student.apply(init_weights)
+        modules = student.children()
+        for module in modules:
+            print(f'module : {module.__class__.__name__} ')
+            student._init_weights(module)
         student.train()
 
         optimizer = torch.optim.AdamW([{'params' : student.parameters(),'lr' :1e-4 },
