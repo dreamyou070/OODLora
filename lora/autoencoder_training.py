@@ -215,6 +215,24 @@ class NetworkTrainer:
         teacher = Teacher(vae_decoder, vae_decoder_quantize)
 
         student = Student(vae_decoder, vae_decoder_quantize)
+
+        from torch import nn
+
+        def _init_weights(name, module):
+            """ Initialize the weights """
+            if isinstance(module, (nn.Linear, nn.Conv2d)):
+                print(f'{name} nn.Linear, nn.Conv2d')
+                module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            elif isinstance(module, nn.LayerNorm):
+                print(f'{name} nn.LayerNorm')
+                module.bias.data.zero_()
+                module.weight.data.fill_(1.0)
+            if isinstance(module, nn.Linear) and module.bias is not None:
+                module.bias.data.zero_()
+        for name, module in student.named_modules():
+            _init_weights(name, module)
+
+
         print(f'student.named_parameters() : {type(student.named_parameters())}')
         #for name, param in student.named_parameters():
         #    if 'weight' in name:
