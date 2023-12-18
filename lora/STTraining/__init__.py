@@ -358,6 +358,7 @@ class Student(nn.Module):
             if len(list(module.named_modules())) == 1:
                 if len(list(module.named_parameters())) > 0:
                     for param_name, param in module.named_parameters():
+                        print(f'[param_name] : {param_name}')
                         if param_name == 'weight':
                             torch.nn.init.normal_(param.data, 0, 0.01)
                         elif param_name == 'bias':
