@@ -22,3 +22,5 @@ python finding_best_scheduler.py --device cuda:3 \
    --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
    --output_dir ../result/new_alphas_cumprod_noising \
    --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel
+
+   # sbatch -p 
