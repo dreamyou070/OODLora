@@ -408,6 +408,7 @@ class NetworkTrainer:
                 y_hat = student(latent)
                 loss = torch.nn.functional.mse_loss(y_hat, y, reduction = 'none')
                 loss = loss.mean([1,2,3])
+                loss = loss.mean()
                 # ------------------------------------------------------------------------------------
                 accelerator.backward(loss)
                 optimizer.step()
@@ -431,7 +432,7 @@ class NetworkTrainer:
                     os.makedirs(save_directory, exist_ok=True)
                     print(f'saving model to {save_directory}')
                     accelerator.save_model(student, os.path.join(save_directory, ckpt_name))
-        
+
         """
 
             if args.sample_every_n_epochs is not None:

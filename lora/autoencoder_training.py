@@ -232,7 +232,7 @@ class NetworkTrainer:
         # train_dataset_group.set_max_train_steps(args.max_train_steps)
 
         # lr schedulerを用意する
-        discriminator = PatchDiscriminator(spatial_dims=2,
+        discriminator = PatchDiscriminator(spatial_dims =2,
                                            num_layers_d=3,
                                            num_channels=64,
                                            in_channels=3,
