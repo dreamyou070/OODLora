@@ -213,8 +213,9 @@ class NetworkTrainer:
         vae_decoder_quantize = vae.post_quant_conv
 
         teacher = Teacher(vae_decoder, vae_decoder_quantize)
-        original_state_dict = teacher.state_dict().detach()
 
+        import copy
+        original_state_dict = copy.deepcopy(teacher.state_dict())
         student = Student(vae_decoder, vae_decoder_quantize)
         new_state_dict = {}
         for k, v in student.state_dict().items():
