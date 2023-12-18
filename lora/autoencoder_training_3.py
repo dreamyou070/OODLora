@@ -224,6 +224,8 @@ class NetworkTrainer:
             try :
                 child.named_modules()
                 print(f'{name} ({child.__class__.__name__}) has sub modules')
+                for n, m in child.named_modules():
+                    print(f'  - {n} : {m.__class__.__name__}')
                 #for name, m in  :
                 #    print(f'{name} : {m.__class__.__name__}')
             except :
