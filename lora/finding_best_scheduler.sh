@@ -12,8 +12,8 @@ source ~/.bashrc
 conda activate venv
 ml purge
 ml load cuda/11.0
-
-python finding_best_scheduler.py --device cuda:3 \
+# sbatch -p dell_rtx3090 -q big_qos --nodes 1 --output=../result/printing_screen/noising_scheduler_log.log finding_best_scheduler.sh
+python finding_best_scheduler.py --device cuda \
    --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
    --network_module networks.lora \
    --network_dim 64 --network_alpha 4 \
@@ -22,5 +22,3 @@ python finding_best_scheduler.py --device cuda:3 \
    --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
    --output_dir ../result/new_alphas_cumprod_noising \
    --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel
-
-   # sbatch -p 
