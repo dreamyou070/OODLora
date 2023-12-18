@@ -220,8 +220,10 @@ class NetworkTrainer:
         #    print(f'{name} : {module.__class__.__name__}')
 
         for name, child in student.named_children():
+
             try :
                 child.named_modules()
+                print(f'{name} ({child.__class__.__name__}) has sub modules')
                 #for name, m in  :
                 #    print(f'{name} : {m.__class__.__name__}')
             except :
