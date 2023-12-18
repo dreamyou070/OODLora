@@ -221,7 +221,7 @@ class NetworkTrainer:
 
 
         def init_model(model):  # if mask_threshold is 1, use itself
-            for name, module in model.named_module():
+            for name, module in model.named_modules():
                 try :
                     weight = module.weight.data
                     print(f'{name} finish : {weight}')
