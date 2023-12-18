@@ -220,37 +220,6 @@ class NetworkTrainer:
         student_vae_decoder = student_vae.decoder
         student_vae_decoder_quantize = student_vae.post_quant_conv
         student = Student(student_vae_decoder, student_vae_decoder_quantize)
-        student_dict = student.state_dict()
-        teacher_dict = teacher.state_dict()
-        for k, v in student_dict.items():
-            t = teacher_dict[k]
-            print(f'{k} : torch.equal(v, t) : {torch.equal(v, t)}')
-
-        """
-        
-
-
-
-        
-        #for name, param in student.named_parameters():
-        #    if 'weight' in name:
-        #        student.named_parameters()[name].data = torch.nn.init.normal_(torch.empty(param.shape)) * 100
-                #print(name, param.shape)
-            #print(name, param.shape)
-        """
-        """
-
-        import copy
-        original_state_dict = copy.deepcopy(teacher.state_dict())
-        student = Student(vae_decoder, vae_decoder_quantize)
-        new_state_dict = {}
-        for k, v in student.state_dict().items():
-            if 'weight' in k :
-                new_state_dict[k] = torch.nn.init.normal_(torch.empty(v.shape)) * 100
-            else :
-                new_state_dict[k] = torch.nn.init.ones_(torch.empty(v.shape)) * 100
-        student.load_state_dict(new_state_dict)
-        teacher.load_state_dict(original_state_dict)
 
         teacher.requires_grad_(False)
         teacher.eval()
@@ -429,10 +398,7 @@ class NetworkTrainer:
                     h = vae_encoder(batch['images'].to(dtype=vae_dtype))
                     latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
                     y = teacher(latent)
-                print(f'y : {y}')
-
                 y_hat = student(latent)
-                print(f'y_hat : {y_hat}')
                 loss = torch.nn.functional.mse_loss(y_hat, y, reduction = 'none')
                 loss = loss.mean([1,2,3])
                 loss = loss.mean()
@@ -460,7 +426,6 @@ class NetworkTrainer:
                     print(f'saving model to {save_directory}')
                     accelerator.save_model(student, os.path.join(save_directory, ckpt_name))
 
-            
             if args.sample_every_n_epochs is not None:
                 print('sampling')
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
@@ -469,30 +434,31 @@ class NetworkTrainer:
                 img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
                 with torch.no_grad():
                     if accelerator.is_main_process:
-                        inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
-                        img = img.to(inf_vae.device)
-                        recon_img = inf_vae(img).sample
-                        recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        img = img.to(vae_encoder.device)
+                        h = vae_encoder(img.to(dtype=vae_dtype))
+                        latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
+                        recon = accelerator.unwrap_model(student).to(dtype=vae_dtype)(latent)
+                        recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                         image = (recon_img * 255).astype(np.uint8)
                         image = Image.fromarray(image)
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch + 7}.png'))
+                        image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch + 1}.png'))
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png'
                 img = load_image(sample_data_dir, int(h), int(w))
                 img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
                 with torch.no_grad():
                     if accelerator.is_main_process:
-                        inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
-                        img = img.to(inf_vae.device)
-                        recon_img = inf_vae(img).sample
-                        recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        img = img.to(vae_encoder.device)
+                        h = vae_encoder(img.to(dtype=vae_dtype))
+                        latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
+                        recon = accelerator.unwrap_model(student).to(dtype=vae_dtype)(latent)
+                        recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                         image = (recon_img * 255).astype(np.uint8)
                         image = Image.fromarray(image)
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch + 7}.png'))
-        """
+                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch + 1}.png'))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
