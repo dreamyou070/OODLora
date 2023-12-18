@@ -219,7 +219,11 @@ class NetworkTrainer:
         student_state_dict = student.state_dict()
         new_state_dict = {}
         for k, v in student.state_dict().items():
-            print(f'k : {k} | {v.shape}')
+            if 'weight' in k :
+                new_state_dict[k] = torch.nn.init.normal_(v, 0, 0.01)
+            else :
+                new_state_dict[k] = torch.nn.init.constant_(v, 0)
+        student.load_state_dict(new_state_dict)
 
         """
         def init_model(model):  # if mask_threshold is 1, use itself
