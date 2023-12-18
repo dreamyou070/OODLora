@@ -216,9 +216,11 @@ class NetworkTrainer:
         teacher.eval()
         teacher.to(dtype=weight_dtype)
         student = Student(vae_decoder, vae_decoder_quantize)
-        modules = student.children()
-        for module in modules:
-            student._init_weights(module)
+
+        for name , module in student.named_children():
+            print(f'{name} : {module.weight}')
+            #student._init_weights(module)
+            #print(f'[{name} ')
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders: t_enc.requires_grad_(False)
