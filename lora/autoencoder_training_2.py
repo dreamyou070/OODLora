@@ -457,6 +457,7 @@ class NetworkTrainer:
                     log_loss['loss/recons_loss'] = recons_loss
                     log_loss['loss/perceptual_loss'] = p_loss
                     log_loss['loss/discriminator_g_loss'] = generator_loss
+                """
                 with torch.autograd.detect_anomaly():
                     if epoch > autoencoder_warm_up_n_epochs:
                         with autocast(enabled=True):
@@ -467,6 +468,7 @@ class NetworkTrainer:
                             log_loss['loss/discriminator_d_fake_loss'] = loss_d_fake
                             log_loss['loss/discriminator_d_real_loss'] = loss_d_real
                             total_loss += loss_d
+                """
                 total_loss.backward()
                 optimizer.step()
                 if accelerator.sync_gradients:
@@ -479,7 +481,7 @@ class NetworkTrainer:
                 print('saving model')
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
-                    trg_epoch = str(epoch+4).zfill(6)
+                    trg_epoch = str(epoch+7).zfill(6)
                     # ------------------------------------------------------------------------
                     ckpt_name = f'vae_epoch_{trg_epoch}'
                     save_directory = os.path.join(args.output_dir, 'vae_model')
@@ -508,7 +510,7 @@ class NetworkTrainer:
                         image = Image.fromarray(image)
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch+4}.png'))
+                        image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch+7}.png'))
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png'
                 img = load_image(sample_data_dir, int(h), int(w))
                 img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
@@ -522,7 +524,7 @@ class NetworkTrainer:
                         image = Image.fromarray(image)
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch+4}.png'))
+                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch+7}.png'))
 
 
 if __name__ == "__main__":
