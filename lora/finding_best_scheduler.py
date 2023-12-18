@@ -513,66 +513,66 @@ def main(args):
     customizing_alphas_cumprod_dict = {}
     customizing_alphas_cumprod_dict[0] = scheduler.alphas_cumprod[0]
     customizing_alphas_cumprod_dict[20] = 0.8318988084793091
-    customizing_alphas_cumprod_dict[40] = 0.4213506579399109
     #line = f'0 : {scheduler.alphas_cumprod[0].clone().detach().item()}'
     #with open(noising_alphas_cumprod_text_file, 'a') as ff:
     #    ff.write(line + '\n')
-    for train_img in train_images:
-        train_img_dir = os.path.join(train_img_folder, train_img)
-        print(f' (2.3.1) get suber image')
-        image_gt_np = load_512(train_img_dir)
-        latent = image2latent(image_gt_np, vae, device, weight_dtype)
-        parent, network_name = os.path.split(args.network_weights)
-        name, ext = os.path.splitext(network_name)
-        save_base_folder = os.path.join(parent, f'inference_scheduling_2_20231218')
-        os.makedirs(save_base_folder, exist_ok=True)
-        flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
-        uncon, con = invers_context.chunk(2)
-        print(f' (2.3.2) inversing')
-        vae.eval()
-        vae.requires_grad_(False)
-        for i, present_t in enumerate(flip_times[:-1]):
-            next_t = flip_times[i + 1] # torch
-            alpha_cumprod_t = customizing_alphas_cumprod_dict[present_t.item()]
-            if next_t.item() in customizing_alphas_cumprod_dict.keys():
-                alpha = customizing_alphas_cumprod_dict[next_t.item()]
-                with torch.no_grad():
-                    noise_pred = call_unet(unet, latent, present_t, uncon, None, None)
-            else :
-                print(f'Finding {next_t.item()} noising alpha value')
-                with torch.no_grad():
-                    noise_pred = call_unet(unet, latent, present_t, uncon, None, None)
-                alpha = scheduler.alphas_cumprod[next_t.item()].detach()
-                alpha.requires_grad = True
-                optimizer = torch.optim.Adam([alpha], lr=0.001)
-                for j in range(500):
-                    with torch.autograd.set_detect_anomaly(True):
-                        alpha_before = alpha.clone().detach()
-                        latent_next = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
-                        next_noise_pred = call_unet(unet, latent_next, next_t, uncon, None, None)
-                        recon_latent = prev_step(next_noise_pred, next_t.item(), sample = latent_next, scheduler=scheduler)
-                        loss = torch.nn.functional.mse_loss(latent.float(), recon_latent.float(), reduction="none")
-                        loss = loss.mean([1,2,3]).mean()
-                        optimizer.zero_grad()
-                        loss.backward(retain_graph=True)
-                        optimizer.step()
-                        if loss.item() < 0.00001 :
-                            break
-                        if torch.isnan(alpha).any():
-                            alpha = alpha_before
-                            break
-                customizing_alphas_cumprod_dict[next_t.item()] = alpha.clone().detach().item()
-                line = f'{next_t.item()} : {alpha.clone().detach()}'
-                with open(noising_alphas_cumprod_text_file, 'a') as ff:
-                    ff.write(line + '\n')
-            latent = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
-            # ----------------------------------------------------------------------------------------------- #
-            # Testing
-            np_img = latent2image(latent , vae, return_type='np')
-            pil_img = Image.fromarray(np_img)
-            pil_img.save(os.path.join(save_base_folder, f'noising_{int(present_t.item())}.png'))  # 999
+    for j, train_img in enumerate(train_images):
+        if j == 0 :
+            train_img_dir = os.path.join(train_img_folder, train_img)
+            print(f' (2.3.1) get suber image')
+            image_gt_np = load_512(train_img_dir)
+            latent = image2latent(image_gt_np, vae, device, weight_dtype)
+            #parent, network_name = os.path.split(args.network_weights)
+            #name, ext = os.path.splitext(network_name)
+            #save_base_folder = os.path.join(parent, f'inference_scheduling_2_20231218')
+            #os.makedirs(save_base_folder, exist_ok=True)
+            flip_times = torch.flip(torch.cat([torch.tensor([999]), inference_times, ], dim=0), dims=[0])  # [0,20, ..., 980, 999]
+            uncon, con = invers_context.chunk(2)
+            print(f' (2.3.2) inversing')
+            vae.eval()
+            vae.requires_grad_(False)
+            for i, present_t in enumerate(flip_times[:-1]):
+                next_t = flip_times[i + 1] # torch
+                alpha_cumprod_t = customizing_alphas_cumprod_dict[present_t.item()]
+                if next_t.item() in customizing_alphas_cumprod_dict.keys():
+                    alpha = customizing_alphas_cumprod_dict[next_t.item()]
+                    with torch.no_grad():
+                        noise_pred = call_unet(unet, latent, present_t, uncon, None, None)
+                else :
+                    print(f'Finding {next_t.item()} noising alpha value')
+                    with torch.no_grad():
+                        noise_pred = call_unet(unet, latent, present_t, uncon, None, None)
+                    alpha = scheduler.alphas_cumprod[next_t.item()].detach()
+                    alpha.requires_grad = True
+                    optimizer = torch.optim.Adam([alpha], lr=0.001)
+                    for j in range(500):
+                        with torch.autograd.set_detect_anomaly(True):
+                            alpha_before = alpha.clone().detach()
+                            latent_next = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
+                            next_noise_pred = call_unet(unet, latent_next, next_t, uncon, None, None)
+                            recon_latent = prev_step(next_noise_pred, next_t.item(), sample = latent_next, scheduler=scheduler)
+                            loss = torch.nn.functional.mse_loss(latent.float(), recon_latent.float(), reduction="none")
+                            loss = loss.mean([1,2,3]).mean()
+                            optimizer.zero_grad()
+                            loss.backward(retain_graph=True)
+                            optimizer.step()
+                            if loss.item() < 0.00001 :
+                                break
+                            if torch.isnan(alpha).any():
+                                alpha = alpha_before
+                                break
+                    customizing_alphas_cumprod_dict[next_t.item()] = alpha.clone().detach().item()
+                    line = f'{next_t.item()} : {alpha.clone().detach()}'
+                    with open(noising_alphas_cumprod_text_file, 'a') as ff:
+                        ff.write(line + '\n')
+                latent = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
+                # ----------------------------------------------------------------------------------------------- #
+                # Testing
+                np_img = latent2image(latent , vae, return_type='np')
+                pil_img = Image.fromarray(np_img)
+                pil_img.save(os.path.join(output_dir, f'noising_{int(present_t.item())}.png'))  # 999
 
-        break
+
 
     with open(noising_alphas_cumprod_text_file, 'r') as f:
         content = f.readlines()
