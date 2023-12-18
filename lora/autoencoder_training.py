@@ -220,35 +220,18 @@ class NetworkTrainer:
         student_vae_decoder = student_vae.decoder
         student_vae_decoder_quantize = student_vae.post_quant_conv
         student = Student(student_vae_decoder, student_vae_decoder_quantize)
-        """
-        
-
-        from torch import nn
-
-        def _init_weights(name, module):
-            
-            if isinstance(module, (nn.Linear, nn.Conv2d)):
-                print(f'{name} nn.Linear, nn.Conv2d')
-                module.weight.data.normal_(mean=0.0, std=1.0)
-            elif isinstance(module, nn.LayerNorm):
-                print(f'{name} nn.LayerNorm')
-                module.bias.data.zero_()
-                module.weight.data.fill_(1.0)
-            if isinstance(module, nn.Linear) and module.bias is not None:
-                module.bias.data.zero_()
-        for name, module in student.named_modules():
-            _init_weights(name, module)
-
-
         student_dict = student.state_dict()
         teacher_dict = teacher.state_dict()
-        new_dict = {}
-        for k, v in student_dict.items() :
-            new_dict[k] = v * 0
-        student.load_state_dict(new_dict)
         for k, v in student_dict.items():
             t = teacher_dict[k]
             print(f'{k} : torch.equal(v, t) : {torch.equal(v, t)}')
+
+        """
+        
+
+
+
+        
         #for name, param in student.named_parameters():
         #    if 'weight' in name:
         #        student.named_parameters()[name].data = torch.nn.init.normal_(torch.empty(param.shape)) * 100
