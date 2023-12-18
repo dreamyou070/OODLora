@@ -213,12 +213,20 @@ class NetworkTrainer:
         vae_decoder_quantize = vae.post_quant_conv
 
         teacher = Teacher(vae_decoder, vae_decoder_quantize)
-        student = Student(vae_decoder, vae_decoder_quantize)
+
+        config_dict = vae.config_dict
+        from diffusers import AutoencoderKL
+        student_vae = AutoencoderKL.from_config_dict(config_dict)
+        student_vae_decoder = student_vae.decoder
+        student_vae_decoder_quantize = student_vae.post_quant_conv
+        student = Student(student_vae_decoder, student_vae_decoder_quantize)
+        """
+        
 
         from torch import nn
 
         def _init_weights(name, module):
-            """ Initialize the weights """
+            
             if isinstance(module, (nn.Linear, nn.Conv2d)):
                 print(f'{name} nn.Linear, nn.Conv2d')
                 module.weight.data.normal_(mean=0.0, std=1.0)
@@ -246,6 +254,7 @@ class NetworkTrainer:
         #        student.named_parameters()[name].data = torch.nn.init.normal_(torch.empty(param.shape)) * 100
                 #print(name, param.shape)
             #print(name, param.shape)
+        """
         """
 
         import copy
