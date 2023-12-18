@@ -260,26 +260,21 @@ class NetworkTrainer:
         vae_decoder_quantize = vae.post_quant_conv
         from STTraining import Teacher, Student
         teacher = Teacher(vae_decoder, vae_decoder_quantize)
+
+        teacher.requires_grad_(False)
         teacher.eval()
-
-
-
+        teacher.to(dtype=weight_dtype)
 
         student = Student(vae_decoder, vae_decoder_quantize)
         modules = student.children()
         for module in modules:
-            print(f'module : {module.__class__.__name__} ')
             student._init_weights(module)
-
-        for k, v in teacher.state_dict().items():
-            print(f'k : {k} | v : {v}')
-        student.train()
 
         optimizer = torch.optim.AdamW([{'params' : student.parameters(),'lr' :1e-4 },
                                        {'params' : discriminator.parameters(),'lr':5e-4 }],)
         lr_scheduler = train_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
 
-        """
+
         # 実験的機能：勾配も含めたfp16学習を行う　PyTorchにパッチを当ててfp16でのgrad scaleを有効にする
         if args.full_fp16:
             train_util.patch_accelerator_for_fp16_training(accelerator)
@@ -289,26 +284,24 @@ class NetworkTrainer:
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders: t_enc.requires_grad_(False)
-
+        """
         if args.resume_vae_training :
             vae_pretrained_dir = args.vae_pretrained_dir
             discriminator_pretrained_dir = args.discriminator_pretrained_dir
             vae.load_state_dict(torch.load(vae_pretrained_dir))
             discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
-        vae_decoder, vae_decoder_quantize, optimizer, train_dataloader, lr_scheduler, discriminator, perceptual_loss= accelerator.prepare(vae_decoder, vae_decoder_quantize,
-                                                                                                            optimizer,
-                                                                                                            train_dataloader,
-                                                                                                            lr_scheduler,
-                                                                                                            discriminator,
-                                                                                                            perceptual_loss )
+        """
+        student, optimizer, train_dataloader, lr_scheduler, discriminator, perceptual_loss= accelerator.prepare(student,
+                                                                                                                optimizer,
+                                                                                                                train_dataloader,
+                                                                                                                lr_scheduler,
+                                                                                                                discriminator,
+                                                                                                                perceptual_loss )
 
         # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
-        vae_decoder.requires_grad_(True)
-        vae_decoder.train()
-        vae_decoder.to(dtype=vae_dtype)
-        vae_decoder_quantize.requires_grad_(True)
-        vae_decoder_quantize.train()
-        vae_decoder_quantize.to(dtype=vae_dtype)
+        student.requires_grad_(True)
+        student.train()
+        student.to(dtype=vae_dtype)
 
         discriminator.requires_grad_(True)
         discriminator.train()
@@ -433,9 +426,81 @@ class NetworkTrainer:
                                       init_kwargs=init_kwargs)
 
         del train_dataset_group
-        """
+        # training loop
+        autoencoder_warm_up_n_epochs = args.autoencoder_warm_up_n_epochs
+        for epoch in range(num_train_epochs):
+            accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
+            current_epoch.value = epoch + 1
+            metadata["ss_epoch"] = str(epoch + 1)
+            vae.train()
+            discriminator.train()
+            for step, batch in enumerate(train_dataloader):
+                log_loss = {}
+                # generator training
+                optimizer.zero_grad(set_to_none=True)
+                with torch.no_grad():
+                    h = vae_encoder(batch['images'].to(dtype=vae_dtype))
+                    latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
+                    y = teacher(latent)
+                y_hat = student(latent)
+                loss = torch.nn.functional.mse_loss(y_hat, y, reduction = 'none')
+                loss = loss.mean([1,2,3])
+                # ------------------------------------------------------------------------------------
+                accelerator.backward(loss)
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad(set_to_none=True)
+            if accelerator.sync_gradients:
+                progress_bar.update(1)
+                global_step += 1
+                if is_main_process:
+                    wandb.log(log_loss, step=global_step)
+            # ------------------------------------------------------------------------------------------
+            if args.save_every_n_epochs is not None:
+                print('saving model')
+                accelerator.wait_for_everyone()
+                if accelerator.is_main_process:
+                    trg_epoch = str(epoch + 1).zfill(6)
+                    # ------------------------------------------------------------------------
+                    ckpt_name = f'student_epoch_{trg_epoch}'
+                    save_directory = os.path.join(args.output_dir, 'vae_student_model')
+                    os.makedirs(save_directory, exist_ok=True)
+                    print(f'saving model to {save_directory}')
+                    accelerator.save_model(student, os.path.join(save_directory, ckpt_name))
+            """
 
-
+            if args.sample_every_n_epochs is not None:
+                print('sampling')
+                sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
+                h, w = args.resolution
+                img = load_image(sample_data_dir, int(h), int(w))
+                img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
+                with torch.no_grad():
+                    if accelerator.is_main_process:
+                        inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
+                        img = img.to(inf_vae.device)
+                        recon_img = inf_vae(img).sample
+                        recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        image = (recon_img * 255).astype(np.uint8)
+                        image = Image.fromarray(image)
+                        save_dir = os.path.join(args.output_dir, 'sample')
+                        os.makedirs(save_dir, exist_ok=True)
+                        image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch + 7}.png'))
+                sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png'
+                img = load_image(sample_data_dir, int(h), int(w))
+                img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
+                with torch.no_grad():
+                    if accelerator.is_main_process:
+                        inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
+                        img = img.to(inf_vae.device)
+                        recon_img = inf_vae(img).sample
+                        recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        image = (recon_img * 255).astype(np.uint8)
+                        image = Image.fromarray(image)
+                        save_dir = os.path.join(args.output_dir, 'sample')
+                        os.makedirs(save_dir, exist_ok=True)
+                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch + 7}.png'))
+            """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
