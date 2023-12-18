@@ -213,7 +213,6 @@ class NetworkTrainer:
         vae_decoder_quantize = vae.post_quant_conv
 
         teacher = Teacher(vae_decoder, vae_decoder_quantize)
-
         student = Student(vae_decoder, vae_decoder_quantize)
 
         from torch import nn
@@ -233,7 +232,11 @@ class NetworkTrainer:
             _init_weights(name, module)
 
 
-        print(f'student.named_parameters() : {type(student.named_parameters())}')
+        student_dict = student.state_dict()
+        teacher_dict = teacher.state_dict()
+        for k, v in student_dict.item() :
+            t = teacher_dict[k]
+            print(f'{k} : torch.equal(v, t) : {torch.equal(v, t)}')
         #for name, param in student.named_parameters():
         #    if 'weight' in name:
         #        student.named_parameters()[name].data = torch.nn.init.normal_(torch.empty(param.shape)) * 100
