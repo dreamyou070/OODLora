@@ -216,20 +216,21 @@ class NetworkTrainer:
         teacher.eval()
         teacher.to(dtype=weight_dtype)
         student = Student(vae_decoder, vae_decoder_quantize)
-        """
+
         def init_model(model):  # if mask_threshold is 1, use itself
             for name, module in model.named_children():
                 if len(list(module.named_modules())) == 1 :
                     if len(list(module.named_parameters())) > 0 :
                         for param_name, param in module.named_parameters():
+                            print(f'param_name : {param_name} : {param}' )
                             if param_name == 'weight':
                                 torch.nn.init.normal_(param.data, 0, 0.01)
                             elif param_name == 'bias':
                                 torch.nn.init.constant_(param.data, 0)
                 else :
                     init_model(module)
-        """
-        student.init_model()
+
+        init_model(student)
 
 
         unet.requires_grad_(False)
