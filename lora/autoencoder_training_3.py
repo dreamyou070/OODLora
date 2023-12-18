@@ -270,6 +270,9 @@ class NetworkTrainer:
         for module in modules:
             print(f'module : {module.__class__.__name__} ')
             student._init_weights(module)
+
+        for k, v in teacher.state_dict().items():
+            print(f'k : {k} | v : {v}')
         student.train()
 
         optimizer = torch.optim.AdamW([{'params' : student.parameters(),'lr' :1e-4 },
