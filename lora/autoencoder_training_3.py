@@ -219,7 +219,7 @@ class NetworkTrainer:
 
         def init_model(model):  # if mask_threshold is 1, use itself
             for name, net in model.named_children():
-                if net.named_childer() :
+                if net.named_childeren() :
                     print(f'{name} still have children')
                     init_model(net)
                 else :
