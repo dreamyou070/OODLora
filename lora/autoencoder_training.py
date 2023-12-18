@@ -214,6 +214,11 @@ class NetworkTrainer:
 
         teacher = Teacher(vae_decoder, vae_decoder_quantize)
 
+        student = Student(vae_decoder, vae_decoder_quantize)
+        for name, param in student.named_parameters():
+            print(name, param.shape)
+        """
+
         import copy
         original_state_dict = copy.deepcopy(teacher.state_dict())
         student = Student(vae_decoder, vae_decoder_quantize)
@@ -434,7 +439,7 @@ class NetworkTrainer:
                     print(f'saving model to {save_directory}')
                     accelerator.save_model(student, os.path.join(save_directory, ckpt_name))
 
-            """
+            
             if args.sample_every_n_epochs is not None:
                 print('sampling')
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
@@ -466,7 +471,7 @@ class NetworkTrainer:
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
                         image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch + 7}.png'))
-            """
+        """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
