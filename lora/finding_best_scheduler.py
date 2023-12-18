@@ -661,6 +661,9 @@ if __name__ == "__main__":
     parser.add_argument("--folder_name", type=str)
     parser.add_argument("--guidance_scale", type=float, default=7.5)
     parser.add_argument("--self_attn_threshold_time", type=int, default=1)
+
+    parser.add_argument("--output_dir", type=str)
+
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
