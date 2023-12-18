@@ -562,15 +562,16 @@ def main(args):
                             alpha = alpha_before
                             break
                 customizing_alphas_cumprod_dict[next_t.item()] = alpha.clone().detach().item()
+                line = f'{next_t.item()} : {alpha.clone().detach()}'
+                with open(noising_alphas_cumprod_text_file, 'a') as ff:
+                    ff.write(line + '\n')
             latent = customizing_next_step(noise_pred, alpha_cumprod_t, alpha, latent)
             # ----------------------------------------------------------------------------------------------- #
             # Testing
             np_img = latent2image(latent , vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_img.save(os.path.join(save_base_folder, f'noising_{int(present_t.item())}.png'))  # 999
-            line = f'{next_t.item()} : {alpha.clone().detach()}'
-            with open(noising_alphas_cumprod_text_file, 'a') as ff:
-                ff.write(line + '\n')
+
         break
 
     with open(noising_alphas_cumprod_text_file, 'r') as f:
