@@ -23,7 +23,7 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config --main_proc
   --sample_every_n_epochs 1 \
   --train_batch_size 2 \
   --max_train_steps 100000 \
-  --train_data_dir ../../../MyData/anomaly_detection/autoencoder_training/bad \
+  --train_data_dir ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/train/good/rgb \
   --class_caption 'good' \
   --contrastive_eps 0.0 \
   --perceptual_weight 0.001

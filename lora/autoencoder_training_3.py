@@ -225,26 +225,6 @@ class NetworkTrainer:
                 new_state_dict[k] = torch.nn.init.constant_(v, 0)
         student.load_state_dict(new_state_dict)
 
-        """
-        def init_model(model):  # if mask_threshold is 1, use itself
-            for name, module in model.named_children():
-                if len(list(module.named_modules())) == 1 :
-                    if len(list(module.named_parameters())) > 0 :
-                        for param_name, param in module.named_parameters():                            
-                            if param_name == 'weight':
-                                torch.nn.init.normal_(param.data, 0, 0.01)
-                            elif param_name == 'bias':
-                                print(f'[before] param_name : {param_name} : {param.data}')
-                                torch.nn.init.constant_(param.data, 0)
-                                print(f'[after] param_name : {param_name} : {param.data}')
-                else :
-                    init_model(module)
-        
-        init_model(student)
-        
-        
-
-
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders: t_enc.requires_grad_(False)
