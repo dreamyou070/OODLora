@@ -216,7 +216,7 @@ class NetworkTrainer:
         teacher.eval()
         teacher.to(dtype=weight_dtype)
         student = Student(vae_decoder, vae_decoder_quantize)
-
+        """
         def init_model(model):  # if mask_threshold is 1, use itself
             for name, module in model.named_children():
                 if len(list(module.named_modules())) == 1 :
@@ -228,7 +228,8 @@ class NetworkTrainer:
                                 torch.nn.init.constant_(param.data, 0)
                 else :
                     init_model(module)
-        init_model(student)
+        """
+        student.init_model()
 
 
         unet.requires_grad_(False)
