@@ -367,7 +367,7 @@ class Student(nn.Module):
                                 torch.nn.init.constant_(param.data, 0)
                 else:
                     self._init_model(module)
-        
+
         _init_model(self)
 
 
