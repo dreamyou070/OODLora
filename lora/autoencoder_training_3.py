@@ -249,21 +249,13 @@ class NetworkTrainer:
             vae.load_state_dict(torch.load(vae_pretrained_dir))
             discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
         """
-        student, optimizer, train_dataloader, lr_scheduler, discriminator, perceptual_loss= accelerator.prepare(student,
-                                                                                                                optimizer,
-                                                                                                                train_dataloader,
-                                                                                                                lr_scheduler,
-                                                                                                                discriminator,
-                                                                                                                perceptual_loss )
+        student, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student, optimizer, train_dataloader, lr_scheduler,)
 
         # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
         student.requires_grad_(True)
         student.train()
         student.to(dtype=vae_dtype)
 
-        discriminator.requires_grad_(True)
-        discriminator.train()
-        discriminator.to(dtype=weight_dtype)
 
         l1_loss = L1Loss()
         adv_loss = PatchAdversarialLoss(criterion="least_squares")
@@ -390,8 +382,7 @@ class NetworkTrainer:
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
-            vae.train()
-            discriminator.train()
+            student.train()
             for step, batch in enumerate(train_dataloader):
                 log_loss = {}
                 # generator training
