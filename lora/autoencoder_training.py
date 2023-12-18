@@ -222,7 +222,7 @@ class NetworkTrainer:
             """ Initialize the weights """
             if isinstance(module, (nn.Linear, nn.Conv2d)):
                 print(f'{name} nn.Linear, nn.Conv2d')
-                module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+                module.weight.data.normal_(mean=0.0, std=1.0)
             elif isinstance(module, nn.LayerNorm):
                 print(f'{name} nn.LayerNorm')
                 module.bias.data.zero_()
