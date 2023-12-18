@@ -219,17 +219,12 @@ class NetworkTrainer:
         #for name, module in student.named_modules():
         #    print(f'{name} : {module.__class__.__name__}')
 
+        # named_children = right child
         for name, child in student.named_children():
-
             try :
-                child.named_modules()
-                print(f'{name} ({child.__class__.__name__}) has sub modules')
-                for n, m in child.named_modules():
-                    print(f'  - {n} : {m.__class__.__name__}')
-                #for name, m in  :
-                #    print(f'{name} : {m.__class__.__name__}')
+                child.named_children()
             except :
-                print(f'not having modules, name : {name}')
+                print(f'not having child name : {name}')
         """        
         def init_model(model):  # if mask_threshold is 1, use itself
             for name, module in model.named_modules():
