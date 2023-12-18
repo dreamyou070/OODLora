@@ -218,10 +218,12 @@ class NetworkTrainer:
         student = Student(vae_decoder, vae_decoder_quantize)
         #for name, module in student.named_modules():
         #    print(f'{name} : {module.__class__.__name__}')
-
-
+        for name, module in student.named_children():
+            print(f'{name} : {module.__class__.__name__}')
+        """
         def init_model(model):  # if mask_threshold is 1, use itself
             for name, module in model.named_children():
+                print(f'{name} : no have child')
                 try :
                     module.named_childern()
                     init_model(module)
@@ -232,6 +234,7 @@ class NetworkTrainer:
                     #weight_data = module.weight.data
                     print(f'{name} : no have child')
         init_model(student)
+        """
         """
         init_model(student)
         """
