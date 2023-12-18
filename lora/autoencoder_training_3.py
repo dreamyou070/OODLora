@@ -257,27 +257,26 @@ class NetworkTrainer:
         vae_encoder_quantize.to(dtype=weight_dtype)
 
         vae_decoder = vae.decoder
-        decoder_init_state_dict = {}
-        decoder_stat_dict = vae_decoder.state_dict()
-        for k, v in decoder_stat_dict.items():
-            decoder_init_state_dict[k] = torch.nn.init.normal_(v, mean=0.0, std=0.02)
-        vae_decoder.load_state_dict(decoder_init_state_dict)
         vae_decoder_quantize = vae.post_quant_conv
-        decoder_quantize_init_state_dict = {}
-        decoder_quantize_stat_dict = vae_decoder_quantize.state_dict()
-        for k, v in decoder_quantize_stat_dict.items():
-            decoder_quantize_init_state_dict[k] = torch.nn.init.normal_(v, mean=0.0, std=0.02)
-        vae_decoder_quantize.load_state_dict(decoder_quantize_init_state_dict)
+        from STTraining import Teacher, Student
+        teacher = Teacher(vae_decoder, vae_decoder_quantize)
+        teacher.eval()
 
-        optimizer = torch.optim.AdamW([{'params' : vae_decoder.parameters(),'lr' :1e-4 },
-                                       {'params' : vae_decoder_quantize.parameters(),'lr' :1e-4 },
+
+        def init_weights(m):
+            if isinstance(m, torch.nn):
+                torch.nn.init.xavier_uniform(m.weight)
+                m.bias.data.fill_(0.01)
+
+        student = Student(vae_decoder, vae_decoder_quantize)
+        student.apply(init_weights)
+        student.train()
+
+        optimizer = torch.optim.AdamW([{'params' : student.parameters(),'lr' :1e-4 },
                                        {'params' : discriminator.parameters(),'lr':5e-4 }],)
+        lr_scheduler = train_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
 
-        lr_scheduler = train_util.get_scheduler_fix(args,
-                                                    optimizer, accelerator.num_processes)
-
-
-
+        """
         # 実験的機能：勾配も含めたfp16学習を行う　PyTorchにパッチを当ててfp16でのgrad scaleを有効にする
         if args.full_fp16:
             train_util.patch_accelerator_for_fp16_training(accelerator)
@@ -431,107 +430,8 @@ class NetworkTrainer:
                                       init_kwargs=init_kwargs)
 
         del train_dataset_group
+        """
 
-        # training loop
-        autoencoder_warm_up_n_epochs = args.autoencoder_warm_up_n_epochs
-        for epoch in range(num_train_epochs):
-            accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
-            current_epoch.value = epoch + 1
-            metadata["ss_epoch"] = str(epoch + 1)
-            vae.train()
-            discriminator.train()
-            for step, batch in enumerate(train_dataloader):
-                log_loss = {}
-                # generator training
-                optimizer.zero_grad(set_to_none=True)
-                with torch.no_grad():
-                    h = vae_encoder(batch['images'].to(dtype=vae_dtype))
-                    latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
-
-                with autocast(enabled=True):
-                    z = vae_decoder_quantize(latent)
-                    reconstruction = vae_decoder(z)
-                    recons_loss = l1_loss(reconstruction.float(), batch['images'].float())
-                    p_loss = perceptual_loss(reconstruction.float(), batch['images'].float())
-                    """
-                    logits_fake = discriminator(reconstruction.contiguous().float())[-1]
-                    generator_loss = adv_loss(logits_fake,
-                                              target_is_real=True,
-                                              for_discriminator=False)
-                    """
-                    loss_g = recons_loss + p_loss * perceptual_weight #+ generator_loss * adv_weight
-                    total_loss = loss_g
-                    log_loss['loss/recons_loss'] = recons_loss
-                    log_loss['loss/perceptual_loss'] = p_loss
-                    #log_loss['loss/discriminator_g_loss'] = generator_loss
-                """
-                with torch.autograd.detect_anomaly():
-                    if epoch > autoencoder_warm_up_n_epochs:
-                        with autocast(enabled=True):
-                            loss_d_fake = adv_loss(logits_fake, target_is_real=False, for_discriminator=True)
-                            logits_real = discriminator(batch['images'].contiguous().detach())[-1]
-                            loss_d_real = adv_loss(logits_real, target_is_real=True, for_discriminator=True)
-                            loss_d = (loss_d_fake + loss_d_real) * 0.5
-                            log_loss['loss/discriminator_d_fake_loss'] = loss_d_fake
-                            log_loss['loss/discriminator_d_real_loss'] = loss_d_real
-                            total_loss += loss_d
-                """
-                total_loss.backward()
-                optimizer.step()
-                if accelerator.sync_gradients:
-                    progress_bar.update(1)
-                    global_step += 1
-                    if is_main_process:
-                        wandb.log(log_loss, step=global_step)
-            # ------------------------------------------------------------------------------------------
-            if args.save_every_n_epochs is not None:
-                print('saving model')
-                accelerator.wait_for_everyone()
-                if accelerator.is_main_process:
-                    trg_epoch = str(epoch+7).zfill(6)
-                    # ------------------------------------------------------------------------
-                    ckpt_name = f'vae_epoch_{trg_epoch}'
-                    save_directory = os.path.join(args.output_dir, 'vae_model')
-                    os.makedirs(save_directory, exist_ok=True)
-                    print(f'saving model to {save_directory}')
-                    accelerator.save_model(vae, os.path.join(save_directory, ckpt_name))
-
-                    # ------------------------------------------------------------------------
-                    d_save_directory = os.path.join(args.output_dir, 'discriminator_model')
-                    os.makedirs(d_save_directory, exist_ok=True)
-                    accelerator.save_model(discriminator, os.path.join(d_save_directory, f'discriminator_epoch_{trg_epoch}'))
-
-            if args.sample_every_n_epochs is not None :
-                print('sampling')
-                sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
-                h,w = args.resolution
-                img = load_image(sample_data_dir, int(h), int(w))
-                img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
-                with torch.no_grad():
-                    if accelerator.is_main_process:
-                        inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
-                        img = img.to(inf_vae.device)
-                        recon_img = inf_vae(img).sample
-                        recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                        image = (recon_img * 255).astype(np.uint8)
-                        image = Image.fromarray(image)
-                        save_dir = os.path.join(args.output_dir, 'sample')
-                        os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'anormal_recon_epoch_{epoch+7}.png'))
-                sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png'
-                img = load_image(sample_data_dir, int(h), int(w))
-                img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
-                with torch.no_grad():
-                    if accelerator.is_main_process:
-                        inf_vae = accelerator.unwrap_model(vae).to(dtype=vae_dtype)
-                        img = img.to(inf_vae.device)
-                        recon_img = inf_vae(img).sample
-                        recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                        image = (recon_img * 255).astype(np.uint8)
-                        image = Image.fromarray(image)
-                        save_dir = os.path.join(args.output_dir, 'sample')
-                        os.makedirs(save_dir, exist_ok=True)
-                        image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch+7}.png'))
 
 
 if __name__ == "__main__":
