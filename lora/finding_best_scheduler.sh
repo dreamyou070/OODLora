@@ -12,7 +12,7 @@ source ~/.bashrc
 conda activate venv
 ml purge
 ml load cuda/11.0
-# sbatch -p dell_rtx3090 -q big_qos --nodes 1 --output=../result/printing_screen/noising_scheduler_log.log finding_best_scheduler.sh
+# sbatch -p dell_rtx3090 -q big_qos --nodes 1 --output=../result/printing_screen/noising_scheduler_log.log finding_best_scheduler.sh 2>&1
 python finding_best_scheduler.py --device cuda \
    --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
    --network_module networks.lora \

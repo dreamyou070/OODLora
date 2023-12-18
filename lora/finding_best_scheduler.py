@@ -516,6 +516,7 @@ def main(args):
     customizing_alphas_cumprod_dict[40] = 0.4213502109050751
     customizing_alphas_cumprod_dict[60] = 0.4381713569164276
     customizing_alphas_cumprod_dict[80] = 0.4129374921321869
+    customizing_alphas_cumprod_dict[100] = 0.40708696842193604
     #line = f'0 : {scheduler.alphas_cumprod[0].clone().detach().item()}'
     #with open(noising_alphas_cumprod_text_file, 'a') as ff:
     #    ff.write(line + '\n')
