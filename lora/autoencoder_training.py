@@ -408,7 +408,7 @@ class NetworkTrainer:
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad(set_to_none=True)
-                log_loss['loss'] = loss.mean().item()
+                log_loss['loss'] = loss.item()
                 if accelerator.sync_gradients:
                     progress_bar.update(1)
                     global_step += 1
