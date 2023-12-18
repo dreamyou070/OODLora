@@ -12,7 +12,7 @@ conda activate venv
 ml purge
 ml load cuda/11.0
 
-accelerate launch --config_file ../../../gpu_config/gpu_0_config autoencoder_training.py \
+accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config autoencoder_training.py \
   --process_title parksooyeon --max_token_length 225 \
   --logging_dir ../result/logs \
   --log_with wandb \
