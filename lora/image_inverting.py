@@ -548,7 +548,7 @@ def main(args) :
             inference_decoding_factor[t] = f
     elif args.with_new_noising_alphas_cumprod :
         inference_decoding_factor = {}
-        alphas_cumprod_dict_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/record/lora_noising_pretrained_denoising_decoding_factor_txt.txt'
+        alphas_cumprod_dict_dir = '../result/lora_noising_pretrained_denoising_decoding_factor_txt.txt'
         alphas_cumprod_dict = {}
         with open(alphas_cumprod_dict_dir, 'r') as f:
             content = f.readlines()
