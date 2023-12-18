@@ -352,8 +352,6 @@ class Student(nn.Module):
         super().__init__()
         self.quant_layer = base_quant_layer
         self.model = base_model
-        self.init_weights()
-
 
     def forward(self, x):
         x = self.quant_layer(x)
