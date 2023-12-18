@@ -257,9 +257,15 @@ class NetworkTrainer:
         vae_encoder_quantize.to(dtype=weight_dtype)
 
         vae_decoder = vae.decoder
-        torch.nn.init.normal_(vae_decoder.parameters(), mean=0.0, std=0.02)
+        vae_decoder.reset_parameters()
+        #torch.nn.init.normal_(vae_decoder.parameters(), mean=0.0, std=0.02)
         vae_decoder_quantize = vae.post_quant_conv
-        torch.nn.init.normal_(vae_decoder_quantize.parameters(), mean=0.0, std=0.02)
+        vae_decoder_quantize.reset_parameters()
+        #torch.nn.init.normal_(vae_decoder_quantize.parameters(), mean=0.0, std=0.02)
+
+
+
+
         optimizer = torch.optim.AdamW([{'params' : vae_decoder.parameters(),'lr' :1e-4 },
                                        {'params' : vae_decoder_quantize.parameters(),'lr' :1e-4 },
                                        {'params' : discriminator.parameters(),'lr':5e-4 }],)
