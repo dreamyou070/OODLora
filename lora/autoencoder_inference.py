@@ -2,6 +2,7 @@ import argparse
 from generative.losses import PatchAdversarialLoss, PerceptualLoss
 from generative.networks.nets import AutoencoderKL, PatchDiscriminator
 from monai.networks.layers import Act
+from STTraining import Teacher, Student
 from torch.nn import L1Loss
 import math
 import os
@@ -72,23 +73,33 @@ def main(args):
     print(f' (3) making encoder of vae')
     vae_encoder = vae.encoder
     vae_encoder_quantize = vae.quant_conv
-
-    print(f' (4) making decoder of vae')
-    vae_pretrained_dir = args.vae_pretrained_dir
-    discriminator_pretrained_dir = '/data7/sooyeon/Lora/OODLora/result/MVTec_experiment/bagel/vae_training/discriminator_model/discriminator_epoch_000004/pytorch_model.bin'
-    vae.load_state_dict(torch.load(vae_pretrained_dir))
     vae_decoder = vae.decoder
     vae_decoder_quantize = vae.post_quant_conv
-    discriminator.load_state_dict(torch.load(discriminator_pretrained_dir))
 
-    vae.requires_grad_(False)
-    vae.eval()
-    vae.to(accelerator.device, dtype=vae_dtype)
+    teacher = Teacher(vae_decoder, vae_decoder_quantize)
 
-    discriminator.requires_grad_(False)
-    discriminator.eval()
-    discriminator.to(accelerator.device, dtype=vae_dtype)
-    #discriminator.to(args.device)
+    config_dict = vae.config
+    from diffusers import AutoencoderKL
+    student_vae = AutoencoderKL.from_config(config_dict)
+    student_vae_decoder = student_vae.decoder
+    student_vae_decoder_quantize = student_vae.post_quant_conv
+    student = Student(student_vae_decoder, student_vae_decoder_quantize)
+
+
+    print(f' (4) making decoder of vae')
+    from safetensors.torch import load_file
+    from safetensors import safe_open
+
+    student_pretrained_dir = '../result/MVTec_experiment/bagel/vae_training/1_TS_test/vae_student_model/student_epoch_000001/model.safetensors'
+    tensors = {}
+    with safe_open("model.safetensors", framework="pt", device="cpu") as f:
+        for key in f.keys():
+            tensors[key] = f.get_tensor(key)
+    student.load_state_dict(tensors)
+
+    student.requires_grad_(False)
+    student.eval()
+    student.to(accelerator.device, dtype=vae_dtype)
 
     vae_epoch = os.path.split(args.vae_pretrained_dir)[0]
     vae_epoch = os.path.split(vae_epoch)[-1]
@@ -111,8 +122,7 @@ def main(args):
             latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
 
             # (2) decoder
-            z = vae_decoder_quantize(latent)
-            recon_img = vae_decoder(z)  # .sample
+            recon_img = student(latent)  # .sample
             recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
             image = (recon_img * 255).astype(np.uint8)
             image = Image.fromarray(image)
