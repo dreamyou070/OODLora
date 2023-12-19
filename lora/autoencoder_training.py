@@ -414,7 +414,6 @@ class NetworkTrainer:
                     global_step += 1
                     if is_main_process:
                         wandb.log(log_loss, step=global_step)
-                break
             # ------------------------------------------------------------------------------------------
             if args.save_every_n_epochs is not None:
                 print('saving model')
@@ -424,9 +423,8 @@ class NetworkTrainer:
                     save_directory = os.path.join(args.output_dir, f'vae_student_model')
                     os.makedirs(save_directory, exist_ok=True)
                     state_dict = student.state_dict()
-                    #state_dict.to('cpu')
-                    #torch.save(accelerator.unwrap_model(student).to('cpu').state_dict(), os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
-                    torch.save(state_dict,os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
+                    torch.save(state_dict,
+                               os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
             """
             if args.sample_every_n_epochs is not None:
                 print('sampling')
