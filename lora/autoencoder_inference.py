@@ -88,7 +88,7 @@ def main(args):
 
     student_pretrained_dir = args.student_pretrained_dir
     model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
-    print(type(model_state_dict))
+    print(model_state_dict.keys())
     """
     student.load_state_dict(model_state_dict, strict=True)
 
