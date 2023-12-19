@@ -127,19 +127,29 @@ def main(args):
             image.save(save_dir)
 
     print(f'\n step 3. inference')
-    save_dir = os.path.join(args.output_dir, 'test')
+    save_dir = os.path.join(args.output_dir, 'vae_result_check')
     os.makedirs(save_dir, exist_ok=True)
-    print(' (3.1) anormal test')
-    anormal_sample_data_dir = args.anormal_sample_data_dir
-    compare_save_dir = os.path.join(save_dir, 'anormal.png')
-    anormal_save_dir = os.path.join(save_dir, f'model_{student_epoch}_original_encoder_trained_decoder_anormal_recon_test.png')
-    recon(anormal_sample_data_dir, anormal_save_dir, compare_save_dir)
+    save_base_dir = os.path.join(save_dir, f'student_epoch_{student_epoch}')
+    os.makedirs(save_base_dir, exist_ok=True)
+    test_save_dir = os.path.join(save_base_dir, 'test_dataset')
+    os.makedirs(test_save_dir, exist_ok=True)
 
-    print(f' (3.2) normal test')
-    normal_sample_data_dir = args.normal_sample_data_dir
-    compare_save_dir = os.path.join(save_dir, 'normal.png')
-    normal_save_dir = os.path.join(save_dir, f'model_{student_epoch}_original_encoder_trained_decoder_normal_recon_test.png')
-    recon(normal_sample_data_dir, normal_save_dir, compare_save_dir)
+    print(' (3.1) anormal test')
+    anormal_folder = args.anormal_folder
+    classes = os.listdir(anormal_folder)
+    for class_ in classes:
+        class_dir = os.path.join(anormal_folder, class_)
+        class_save_dir = os.path.join(test_save_dir, class_)
+        os.makedirs(class_save_dir, exist_ok=True)
+        sample_data_dir = os.path.join(class_dir, 'rgb')
+        images = os.listdir(sample_data_dir)
+        for image in images :
+            name, ext = os.path.splitext(image)
+            img_dir = os.path.join(sample_data_dir, image)
+            img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
+            compare_save_dir = os.path.join(save_dir, image)
+            recon(img_dir, img_save_dir, compare_save_dir)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
