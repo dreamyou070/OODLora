@@ -387,6 +387,7 @@ class NetworkTrainer:
         # training loop
         autoencoder_warm_up_n_epochs = args.autoencoder_warm_up_n_epochs
         for epoch in range(num_train_epochs):
+            """
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
@@ -414,6 +415,7 @@ class NetworkTrainer:
                     global_step += 1
                     if is_main_process:
                         wandb.log(log_loss, step=global_step)
+            """
             # ------------------------------------------------------------------------------------------
             if args.save_every_n_epochs is not None:
                 print('saving model')
@@ -425,7 +427,9 @@ class NetworkTrainer:
                     save_directory = os.path.join(args.output_dir, 'vae_student_model')
                     os.makedirs(save_directory, exist_ok=True)
                     print(f'saving model to {save_directory}')
-                    accelerator.save_model(student, os.path.join(save_directory, ckpt_name))
+                    student_model_cpu = accelerator.unwrap_model(student).to('cpu')
+                    student_model_cpu.save_weights(os.path.join(save_directory, ckpt_name), save_dtype)
+
             """
             if args.sample_every_n_epochs is not None:
                 print('sampling')
