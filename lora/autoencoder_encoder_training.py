@@ -143,6 +143,17 @@ class NetworkTrainer:
         vae_encoder_quantize.eval()
         vae_encoder.to(dtype=weight_dtype)
         vae_encoder_quantize.to(dtype=weight_dtype)
+
+        vae_decoder = vae.decoder
+        vae_decoder_quantize = vae.post_quant_conv
+        vae_decoder.requires_grad_(False)
+        vae_decoder_quantize.requires_grad_(False)
+        vae_decoder.eval()
+        vae_decoder_quantize.eval()
+        vae_decoder.to(dtype=weight_dtype)
+        vae_decoder_quantize.to(dtype=weight_dtype)
+
+
         teacher = Encoder_Teacher(vae_encoder, vae_encoder_quantize)
 
         config_dict = vae.config
@@ -156,6 +167,8 @@ class NetworkTrainer:
         teacher.eval()
         teacher.to(dtype=weight_dtype)
         teacher.to(accelerator.device)
+        vae_decoder.to(accelerator.device)
+        vae_decoder_quantize.to(accelerator.device)
 
         unet.requires_grad_(False)
         unet.to(dtype=weight_dtype)
@@ -346,7 +359,8 @@ class NetworkTrainer:
                             normal_indexs.append(i)
                     if len(normal_indexs) > 0:
                         normal_org = org_img[normal_indexs]
-                        normal_recon = y_hat[normal_indexs]
+                        latent = DiagonalGaussianDistribution(y_hat[normal_indexs]).sample()
+                        normal_recon = vae_decoder_quantize(vae_decoder(latent))
                         recon_loss = torch.nn.functional.mse_loss(normal_org, normal_recon, reduction='none')
                         recon_loss = recon_loss.mean([1, 2, 3])
                         recon_loss = recon_loss.mean()
