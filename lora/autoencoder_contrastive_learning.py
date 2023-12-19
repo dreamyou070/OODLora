@@ -422,8 +422,9 @@ class NetworkTrainer:
                         normal_recon = y_hat[normal_indexs]
                         recon_loss = torch.nn.functional.mse_loss(normal_org, normal_recon, reduction = 'none')
                         recon_loss = recon_loss.mean([1,2,3])
-                        log_loss['loss/recon'] = recon_loss.item()
-                        loss = loss + recon_loss.mean()
+                        recon_loss = recon_loss.mean()
+                        log_loss['loss/recon'] = recon_loss.mean().item()
+                        loss = loss + recon_loss
 
                 # ------------------------------------------------------------------------------------
                 accelerator.backward(loss)
