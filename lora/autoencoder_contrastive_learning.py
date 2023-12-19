@@ -550,7 +550,7 @@ if __name__ == "__main__":
     parser.add_argument("--autoencoder_warm_up_n_epochs", type=int, default=2)
     parser.add_argument("--vae_pretrained_dir", type=str)
     parser.add_argument("--discriminator_pretrained_dir", type=str)
-    parser.add_argument("--student_reconst_loss", action = True)
+    parser.add_argument("--student_reconst_loss", action="store_true")
     # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
