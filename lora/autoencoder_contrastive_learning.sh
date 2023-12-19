@@ -11,6 +11,7 @@ source ~/.bashrc
 conda activate venv_lora
 ml purge
 ml load cuda/11.0
+# srun -p suma_rtx4090 -q big_qos --job-name=s_learn_recon --gres=gpu:2 --pty bash -i
 
 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 57689 autoencoder_contrastive_learning.py \
   --process_title parksooyeon --max_token_length 225 \
