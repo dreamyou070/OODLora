@@ -91,7 +91,7 @@ def main(args):
     from safetensors import safe_open
     student_pretrained_dir = args.student_pretrained_dir
     loader = safe_load_file
-    state_dict = loader(student_pretrained_dir)
+    state_dict = loader(student_pretrained_dir, map_location="cpu")
 
 
     """

@@ -427,8 +427,9 @@ class NetworkTrainer:
                     save_directory = os.path.join(args.output_dir, 'vae_student_model')
                     os.makedirs(save_directory, exist_ok=True)
                     print(f'saving model to {save_directory}')
-                    student_model_cpu = accelerator.unwrap_model(student).to('cpu')
-                    student_model_cpu.save_weights(os.path.join(save_directory, ckpt_name), save_dtype)
+                    accelerator.save({"model": accelerator.unwrap_model(student).to('cpu').state_dict(),},
+                                     save_directory)
+
 
             """
             if args.sample_every_n_epochs is not None:
