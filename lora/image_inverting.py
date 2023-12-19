@@ -361,7 +361,9 @@ def latent2image_customizing_with_decoder(latents, student, factor, return_type=
     return image
 
 @torch.no_grad()
-def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer,alphas_cumprod_dict):
+def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
+              base_folder_dir, attention_storer,alphas_cumprod_dict,
+              vae_factor_dict):
     uncond_embeddings, cond_embeddings = context.chunk(2)
     time_steps = []
     latent = latent.clone().detach()
@@ -370,7 +372,12 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     latent_dict[0] = latent
     pil_images = []
     with torch.no_grad():
-        np_img = latent2image(latent, vae, return_type='np')
+        if args.customizing_decoder:
+            factor = vae_factor_dict[0]
+            np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
+
+        else:
+            np_img = latent2image(latent, vae, return_type='np')
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
@@ -406,7 +413,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
 
 
 @torch.no_grad()
-def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir, vae_factor_dict):
+def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, student,
+               base_folder_dir, vae_factor_dict):
     uncon, con = context.chunk(2)
     if inference_times[0] < inference_times[1] :
         inference_times.reverse()
@@ -419,7 +427,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     with torch.no_grad():
         if args.customizing_decoder:
             factor = vae_factor_dict[inference_times[0]]
-            np_img = latent2image_customizing_with_decoder(latent, vae, factor, return_type='np')
+            np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
         else :
             np_img = latent2image(latent, vae, return_type='np')
     pil_img = Image.fromarray(np_img)
@@ -435,7 +443,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
             if args.using_customizing_scheduling :
                 factor = float(vae_factor_dict[prev_time])
                 if args.customizing_decoder :
-                    np_img = latent2image_customizing_with_decoder(latent, vae, factor, return_type='np')
+                    np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
                 else :
                     np_img = latent2image_customizing(latent, vae, factor,return_type='np')
             else :
@@ -670,9 +678,11 @@ def main(args) :
                                                                     scheduler=scheduler,
                                                                     unet=invers_unet,
                                                                     vae=vae,
+                                                                    student = student,
                                                                     base_folder_dir=timewise_save_base_folder,
                                                                     attention_storer=attention_storer,
-                                                                    alphas_cumprod_dict=alphas_cumprod_dict,)
+                                                                    alphas_cumprod_dict=alphas_cumprod_dict,
+                                                                    vae_factor_dict=vae_factor_dict)
                     attention_storer.reset()
                     time_steps.reverse()
                     print(f'time_steps : {time_steps}')
@@ -683,7 +693,8 @@ def main(args) :
                                                          inference_times=time_steps,  # [20,0]
                                                          scheduler=scheduler,
                                                          unet=unet,
-                                                         vae=student,
+                                                         vae=vae,
+                                                         student = student,
                                                          base_folder_dir=timewise_save_base_folder,
                                                          vae_factor_dict = inference_decoding_factor)
                     attention_storer.reset()
