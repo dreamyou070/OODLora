@@ -93,9 +93,6 @@ def main(args):
         k_ = '.'.join(k.split('.')[1:])
         state_dict[k_] = v
     student.load_state_dict(state_dict, strict=True)
-    """
-    
-
     student.requires_grad_(False)
     student.eval()
     student.to(accelerator.device, dtype=vae_dtype)
@@ -141,8 +138,6 @@ def main(args):
     compare_save_dir = os.path.join(save_dir, 'normal.png')
     normal_save_dir = os.path.join(save_dir, f'model_{student_epoch}_original_encoder_trained_decoder_normal_recon_test.png')
     recon(normal_sample_data_dir, normal_save_dir, compare_save_dir)
-    """
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
