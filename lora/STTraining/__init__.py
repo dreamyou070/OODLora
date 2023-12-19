@@ -354,34 +354,6 @@ class Student(nn.Module):
         self.quant_layer = base_quant_layer
         self.model = base_model
 
-
-
-
-    """
-    def init_model(self):  # if mask_threshold is 1, use itself
-
-        def _init_weights(module):
-            for name, param in module.named_parameters():
-                if name == 'weight':
-                    nn.init.normal_(param.data, 0, 0.01)
-                elif name == 'bias':
-                    nn.init.constant_(param.data, 0)
-
-            if isinstance(module, nn.Linear):
-                module.weight.data.normal_(mean=0.0, std=1.0)
-                if module.bias is not None:
-                    module.bias.data.zero_()
-
-        for name, module in self.named_children():
-
-            if len(list(module.named_modules())) == 1:
-                module.weight.data = module.weight.data
-                module.
-                print(f'{name} : {module.__class__.__name__}')
-            else:
-                self._init_model(module)
-    """
-
     def forward(self, x):
         x = self.quant_layer(x)
         x = self.model(x)
