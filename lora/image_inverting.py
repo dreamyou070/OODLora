@@ -628,6 +628,7 @@ def main(args) :
             line = line.split(' : ')
             t, f = int(line[0]), float(line[1])
             inference_decoding_factor[t] = f
+        vae_factor_dict = inference_decoding_factor
         alphas_cumprod_dict = {}
 
     elif args.with_new_noising_alphas_cumprod :
