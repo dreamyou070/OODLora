@@ -360,7 +360,7 @@ class NetworkTrainer:
                     if len(normal_indexs) > 0:
                         normal_org = org_img[normal_indexs]
                         latent = DiagonalGaussianDistribution(y_hat[normal_indexs]).sample()
-                        normal_recon = vae_decoder_quantize(vae_decoder(latent))
+                        normal_recon = vae_decoder(vae_decoder_quantize(latent))
                         recon_loss = torch.nn.functional.mse_loss(normal_org, normal_recon, reduction='none')
                         recon_loss = recon_loss.mean([1, 2, 3])
                         recon_loss = recon_loss.mean()
