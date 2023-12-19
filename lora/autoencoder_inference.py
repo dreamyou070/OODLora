@@ -147,7 +147,7 @@ def main(args):
             name, ext = os.path.splitext(image)
             img_dir = os.path.join(sample_data_dir, image)
             img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
-            compare_save_dir = os.path.join(class_ave_dir, image)
+            compare_save_dir = os.path.join(class_save_dir, image)
             recon(img_dir, img_save_dir, compare_save_dir)
 
 
