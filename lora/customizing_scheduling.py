@@ -81,6 +81,15 @@ def latent2image(latents, vae, return_type='np'):
         image = (image * 255).astype(np.uint8)
     return image
 
+def custom_latent2image(latents, student, factor, return_type='np'):
+    latents = factor * latents.detach()
+    image = student(latents)
+    if return_type == 'np':
+        image = (image / 2 + 0.5).clamp(0, 1)
+        image = image.cpu().permute(0, 2, 3, 1).numpy()[0]
+        image = (image * 255).astype(np.uint8)
+    return image
+
 
 @torch.no_grad()
 def latent2image_customizing(latents, vae, factor, return_type='np'):
@@ -449,6 +458,33 @@ def main(args):
         print(f'Loading Network Weights')
         info = network.load_weights(args.network_weights)
     network.to(device)
+    print(f' (2.3) vae student model')
+    print(f' (2.3.1) making encoder of vae')
+    from diffusers import AutoencoderKL
+    from STTraining import Student
+    vae_encoder = vae.encoder
+    vae_encoder_quantize = vae.quant_conv
+    vae_encoder.requires_grad_(False)
+    vae_encoder.eval()
+    vae_encoder_quantize.requires_grad_(False)
+    vae_encoder_quantize.eval()
+
+    config_dict = vae.config
+    student_vae = AutoencoderKL.from_config(config_dict)
+    student_vae_decoder = student_vae.decoder
+    student_vae_decoder_quantize = student_vae.post_quant_conv
+    student = Student(student_vae_decoder, student_vae_decoder_quantize)
+    print(f' (2.3.2) making decoder of vae')
+    student_pretrained_dir = args.student_pretrained_dir
+    model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
+    state_dict = {}
+    for k, v in model_state_dict.items():
+        k_ = '.'.join(k.split('.')[1:])
+        state_dict[k_] = v
+    student.load_state_dict(state_dict, strict=True)
+    student.requires_grad_(False)
+    student.eval()
+
 
 
     print(f' \n step 3. ground-truth image preparing')
@@ -463,7 +499,8 @@ def main(args):
     train_img_folder = os.path.join(args.concept_image_folder)
     train_images = os.listdir(train_img_folder)
     decoding_factor = 1 / 0.18215
-    vae_factor_dict = r'../result/lora_noising_pretrained_denoising_decoding_factor_txt.txt'
+    vae_factor_dict = r'../result/decoder_factor.txt'
+
     for train_img in train_images:
         train_img_dir = os.path.join(train_img_folder, train_img)
         print(f' (2.3.1) get suber image')
@@ -477,6 +514,7 @@ def main(args):
         uncon, con = invers_context.chunk(2)
         print(f' (2.3.2) inversing')
         inference_decoding_factor = {}
+        inference_decoding_factor[0] = 1/0.18215
         vae.eval()
         vae.requires_grad_(False)
         for i, present_t in enumerate(flip_times[:-1]):
@@ -484,44 +522,21 @@ def main(args):
             next_t = flip_times[i + 1]
             with torch.no_grad():
                 noise_pred = call_unet(unet, latent, present_t, uncon, next_t, present_t)
-            layer_names = attention_storer.self_query_store.keys()
-            self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
-            t_ = next_t.item()
-            for layer in layer_names:
-                self_query_list = attention_storer.self_query_store[layer]
-                self_key_list = attention_storer.self_key_store[layer]
-                self_value_list = attention_storer.self_value_store[layer]
-                for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
-                    if t_ not in self_query_dict.keys():
-                        self_query_dict[t_] = {}
-                        self_query_dict[t_][layer] = self_query
-                    else:
-                        self_query_dict[t_][layer] = self_query
-                    if t_ not in self_key_dict.keys():
-                        self_key_dict[t_] = {}
-                        self_key_dict[t_][layer] = self_key
-                    else:
-                        self_key_dict[t_][layer] = self_key
-                    if t_ not in self_value_dict.keys():
-                        self_value_dict[t_] = {}
-                        self_value_dict[t_][layer] = self_value
-                    else:
-                        self_value_dict[t_][layer] = self_value
             attention_storer.reset()
             latent_next = next_step(noise_pred,int(present_t.item()), latent, scheduler)
-            collector = AttentionStore()
-            register_self_condition_giver(invers_unet, collector, self_query_dict, self_key_dict, self_value_dict)
-            #noise_pred_next = call_unet(unet, latent_next, next_t, uncon, present_t.item(), next_t.item())
             noise_pred_next = call_unet(invers_unet, latent_next, next_t, uncon, next_t.item(), next_t.item())
             recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next, scheduler)
-            pixel_origin = latent2image(latent, vae, return_type='torch')
+
+            factor = inference_decoding_factor[int(present_t.item())]
+            pixel_origin = custom_latent2image(latent, student, factor, return_type='torch')
+
             alpha = torch.Tensor([copy.deepcopy(decoding_factor)],).to(vae.device)
             alpha.requires_grad = True
             optimizer = torch.optim.Adam([alpha], lr=0.001)
             for j in range(10000):
                 alpha_before = alpha.clone().detach()
                 recon_pixel = alpha * recon_latent.detach()
-                loss = torch.nn.functional.mse_loss(vae.decode(recon_pixel)['sample'],
+                loss = torch.nn.functional.mse_loss(student(recon_pixel),
                                                     pixel_origin).mean()
                 optimizer.zero_grad()
                 loss.backward()
@@ -630,6 +645,7 @@ if __name__ == "__main__":
     parser.add_argument("--folder_name", type=str)
     parser.add_argument("--guidance_scale", type=float, default=7.5)
     parser.add_argument("--self_attn_threshold_time", type=int, default=1)
+    parser.add_argument("--student_pretrained_dir", type=str)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)

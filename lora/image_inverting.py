@@ -677,6 +677,7 @@ def main(args) :
                     print(f' - save_base_folder : {timewise_save_base_folder}')
                     os.makedirs(timewise_save_base_folder, exist_ok=True)
                     org_pil = Image.open(train_img_dir).resize((512, 512)).convert('RGB')
+
                     org_pil.save(os.path.join(timewise_save_base_folder, 'org.png'))
                     latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
                                                                     context=invers_context,
@@ -704,7 +705,7 @@ def main(args) :
                                                          base_folder_dir=timewise_save_base_folder,
                                                          vae_factor_dict = inference_decoding_factor)
                     attention_storer.reset()
-    
+
 
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
