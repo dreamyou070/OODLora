@@ -12,6 +12,8 @@ for i in range(batch_size):
     mask = mask_img[i]
     if torch.equal(org,mask) :
         normal_indexs.append(i)
+    else :
+        print('false')
 
 
 

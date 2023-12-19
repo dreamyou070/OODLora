@@ -415,7 +415,7 @@ class NetworkTrainer:
                     for i in range(batch_size):
                         org = org_img[i]
                         mask = masked_img[i]
-                        if org == mask:
+                        if torch.equal(org,mask) :
                             normal_indexs.append(i)
                     if len(normal_indexs) > 0:
                         normal_org = org_img[normal_indexs]
