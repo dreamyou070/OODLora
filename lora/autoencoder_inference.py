@@ -178,6 +178,7 @@ if __name__ == "__main__":
                         help="path to checkpoint of vae to replace / VAEを入れ替える場合、VAEのcheckpointファイルまたはディレクトリ")
     parser.add_argument("--anormal_sample_data_dir", type=str,
                         default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png')
+    parser.add_argument("--anormal_folder", type=str,)
     parser.add_argument("--normal_sample_data_dir", type=str,
                         default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png')
     parser.add_argument("--student_pretrained_dir", type=str,
