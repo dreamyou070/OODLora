@@ -426,7 +426,7 @@ class NetworkTrainer:
                     os.makedirs(save_directory, exist_ok=True)
                     print(f'saving model to {save_directory}')
                     accelerator.save_model(student, os.path.join(save_directory, ckpt_name))
-
+            """
             if args.sample_every_n_epochs is not None:
                 print('sampling')
                 sample_data_dir = r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png'
@@ -460,7 +460,7 @@ class NetworkTrainer:
                         save_dir = os.path.join(args.output_dir, 'sample')
                         os.makedirs(save_dir, exist_ok=True)
                         image.save(os.path.join(save_dir, f'normal_recon_epoch_{epoch + 1}.png'))
-
+            """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
