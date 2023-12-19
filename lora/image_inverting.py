@@ -417,7 +417,11 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
     time_steps = []
     pil_images = []
     with torch.no_grad():
-        np_img = latent2image(latent, vae, return_type='np')
+        if args.customizing_decoder:
+            factor = vae_factor_dict[inference_times[0]]
+            np_img = latent2image_customizing_with_decoder(latent, vae, factor, return_type='np')
+        else :
+            np_img = latent2image(latent, vae, return_type='np')
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
