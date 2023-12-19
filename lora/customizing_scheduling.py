@@ -484,6 +484,8 @@ def main(args):
     student.load_state_dict(state_dict, strict=True)
     student.requires_grad_(False)
     student.eval()
+    student.to(device)
+    
 
 
 
