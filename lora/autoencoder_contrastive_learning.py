@@ -402,9 +402,9 @@ class NetworkTrainer:
                     generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
                     org_latent = DiagonalGaussianDistribution(vae_encoder_quantize(vae_encoder(org_img))).sample(generator)
                     masked_latent = DiagonalGaussianDistribution(vae_encoder_quantize(vae_encoder(masked_img))).sample(generator)
-                    masked_y = teacher(masked_latent.to(dtype=weight_dtype))
+                    y = teacher(masked_latent.to(dtype=weight_dtype))
                 y_hat = student(org_latent.to(dtype=weight_dtype))
-                loss = torch.nn.functional.mse_loss(masked_y, masked_latent, reduction = 'none')
+                loss = torch.nn.functional.mse_loss(y, y_hat, reduction = 'none')
                 loss = loss.mean([1,2,3])
                 loss = loss.mean()
                 # ------------------------------------------------------------------------------------
