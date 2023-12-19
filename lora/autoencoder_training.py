@@ -423,12 +423,12 @@ class NetworkTrainer:
                 if accelerator.is_main_process:
                     trg_epoch = str(epoch + 1).zfill(6)
                     # ------------------------------------------------------------------------
-                    ckpt_name = f'student_epoch_{trg_epoch}'
-                    save_directory = os.path.join(args.output_dir, f'vae_student_model.pt')
-                    #os.makedirs(save_directory, exist_ok=True)
-                    #print(f'saving model to {save_directory}')
-
+                    ckpt_name = f'student_epoch_{trg_epoch}.pth'
+                    save_directory = os.path.join(args.output_dir, f'vae_student_model')
+                    os.makedirs(save_directory, exist_ok=True)
+                    path = os.path.join(save_directory, ckpt_name)
                     state_dict = accelerator.unwrap_model(student).to('cpu').state_dict()
+                    torch.save(state_dict, path)
                     torch.save(state_dict, save_directory)
 
 
