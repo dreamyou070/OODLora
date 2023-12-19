@@ -632,7 +632,7 @@ def main(args) :
     context = init_prompt(tokenizer, text_encoder, device, prompt)
 
     print(f' (3.2) train images')
-    train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb')
+    train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb/30_rgb')
     train_images = os.listdir(train_img_folder)
     for i, train_img in enumerate(train_images) :
         if i < 5 :

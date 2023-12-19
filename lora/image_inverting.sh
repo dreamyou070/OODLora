@@ -12,7 +12,8 @@ conda activate venv_lora
 ml purge
 ml load cuda/11.0
 
-python image_inverting.py --device cuda:0 \
+
+accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 57689 image_inverting.py \
   --process_title parksooyeon \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 \
@@ -20,7 +21,7 @@ python image_inverting.py --device cuda:0 \
   --inversion_experiment \
   --sample_sampler ddim \
   --num_ddim_steps 50 \
-  --output_dir ../result/MVTec_experiment/bagel/unet_training/new_alphas_cumprod_noising \
+  --output_dir ../result/MVTec_experiment/bagel/unet_training/vae_new_factor_lora_test \
   --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel \
   --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/2_TS_test_contrastive/vae_student_model/student_epoch_000004.pth \
   --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
