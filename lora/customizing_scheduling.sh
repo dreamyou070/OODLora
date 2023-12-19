@@ -19,5 +19,5 @@ python customizing_scheduling.py --device cuda:0 \
   --prompt 'good' --sample_sampler ddim --num_ddim_steps 50 \
   --output_dir '../result' \
   --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
-  --concept_image_folder ../../../MyData/anomaly_detection/autoencoder_training/bad/100_good \
+  --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/train/good/rgb/30_rgb \
   --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/2_TS_test_contrastive/vae_student_model/student_epoch_000004.pth
