@@ -1,5 +1,5 @@
 import argparse
-from accelerate.utils import set_seed
+
 import json
 import os
 import random
@@ -457,7 +457,8 @@ def main(args) :
     train_util.prepare_dataset_args(args, True)
     if args.seed is None:
         args.seed = random.randint(0, 2 ** 32)
-    set_seed(args.seed)
+    #from accelerate.utils import set_seed
+    #set_seed(args.seed)
 
     print(f" (1.2) save directory and save config")
     weight_dtype, save_dtype = train_util.prepare_dtype(args)
