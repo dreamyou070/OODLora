@@ -12,7 +12,7 @@ conda activate venv
 ml purge
 ml load cuda/11.0
 
-python image_inverting.py --device cuda \
+python image_inverting.py --device cuda:0 \
   --process_title parksooyeon \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 \
