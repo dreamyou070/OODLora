@@ -114,7 +114,6 @@ def main(args):
         with torch.no_grad():
             img = img.to(accelerator.device)
             # (1) encoder
-            latents = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample()
             from diffusers.models.vae import DiagonalGaussianDistribution
             h = vae_encoder(img.to(dtype=vae_dtype))
             latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()

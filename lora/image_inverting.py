@@ -250,6 +250,16 @@ def latent2image(latents, vae, return_type='np'):
         image = (image * 255).astype(np.uint8)
     return image
 
+@torch.no_grad()
+def customizing_latent2image(latents, vae, return_type='np'):
+    latents = 1 / 0.18215 * latents.detach()
+    image = vae.decode(latents)['sample']
+    if return_type == 'np':
+        image = (image / 2 + 0.5).clamp(0, 1)
+        image = image.cpu().permute(0, 2, 3, 1).numpy()[0]
+        image = (image * 255).astype(np.uint8)
+    return image
+
 def init_prompt(tokenizer, text_encoder, device, prompt: str):
     uncond_input = tokenizer([""],
                              padding="max_length", max_length=tokenizer.model_max_length,
@@ -342,6 +352,14 @@ def latent2image_customizing(latents, vae, factor, return_type='np'):
         image = (image * 255).astype(np.uint8)
     return image
 
+def latent2image_customizing_with_decoder(latents, student, factor, return_type='np'):
+    latents = factor * latents.detach()
+    image = student(latents)
+    if return_type == 'np':
+        image = (image / 2 + 0.5).clamp(0, 1)
+        image = image.cpu().permute(0, 2, 3, 1).numpy()[0]
+        image = (image * 255).astype(np.uint8)
+    return image
 
 @torch.no_grad()
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, attention_storer,alphas_cumprod_dict):
@@ -374,7 +392,10 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
                 latent = latent.to(vae.device)
             else :
                 latent = next_step(noise_pred, int(t.item()), latent, scheduler)
-            np_img = latent2image(latent, vae, return_type='np')
+            if args.customizing_decoder :
+                np_img = customizing_latent2image(latent, vae, return_type='np')
+            else :
+                np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
@@ -408,10 +429,12 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         with torch.no_grad():
             noise_pred = call_unet(unet, latent, t, con, t, prev_time)
             latent = prev_step(noise_pred, int(t), latent, scheduler)
-
             if args.using_customizing_scheduling :
                 factor = float(vae_factor_dict[prev_time])
-                np_img = latent2image_customizing(latent, vae, factor,return_type='np')
+                if args.customizing_decoder :
+                    np_img = latent2image_customizing_with_decoder(latent, vae, factor, return_type='np')
+                else :
+                    np_img = latent2image_customizing(latent, vae, factor,return_type='np')
             else :
                 np_img = latent2image(latent, vae, return_type='np')
         if prev_time == 0 :
@@ -465,6 +488,35 @@ def main(args) :
     text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
                                                                                           unet_use_linear_projection_in_v2=False, )
     text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
+
+    print(f' (2.3) vae student model')
+    print(f' (2.3.1) making encoder of vae')
+    from diffusers import AutoencoderKL
+    from STTraining import Student
+    vae_encoder = vae.encoder
+    vae_encoder_quantize = vae.quant_conv
+    vae_encoder.requires_grad_(False)
+    vae_encoder.eval()
+    vae_encoder_quantize.requires_grad_(False)
+    vae_encoder_quantize.eval()
+
+
+    config_dict = vae.config
+    student_vae = AutoencoderKL.from_config(config_dict)
+    student_vae_decoder = student_vae.decoder
+    student_vae_decoder_quantize = student_vae.post_quant_conv
+    student = Student(student_vae_decoder, student_vae_decoder_quantize)
+    print(f' (2.3.2) making decoder of vae')
+    student_pretrained_dir = args.student_pretrained_dir
+    model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
+    state_dict = {}
+    for k, v in model_state_dict.items():
+        k_ = '.'.join(k.split('.')[1:])
+        state_dict[k_] = v
+    student.load_state_dict(state_dict, strict=True)
+    student.requires_grad_(False)
+    student.eval()
+
     print(f' (2.3) scheduler')
     sched_init_args = {}
     if args.sample_sampler == "ddim":
@@ -544,10 +596,13 @@ def main(args) :
     if args.network_weights is not None:
         info = network.load_weights(args.network_weights)
     network.to(device)
+    vae_encoder.to(device, dtype=vae_dtype)
+    vae_encoder_quantize.to(device, dtype=vae_dtype)
+    student.to(device, dtype=vae_dtype)
 
     print(f' (2.4) scheduling factors')
     if args.with_new_vae_factor :
-        vae_factor_dict = '../result/lora_noising_pretrained_denoising_decoding_factor_txt.txt'
+        vae_factor_dict = '../result/inference_decoding_factor_txt.txt'
         with open(vae_factor_dict, 'r') as f:
             content = f.readlines()
         inference_decoding_factor = {}
@@ -610,53 +665,16 @@ def main(args) :
                                                                     attention_storer=attention_storer,
                                                                     alphas_cumprod_dict=alphas_cumprod_dict,)
                     attention_storer.reset()
-                    """
-                    # self query / key / value dictionary
-                    layer_names = attention_storer.self_query_store.keys()
-                    self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
-                    for layer in layer_names:
-                        if 'down' in layer:
-                            self_query_list = attention_storer.self_query_store[layer]
-                            self_key_list = attention_storer.self_key_store[layer]
-                            self_value_list = attention_storer.self_value_store[layer]
-                            i = 0
-                            for self_query, self_key, self_value in zip(self_query_list, self_key_list, self_value_list):
-                                t_ = time_steps[i]
-                                if t_ not in self_query_dict.keys():
-                                    self_query_dict[t_] = {}
-                                    self_query_dict[t_][layer] = self_query
-                                else:
-                                    self_query_dict[t_][layer] = self_query
-
-                                if t_ not in self_key_dict.keys():
-                                    self_key_dict[t_] = {}
-                                    self_key_dict[t_][layer] = self_key
-                                else:
-                                    self_key_dict[t_][layer] = self_key
-
-                                if t_ not in self_value_dict.keys():
-                                    self_value_dict[t_] = {}
-                                    self_value_dict[t_][layer] = self_value
-                                else:
-                                    self_value_dict[t_][layer] = self_value
-                                i += 1
-                    #collector = AttentionStore()
-                    #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                    """
                     time_steps.reverse()
                     print(f'time_steps : {time_steps}')
-                    # timesteps = [0,20]
                     context = init_prompt(tokenizer, text_encoder, device, prompt)
-                    #collector = AttentionStore()
-                    #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-                    
                     print(f' (2.3.2) recon')
                     recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                                          context=context,
                                                          inference_times=time_steps,  # [20,0]
                                                          scheduler=scheduler,
                                                          unet=unet,
-                                                         vae=vae,
+                                                         vae=student,
                                                          base_folder_dir=timewise_save_base_folder,
                                                          vae_factor_dict = inference_decoding_factor)
                     attention_storer.reset()
@@ -678,136 +696,42 @@ def main(args) :
         test_images = os.listdir(image_folder)
         for j, test_img in enumerate(test_images):
             if j < 4 :
-                test_img_dir = os.path.join(image_folder, test_img)
-                mask_img_dir = os.path.join(mask_folder, test_img)
-                mask_img_pil = Image.open(mask_img_dir)
+                train_img_dir = os.path.join(image_folder, test_img)
                 concept_name = test_img.split('.')[0]
-                save_base_folder = os.path.join(class_base_folder, f'noising_inverse_unet_denoising_lora_inference_time_{args.num_ddim_steps}_model_epoch_{model_epoch}')
-                print(f'save_base_folder : {save_base_folder}')
-                os.makedirs(save_base_folder, exist_ok=True)
-                # inference_times = [980, 960, ..., 0]
-                image_gt_np = load_512(test_img_dir)
+                print(f' (2.3.1) inversion')
+                image_gt_np = load_512(train_img_dir)
                 latent = image2latent(image_gt_np, vae, device, weight_dtype)
-                inference_times = torch.cat([torch.tensor([999]), inference_times, ], dim=0)
-                flip_times = torch.flip(inference_times, dims=[0]) # [0,20, ..., 980]
+                inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
+                flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
                 original_latent = latent.clone().detach()
                 for ii, final_time in enumerate(flip_times[1:]):
-                    if final_time == args.final_time :
-                        timewise_save_base_folder = os.path.join(save_base_folder,f'{concept_name}/final_time_{final_time.item()}')
+                    if final_time.item() == args.final_time:
+                        timewise_save_base_folder = os.path.join(class_base_folder, f'final_time_{final_time.item()}')
+                        print(f' - save_base_folder : {timewise_save_base_folder}')
                         os.makedirs(timewise_save_base_folder, exist_ok=True)
                         latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
                                                                         context=invers_context,
-                                                                        #context=context,
                                                                         inference_times=flip_times[:ii + 2],
                                                                         scheduler=scheduler,
                                                                         unet=invers_unet,
-                                                                        #unet = unet,
                                                                         vae=vae,
                                                                         base_folder_dir=timewise_save_base_folder,
-                                                                        attention_storer=attention_storer)
-
-                        layer_names = attention_storer.self_query_store.keys()
-                        self_query_dict, self_key_dict, self_value_dict = {}, {}, {}
-                        for layer in layer_names:
-
-                            self_query_list = attention_storer.self_query_store[layer]
-                            self_key_list = attention_storer.self_key_store[layer]
-                            self_value_list = attention_storer.self_value_store[layer]
-                            i = 0
-                            for self_query, self_key, self_value in zip(self_query_list, self_key_list,
-                                                                        self_value_list):
-                                t_ = time_steps[i]
-                                if t_ not in self_query_dict.keys():
-                                    self_query_dict[t_] = {}
-                                    self_query_dict[t_][layer] = self_query
-                                else:
-                                    self_query_dict[t_][layer] = self_query
-
-                                if t_ not in self_key_dict.keys():
-                                    self_key_dict[t_] = {}
-                                    self_key_dict[t_][layer] = self_key
-                                else:
-                                    self_key_dict[t_][layer] = self_key
-
-                                if t_ not in self_value_dict.keys():
-                                    self_value_dict[t_] = {}
-                                    self_value_dict[t_][layer] = self_value
-                                else:
-                                    self_value_dict[t_][layer] = self_value
-                                i += 1
+                                                                        attention_storer=attention_storer,
+                                                                        alphas_cumprod_dict=alphas_cumprod_dict, )
                         attention_storer.reset()
-                        #collector = AttentionStore()
-                        #register_self_condition_giver(unet, collector, self_query_dict, self_key_dict, self_value_dict)
-
+                        time_steps.reverse()
+                        print(f'time_steps : {time_steps}')
+                        context = init_prompt(tokenizer, text_encoder, device, prompt)
                         print(f' (2.3.2) recon')
                         recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                                              context=context,
                                                              inference_times=time_steps,  # [20,0]
                                                              scheduler=scheduler,
                                                              unet=unet,
-                                                             vae=vae,
+                                                             vae=student,
                                                              base_folder_dir=timewise_save_base_folder,
                                                              vae_factor_dict=inference_decoding_factor)
-                        #attention_storer.reset()
-
-
-        """
-        print(f' (2.3.3) heatmap checking')
-        org_img_dir = os.path.join(args.concept_image_folder, concept_img)
-        orgin_latent = image2latent(load_512(org_img_dir), vae, device, weight_dtype)
-        recon_latent = all_latent[-1]
-        input_latent = torch.cat([orgin_latent, recon_latent])
-        query_storer = AttentionStore()
-        register_attention_control(unet, query_storer)
-        un, _ = context.chunk(2)
-        call_unet(unet,input_latent, 0, torch.cat([un] * 2),None, None)
-        query_storing = query_storer.cross_key_store
-        layer_names = query_storing.keys()
-        query_storer.reset()
-        org_query_dict, recon_query_dict = {}, {}
-        for layer_name in layer_names :
-            query_value_list = query_storing[layer_name]
-            query_collecting = query_value_list[0]
-            org_query, recon_query = query_collecting.chunk(2)
-            org_query = torch.mean(org_query, dim=0)
-            recon_query = torch.mean(recon_query, dim=0) # [pix_2, dim]
-            pix_num = org_query.shape[-2]
-            height = int(pix_num ** 0.5)
-            if height not in org_query_dict.keys():
-                org_query_dict[height] = []
-                org_query_dict[height].append(org_query)
-                recon_query_dict[height] = []
-                recon_query_dict[height].append(recon_query)
-            else:
-                org_query_dict[height].append(org_query)
-                recon_query_dict[height].append(recon_query)
-        heights = org_query_dict.keys()
-        for height in heights:
-            org_query_list = org_query_dict[height]
-            recon_query_list = recon_query_dict[height]
-            org_query = torch.stack(org_query_list, dim=0)
-            recon_query = torch.stack(recon_query_list, dim=0)
-            org_query = torch.mean(org_query, dim=0)
-            recon_query = torch.mean(recon_query, dim=0)
-            cross_attn_map = torch.matmul(org_query, recon_query.transpose(-1, -2))
-            print(f'[cross_attn_map] height : {height} | cross_attn_map (pix2,pix2) : {cross_attn_map.shape}')
-
-            cross_attn_map = torch.softmax(cross_attn_map, dim=-1)
-            diagonal_mask = torch.eye(height*height)
-            normal_map = cross_attn_map * diagonal_mask
-            print(f'normal_map : {normal_map}')
-            sim_vector = normal_map.sum(-1)
-            print(f'sim_vector : {sim_vector}')
-            sim_map = sim_vector.reshape(height, height)
-            anomal_map = 1 - sim_map
-            gray = anomal_map * 255.0
-            import cv2
-            heatmap = cv2.applyColorMap(np.uint8(gray), cv2.COLORMAP_JET)
-            pil_image = Image.fromarray(heatmap).resize((512, 512))
-            heatmap_save_dir = os.path.join(base_folder, f'heatmap_res_{height}.png')
-            pil_image.save(heatmap_save_dir)
-        """
-
+                        attention_storer.reset()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -861,9 +785,7 @@ if __name__ == "__main__":
     parser.add_argument("--final_time", type=int, default = 600)
     parser.add_argument("--with_new_vae_factor", action='store_true')
     parser.add_argument("--with_new_noising_alphas_cumprod", action='store_true')
-
-
-
+    parser.add_argument("--student_pretrained_dir", type=str)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
