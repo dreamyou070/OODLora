@@ -789,6 +789,7 @@ if __name__ == "__main__":
     parser.add_argument("--using_customizing_scheduling", action="store_true",)
     parser.add_argument("--final_time", type=int, default = 600)
     parser.add_argument("--with_new_vae_factor", action='store_true')
+    parser.add_argument("--customizing_decoder", action='store_true')
     parser.add_argument("--with_new_noising_alphas_cumprod", action='store_true')
     parser.add_argument("--student_pretrained_dir", type=str)
     args = parser.parse_args()
