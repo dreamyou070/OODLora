@@ -387,7 +387,6 @@ class NetworkTrainer:
         # training loop
         autoencoder_warm_up_n_epochs = args.autoencoder_warm_up_n_epochs
         for epoch in range(num_train_epochs):
-            """
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
@@ -415,7 +414,7 @@ class NetworkTrainer:
                     global_step += 1
                     if is_main_process:
                         wandb.log(log_loss, step=global_step)
-            """
+
             # ------------------------------------------------------------------------------------------
             if args.save_every_n_epochs is not None:
                 print('saving model')

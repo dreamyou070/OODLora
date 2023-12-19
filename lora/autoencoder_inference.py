@@ -87,20 +87,10 @@ def main(args):
 
 
     print(f' (4) making decoder of vae')
-    from safetensors.torch import load_file as safe_load_file
-    from safetensors import safe_open
+
     student_pretrained_dir = args.student_pretrained_dir
-    loader = safe_load_file
-    state_dict = loader(student_pretrained_dir, map_location="cpu")
-
-
-    """
-    tensors = {}
-
-    with safe_open(student_pretrained_dir, framework="pt") as f:
-        for key in f.keys():
-            tensors[key] = f.get_tensor(key)
-    student.load_state_dict(tensors)
+    model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
+    student.load_state_dict(model_state_dict, map_location="cpu", strict=True)
 
     student.requires_grad_(False)
     student.eval()
