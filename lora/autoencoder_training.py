@@ -428,7 +428,8 @@ class NetworkTrainer:
                     os.makedirs(save_directory, exist_ok=True)
                     print(f'saving model to {save_directory}')
 
-                    torch.save({"model": accelerator.unwrap_model(student).to('cpu').state_dict(),},save_directory)
+                    state_dict = accelerator.unwrap_model(student).to('cpu').state_dict()
+                    print(state_dict.keys())
 
 
 
