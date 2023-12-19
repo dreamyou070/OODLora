@@ -1,8 +1,8 @@
 import argparse
+from accelerate.utils import set_seed
 import json
 import os
 import random
-from accelerate.utils import set_seed
 import library.train_util as train_util
 import library.config_util as config_util
 import library.custom_train_functions as custom_train_functions
