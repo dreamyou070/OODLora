@@ -651,7 +651,7 @@ def main(args) :
     prompt = args.prompt
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
     context = init_prompt(tokenizer, text_encoder, device, prompt)
-    """
+
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb/30_rgb')
     train_images = os.listdir(train_img_folder)
@@ -676,6 +676,8 @@ def main(args) :
                     timewise_save_base_folder = os.path.join(train_base_folder, f'final_time_{final_time.item()}')
                     print(f' - save_base_folder : {timewise_save_base_folder}')
                     os.makedirs(timewise_save_base_folder, exist_ok=True)
+                    org_pil = Image.open(train_img_dir).resize((512, 512)).convert('RGB')
+                    org_pil.save(os.path.join(timewise_save_base_folder, 'org.png'))
                     latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
                                                                     context=invers_context,
                                                                     inference_times=flip_times[:ii + 2],
@@ -702,7 +704,7 @@ def main(args) :
                                                          base_folder_dir=timewise_save_base_folder,
                                                          vae_factor_dict = inference_decoding_factor)
                     attention_storer.reset()
-    """
+    
 
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
