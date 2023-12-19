@@ -65,10 +65,6 @@ def main(args):
     vae_dtype = torch.float32
     print(f' (2) model')
     text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
-    # lr schedulerを用意する
-    discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=3,
-                                       out_channels=3,kernel_size=4, activation=(Act.LEAKYRELU, {"negative_slope": 0.2, }),
-                                       norm="BATCH", bias=False, padding=1, )
 
     print(f' (3) making encoder of vae')
     vae_encoder = vae.encoder
@@ -99,6 +95,7 @@ def main(args):
     vae_epoch = os.path.split(args.vae_pretrained_dir)[-1]
     vae_epoch = os.path.splitext(vae_epoch)[0]
     vae_epoch = int(vae_epoch.split('_')[-1])
+    print(f'vae_epoch: {vae_epoch}')
 
     def recon(sample_data_dir, save_dir, compare_save_dir):
         pil_img = Image.open(sample_data_dir)
