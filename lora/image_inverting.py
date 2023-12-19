@@ -629,6 +629,7 @@ def main(args) :
             t, f = int(line[0]), float(line[1])
             inference_decoding_factor[t] = f
         alphas_cumprod_dict = {}
+
     elif args.with_new_noising_alphas_cumprod :
         inference_decoding_factor = {}
         alphas_cumprod_dict_dir = r'../result/lora_noising_scheduler_alphas_cumprod_2_20231218.txt'
@@ -640,6 +641,7 @@ def main(args) :
             line = line.split(' : ')
             t, f = int(line[0]), float(line[1])
             alphas_cumprod_dict[t] = f
+    print(f'vae_factor_dict : {vae_factor_dict}')
 
 
 
