@@ -414,20 +414,16 @@ class NetworkTrainer:
                     global_step += 1
                     if is_main_process:
                         wandb.log(log_loss, step=global_step)
-
+                break
             # ------------------------------------------------------------------------------------------
             if args.save_every_n_epochs is not None:
                 print('saving model')
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
                     trg_epoch = str(epoch + 1).zfill(6)
-                    # ------------------------------------------------------------------------
-                    ckpt_name = f'student_epoch_{trg_epoch}.pth'
                     save_directory = os.path.join(args.output_dir, f'vae_student_model')
                     os.makedirs(save_directory, exist_ok=True)
-                    path = os.path.join(save_directory, ckpt_name)
-                    state_dict = accelerator.unwrap_model(student).to('cpu').state_dict()
-                    torch.save(state_dict, path)
+                    torch.save(accelerator.unwrap_model(student).to('cpu').state_dict(), os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
             """
             if args.sample_every_n_epochs is not None:
                 print('sampling')
