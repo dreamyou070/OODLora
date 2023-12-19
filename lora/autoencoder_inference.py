@@ -90,7 +90,7 @@ def main(args):
     from safetensors.torch import load_file
     from safetensors import safe_open
 
-    student_pretrained_dir = '../result/MVTec_experiment/bagel/vae_training/1_TS_test/vae_student_model/student_epoch_000001/model.safetensors'
+    student_pretrained_dir = args.student_pretrained_dir
     tensors = {}
     with safe_open("model.safetensors", framework="pt", device="cpu") as f:
         for key in f.keys():
@@ -174,7 +174,7 @@ if __name__ == "__main__":
                         default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/crack/rgb/000.png')
     parser.add_argument("--normal_sample_data_dir", type=str,
                         default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png')
-    parser.add_argument("--vae_pretrained_dir", type=str,
+    parser.add_argument("--student_pretrained_dir", type=str,
                         default='../result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000005/pytorch_model.bin')
     args = parser.parse_args()
     main(args)
