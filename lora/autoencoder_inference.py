@@ -66,6 +66,8 @@ def main(args):
     print(f' (2) model')
     text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
 
+    print(f'accelerator.device : {accelerator.device}')
+
     print(f' (3) making encoder of vae')
     vae_encoder = vae.encoder
     vae_encoder_quantize = vae.quant_conv

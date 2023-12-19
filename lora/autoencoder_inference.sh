@@ -15,6 +15,6 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_
   --process_title parksooyeon \
   --seed 42 \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
-  --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/2_TS_test_contrastive/vae_student_model/student_epoch_000002.pth \
+  --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/2_TS_test_contrastive/vae_student_model/student_epoch_000003.pth \
   --output_dir ../result/MVTec_experiment/bagel/vae_training/2_TS_test_contrastive \
   --resolution 512,512
