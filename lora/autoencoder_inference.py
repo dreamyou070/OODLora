@@ -92,10 +92,10 @@ def main(args):
     student.eval()
     student.to(accelerator.device, dtype=vae_dtype)
 
-    vae_epoch = os.path.split(args.vae_pretrained_dir)[-1]
-    vae_epoch = os.path.splitext(vae_epoch)[0]
-    vae_epoch = int(vae_epoch.split('_')[-1])
-    print(f'vae_epoch: {vae_epoch}')
+    student_epoch = os.path.split(student_pretrained_dir)[-1]
+    student_epoch = os.path.splitext(student_epoch)[0]
+    student_epoch = int(student_epoch.split('_')[-1])
+    print(f'student_epoch: {student_epoch}')
 
     def recon(sample_data_dir, save_dir, compare_save_dir):
         pil_img = Image.open(sample_data_dir)
