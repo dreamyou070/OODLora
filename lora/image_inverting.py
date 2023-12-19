@@ -651,7 +651,7 @@ def main(args) :
     prompt = args.prompt
     invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
     context = init_prompt(tokenizer, text_encoder, device, prompt)
-
+    """
     print(f' (3.2) train images')
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb/30_rgb')
     train_images = os.listdir(train_img_folder)
@@ -702,7 +702,7 @@ def main(args) :
                                                          base_folder_dir=timewise_save_base_folder,
                                                          vae_factor_dict = inference_decoding_factor)
                     attention_storer.reset()
-
+    """
 
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
@@ -739,9 +739,11 @@ def main(args) :
                                                                         scheduler=scheduler,
                                                                         unet=invers_unet,
                                                                         vae=vae,
+                                                                        student=student,
                                                                         base_folder_dir=timewise_save_base_folder,
                                                                         attention_storer=attention_storer,
-                                                                        alphas_cumprod_dict=alphas_cumprod_dict, )
+                                                                        alphas_cumprod_dict=alphas_cumprod_dict,
+                                                                        vae_factor_dict=vae_factor_dict)
                         attention_storer.reset()
                         time_steps.reverse()
                         print(f'time_steps : {time_steps}')
@@ -752,7 +754,8 @@ def main(args) :
                                                              inference_times=time_steps,  # [20,0]
                                                              scheduler=scheduler,
                                                              unet=unet,
-                                                             vae=student,
+                                                             vae=vae,
+                                                             student=student,
                                                              base_folder_dir=timewise_save_base_folder,
                                                              vae_factor_dict=inference_decoding_factor)
                         attention_storer.reset()
