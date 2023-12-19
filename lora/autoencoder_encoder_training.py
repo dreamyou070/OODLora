@@ -335,6 +335,24 @@ class NetworkTrainer:
                 loss = loss.mean([1, 2, 3])
                 loss = loss.mean()
                 log_loss['loss/student_encoder'] = loss.item()
+
+                if args.student_reconst_loss :
+                    batch_size = org_img.shape[0]
+                    normal_indexs = []
+                    for i in range(batch_size):
+                        org = org_img[i]
+                        mask = masked_img[i]
+                        if torch.equal(org, mask):
+                            normal_indexs.append(i)
+                    if len(normal_indexs) > 0:
+                        normal_org = org_img[normal_indexs]
+                        normal_recon = y_hat[normal_indexs]
+                        recon_loss = torch.nn.functional.mse_loss(normal_org, normal_recon, reduction='none')
+                        recon_loss = recon_loss.mean([1, 2, 3])
+                        recon_loss = recon_loss.mean()
+                        log_loss['loss/recon'] = recon_loss.mean().item()
+                        loss = loss + recon_loss
+
                 # ------------------------------------------------------------------------------------
                 accelerator.backward(loss)
                 optimizer.step()
