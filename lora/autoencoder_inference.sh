@@ -6,7 +6,6 @@
 echo $CUDA_VISIBLE_DEVICES
 echo $SLURM_NODELIST
 echo $SLURM_NODEID
-
 source ~/.bashrc
 conda activate venv_lora
 ml purge
