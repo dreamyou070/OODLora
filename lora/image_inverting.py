@@ -723,6 +723,8 @@ def main(args) :
                 train_img_dir = os.path.join(image_folder, test_img)
                 concept_name = test_img.split('.')[0]
                 print(f' (2.3.1) inversion')
+                save_base_dir = os.path.join(class_base_folder, concept_name)
+                os.makedirs(save_base_dir, exist_ok=True)
                 image_gt_np = load_512(train_img_dir)
                 latent = image2latent(image_gt_np, vae, device, weight_dtype)
                 inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
@@ -730,7 +732,7 @@ def main(args) :
                 original_latent = latent.clone().detach()
                 for ii, final_time in enumerate(flip_times[1:]):
                     if final_time.item() == args.final_time:
-                        timewise_save_base_folder = os.path.join(class_base_folder, f'final_time_{final_time.item()}')
+                        timewise_save_base_folder = os.path.join(save_base_dir, f'final_time_{final_time.item()}')
                         print(f' - save_base_folder : {timewise_save_base_folder}')
                         os.makedirs(timewise_save_base_folder, exist_ok=True)
                         latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
