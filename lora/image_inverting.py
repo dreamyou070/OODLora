@@ -459,6 +459,10 @@ def main(args) :
 
     set_seed(args.seed)
 
+    print(f'\n step 3. preparing accelerator')
+    accelerator = train_util.prepare_accelerator(args)
+    is_main_process = accelerator.is_main_process
+
     print(f" (1.2) save directory and save config")
     weight_dtype, save_dtype = train_util.prepare_dtype(args)
     vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
@@ -477,7 +481,7 @@ def main(args) :
     os.makedirs(output_dir, exist_ok=True)
 
     print(f' \n step 2. make stable diffusion model')
-    device = args.device
+    device = accelerator.device
     print(f' (2.1) tokenizer')
     tokenizer = train_util.load_tokenizer(args)
     tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
