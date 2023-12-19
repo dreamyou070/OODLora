@@ -126,13 +126,13 @@ def main(args):
     print(' (3.1) anormal test')
     anormal_sample_data_dir = args.anormal_sample_data_dir
     compare_save_dir = os.path.join(save_dir, 'anormal.png')
-    anormal_save_dir = os.path.join(save_dir, f'model_{vae_epoch}_original_encoder_trained_decoder_anormal_recon_test.png')
+    anormal_save_dir = os.path.join(save_dir, f'model_{student_epoch}_original_encoder_trained_decoder_anormal_recon_test.png')
     recon(anormal_sample_data_dir, anormal_save_dir, compare_save_dir)
 
     print(f' (3.2) normal test')
     normal_sample_data_dir = args.normal_sample_data_dir
     compare_save_dir = os.path.join(save_dir, 'normal.png')
-    normal_save_dir = os.path.join(save_dir, f'model_{vae_epoch}_original_encoder_trained_decoder_normal_recon_test.png')
+    normal_save_dir = os.path.join(save_dir, f'model_{student_epoch}_original_encoder_trained_decoder_normal_recon_test.png')
     recon(normal_sample_data_dir, normal_save_dir, compare_save_dir)
 
 
