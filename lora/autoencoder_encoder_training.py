@@ -24,7 +24,7 @@ from utils.image_utils import load_image, latent2image, IMAGE_TRANSFORMS
 import numpy as np
 from PIL import Image
 from diffusers.models.vae import DiagonalGaussianDistribution
-from STTraining import Teacher, Student
+from STTraining import Encoder_Teacher, Encoder_Student
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -143,14 +143,14 @@ class NetworkTrainer:
         vae_encoder_quantize.eval()
         vae_encoder.to(dtype=weight_dtype)
         vae_encoder_quantize.to(dtype=weight_dtype)
-        teacher = Teacher(vae_encoder, vae_encoder_quantize)
+        teacher = Encoder_Teacher(vae_encoder, vae_encoder_quantize)
 
         config_dict = vae.config
         from diffusers import AutoencoderKL
         student_vae = AutoencoderKL.from_config(config_dict)
         student_vae_encoder = student_vae.encoder
         student_vae_encoder_quantize = student_vae.quant_conv
-        student = Student(student_vae_encoder, student_vae_encoder_quantize)
+        student = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
 
         teacher.requires_grad_(False)
         teacher.eval()

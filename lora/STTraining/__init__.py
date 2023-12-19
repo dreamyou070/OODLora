@@ -354,8 +354,33 @@ class Student(nn.Module):
         self.quant_layer = base_quant_layer
         self.model = base_model
 
+
+
     def forward(self, x):
         x = self.quant_layer(x)
         x = self.model(x)
         return x
 
+
+class Encoder_Teacher(nn.Module):
+    def __init__(self, base_model, base_quant_layer) -> None:
+        super().__init__()
+        self.quant_layer = base_quant_layer
+        self.model = base_model
+
+    def forward(self, x):
+        x = self.model(x)
+        x = self.quant_layer(x)
+        return x
+
+
+class Encoder_Student(nn.Module):
+    def __init__(self, base_model, base_quant_layer) -> None:
+        super().__init__()
+        self.quant_layer = base_quant_layer
+        self.model = base_model
+
+    def forward(self, x):
+        x = self.model(x)
+        x = self.quant_layer(x)
+        return x
