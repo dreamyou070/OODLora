@@ -429,11 +429,6 @@ class NetworkTrainer:
                     path = os.path.join(save_directory, ckpt_name)
                     state_dict = accelerator.unwrap_model(student).to('cpu').state_dict()
                     torch.save(state_dict, path)
-                    torch.save(state_dict, save_directory)
-
-
-
-
             """
             if args.sample_every_n_epochs is not None:
                 print('sampling')
