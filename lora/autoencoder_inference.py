@@ -88,6 +88,8 @@ def main(args):
 
     student_pretrained_dir = args.student_pretrained_dir
     model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
+    print(model_state_dict)
+    """
     student.load_state_dict(model_state_dict, strict=True)
 
     student.requires_grad_(False)
@@ -135,7 +137,7 @@ def main(args):
     compare_save_dir = os.path.join(save_dir, 'normal.png')
     normal_save_dir = os.path.join(save_dir, f'model_{student_epoch}_original_encoder_trained_decoder_normal_recon_test.png')
     recon(normal_sample_data_dir, normal_save_dir, compare_save_dir)
-
+    """
 
 
 if __name__ == "__main__":
