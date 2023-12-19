@@ -87,11 +87,16 @@ def main(args):
 
 
     print(f' (4) making decoder of vae')
-    from safetensors.torch import load_file
+    from safetensors.torch import load_file as safe_load_file
     from safetensors import safe_open
-
     student_pretrained_dir = args.student_pretrained_dir
+    loader = safe_load_file
+    state_dict = loader(student_pretrained_dir)
+
+
+    """
     tensors = {}
+
     with safe_open(student_pretrained_dir, framework="pt") as f:
         for key in f.keys():
             tensors[key] = f.get_tensor(key)
@@ -142,7 +147,7 @@ def main(args):
     compare_save_dir = os.path.join(save_dir, 'normal.png')
     normal_save_dir = os.path.join(save_dir, f'model_{vae_epoch}_original_encoder_trained_decoder_normal_recon_test.png')
     recon(normal_sample_data_dir, normal_save_dir, compare_save_dir)
-
+    """
 
 
 if __name__ == "__main__":
