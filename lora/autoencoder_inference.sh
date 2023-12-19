@@ -8,11 +8,11 @@ echo $SLURM_NODELIST
 echo $SLURM_NODEID
 
 source ~/.bashrc
-conda activate venv
+conda activate venv_lora
 ml purge
 ml load cuda/11.0
 
-accelerate launch --config_file ../../../gpu_config/gpu_3_4_config --main_process_port 53489 autoencoder_inference.py \
+accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 53489 autoencoder_inference.py \
   --device 'cuda:4' \
   --process_title parksooyeon \
   --seed 42 \
