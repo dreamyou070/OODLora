@@ -69,10 +69,12 @@ def main(args):
     print(f' (3) making encoder of vae')
     vae_encoder = vae.encoder
     vae_encoder_quantize = vae.quant_conv
-    vae_decoder = vae.decoder
-    vae_decoder_quantize = vae.post_quant_conv
-
-    teacher = Teacher(vae_decoder, vae_decoder_quantize)
+    vae_encoder.requires_grad_(False)
+    vae_encoder.eval()
+    vae_encoder.to(accelerator.device, dtype=vae_dtype)
+    vae_encoder_quantize.requires_grad_(False)
+    vae_encoder_quantize.eval()
+    vae_encoder_quantize.to(accelerator.device, dtype=vae_dtype)
 
     config_dict = vae.config
     from diffusers import AutoencoderKL
@@ -105,8 +107,7 @@ def main(args):
         img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
         img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
         with torch.no_grad():
-            img = img.to(vae.device)
-            # ------------------
+            img = img.to(accelerator.device)
             # (1) encoder
             latents = vae.encode(img.to(dtype=vae_dtype)).latent_dist.sample()
             from diffusers.models.vae import DiagonalGaussianDistribution
