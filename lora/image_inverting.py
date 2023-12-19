@@ -13,7 +13,6 @@ from PIL import Image
 import sys, importlib
 from typing import Union
 import numpy as np
-from sklearn.metrics import roc_auc_score,auc,average_precision_score
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
