@@ -424,7 +424,7 @@ class NetworkTrainer:
                     trg_epoch = str(epoch + 1).zfill(6)
                     # ------------------------------------------------------------------------
                     ckpt_name = f'student_epoch_{trg_epoch}'
-                    save_directory = os.path.join(args.output_dir, 'vae_student_model')
+                    save_directory = os.path.join(args.output_dir, f'vae_student_model_epoch_{trg_epoch}.pt')
                     os.makedirs(save_directory, exist_ok=True)
                     print(f'saving model to {save_directory}')
                     accelerator.save({"model": accelerator.unwrap_model(student).to('cpu').state_dict(),},
