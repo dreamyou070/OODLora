@@ -27,4 +27,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_proces
   --sample_every_n_epochs 1 \
   --train_batch_size 3 \
   --max_train_steps 100000 \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTecAD/paired_data/bad
+  --train_data_dir ../../../MyData/anomaly_detection/VisA/MVTecAD/paired_data/bad
