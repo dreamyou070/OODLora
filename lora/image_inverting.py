@@ -379,9 +379,9 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
 
         else:
             np_img = latent2image(latent, vae, return_type='np')
-    pil_img = Image.fromarray(np_img)
-    pil_images.append(pil_img)
-    pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
+    #pil_img = Image.fromarray(np_img)
+    #pil_images.append(pil_img)
+    #pil_img.save(os.path.join(base_folder_dir, f'original_sample.png'))
     flip_times = inference_times
     repeat_time = 0
     for i, t in enumerate(flip_times[:-1]):
@@ -721,6 +721,7 @@ def main(args) :
         for j, test_img in enumerate(test_images):
             if j < 4 :
                 train_img_dir = os.path.join(image_folder, test_img)
+                mask_img_dir = os.path.join(mask_folder, test_img)
                 concept_name = test_img.split('.')[0]
                 print(f' (2.3.1) inversion')
                 save_base_dir = os.path.join(class_base_folder, concept_name)
@@ -735,6 +736,10 @@ def main(args) :
                         timewise_save_base_folder = os.path.join(save_base_dir, f'final_time_{final_time.item()}')
                         print(f' - save_base_folder : {timewise_save_base_folder}')
                         os.makedirs(timewise_save_base_folder, exist_ok=True)
+                        mask_pil = Image.open(mask_img_dir).resize((512, 512)).convert('RGB')
+                        mask_pil.save(os.path.join(timewise_save_base_folder, 'mask.png'))
+                        org_pil = Image.open(train_img_dir).resize((512, 512)).convert('RGB')
+                        org_pil.save(os.path.join(timewise_save_base_folder, 'org.png'))
                         latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
                                                                         context=invers_context,
                                                                         inference_times=flip_times[:ii + 2],
