@@ -96,8 +96,8 @@ def main(args):
     student.eval()
     student.to(accelerator.device, dtype=vae_dtype)
 
-    vae_epoch = os.path.split(args.vae_pretrained_dir)[0]
-    vae_epoch = os.path.split(vae_epoch)[-1]
+    vae_epoch = os.path.split(args.vae_pretrained_dir)[-1]
+    vae_epoch = os.path.splitext(vae_epoch)[0]
     vae_epoch = int(vae_epoch.split('_')[-1])
 
     def recon(sample_data_dir, save_dir, compare_save_dir):
@@ -137,7 +137,7 @@ def main(args):
     compare_save_dir = os.path.join(save_dir, 'normal.png')
     normal_save_dir = os.path.join(save_dir, f'model_{vae_epoch}_original_encoder_trained_decoder_normal_recon_test.png')
     recon(normal_sample_data_dir, normal_save_dir, compare_save_dir)
-    """
+
 
 
 if __name__ == "__main__":
