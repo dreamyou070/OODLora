@@ -404,15 +404,33 @@ class NetworkTrainer:
                     masked_latent = DiagonalGaussianDistribution(vae_encoder_quantize(vae_encoder(masked_img))).sample(generator)
                     y = teacher(masked_latent.to(dtype=weight_dtype))
                 y_hat = student(org_latent.to(dtype=weight_dtype))
-                loss = torch.nn.functional.mse_loss(y, y_hat, reduction = 'none')
-                loss = loss.mean([1,2,3])
+                loss = torch.nn.functional.mse_loss(y, y_hat, reduction='none')
+                loss = loss.mean([1, 2, 3])
                 loss = loss.mean()
+                log_loss['loss'] = loss.item()
+
+                if args.student_reconst_loss :
+                    batch_size = org_img.shape[0]
+                    normal_indexs = []
+                    for i in range(batch_size):
+                        org = org_img[i]
+                        mask = masked_img[i]
+                        if org == mask:
+                            normal_indexs.append(i)
+                    if len(normal_indexs) > 0:
+                        normal_org = org_img[normal_indexs]
+                        normal_recon = y_hat[normal_indexs]
+                        recon_loss = torch.nn.functional.mse_loss(normal_org, normal_recon, reduction = 'none')
+                        recon_loss = recon_loss.mean([1,2,3])
+                        log_loss['loss/recon'] = recon_loss.item()
+                        loss = loss + recon_loss.mean()
+
                 # ------------------------------------------------------------------------------------
                 accelerator.backward(loss)
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad(set_to_none=True)
-                log_loss['loss'] = loss.item()
+
                 if accelerator.sync_gradients:
                     progress_bar.update(1)
                     global_step += 1
@@ -532,6 +550,7 @@ if __name__ == "__main__":
     parser.add_argument("--autoencoder_warm_up_n_epochs", type=int, default=2)
     parser.add_argument("--vae_pretrained_dir", type=str)
     parser.add_argument("--discriminator_pretrained_dir", type=str)
+    parser.add_argument("--student_reconst_loss", action = True)
     # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)

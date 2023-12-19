@@ -400,6 +400,9 @@ class NetworkTrainer:
                     latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
                     y = teacher(latent.to(dtype=weight_dtype))
                 y_hat = student(latent.to(dtype=weight_dtype))
+
+
+
                 loss = torch.nn.functional.mse_loss(y_hat, y, reduction = 'none')
                 loss = loss.mean([1,2,3])
                 loss = loss.mean()
