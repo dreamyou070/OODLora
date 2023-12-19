@@ -88,10 +88,11 @@ def main(args):
 
     student_pretrained_dir = args.student_pretrained_dir
     model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
-    original_state_dict = student.state_dict()
-    #student.load_state_dict(model_state_dict, strict=True)
-    print(f'original state dict : {original_state_dict.keys()}')
-    print(f'trained  state dict : {model_state_dict.keys()}')
+    state_dict = {}
+    for k, v in model_state_dict.items():
+        k_ = '.'.join(k.split('.')[1:])
+        state_dict[k_] = v
+    student.load_state_dict(state_dict, strict=True)
     """
     
 
