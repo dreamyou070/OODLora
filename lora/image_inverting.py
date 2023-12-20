@@ -635,7 +635,6 @@ def main(args) :
     print(f' (2.4) scheduling factors')
     alphas_cumprod_dict = {}
     inference_decoding_factor = {}
-    vae_factor_dict = {}
     if args.using_customizing_scheduling :
         vae_factor_dict = '../result/decoder_factor.txt'
         with open(vae_factor_dict, 'r') as f:
@@ -645,13 +644,10 @@ def main(args) :
             line = line.split(' : ')
             t, f = int(line[0]), float(line[1])
             inference_decoding_factor[t] = f
-        vae_factor_dict = inference_decoding_factor
 
 
     elif args.with_new_noising_alphas_cumprod :
-        inference_decoding_factor = {}
         alphas_cumprod_dict_dir = r'../result/inference_decoding_factor_txt.txt'
-        alphas_cumprod_dict = {}
         with open(alphas_cumprod_dict_dir, 'r') as f:
             content = f.readlines()
         for line in content:
@@ -659,7 +655,7 @@ def main(args) :
             line = line.split(' : ')
             t, f = int(line[0]), float(line[1])
             alphas_cumprod_dict[t] = f
-    print(f'vae_factor_dict : {vae_factor_dict}')
+    print(f'inference_decoding_factor : {inference_decoding_factor}')
 
 
 
@@ -707,7 +703,7 @@ def main(args) :
                                                                     base_folder_dir=timewise_save_base_folder,
                                                                     attention_storer=attention_storer,
                                                                     alphas_cumprod_dict=alphas_cumprod_dict,
-                                                                    vae_factor_dict=vae_factor_dict)
+                                                                    vae_factor_dict=inference_decoding_factor)
                     attention_storer.reset()
                     time_steps.reverse()
                     print(f'time_steps : {time_steps}')
@@ -771,7 +767,7 @@ def main(args) :
                                                                         base_folder_dir=timewise_save_base_folder,
                                                                         attention_storer=attention_storer,
                                                                         alphas_cumprod_dict=alphas_cumprod_dict,
-                                                                        vae_factor_dict=vae_factor_dict)
+                                                                        vae_factor_dict=inference_decoding_factor)
                         attention_storer.reset()
                         time_steps.reverse()
                         print(f'time_steps : {time_steps}')
