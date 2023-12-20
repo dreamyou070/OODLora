@@ -109,4 +109,5 @@ class AttentionStore :
         self.cross_key_store = {}
         self.cross_value_store = {}
         self.key_value_states_dict = {}
+        self.repeat = 0
         self.loss_list = []

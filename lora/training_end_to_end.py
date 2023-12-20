@@ -877,7 +877,8 @@ class NetworkTrainer:
                     global_step += 1
                     # (4) sample images
                     # self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
-                    if attention_storer is not None: attention_storer.step_store = {}
+                    if attention_storer is not None:
+                        attention_storer.step_store = {}
                     # (5) save or erase model
                     if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
                         accelerator.wait_for_everyone()
@@ -934,8 +935,8 @@ class NetworkTrainer:
             if epoch % args.sample_every_n_epochs == 0 and is_main_process:
                 self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
                                    text_encoder, unet)
-            if attention_storer is not None:
-                attention_storer.step_store = {}
+                if attention_storer is not None:
+                    attention_storer.reset()
             # end of epoch
         # metadata["ss_epoch"] = str(num_train_epochs)
         metadata["ss_training_finished_at"] = str(time.time())
