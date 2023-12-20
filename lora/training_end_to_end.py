@@ -888,7 +888,7 @@ class NetworkTrainer:
                                                                                  remove_step_no)
                                 remove_model(remove_ckpt_name)
 
-                current_loss = total_loss.detach().item()
+                current_loss = vae_loss.detach().item()
                 log_loss["loss/current_loss"] = current_loss
                 # ------------------------------------------------------------------------------------------------------------------------------
                 if epoch == 0:
