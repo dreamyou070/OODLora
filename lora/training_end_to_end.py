@@ -839,7 +839,7 @@ class NetworkTrainer:
                                                         noisy_latents, timesteps,
                                                         input_condition, batch, weight_dtype,
                                                         None, None)
-
+                            attention_storer.reset()
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
