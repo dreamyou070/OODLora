@@ -427,7 +427,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, stud
     pil_images = []
     with torch.no_grad():
         if args.customizing_decoder:
-            factor = vae_factor_dict[inference_times[0]]
+            factor = 1 / 0.18215
             np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
         else :
             np_img = latent2image(latent, vae, return_type='np')
@@ -449,7 +449,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, stud
                     np_img = latent2image_customizing(latent, vae, factor,return_type='np')
             else :
                 np_img = latent2image(latent, vae, return_type='np')
-        if prev_time == 0 :
+        #if prev_time == 0 :
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
@@ -656,7 +656,7 @@ def main(args) :
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb/30_rgb')
     train_images = os.listdir(train_img_folder)
     for i, train_img in enumerate(train_images) :
-        if i < 5 :
+        if i < 1 :
             train_img_dir = os.path.join(train_img_folder, train_img)
             concept_name = train_img.split('.')[0]
             print(f' (2.3.1) inversion')
@@ -706,7 +706,7 @@ def main(args) :
                                                          vae_factor_dict = inference_decoding_factor)
                     attention_storer.reset()
 
-
+    """
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
     test_base_folder = os.path.join(output_dir, 'test')
@@ -769,7 +769,8 @@ def main(args) :
                                                              base_folder_dir=timewise_save_base_folder,
                                                              vae_factor_dict=inference_decoding_factor)
                         attention_storer.reset()
-
+    """
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
