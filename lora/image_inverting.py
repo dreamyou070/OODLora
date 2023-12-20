@@ -452,7 +452,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, stud
             noise_pred = call_unet(unet, latent, t, con, t, prev_time)
             latent = prev_step(noise_pred, int(t), latent, scheduler)
             if args.customizing_decoder :
-                if args.args.using_customizing_scheduling:
+                if args.using_customizing_scheduling:
                     factor = vae_factor_dict[0]
                     np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
                 else:
