@@ -373,8 +373,12 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
     pil_images = []
     with torch.no_grad():
         if args.customizing_decoder:
-            factor = vae_factor_dict[0]
-            np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
+            if args.args.using_customizing_scheduling :
+                factor = vae_factor_dict[0]
+                np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
+            else :
+                factor = 1/0.18215
+                np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
         else:
             np_img = latent2image(latent, vae, return_type='np')
     #pil_img = Image.fromarray(np_img)
@@ -399,7 +403,12 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
                 latent = next_step(noise_pred, int(t.item()), latent, scheduler)
 
             if args.customizing_decoder :
-                np_img = customizing_latent2image(latent, vae, return_type='np')
+                if args.args.using_customizing_scheduling:
+                    factor = vae_factor_dict[0]
+                    np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
+                else:
+                    factor = 1 / 0.18215
+                    np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
             else :
                 np_img = latent2image(latent, vae, return_type='np')
 
@@ -442,12 +451,13 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, stud
         with torch.no_grad():
             noise_pred = call_unet(unet, latent, t, con, t, prev_time)
             latent = prev_step(noise_pred, int(t), latent, scheduler)
-            if args.using_customizing_scheduling :
-                factor = float(vae_factor_dict[prev_time])
-                if args.customizing_decoder :
+            if args.customizing_decoder :
+                if args.args.using_customizing_scheduling:
+                    factor = vae_factor_dict[0]
                     np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
-                else :
-                    np_img = latent2image_customizing(latent, vae, factor,return_type='np')
+                else:
+                    factor = 1 / 0.18215
+                    np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
             else :
                 factor = 1/0.18215
                 if args.customizing_decoder:
@@ -625,7 +635,7 @@ def main(args) :
     print(f' (2.4) scheduling factors')
     alphas_cumprod_dict = {}
     inference_decoding_factor = {}
-    if args.with_new_vae_factor :
+    if args.using_customizing_scheduling :
         vae_factor_dict = '../result/decoder_factor.txt'
         with open(vae_factor_dict, 'r') as f:
             content = f.readlines()
@@ -828,7 +838,6 @@ if __name__ == "__main__":
     parser.add_argument("--self_attn_threshold_time", type=int, default=1)
     parser.add_argument("--using_customizing_scheduling", action="store_true",)
     parser.add_argument("--final_time", type=int, default = 600)
-    parser.add_argument("--with_new_vae_factor", action='store_true')
     parser.add_argument("--customizing_decoder", action='store_true')
     parser.add_argument("--with_new_noising_alphas_cumprod", action='store_true')
     parser.add_argument("--student_pretrained_dir", type=str)
