@@ -730,22 +730,10 @@ class NetworkTrainer:
                             latents = batch["latents"].to(accelerator.device)
                         else:
                             instance_seed = random.randint(0, 2 ** 31)
-
                             generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
-                            """
-                            img = batch["images"].to(dtype=vae_dtype)
-                            img_moment = vae_encoder_quantize(vae_encoder(img))
-                            img_latents = DiagonalGaussianDistribution(img_moment).sample(generator=generator)
-
-                            masked_img = batch["mask_imgs"].to(dtype=vae_dtype)
-                            masked_img_moment = vae_encoder_quantize(vae_encoder(masked_img))
-                            masked_img_latents = DiagonalGaussianDistribution(masked_img_moment).sample(generator=generator)
-                            """
-                            img_latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample(
-                                generator=generator)
+                            img_latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
                             generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
                             masked_img_latents = vae.encode(batch["mask_imgs"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
-
                             if torch.any(torch.isnan(img_latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 img_latents = torch.where(torch.isnan(img_latents),
@@ -764,10 +752,8 @@ class NetworkTrainer:
                                 test_indexs.append(index)
                         train_latents = latents[train_indexs, :, :, :]
                         train_good_latents = good_latents[train_indexs, :, :, :]
-
                         test_latents = latents[test_indexs, :, :, :]
                         test_good_latents = good_latents[test_indexs, :, :, :]
-
                         trg_indexs = batch["trg_indexs_list"]
                         index_list = []
                         b_size = len(trg_indexs)
@@ -787,8 +773,28 @@ class NetworkTrainer:
                         if test_latents.dim() != 4:
                             test_latents = test_latents.unsqueeze(0)
                             test_good_latents = test_good_latents.unsqueeze(0)
+
+                        # ---------------------------------------------------------------------------------------------------------------------
+                        # (2) lora learning
+                        input_latents = torch.cat([test_latents, test_good_latents], dim=0)
+                        input_condition = text_encoder_conds[test_indexs, :, :]
+                        input_condition = torch.cat([input_condition] * 2, dim=0)
+                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                           noise_scheduler,
+                                                                                                           input_latents)
+                        with accelerator.autocast():
+                            self.call_unet(args, accelerator, unet, noisy_latents, timesteps,
+                                           input_condition, batch, weight_dtype, index_list, None)
+                        losss = attention_storer.loss_list
+                        attention_storer.reset()
+                        contrastive_loss = torch.stack(losss, dim=0).mean(dim=0)
+                        log_loss["loss/lora_contrastive_loss"] = contrastive_loss.mean()
+                        optimizer.zero_grad(set_to_none=True)
+                        accelerator.backward(contrastive_loss.mean())
+                        optimizer.step()
                         # ---------------------------------------------------------------------------------------------------------------------
                         # (1) teacher result
+
                         with torch.no_grad():
                             y = teacher(test_good_latents)
                         with accelerator.autocast():
@@ -801,30 +807,8 @@ class NetworkTrainer:
                         accelerator.backward(st_loss)
                         student_optimizer.step()
 
-                        #vae_loss += st_loss
+                        # vae_loss += st_loss
                         total_loss += st_loss
-                        # ---------------------------------------------------------------------------------------------------------------------
-                        # (2) lora learning
-                        input_latents = torch.cat([test_latents, test_good_latents], dim=0)
-                        input_condition = text_encoder_conds[test_indexs, :, :]
-                        input_condition = torch.cat([input_condition] * 2, dim=0)
-                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                           noise_scheduler,
-                                                                                                           input_latents)
-                        with accelerator.autocast():
-                            self.call_unet(args, accelerator, unet,
-                                           noisy_latents, timesteps,
-                                           input_condition, batch, weight_dtype,
-                                           index_list,
-                                           None)
-                        losss = attention_storer.loss_list
-                        attention_storer.reset()
-                        contrastive_loss = torch.stack(losss, dim=0).mean(dim=0)
-                        log_loss["loss/lora_contrastive_loss"] = contrastive_loss.mean()
-                        optimizer.zero_grad(set_to_none=True)
-                        accelerator.backward(contrastive_loss.mean())
-                        optimizer.step()
-                        lora_loss += contrastive_loss
                         total_loss += contrastive_loss
 
                     if len(train_indexs) > 0:
