@@ -845,7 +845,7 @@ class NetworkTrainer:
                         #optimizer.zero_grad(set_to_none=True)
                         #accelerator.backward(task_loss.mean())
                         #optimizer.step()
-                        vae_loss += st_loss.item()
+                        vae_loss += st_loss
                         #total_loss += task_loss.mean()
                     student_optimizer.zero_grad(set_to_none=True)
                     accelerator.backward(vae_loss)
