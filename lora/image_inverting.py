@@ -619,7 +619,7 @@ def main(args) :
 
     print(f' (2.4) scheduling factors')
     if args.with_new_vae_factor :
-        vae_factor_dict = '../result/decoding_factor.txt'
+        vae_factor_dict = '../result/decoder_factor.txt'
         with open(vae_factor_dict, 'r') as f:
             content = f.readlines()
         inference_decoding_factor = {}
