@@ -30,4 +30,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_proces
   --using_customizing_scheduling \
   --repeat_time 51 \
   --self_attn_threshold_time 1000 \
-  --final_time 250
+  --final_time 200
