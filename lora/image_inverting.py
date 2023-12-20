@@ -407,7 +407,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
             repeat_time += 1
-    #time_steps.append(next_time)
+    time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
     latent_dict_keys = latent_dict.keys()
     return latent_dict, time_steps, pil_images
@@ -419,7 +419,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, stud
     uncon, con = context.chunk(2)
     if inference_times[0] < inference_times[1] :
         inference_times.reverse()
-    inference_times = inference_times[1:]
+    #inference_times = inference_times[1:]
     latent = latent_dict[inference_times[0]]
     all_latent_dict = {}
     all_latent_dict[inference_times[0]] = latent
