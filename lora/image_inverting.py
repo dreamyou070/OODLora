@@ -653,6 +653,7 @@ def main(args) :
     context = init_prompt(tokenizer, text_encoder, device, prompt)
 
     print(f' (3.2) train images')
+    """
     train_img_folder = os.path.join(args.concept_image_folder, 'train/good/rgb/30_rgb')
     train_images = os.listdir(train_img_folder)
     for i, train_img in enumerate(train_images) :
@@ -722,7 +723,7 @@ def main(args) :
         mask_folder = os.path.join(class_folder, 'gt')
         test_images = os.listdir(image_folder)
         for j, test_img in enumerate(test_images):
-            if j < 4 :
+            if j < 1 :
                 train_img_dir = os.path.join(image_folder, test_img)
                 mask_img_dir = os.path.join(mask_folder, test_img)
                 concept_name = test_img.split('.')[0]
@@ -769,7 +770,7 @@ def main(args) :
                                                              base_folder_dir=timewise_save_base_folder,
                                                              vae_factor_dict=inference_decoding_factor)
                         attention_storer.reset()
-    """
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
