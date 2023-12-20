@@ -857,11 +857,8 @@ class NetworkTrainer:
                 accelerator.log(logs, step=epoch + 1)
             accelerator.wait_for_everyone()
             """
-        if is_main_process and args.save_state:
-            train_util.save_state_on_train_end(args, accelerator)
-            if is_main_process:
-                ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
-                #save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
+            if is_main_process :
+
                 print('saving model')
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
