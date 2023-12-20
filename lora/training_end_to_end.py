@@ -782,8 +782,8 @@ class NetworkTrainer:
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
                                                                                                            input_latents)
-                        with accelerator.autocast():
-                            self.call_unet(args, accelerator, unet, noisy_latents, timesteps,
+                        #with accelerator.autocast():
+                        self.call_unet(args, accelerator, unet, noisy_latents, timesteps,
                                            input_condition, batch, weight_dtype, index_list, None)
                         losss = attention_storer.loss_list
                         attention_storer.reset()
