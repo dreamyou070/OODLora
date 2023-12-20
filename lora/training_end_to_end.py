@@ -801,64 +801,45 @@ class NetworkTrainer:
                         params_to_clip = network.get_trainable_params()
                         accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
                     lr_scheduler.step()
-                if args.scale_weight_norms:
-                    keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(
-                        args.scale_weight_norms, accelerator.device)
-                    max_mean_logs = {"Keys Scaled": keys_scaled, "Average key norm": mean_norm}
-                else:
-                    keys_scaled, mean_norm, maximum_norm = None, None, None
-                if accelerator.sync_gradients:
-                    progress_bar.update(1)
-                    global_step += 1
-                    # (4) sample images
-                    # self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
-                    if attention_storer is not None:
-                        attention_storer.step_store = {}
-                    # (5) save or erase model
-                    if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
-                        accelerator.wait_for_everyone()
-                        if accelerator.is_main_process:
-                            ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
-                            save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch)
-                            if args.save_state:
-                                train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
-                            remove_step_no = train_util.get_remove_step_no(args, global_step)
-                            if remove_step_no is not None:
-                                remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as,
-                                                                                 remove_step_no)
-                                remove_model(remove_ckpt_name)
 
-                current_loss = vae_loss.detach().item()
-                log_loss["loss/current_loss"] = current_loss
-                # ------------------------------------------------------------------------------------------------------------------------------
-                if epoch == 0:
-                    loss_list.append(current_loss)
-                else:
-                    loss_total -= loss_list[step]
-                    loss_list[step] = current_loss
-                loss_total += current_loss
-                avr_loss = loss_total / len(loss_list)
-                log_loss["loss/avr_loss"] = avr_loss
-                # ------------------------------------------------------------------------------------------------------------------------------
-                progress_bar.set_postfix(**log_loss)
-                if args.scale_weight_norms:
-                    progress_bar.set_postfix(**{**max_mean_logs, **log_loss})
-                if args.logging_dir is not None:
-                    logs = self.generate_step_logs(log_loss, lr_scheduler, keys_scaled, mean_norm, maximum_norm)
+                    if args.scale_weight_norms:
+                        keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(
+                            args.scale_weight_norms, accelerator.device)
+                        max_mean_logs = {"Keys Scaled": keys_scaled, "Average key norm": mean_norm}
+                    else:
+                        keys_scaled, mean_norm, maximum_norm = None, None, None
+                    if accelerator.sync_gradients:
+                        progress_bar.update(1)
+                        global_step += 1
 
-                    accelerator.log(logs, step=global_step)
-                if is_main_process:
-                    wandb.log(logs)
-                if global_step >= args.max_train_steps:
-                    break
-            
+                    current_loss = vae_loss.detach().item()
+                    log_loss["loss/current_loss"] = current_loss
+                    # ------------------------------------------------------------------------------------------------------------------------------
+                    if epoch == 0:
+                        loss_list.append(current_loss)
+                    else:
+                        loss_total -= loss_list[step]
+                        loss_list[step] = current_loss
+                    loss_total += current_loss
+                    avr_loss = loss_total / len(loss_list)
+                    log_loss["loss/avr_loss"] = avr_loss
+                    # ------------------------------------------------------------------------------------------------------------------------------
+                    progress_bar.set_postfix(**log_loss)
+                    if args.scale_weight_norms:
+                        progress_bar.set_postfix(**{**max_mean_logs, **log_loss})
+                    if args.logging_dir is not None:
+                        logs = self.generate_step_logs(log_loss, lr_scheduler, keys_scaled, mean_norm, maximum_norm)
+
+                        accelerator.log(logs, step=global_step)
+                    if is_main_process:
+                        wandb.log(logs)
+                    if global_step >= args.max_train_steps:
+                        break
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_total / len(loss_list)}
                 accelerator.log(logs, step=epoch + 1)
             accelerator.wait_for_everyone()
-
             if is_main_process :
-
                 print('saving model')
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
