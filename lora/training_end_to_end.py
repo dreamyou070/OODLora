@@ -855,8 +855,8 @@ class NetworkTrainer:
                         # task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
                         log_loss["loss/lora_task_loss"] = task_loss.mean()
                         print(f'train lora loss : {task_loss.shape}')
-                        lora_loss += task_loss
-                        total_loss += task_loss
+                        lora_loss += task_loss.mean()
+                        total_loss += task_loss.mean()
 
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(vae_loss)
