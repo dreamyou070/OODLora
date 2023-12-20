@@ -742,7 +742,9 @@ class NetworkTrainer:
                                                            torch.zeros_like(masked_img_latents),masked_img_latents)
                         latents = img_latents * self.vae_scale_factor
                         good_latents = masked_img_latents * self.vae_scale_factor
+
                         # ---------------------------------------------------------------------------------------------------------------------
+
                         train_class_list = batch["train_class_list"]
                         train_indexs, test_indexs = [], []
                         for index, i in enumerate(train_class_list):
@@ -762,9 +764,9 @@ class NetworkTrainer:
                                 a = trg_indexs[i]
                                 index_list.append(a)
                     # (2) text condition checking
-                    with torch.set_grad_enabled(train_text_encoder):
-                        text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
-                                                                weight_dtype)
+                    #with torch.set_grad_enabled(train_text_encoder):
+                    #    text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
+                    #                                           weight_dtype)
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.1) contrastive learning
                     log_loss = {}
@@ -776,12 +778,13 @@ class NetworkTrainer:
 
                         # ---------------------------------------------------------------------------------------------------------------------
                         # (2) lora learning
-                        input_latents = torch.cat([test_latents, test_good_latents], dim=0)
-                        input_condition = text_encoder_conds[test_indexs, :, :]
-                        input_condition = torch.cat([input_condition] * 2, dim=0)
+                        #input_latents = torch.cat([test_latents, test_good_latents], dim=0)
+                        #input_condition = text_encoder_conds[test_indexs, :, :]
+                        #input_condition = torch.cat([input_condition] * 2, dim=0)
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
                                                                                                            input_latents)
+                        """
                         #with accelerator.autocast():
                         self.call_unet(args, accelerator, unet, noisy_latents, timesteps,
                                            input_condition, batch, weight_dtype, index_list, None)
@@ -792,6 +795,7 @@ class NetworkTrainer:
                         optimizer.zero_grad(set_to_none=True)
                         accelerator.backward(contrastive_loss.mean())
                         optimizer.step()
+                        """
                         # ---------------------------------------------------------------------------------------------------------------------
                         # (1) teacher result
 
@@ -803,13 +807,7 @@ class NetworkTrainer:
                         st_loss = st_loss.mean([1, 2, 3])
                         st_loss = st_loss.mean()
                         log_loss['loss/vae_contrastive_loss'] = st_loss.item()
-                        student_optimizer.zero_grad(set_to_none=True)
-                        accelerator.backward(st_loss)
-                        student_optimizer.step()
-
-                        # vae_loss += st_loss
-                        total_loss += st_loss
-                        total_loss += contrastive_loss
+                        vae_loss += st_loss
 
                     if len(train_indexs) > 0:
                         if train_latents.dim() != 4:
@@ -825,12 +823,7 @@ class NetworkTrainer:
                         st_loss = st_loss.mean([1, 2, 3])
                         st_loss = st_loss.mean()
                         log_loss['loss/vae_normal_st_loss'] = st_loss.item()
-                        student_optimizer.zero_grad(set_to_none=True)
-                        accelerator.backward(st_loss)
-                        student_optimizer.step()
-
-                        vae_loss += st_loss
-                        total_loss += st_loss
+                        """
                         input_condition = text_encoder_conds[train_indexs, :, :]
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
@@ -846,14 +839,17 @@ class NetworkTrainer:
                         else:
                             target = noise
                         task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none").mean([1, 2, 3])
+                        """
                         # task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
-                        log_loss["loss/lora_task_loss"] = task_loss.mean()
-                        optimizer.zero_grad(set_to_none=True)
-                        accelerator.backward(task_loss.mean())
-                        optimizer.step()
-                        #lora_loss += task_loss.mean()
-                        total_loss += task_loss.mean()
-
+                        #log_loss["loss/lora_task_loss"] = task_loss.mean()
+                        #optimizer.zero_grad(set_to_none=True)
+                        #accelerator.backward(task_loss.mean())
+                        #optimizer.step()
+                        vae_loss += st_loss.itemn()
+                        #total_loss += task_loss.mean()
+                    student_optimizer.zero_grad(set_to_none=True)
+                    accelerator.backward(vae_loss)
+                    student_optimizer.step()
                     # ------------------------------------------------------------------------------------
 
 
@@ -946,8 +942,16 @@ class NetworkTrainer:
             train_util.save_state_on_train_end(args, accelerator)
         if is_main_process:
             ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
-            save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
-            print("model saved.")
+            #save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
+            print('saving model')
+            accelerator.wait_for_everyone()
+            if accelerator.is_main_process:
+                trg_epoch = str(epoch + 1).zfill(6)
+                save_directory = os.path.join(args.output_dir, f'vae_student_model')
+                os.makedirs(save_directory, exist_ok=True)
+                state_dict = student.state_dict()
+                torch.save(state_dict,
+                           os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
             # saving attn loss
             import csv
             attn_loss_save_dir = os.path.join(args.output_dir, 'record', f'{args.wandb_run_name}_attn_loss.csv')
