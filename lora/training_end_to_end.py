@@ -857,49 +857,21 @@ class NetworkTrainer:
                 accelerator.log(logs, step=epoch + 1)
             accelerator.wait_for_everyone()
             """
-            if args.save_every_n_epochs is not None:
-                saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < num_train_epochs
-                if is_main_process and saving:
-                    ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
-                    save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch + 1)
-                    remove_epoch_no = train_util.get_remove_epoch_no(args, epoch + 1)
-                    if remove_epoch_no is not None:
-                        remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as,
-                                                                          remove_epoch_no)
-                        remove_model(remove_ckpt_name)
-                    if args.save_state:
-                        train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
-            if epoch % args.sample_every_n_epochs == 0 and is_main_process:
-                self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
-                                   text_encoder, unet)
-                if attention_storer is not None:
-                    attention_storer.reset()
-            # end of epoch
-        # metadata["ss_epoch"] = str(num_train_epochs)
-        metadata["ss_training_finished_at"] = str(time.time())
-        if is_main_process:
-            network = accelerator.unwrap_model(network)
-        accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
-        if is_main_process:
-            ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
-            #save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
-            print('saving model')
-            accelerator.wait_for_everyone()
-            if accelerator.is_main_process:
-                trg_epoch = str(epoch + 1).zfill(6)
-                save_directory = os.path.join(args.output_dir, f'vae_student_model')
-                os.makedirs(save_directory, exist_ok=True)
-                state_dict = student.state_dict()
-                torch.save(state_dict,
-                           os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
-            # saving attn loss
-            import csv
-            attn_loss_save_dir = os.path.join(args.output_dir, 'record', f'{args.wandb_run_name}_attn_loss.csv')
-            with open(attn_loss_save_dir, 'w') as f:
-                writer = csv.writer(f)
-                writer.writerows(attn_loss_records)
+            if is_main_process:
+                ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
+                #save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
+                print('saving model')
+                accelerator.wait_for_everyone()
+                if accelerator.is_main_process:
+                    trg_epoch = str(epoch + 1).zfill(6)
+                    save_directory = os.path.join(args.output_dir, f'vae_student_model')
+                    os.makedirs(save_directory, exist_ok=True)
+                    state_dict = student.state_dict()
+                    torch.save(state_dict,
+                               os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
+
 
 
 if __name__ == "__main__":
