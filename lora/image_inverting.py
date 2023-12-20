@@ -635,6 +635,7 @@ def main(args) :
     print(f' (2.4) scheduling factors')
     alphas_cumprod_dict = {}
     inference_decoding_factor = {}
+    vae_factor_dict = {}
     if args.using_customizing_scheduling :
         vae_factor_dict = '../result/decoder_factor.txt'
         with open(vae_factor_dict, 'r') as f:
