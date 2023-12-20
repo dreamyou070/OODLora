@@ -4448,8 +4448,6 @@ def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, noise 
     # Sample noise that we'll add to the latents
     if noise is None:
         noise = torch.randn_like(latents, device=latents.device)
-    else :
-        print(f'using same noise')
     if args.noise_offset:
         noise = custom_train_functions.apply_noise_offset(latents, noise, args.noise_offset, args.adaptive_noise_scale)
     if args.multires_noise_iterations:
