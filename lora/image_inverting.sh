@@ -21,9 +21,9 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_proces
   --inversion_experiment \
   --sample_sampler ddim \
   --num_ddim_steps 50 \
-  --output_dir ../result/MVTec_experiment/bagel/unet_training/vae_new_factor_lora_test_20231220 \
+  --output_dir ../result/MVTec_experiment/bagel/unet_training/vae_new_factor_lora_test_20231220_2 \
   --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel \
-  --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/2_TS_test_contrastive/vae_student_model/student_epoch_000003.pth \
+  --student_pretrained_dir ../result/MVTec_experiment/bagel/6_train_end_to_end/vae_student_model/student_epoch_000001.pth \
   --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
   --with_new_vae_factor \
   --customizing_decoder \
@@ -31,3 +31,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_proces
   --repeat_time 51 \
   --self_attn_threshold_time 1000 \
   --final_time 700
+

@@ -6,5 +6,3 @@ accelerate launch --config_file /data7/sooyeon/LyCORIS/gpu_config/gpu_4_5_config
                   --save_folder_name 'without_img_lora' \
                   --network_module networks.lora --efficient_layer 'down_blocks_2,mid,up_blocks_1' \
                   --sample_every_n_epochs 1 --sample_prompts /data7/sooyeon/MyData/perfusion_dataset/cat/test_other.txt
-
-                  vi /data7/sooyeon/MyData/perfusion_dataset/cat/test_other.txt
