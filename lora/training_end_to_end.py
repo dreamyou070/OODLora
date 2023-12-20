@@ -778,6 +778,8 @@ class NetworkTrainer:
                     # (3.1) contrastive learning
                     log_loss = {}
                     vae_loss, lora_loss, total_loss = 0, 0, 0
+                    print(f'test_indexs : {test_indexs}')
+                    print(f'train_indexs : {train_indexs}')
                     if len(test_indexs) > 0:
                         if test_latents.dim() != 4:
                             test_latents = test_latents.unsqueeze(0)
@@ -793,6 +795,7 @@ class NetworkTrainer:
                         st_loss = st_loss.mean()
                         log_loss['loss/vae_contrastive_loss'] = st_loss.item()
                         print(f'test st loss: {st_loss.shape}')
+                        print(f'test st loss: {st_loss}')
                         vae_loss += st_loss
                         total_loss += st_loss
                         # ---------------------------------------------------------------------------------------------------------------------
