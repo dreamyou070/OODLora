@@ -397,10 +397,12 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
                 latent = latent.to(vae.device)
             else :
                 latent = next_step(noise_pred, int(t.item()), latent, scheduler)
+
             if args.customizing_decoder :
                 np_img = customizing_latent2image(latent, vae, return_type='np')
             else :
                 np_img = latent2image(latent, vae, return_type='np')
+
             #pil_img = Image.fromarray(np_img)
             #pil_images.append(pil_img)
             #pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
@@ -447,11 +449,15 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, stud
                 else :
                     np_img = latent2image_customizing(latent, vae, factor,return_type='np')
             else :
-                np_img = latent2image(latent, vae, return_type='np')
-        if prev_time == 0 :
-            pil_img = Image.fromarray(np_img)
-            pil_images.append(pil_img)
-            pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+                factor = 1/0.18215
+                if args.customizing_decoder:
+                    np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
+                else :
+                    np_img = latent2image(latent, vae, return_type='np')
+        #if prev_time == 0 :
+        pil_img = Image.fromarray(np_img)
+        pil_images.append(pil_img)
+        pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
         all_latent_dict[prev_time] = latent
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
@@ -617,18 +623,19 @@ def main(args) :
     student.to(device, dtype=vae_dtype)
 
     print(f' (2.4) scheduling factors')
+    alphas_cumprod_dict = {}
+    inference_decoding_factor = {}
     if args.with_new_vae_factor :
         vae_factor_dict = '../result/decoder_factor.txt'
         with open(vae_factor_dict, 'r') as f:
             content = f.readlines()
-        inference_decoding_factor = {}
         for line in content:
             line = line.strip()
             line = line.split(' : ')
             t, f = int(line[0]), float(line[1])
             inference_decoding_factor[t] = f
         vae_factor_dict = inference_decoding_factor
-        alphas_cumprod_dict = {}
+
 
     elif args.with_new_noising_alphas_cumprod :
         inference_decoding_factor = {}

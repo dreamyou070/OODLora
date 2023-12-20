@@ -263,19 +263,16 @@ if __name__ == "__main__":
         type=str,
         help="if specified, load prompts from this file",
     )
-    parser.add_argument(
-        "--config",
-        type=str,
-        default="configs/retrieval-augmented-diffusion/768x768.yaml",
-        help="path to config which constructs model",
-    )
+    parser.add_argument("--config",
+                        type=str,
+                        default="configs/retrieval-augmented-diffusion/768x768.yaml",
+                        help="path to config which constructs model",)
 
     parser.add_argument(
         "--ckpt",
         type=str,
-        default="models/rdm/rdm768x768/model.ckpt",
-        help="path to checkpoint of model",
-    )
+        default="../../models/rdm/rdm768x768/model.ckpt",
+        help="path to checkpoint of model",)
 
     parser.add_argument(
         "--clip_type",
@@ -303,6 +300,7 @@ if __name__ == "__main__":
         help="The number of included neighbors, only applied when --use_neighbors=True",)
 
     opt = parser.parse_args()
+    print(f' step 1. loading model')
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
 
@@ -315,7 +313,7 @@ if __name__ == "__main__":
         sampler = PLMSSampler(model)
     else:
         sampler = DDIMSampler(model)
-
+    """
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
 
@@ -393,3 +391,4 @@ if __name__ == "__main__":
                     grid_count += 1
 
     print(f"Your samples are ready and waiting for you here: \n{outpath} \nEnjoy.")
+    """
