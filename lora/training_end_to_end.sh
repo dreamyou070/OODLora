@@ -30,7 +30,7 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_pr
   --wandb_init_name bagel_training --wandb_run_name 4_train_end_to_end \
   --seed 42 --output_dir ../result/MVTec_experiment/bagel/4_train_end_to_end \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
-  --network_module networks.lora --network_dim 64 --network_alpha 4 --train_batch_size 3 \
+  --network_module networks.lora --network_dim 64 --network_alpha 4 --train_batch_size 2 \
   --optimizer_type AdamW --lr_scheduler cosine_with_restarts --lr_warmup_steps 144 \
   --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 \
   --resolution 512,512 \
