@@ -485,7 +485,7 @@ def main(args):
     student.requires_grad_(False)
     student.eval()
     student.to(device)
-    
+
 
 
 
@@ -507,6 +507,9 @@ def main(args):
         train_img_dir = os.path.join(train_img_folder, train_img)
         print(f' (2.3.1) get suber image')
         image_gt_np = load_512(train_img_dir)
+
+
+
         latent = image2latent(image_gt_np, vae, device, weight_dtype)
         parent, network_name = os.path.split(args.network_weights)
         name, ext = os.path.splitext(network_name)
@@ -516,7 +519,7 @@ def main(args):
         uncon, con = invers_context.chunk(2)
         print(f' (2.3.2) inversing')
         inference_decoding_factor = {}
-        inference_decoding_factor[0] = 1/0.18215
+        #inference_decoding_factor[0] = 1/0.18215
         vae.eval()
         vae.requires_grad_(False)
         for i, present_t in enumerate(flip_times[:-1]):
@@ -529,7 +532,7 @@ def main(args):
             noise_pred_next = call_unet(invers_unet, latent_next, next_t, uncon, next_t.item(), next_t.item())
             recon_latent = prev_step(noise_pred_next, int(next_t.item()),latent_next, scheduler)
 
-            factor = inference_decoding_factor[int(present_t.item())]
+            factor = 1/0.18215
             pixel_origin = custom_latent2image(latent, student, factor, return_type='torch')
 
             alpha = torch.Tensor([copy.deepcopy(decoding_factor)],).to(vae.device)
