@@ -440,12 +440,13 @@ class NetworkTrainer:
 
         accelerator.print("prepare optimizer, data loader etc.")
         # 後方互換性を確保するよ
-        try:
-            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
-        except TypeError:
-            accelerator.print(
-                "Deprecated: use prepare_optimizer_params(text_encoder_lr, unet_lr, learning_rate) instead of prepare_optimizer_params(text_encoder_lr, unet_lr)")
-            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+        #try:
+        #    trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
+        #except TypeError:
+        #    accelerator.print(
+        #        "Deprecated: use prepare_optimizer_params(text_encoder_lr, unet_lr, learning_rate) instead of prepare_optimizer_params(text_encoder_lr, unet_lr)")
+        trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+        trainable_params.append({'params': student.parameters(), 'lr': 1e-4})
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         # dataloaderを準備する
@@ -786,7 +787,8 @@ class NetworkTrainer:
                         # (1) teacher result
                         with torch.no_grad():
                             y = teacher(test_good_latents)
-                        y_hat = student(test_latents)
+                        with accelerator.autocast():
+                            y_hat = student(test_latents)
                         st_loss = torch.nn.functional.mse_loss(y, y_hat, reduction='none')
                         st_loss = st_loss.mean([1, 2, 3])
                         st_loss = st_loss.mean()
@@ -820,7 +822,8 @@ class NetworkTrainer:
                         # (3) vae learning
                         with torch.no_grad():
                             y = teacher(input_latents)
-                        y_hat = student(input_latents)
+                        with accelerator.autocast():
+                            y_hat = student(input_latents)
                         st_loss = torch.nn.functional.mse_loss(y, y_hat, reduction='none')
                         st_loss = st_loss.mean([1, 2, 3])
                         st_loss = st_loss.mean()
