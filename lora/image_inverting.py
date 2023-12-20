@@ -770,7 +770,7 @@ def main(args) :
                                                              vae_factor_dict=inference_decoding_factor)
                         attention_storer.reset()
     """
-    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
