@@ -445,8 +445,9 @@ class NetworkTrainer:
         except TypeError:
             accelerator.print("Deprecated: use prepare_optimizer_params(text_encoder_lr, unet_lr, learning_rate) instead of prepare_optimizer_params(text_encoder_lr, unet_lr)")
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
-        trainable_params.append({'params': student.parameters(), 'lr': 1e-4})
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
+        student_trainable_params = [{'params': student.parameters(), 'lr': 1e-4}]
+        student_optimizer = torch.optim.AdamW(student_trainable_params)
 
         # dataloaderを準備する
         # DataLoaderのプロセス数：0はメインプロセスになる
@@ -488,11 +489,6 @@ class NetworkTrainer:
         for t_enc in text_encoders:
             t_enc.requires_grad_(False)
 
-        from diffusers.image_processor import VaeImageProcessor
-        from diffusers import StableDiffusionInpaintPipeline
-        # pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",
-        #                                                      cache_dir=r'/data7/sooyeon/pretrained_stable_diffusion/models-stable-diffusion-anomalydetection')
-        # mask_processor = pipe.mask_processor
 
         # acceleratorがなんかよろしくやってくれるらしい
         # TODO めちゃくちゃ冗長なのでコードを整理する
@@ -507,10 +503,12 @@ class NetworkTrainer:
                 unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler,student = accelerator.prepare(
                     unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler,student)
                 text_encoders = [text_encoder]
+            student_optimizer = accelerator.prepare(student_optimizer)
         elif train_unet:
             unet, network, optimizer, train_dataloader, lr_scheduler,student = accelerator.prepare(
                 unet, network, optimizer, train_dataloader, lr_scheduler,student
             )
+            student_optimizer = accelerator.prepare(student_optimizer)
         elif train_text_encoder:
             if len(text_encoders) > 1:
                 t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler,student = accelerator.prepare(
@@ -526,11 +524,12 @@ class NetworkTrainer:
 
             unet.to(accelerator.device,
                     dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
+            student_optimizer = accelerator.prepare(student_optimizer)
         else:
             network, optimizer, train_dataloader, lr_scheduler,student = accelerator.prepare(
                 network, optimizer, train_dataloader, lr_scheduler,student
             )
-
+            student_optimizer = accelerator.prepare(student_optimizer)
         # transform DDP after prepare (train_network here only)
         text_encoders = train_util.transform_models_if_DDP(text_encoders)
         unet, network = train_util.transform_models_if_DDP([unet, network])
@@ -852,14 +851,20 @@ class NetworkTrainer:
                         total_loss += task_loss.mean()
 
                     # ------------------------------------------------------------------------------------
+                    student_optimizer.zero_grad(set_to_none=True)
                     accelerator.backward(vae_loss)
+                    student_optimizer.step()
+
+                    optimizer.zero_grad(set_to_none=True)
                     accelerator.backward(lora_loss)
+                    optimizer.step()
+
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
                         accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
-                    optimizer.step()
+
                     lr_scheduler.step()
-                    optimizer.zero_grad(set_to_none=True)
+
                 if args.scale_weight_norms:
                     keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(
                         args.scale_weight_norms, accelerator.device)
