@@ -24,7 +24,7 @@ ml purge
 ml load cuda/11.0
 
 
-accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port 50189 training_end_to_end.py \
+accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 50189 training_end_to_end.py \
   --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 \
   --log_with wandb --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
   --wandb_init_name bagel_training --wandb_run_name 4_train_end_to_end \
