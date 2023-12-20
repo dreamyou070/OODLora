@@ -4444,9 +4444,12 @@ def save_sd_model_on_train_end_common(
             huggingface_util.upload(args, out_dir, "/" + model_name, force_sync_upload=True)
 
 
-def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents):
+def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, noise = None):
     # Sample noise that we'll add to the latents
-    noise = torch.randn_like(latents, device=latents.device)
+    if noise is None:
+        noise = torch.randn_like(latents, device=latents.device)
+    else :
+        print(f'using same noise')
     if args.noise_offset:
         noise = custom_train_functions.apply_noise_offset(latents, noise, args.noise_offset, args.adaptive_noise_scale)
     if args.multires_noise_iterations:

@@ -740,11 +740,16 @@ class NetworkTrainer:
                                                            torch.zeros_like(masked_img_latents),masked_img_latents)
                         latents = img_latents * self.vae_scale_factor
                         good_latents = masked_img_latents * self.vae_scale_factor
+
+                        torch.manual_seed(0)
+                        st_noise = torch.randn_like(latents)
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                           noise_scheduler,latents)
-                        noise, noisy_good_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
-                                                                                                           good_latents)
+                                                                                                           latents,st_noise)
+                        s_noise, noisy_good_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                           noise_scheduler,
+                                                                                                           good_latents,st_noise)
+                        print(f'noise ckeck : {torch.equal(noise, s_noise)}')
 
 
                         # ---------------------------------------------------------------------------------------------------------------------
