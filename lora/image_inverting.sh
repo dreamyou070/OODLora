@@ -21,12 +21,11 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_proces
   --inversion_experiment \
   --sample_sampler ddim \
   --num_ddim_steps 50 \
-  --output_dir ../result/MVTec_experiment/bagel/vae_training/2_TS_test_contrastive/student_model_customizing_factor \
+  --output_dir ../result/MVTec_experiment/bagel/vae_training/2_TS_test_contrastive/student_model \
   --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel \
   --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/2_TS_test_contrastive/vae_student_model/student_epoch_000009.pth \
   --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
   --customizing_decoder \
-  --using_customizing_scheduling \
   --repeat_time 51 \
   --self_attn_threshold_time 1000 \
   --final_time 700
