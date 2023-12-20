@@ -373,7 +373,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
     pil_images = []
     with torch.no_grad():
         if args.customizing_decoder:
-            if args.args.using_customizing_scheduling :
+            if args.using_customizing_scheduling :
                 factor = vae_factor_dict[0]
                 np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
             else :
@@ -403,7 +403,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
                 latent = next_step(noise_pred, int(t.item()), latent, scheduler)
 
             if args.customizing_decoder :
-                if args.args.using_customizing_scheduling:
+                if args.using_customizing_scheduling:
                     factor = vae_factor_dict[0]
                     np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
                 else:
@@ -412,9 +412,9 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
             else :
                 np_img = latent2image(latent, vae, return_type='np')
 
-            #pil_img = Image.fromarray(np_img)
-            #pil_images.append(pil_img)
-            #pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
+            pil_img = Image.fromarray(np_img)
+            pil_images.append(pil_img)
+            pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
