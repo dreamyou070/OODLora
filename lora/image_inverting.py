@@ -401,9 +401,9 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
                 np_img = customizing_latent2image(latent, vae, return_type='np')
             else :
                 np_img = latent2image(latent, vae, return_type='np')
-            pil_img = Image.fromarray(np_img)
-            pil_images.append(pil_img)
-            pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
+            #pil_img = Image.fromarray(np_img)
+            #pil_images.append(pil_img)
+            #pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
@@ -448,7 +448,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, stud
                     np_img = latent2image_customizing(latent, vae, factor,return_type='np')
             else :
                 np_img = latent2image(latent, vae, return_type='np')
-        #if prev_time == 0 :
+        if prev_time == 0 :
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
@@ -722,7 +722,7 @@ def main(args) :
         mask_folder = os.path.join(class_folder, 'gt')
         test_images = os.listdir(image_folder)
         for j, test_img in enumerate(test_images):
-            if j < 1 :
+            if j < 100 :
                 train_img_dir = os.path.join(image_folder, test_img)
                 mask_img_dir = os.path.join(mask_folder, test_img)
                 concept_name = test_img.split('.')[0]
