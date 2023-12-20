@@ -263,7 +263,6 @@ if __name__ == "__main__":
         type=str,
         help="if specified, load prompts from this file",
     )
-
     parser.add_argument(
         "--config",
         type=str,
