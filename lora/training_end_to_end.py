@@ -846,7 +846,7 @@ class NetworkTrainer:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
                             target = noise
-                        task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
+                        task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none").mean([1, 2, 3])
                         # task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
                         log_loss["loss/lora_task_loss"] = task_loss.mean()
                         lora_loss += task_loss
