@@ -75,9 +75,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if self.upcast_attention:
                 query = query.float()
                 key = key.float()
-            attention_scores = torch.baddbmm(
-                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                            device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                                                         device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention:
@@ -731,8 +730,9 @@ class NetworkTrainer:
                             latents = batch["latents"].to(accelerator.device)
                         else:
                             instance_seed = random.randint(0, 2 ** 31)
+                            """
                             generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
-
+                            
                             img = batch["images"].to(dtype=vae_dtype)
                             img_moment = vae_encoder_quantize(vae_encoder(img))
                             img_latents = DiagonalGaussianDistribution(img_moment).sample(generator=generator)
@@ -740,6 +740,11 @@ class NetworkTrainer:
                             masked_img = batch["mask_imgs"].to(dtype=vae_dtype)
                             masked_img_moment = vae_encoder_quantize(vae_encoder(masked_img))
                             masked_img_latents = DiagonalGaussianDistribution(masked_img_moment).sample(generator=generator)
+                            """
+                            img_latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample(
+                                generator=generator)
+                            generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
+                            masked_img_latents = vae.encode(batch["mask_imgs"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
 
                             if torch.any(torch.isnan(img_latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
