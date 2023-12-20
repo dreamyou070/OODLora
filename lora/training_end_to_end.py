@@ -466,7 +466,6 @@ class NetworkTrainer:
                 f"override steps. steps for {args.max_train_epochs} epochs is / 指定エポックまでのステップ数: {args.max_train_steps}")
         # データセット側にも学習ステップを送信
         # train_dataset_group.set_max_train_steps(args.max_train_steps)
-
         # lr schedulerを用意する
         lr_scheduler = train_util.get_scheduler_fix(args,
                                                     optimizer, accelerator.num_processes)
@@ -488,8 +487,6 @@ class NetworkTrainer:
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders:
             t_enc.requires_grad_(False)
-
-
         # acceleratorがなんかよろしくやってくれるらしい
         # TODO めちゃくちゃ冗長なのでコードを整理する
         if train_unet and train_text_encoder:
@@ -720,6 +717,7 @@ class NetworkTrainer:
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
+            """
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -763,42 +761,14 @@ class NetworkTrainer:
                             if i in test_indexs:
                                 a = trg_indexs[i]
                                 index_list.append(a)
-                    # (2) text condition checking
-                    #with torch.set_grad_enabled(train_text_encoder):
-                    #    text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
-                    #                                           weight_dtype)
-                    # ---------------------------------------------------------------------------------------------------------------------
-                    # (3.1) contrastive learning
                     log_loss = {}
                     vae_loss, lora_loss, total_loss = 0, 0, 0
                     if len(test_indexs) > 0:
                         if test_latents.dim() != 4:
                             test_latents = test_latents.unsqueeze(0)
                             test_good_latents = test_good_latents.unsqueeze(0)
-
-                        # ---------------------------------------------------------------------------------------------------------------------
-                        # (2) lora learning
-                        #input_latents = torch.cat([test_latents, test_good_latents], dim=0)
-                        #input_condition = text_encoder_conds[test_indexs, :, :]
-                        #input_condition = torch.cat([input_condition] * 2, dim=0)
-                        #noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                        #                                                                                   noise_scheduler,
-                        #                                                                                   input_latents)
-                        """
-                        #with accelerator.autocast():
-                        self.call_unet(args, accelerator, unet, noisy_latents, timesteps,
-                                           input_condition, batch, weight_dtype, index_list, None)
-                        losss = attention_storer.loss_list
-                        attention_storer.reset()
-                        contrastive_loss = torch.stack(losss, dim=0).mean(dim=0)
-                        log_loss["loss/lora_contrastive_loss"] = contrastive_loss.mean()
-                        optimizer.zero_grad(set_to_none=True)
-                        accelerator.backward(contrastive_loss.mean())
-                        optimizer.step()
-                        """
                         # ---------------------------------------------------------------------------------------------------------------------
                         # (1) teacher result
-
                         with torch.no_grad():
                             y = teacher(test_good_latents)
                         with accelerator.autocast():
@@ -808,7 +778,6 @@ class NetworkTrainer:
                         st_loss = st_loss.mean()
                         log_loss['loss/vae_contrastive_loss'] = st_loss.item()
                         vae_loss += st_loss
-
                     if len(train_indexs) > 0:
                         if train_latents.dim() != 4:
                             train_latents = train_latents.unsqueeze(0)
@@ -823,44 +792,15 @@ class NetworkTrainer:
                         st_loss = st_loss.mean([1, 2, 3])
                         st_loss = st_loss.mean()
                         log_loss['loss/vae_normal_st_loss'] = st_loss.item()
-                        """
-                        input_condition = text_encoder_conds[train_indexs, :, :]
-                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                           noise_scheduler,
-                                                                                                           input_latents)
-                        with accelerator.autocast():
-                            noise_pred = self.call_unet(args, accelerator, unet,
-                                                        noisy_latents, timesteps,
-                                                        input_condition, batch, weight_dtype,
-                                                        None, None)
-                            attention_storer.reset()
-                        if args.v_parameterization:
-                            target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                        else:
-                            target = noise
-                        task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none").mean([1, 2, 3])
-                        """
-                        # task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
-                        #log_loss["loss/lora_task_loss"] = task_loss.mean()
-                        #optimizer.zero_grad(set_to_none=True)
-                        #accelerator.backward(task_loss.mean())
-                        #optimizer.step()
                         vae_loss += st_loss
-                        #total_loss += task_loss.mean()
                     student_optimizer.zero_grad(set_to_none=True)
                     accelerator.backward(vae_loss)
                     student_optimizer.step()
                     # ------------------------------------------------------------------------------------
-
-
-
-
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
                         accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
-
                     lr_scheduler.step()
-
                 if args.scale_weight_norms:
                     keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(
                         args.scale_weight_norms, accelerator.device)
@@ -911,10 +851,12 @@ class NetworkTrainer:
                     wandb.log(logs)
                 if global_step >= args.max_train_steps:
                     break
+            
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_total / len(loss_list)}
                 accelerator.log(logs, step=epoch + 1)
             accelerator.wait_for_everyone()
+            """
             if args.save_every_n_epochs is not None:
                 saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < num_train_epochs
                 if is_main_process and saving:
