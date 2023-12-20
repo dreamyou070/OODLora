@@ -792,6 +792,7 @@ class NetworkTrainer:
                         st_loss = st_loss.mean([1, 2, 3])
                         st_loss = st_loss.mean()
                         log_loss['loss/vae_contrastive_loss'] = st_loss.item()
+                        print(f'test st loss: {st_loss.shape}')
                         vae_loss += st_loss
                         total_loss += st_loss
                         # ---------------------------------------------------------------------------------------------------------------------
@@ -810,7 +811,8 @@ class NetworkTrainer:
                                            None)
                         losss = attention_storer.loss_list
                         attention_storer.reset()
-                        contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean([1, 2, 3])
+                        contrastive_loss = torch.stack(losss, dim=0).mean(dim=0)
+                        print(f'test contrastive_loss : {contrastive_loss.shape}')
                         log_loss["loss/lora_contrastive_loss"] = contrastive_loss.mean()
                         lora_loss += contrastive_loss
                         total_loss += contrastive_loss
@@ -831,7 +833,7 @@ class NetworkTrainer:
                         log_loss['loss/vae_normal_st_loss'] = st_loss.item()
                         vae_loss += st_loss
                         total_loss += st_loss
-
+                        print(f'train st loss : {st_loss.shape}')
                         input_condition = text_encoder_conds[train_indexs, :, :]
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
@@ -849,6 +851,7 @@ class NetworkTrainer:
                         task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none").mean([1, 2, 3])
                         # task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
                         log_loss["loss/lora_task_loss"] = task_loss.mean()
+                        print(f'train lora loss : {task_loss.shape}')
                         lora_loss += task_loss
                         total_loss += task_loss
 
