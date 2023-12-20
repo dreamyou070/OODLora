@@ -730,9 +730,9 @@ class NetworkTrainer:
                             latents = batch["latents"].to(accelerator.device)
                         else:
                             instance_seed = random.randint(0, 2 ** 31)
-                            """
+
                             generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
-                            
+                            """
                             img = batch["images"].to(dtype=vae_dtype)
                             img_moment = vae_encoder_quantize(vae_encoder(img))
                             img_latents = DiagonalGaussianDistribution(img_moment).sample(generator=generator)
