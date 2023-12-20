@@ -810,7 +810,7 @@ class NetworkTrainer:
                                            None)
                         losss = attention_storer.loss_list
                         attention_storer.reset()
-                        contrastive_loss = torch.stack(losss, dim=0).mean(dim=0)
+                        contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean([1, 2, 3])
                         log_loss["loss/lora_contrastive_loss"] = contrastive_loss.mean()
                         lora_loss += contrastive_loss
                         total_loss += contrastive_loss
