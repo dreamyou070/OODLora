@@ -743,12 +743,12 @@ class NetworkTrainer:
 
                             if torch.any(torch.isnan(img_latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
-                                latents = torch.where(torch.isnan(img_latents),
+                                img_latents = torch.where(torch.isnan(img_latents),
                                                       torch.zeros_like(img_latents), img_latents)
-                                good_latents = torch.where(torch.isnan(masked_img_latents),
+                                masked_img_latents = torch.where(torch.isnan(masked_img_latents),
                                                            torch.zeros_like(masked_img_latents),masked_img_latents)
-                        latents = latents * self.vae_scale_factor
-                        good_latents = good_latents * self.vae_scale_factor
+                        latents = img_latents * self.vae_scale_factor
+                        good_latents = masked_img_latents * self.vae_scale_factor
                         # ---------------------------------------------------------------------------------------------------------------------
                         train_class_list = batch["train_class_list"]
                         train_indexs, test_indexs = [], []
