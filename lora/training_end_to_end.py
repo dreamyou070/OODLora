@@ -797,7 +797,11 @@ class NetworkTrainer:
                         st_loss = st_loss.mean([1, 2, 3])
                         st_loss = st_loss.mean()
                         log_loss['loss/vae_contrastive_loss'] = st_loss.item()
-                        vae_loss += st_loss
+                        student_optimizer.zero_grad(set_to_none=True)
+                        accelerator.backward(st_loss)
+                        student_optimizer.step()
+
+                        #vae_loss += st_loss
                         total_loss += st_loss
                         # ---------------------------------------------------------------------------------------------------------------------
                         # (2) lora learning
@@ -817,6 +821,9 @@ class NetworkTrainer:
                         attention_storer.reset()
                         contrastive_loss = torch.stack(losss, dim=0).mean(dim=0)
                         log_loss["loss/lora_contrastive_loss"] = contrastive_loss.mean()
+                        optimizer.zero_grad(set_to_none=True)
+                        accelerator.backward(contrastive_loss.mean())
+                        optimizer.step()
                         lora_loss += contrastive_loss
                         total_loss += contrastive_loss
 
@@ -834,6 +841,10 @@ class NetworkTrainer:
                         st_loss = st_loss.mean([1, 2, 3])
                         st_loss = st_loss.mean()
                         log_loss['loss/vae_normal_st_loss'] = st_loss.item()
+                        student_optimizer.zero_grad(set_to_none=True)
+                        accelerator.backward(st_loss)
+                        student_optimizer.step()
+
                         vae_loss += st_loss
                         total_loss += st_loss
                         input_condition = text_encoder_conds[train_indexs, :, :]
@@ -853,17 +864,16 @@ class NetworkTrainer:
                         task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none").mean([1, 2, 3])
                         # task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
                         log_loss["loss/lora_task_loss"] = task_loss.mean()
-                        lora_loss += task_loss.mean()
+                        optimizer.zero_grad(set_to_none=True)
+                        accelerator.backward(task_loss.mean())
+                        optimizer.step()
+                        #lora_loss += task_loss.mean()
                         total_loss += task_loss.mean()
 
                     # ------------------------------------------------------------------------------------
-                    student_optimizer.zero_grad(set_to_none=True)
-                    accelerator.backward(vae_loss)
-                    student_optimizer.step()
 
-                    optimizer.zero_grad(set_to_none=True)
-                    accelerator.backward(lora_loss)
-                    optimizer.step()
+
+
 
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
