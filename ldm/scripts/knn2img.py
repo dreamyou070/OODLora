@@ -301,11 +301,9 @@ if __name__ == "__main__":
         "--knn",
         default=10,
         type=int,
-        help="The number of included neighbors, only applied when --use_neighbors=True",
-    )
+        help="The number of included neighbors, only applied when --use_neighbors=True",)
 
     opt = parser.parse_args()
-
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
 
