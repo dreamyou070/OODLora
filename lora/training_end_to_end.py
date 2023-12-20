@@ -741,7 +741,7 @@ class NetworkTrainer:
                             masked_img_moment = vae_encoder_quantize(vae_encoder(masked_img))
                             masked_img_latents = DiagonalGaussianDistribution(masked_img_moment).sample(generator=generator)
 
-                            if torch.any(torch.isnan(latents)):
+                            if torch.any(torch.isnan(img_latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(img_latents),
                                                       torch.zeros_like(img_latents), img_latents)
