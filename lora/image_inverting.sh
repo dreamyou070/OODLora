@@ -27,6 +27,7 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_proces
   --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
   --with_new_vae_factor \
   --customizing_decoder \
+  --using_customizing_scheduling \
   --repeat_time 51 \
   --self_attn_threshold_time 1000 \
   --final_time 980

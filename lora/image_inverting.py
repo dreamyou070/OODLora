@@ -374,9 +374,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
     with torch.no_grad():
         if args.customizing_decoder:
             factor = vae_factor_dict[0]
-            print(f'factor: {factor}')
             np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
-
         else:
             np_img = latent2image(latent, vae, return_type='np')
     #pil_img = Image.fromarray(np_img)
@@ -427,9 +425,9 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, stud
     pil_images = []
     with torch.no_grad():
         if args.customizing_decoder:
-            #factor = 1 / 0.18215
-            #np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
-            np_img = latent2image(latent, vae, return_type='np')
+            factor = 1 / 0.18215
+            np_img = latent2image_customizing_with_decoder(latent, student, factor, return_type='np')
+            #np_img = latent2image(latent, vae, return_type='np')
         else :
             np_img = latent2image(latent, vae, return_type='np')
     pil_img = Image.fromarray(np_img)
