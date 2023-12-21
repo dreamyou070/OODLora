@@ -10,7 +10,8 @@ alphas_cumprod = torch.tensor([0.0105, 0.0104, 0.0103, 0.0102, 0.0101, 0.0100, 0
         0.0058, 0.0057, 0.0056, 0.0056, 0.0055, 0.0054, 0.0054, 0.0053, 0.0053,
         0.0052, 0.0051, 0.0051, 0.0050, 0.0049, 0.0049, 0.0048, 0.0048, 0.0047,
         0.0047])
-len(alphas_cumprod.tolist())
-next_timesteps = [1,2,3]
-next_timesteps = [j if j != len(alphas_cumprod.tolist()) else len(alphas_cumprod.tolist()) - 1   for j in next_timesteps   ]
-print(next_timesteps)
+
+min_timestep = 0
+max_timestep = len(alphas_cumprod.tolist())
+timesteps = torch.randint(min_timestep, max_timestep, (3,)) * 20
+print(timesteps)

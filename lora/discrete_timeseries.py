@@ -694,9 +694,8 @@ class NetworkTrainer:
                             train_latents = train_latents.unsqueeze(0)
                         input_latents = train_latents
                         input_condition = text_encoder_conds[train_indexs, :, :]
-                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                           noise_scheduler,
-                                                                                                           input_latents)
+                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps_customizing(args,
+                                                                                                noise_scheduler, input_latents)
                         next_timesteps = (timesteps+step_ratio).tolist()
                         next_timesteps = [j if j != len(noise_scheduler.alphas_cumprod.tolist()) else len(noise_scheduler.alphas_cumprod.tolist()) - 1
                                           for j in next_timesteps]
