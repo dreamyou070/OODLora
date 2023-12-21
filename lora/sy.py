@@ -10,22 +10,7 @@ alphas_cumprod = torch.tensor([0.0105, 0.0104, 0.0103, 0.0102, 0.0101, 0.0100, 0
         0.0058, 0.0057, 0.0056, 0.0056, 0.0055, 0.0054, 0.0054, 0.0053, 0.0053,
         0.0052, 0.0051, 0.0051, 0.0050, 0.0049, 0.0049, 0.0048, 0.0048, 0.0047,
         0.0047])
-timesteps = torch.tensor([1,2,3])
-next_timesteps = (timesteps + 1).tolist()
-alpha_prod_t_next = alphas_cumprod[next_timesteps]
-alpha_prod_t = alphas_cumprod[timesteps.tolist()]
-print(alpha_prod_t_next)
-print(alpha_prod_t)
-
-
-#
-beta = (1 - alpha_prod_t_next)**0.5
-gamma = ((alpha_prod_t_next/alpha_prod_t) * (1-alpha_prod_t)) ** 0.5
-print(beta)
-print(gamma)
-
-diff = torch.randn((3,4,64,64))
-beta = beta.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-gamma = gamma.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-beta = beta.expand(diff.shape)
-print(beta[0,:,:,:])
+len(alphas_cumprod.tolist())
+next_timesteps = [1,2,3]
+next_timesteps = [j if j != len(alphas_cumprod.tolist()) else len(alphas_cumprod.tolist()) - 1   for j in next_timesteps   ]
+print(next_timesteps)
