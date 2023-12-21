@@ -55,7 +55,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
-            if is_cross_attention:
+            if is_cross_attention and mask is not None:
                 # if trg_indexs_list is not None and mask is not None:
                 if trg_indexs_list is not None:
                     masked_attention_probs, org_attention_probs = attention_probs.chunk(2, dim=0)
@@ -724,6 +724,9 @@ class NetworkTrainer:
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
                                                                 weight_dtype)
+
+                    print(f'test_indexs : {test_indexs}')
+                    print(f'train indexs: {train_indexs}')
                     # (3.1) contrastive learning
                     log_loss = {}
                     if len(test_indexs) > 0:
@@ -744,7 +747,7 @@ class NetworkTrainer:
                                            noisy_latents, timesteps,
                                            input_condition, batch, weight_dtype,
                                            index_list,
-                                           None)
+                                           test_indexs)
                         losss = attention_storer.loss_list
                         attention_storer.reset()
                         contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
