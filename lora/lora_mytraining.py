@@ -774,7 +774,8 @@ class NetworkTrainer:
                             noise_pred = self.call_unet(args, accelerator, enc_unet,
                                                         noisy_latents, timesteps,
                                                         input_condition, batch, weight_dtype,
-                                                        None, None)
+                                                        None,
+                                                        mask_imgs=None)
                             noise_diff = noise - noise_pred
                             beta = beta.expand(noise_diff.shape)
                             gamma = gamma.expand(noise_diff.shape)
@@ -784,7 +785,8 @@ class NetworkTrainer:
                             noise_pred = self.call_unet(args, accelerator, unet,
                                                         noisy_latents, timesteps,
                                                         input_condition, batch, weight_dtype,
-                                                        None, None)
+                                                        None,
+                                                        mask_imgs =None)
                             attention_storer.reset()
                             beta_prime = (1 - alpha_prod_t)**0.5
                             gamma_prime = ((alpha_prod_t/alpha_prod_t_next) * (1-alpha_prod_t_next)) ** 0.5
