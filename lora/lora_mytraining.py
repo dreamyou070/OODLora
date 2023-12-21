@@ -55,6 +55,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
+            if is_cross_attention and mask is None:
+                print('Not storing')
             if is_cross_attention and mask is not None:
                 # if trg_indexs_list is not None and mask is not None:
                 if trg_indexs_list is not None:
