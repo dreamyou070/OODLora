@@ -485,7 +485,7 @@ class NetworkTrainer:
         text_encoders = train_util.transform_models_if_DDP(text_encoders)
         unet, network = train_util.transform_models_if_DDP([unet, network])
         enc_text_encoders = train_util.transform_models_if_DDP(enc_text_encoders)
-        enc_unet = train_util.transform_models_if_DDP([enc_unet])
+        enc_unet = train_util.transform_models_if_DDP([enc_unet])[0]
 
 
         if args.gradient_checkpointing:
