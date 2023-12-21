@@ -1,7 +1,5 @@
 import argparse
-from generative.losses import PatchAdversarialLoss, PerceptualLoss
-from generative.networks.nets import AutoencoderKL, PatchDiscriminator
-from monai.networks.layers import Act
+from generative.losses import PatchAdversarialLoss
 from torch.nn import L1Loss
 import math
 import os
@@ -20,9 +18,6 @@ from library.config_util import (ConfigSanitizer, BlueprintGenerator, )
 import library.custom_train_functions as custom_train_functions
 from library.custom_train_functions import prepare_scheduler_for_custom_training
 import torch
-from utils.image_utils import load_image, latent2image, IMAGE_TRANSFORMS
-import numpy as np
-from PIL import Image
 from diffusers.models.vae import DiagonalGaussianDistribution
 from STTraining import Encoder_Teacher, Encoder_Student
 try:
