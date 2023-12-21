@@ -4517,7 +4517,6 @@ def get_noise_noisy_latents_and_timesteps_customizing(args, noise_scheduler, lat
     max_timestep = len(noise_scheduler.timesteps)
     step_ratio = noise_scheduler.config.num_train_timesteps // noise_scheduler.num_inference_steps
     timesteps = torch.randint(min_timestep, max_timestep, (3,)) * step_ratio
-    timesteps = torch.randint(min_timestep, max_timestep, (b_size,), device=latents.device)
     timesteps = timesteps.long()
     # Add noise to the latents according to the noise magnitude at each timestep
     # (this is the forward diffusion process)
