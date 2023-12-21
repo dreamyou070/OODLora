@@ -54,6 +54,7 @@ class NetworkTrainer:
     def train(self, args):
 
         print(f'\n step 1. setting')
+        """
         print(f' (1) session')
         if args.process_title:
             setproctitle(args.process_title)
@@ -384,7 +385,8 @@ class NetworkTrainer:
                     state_dict = student.state_dict()
                     torch.save(state_dict,
                                os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
-
+        """
+        
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
