@@ -539,12 +539,8 @@ class NetworkTrainer:
         # TODO: find a way to handle total batch size when there are multiple datasets
         total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
         accelerator.print("running training / 学習開始")
-        #accelerator.print(f"  num train images * repeats / 学習画像の数×繰り返し回数: {train_dataset_group.num_train_images}")
-        #accelerator.print(f"  num reg images / 正則化画像の数: {train_dataset_group.num_reg_images}")
         accelerator.print(f"  num batches per epoch / 1epochのバッチ数: {len(train_dataloader)}")
         accelerator.print(f"  num epochs / epoch数: {num_train_epochs}")
-        #accelerator.print(f"  batch size per device / バッチサイズ: {', '.join([str(d.batch_size) for d in train_dataset_group.datasets])}")
-        # accelerator.print(f"  total train batch size (with parallel & distributed & accumulation) / 総バッチサイズ（並列学習、勾配合計含む）: {total_batch_size}")
         accelerator.print(f"  gradient accumulation steps / 勾配を合計するステップ数 = {args.gradient_accumulation_steps}")
         accelerator.print(f"  total optimization steps / 学習ステップ数: {args.max_train_steps}")
         training_started_at = time.time()
@@ -670,12 +666,10 @@ class NetworkTrainer:
                 accelerator.print(f"removing old checkpoint: {old_ckpt_file}")
                 os.remove(old_ckpt_file)
 
-        # training loop
-        attn_loss_records = [['epoch', 'global_step', 'attn_loss']]
+
         for epoch in range(num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
-            metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
@@ -845,24 +839,13 @@ class NetworkTrainer:
                 self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
             if attention_storer is not None:
                 attention_storer.step_store = {}
-            # end of epoch
-        # metadata["ss_epoch"] = str(num_train_epochs)
-        metadata["ss_training_finished_at"] = str(time.time())
+                
+        accelerator.end_training()
         if is_main_process:
             network = accelerator.unwrap_model(network)
-        accelerator.end_training()
-        if is_main_process and args.save_state:
-            train_util.save_state_on_train_end(args, accelerator)
-        if is_main_process:
             ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
             save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
             print("model saved.")
-            # saving attn loss
-            import csv
-            attn_loss_save_dir = os.path.join(args.output_dir, 'record', f'{args.wandb_run_name}_attn_loss.csv')
-            with open(attn_loss_save_dir, 'w') as f:
-                writer = csv.writer(f)
-                writer.writerows(attn_loss_records)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

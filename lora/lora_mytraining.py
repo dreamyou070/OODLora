@@ -766,6 +766,7 @@ class NetworkTrainer:
                         beta = beta.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
                         gamma = gamma.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
 
+
                         with torch.no_grad():
                             noise_pred = self.call_unet(args, accelerator, enc_unet,
                                                         noisy_latents, timesteps,
@@ -776,6 +777,7 @@ class NetworkTrainer:
                             beta = beta.expand(noise_diff.shape)
                             gamma = gamma.expand(noise_diff.shape)
                             noise_diff_org = noise_diff * (beta - gamma).to(noise_diff.device)
+                            del beta, gamma
 
                         with accelerator.autocast():
                             noise_pred = self.call_unet(args, accelerator, unet,
@@ -791,6 +793,7 @@ class NetworkTrainer:
                         beta_prime = beta_prime.expand(noise_pred.shape)
                         gamma_prime = gamma_prime.expand(noise_pred.shape)
                         noise_diff_pred = noise_pred * (beta_prime - gamma_prime).to(noise_pred.device)
+                        del beta, gamma
 
                         #if args.v_parameterization:
                         #    target = noise_scheduler.get_velocity(latents, noise, timesteps)
