@@ -38,7 +38,7 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --mai
   --save_every_n_epochs 1 \
   --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/object/bagel_inference.txt \
-  --max_train_steps 400 \
+  --max_train_steps 48000 \
   --train_data_dir ../../../MyData/anomaly_detection/VisA/MVTecAD/paired_data/bad \
   --class_caption 'good' \
   --contrastive_eps 0.0
