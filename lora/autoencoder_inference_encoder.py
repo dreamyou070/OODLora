@@ -105,7 +105,7 @@ def main(args):
             # (1) encoder make latent
             latent = DiagonalGaussianDistribution(student(img)).sample()
             # (2) decoder
-            recon_img = vae.decode(latent)
+            recon_img = vae.decode(latent)['sample']
             recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
             image = (recon_img * 255).astype(np.uint8)
             image = Image.fromarray(image)
