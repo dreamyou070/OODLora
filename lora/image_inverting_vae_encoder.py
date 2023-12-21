@@ -540,32 +540,32 @@ def main(args) :
     vae_encoder_quantize = vae.quant_conv
     vae_encoder.requires_grad_(False)
     vae_encoder.eval()
+    vae_encoder.to(accelerator.device, dtype=vae_dtype)
     vae_encoder_quantize.requires_grad_(False)
     vae_encoder_quantize.eval()
-
+    vae_encoder_quantize.to(accelerator.device, dtype=vae_dtype)
+    vae.to(accelerator.device, dtype=vae_dtype)
 
     config_dict = vae.config
+    from diffusers import AutoencoderKL
+    from STTraining import Encoder_Teacher, Encoder_Student
+
     student_vae = AutoencoderKL.from_config(config_dict)
-    student_vae_decoder = student_vae.decoder
-    student_vae_decoder_quantize = student_vae.post_quant_conv
-    student = Student(student_vae_decoder, student_vae_decoder_quantize)
-    print(f' (2.3.2) making decoder of vae')
+    student_vae_encoder = student_vae.encoder
+    student_vae_encoder_quantize = student_vae.quant_conv
+    student = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
+
+    print(f' (4) making decoder of vae')
     student_pretrained_dir = args.student_pretrained_dir
     model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
     state_dict = {}
     for k, v in model_state_dict.items():
-        print(f'saved key name : {k}')
-        #if 'module' in k:
-        #    k_ = '.'.join(k.split('.')[1:])
-        #else :
-        #k_ = k
-        #k_ = '.'.join(k.split('.')[1:])
-        #state_dict[k_] = v
-    for k, v in student.state_dict():
-        print(f'student original key name : {k}')
+        k_ = '.'.join(k.split('.')[1:])
+        state_dict[k_] = v
     student.load_state_dict(state_dict, strict=True)
     student.requires_grad_(False)
     student.eval()
+    student.to(accelerator.device, dtype=vae_dtype)
 
     print(f' (2.3) scheduler')
     sched_init_args = {}
