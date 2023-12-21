@@ -548,87 +548,18 @@ class NetworkTrainer:
         accelerator.print(f"  total optimization steps / 学習ステップ数: {args.max_train_steps}")
         training_started_at = time.time()
         # TODO refactor metadata creation and move to util
-        metadata = {
-            "ss_session_id": session_id,  # random integer indicating which group of epochs the model came from
-            "ss_training_started_at": training_started_at,  # unix timestamp
-            "ss_output_name": args.output_name,
-            "ss_learning_rate": args.learning_rate,
-            "ss_text_encoder_lr": args.text_encoder_lr,
-            "ss_unet_lr": args.unet_lr,
-            # "ss_num_train_images": train_dataset_group.num_train_images,
-            # "ss_num_reg_images": train_dataset_group.num_reg_images,
-            "ss_num_batches_per_epoch": len(train_dataloader),
-            "ss_num_epochs": num_train_epochs,
-            "ss_gradient_checkpointing": args.gradient_checkpointing,
-            "ss_gradient_accumulation_steps": args.gradient_accumulation_steps,
-            "ss_max_train_steps": args.max_train_steps,
-            "ss_lr_warmup_steps": args.lr_warmup_steps,
-            "ss_lr_scheduler": args.lr_scheduler,
-            "ss_network_module": args.network_module,
-            "ss_network_dim": args.network_dim,
-            # None means default because another network than LoRA may have another default dim
-            "ss_network_alpha": args.network_alpha,  # some networks may not have alpha
-            "ss_network_dropout": args.network_dropout,  # some networks may not have dropout
-            "ss_mixed_precision": args.mixed_precision,
-            "ss_full_fp16": bool(args.full_fp16),
-            "ss_v2": bool(args.v2),
-            "ss_base_model_version": model_version,
-            "ss_clip_skip": args.clip_skip,
-            "ss_max_token_length": args.max_token_length,
-            "ss_cache_latents": bool(args.cache_latents),
-            "ss_seed": args.seed,
-            "ss_lowram": args.lowram,
-            "ss_noise_offset": args.noise_offset,
-            "ss_multires_noise_iterations": args.multires_noise_iterations,
-            "ss_multires_noise_discount": args.multires_noise_discount,
-            "ss_adaptive_noise_scale": args.adaptive_noise_scale,
-            "ss_zero_terminal_snr": args.zero_terminal_snr,
-            "ss_training_comment": args.training_comment,  # will not be updated after training
-            "ss_sd_scripts_commit_hash": train_util.get_git_revision_hash(),
-            "ss_optimizer": optimizer_name + (f"({optimizer_args})" if len(optimizer_args) > 0 else ""),
-            "ss_max_grad_norm": args.max_grad_norm,
-            "ss_caption_dropout_rate": args.caption_dropout_rate,
-            "ss_caption_dropout_every_n_epochs": args.caption_dropout_every_n_epochs,
-            "ss_caption_tag_dropout_rate": args.caption_tag_dropout_rate,
-            "ss_face_crop_aug_range": args.face_crop_aug_range,
-            "ss_prior_loss_weight": args.prior_loss_weight,
-            "ss_min_snr_gamma": args.min_snr_gamma,
-            "ss_scale_weight_norms": args.scale_weight_norms,
-            "ss_ip_noise_gamma": args.ip_noise_gamma,
-        }
 
         metadata = {}
         if args.network_args:
             metadata["ss_network_args"] = json.dumps(net_kwargs)
-
-        # model name and hash
-        if args.pretrained_model_name_or_path is not None:
-            sd_model_name = args.pretrained_model_name_or_path
-            if os.path.exists(sd_model_name):
-                metadata["ss_sd_model_hash"] = train_util.model_hash(sd_model_name)
-                metadata["ss_new_sd_model_hash"] = train_util.calculate_sha256(sd_model_name)
-                sd_model_name = os.path.basename(sd_model_name)
-            metadata["ss_sd_model_name"] = sd_model_name
-        if args.vae is not None:
-            vae_name = args.vae
-            if os.path.exists(vae_name):
-                metadata["ss_vae_hash"] = train_util.model_hash(vae_name)
-                metadata["ss_new_vae_hash"] = train_util.calculate_sha256(vae_name)
-                vae_name = os.path.basename(vae_name)
-            metadata["ss_vae_name"] = vae_name
-        metadata = {k: str(v) for k, v in metadata.items()}
-        # make minimum metadata for filtering
-        minimum_metadata = {}
-        for key in train_util.SS_METADATA_MINIMUM_KEYS:
-            if key in metadata:
-                minimum_metadata[key] = metadata[key]
         progress_bar = tqdm(range(args.max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process,
                             desc="steps")
         global_step = 0
-        noise_scheduler = DDPMScheduler(
-            beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", num_train_timesteps=1000,
-            clip_sample=False
-        )
+        noise_scheduler = DDPMScheduler(beta_start=0.00085,
+                                        beta_end=0.012,
+                                        beta_schedule="scaled_linear",
+                                        num_train_timesteps=1000,
+                                        clip_sample=False)
         prepare_scheduler_for_custom_training(noise_scheduler, accelerator.device)
         if args.zero_terminal_snr:
             custom_train_functions.fix_noise_scheduler_betas_for_zero_terminal_snr(noise_scheduler)
@@ -771,12 +702,12 @@ class NetworkTrainer:
 
 
                         with torch.no_grad():
-                            noise_pred = self.call_unet(args, accelerator, enc_unet,
+                            noise_pred_org = self.call_unet(args, accelerator, enc_unet,
                                                         noisy_latents, timesteps,
                                                         input_condition, batch, weight_dtype,
                                                         None,
                                                         mask_imgs=None)
-                            noise_diff = noise - noise_pred
+                            noise_diff = noise - noise_pred_org
                             beta = beta.expand(noise_diff.shape)
                             gamma = gamma.expand(noise_diff.shape)
                             noise_diff_org = noise_diff * (beta - gamma).to(noise_diff.device)
@@ -796,21 +727,26 @@ class NetworkTrainer:
                         beta_prime = beta_prime.expand(noise_pred.shape)
                         gamma_prime = gamma_prime.expand(noise_pred.shape)
                         noise_diff_pred = noise_pred * (beta_prime - gamma_prime).to(noise_pred.device)
-                        del beta, gamma
 
-                        #if args.v_parameterization:
-                        #    target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                        #else:
-                        #    target = noise
-                        #task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
-                        task_loss = torch.nn.functional.mse_loss(noise_diff_org.float(), noise_diff_pred.float(), reduction="none")
-                        task_loss = task_loss.mean([1, 2, 3]) #* batch["loss_weights"]  # 各sampleごとのweight
+                        if args.v_parameterization:
+                            target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                        else:
+                            target = noise
+                        task_loss = torch.nn.functional.mse_loss(noise_pred.float(),
+                                                                 target.float(), reduction="none")
+                        task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
                         task_loss = task_loss.mean()
+
+                        detail_loss = torch.nn.functional.mse_loss(noise_diff_org.float(),
+                                                                 noise_diff_pred.float(), reduction="none")
+                        detail_loss = detail_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
+                        detail_loss = detail_loss.mean()
+                        log_loss["loss/detail_loss"] = detail_loss
                         log_loss["loss/task_loss"] = task_loss
                         if len(test_indexs) > 0 :
-                            loss += task_loss
+                            loss += task_loss + detail_loss
                         else:
-                            loss = task_loss
+                            loss = task_loss + detail_loss
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
