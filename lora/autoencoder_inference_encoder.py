@@ -93,9 +93,12 @@ def main(args):
     student_epoch = int(student_epoch.split('_')[-1])
     print(f'student_epoch: {student_epoch}')
 
-    def recon(sample_data_dir, save_dir, compare_save_dir):
+    def recon(mask_dir, sample_data_dir, mask_save_dir, save_dir, compare_save_dir):
+        mask_pil_img = Image.open(mask_dir)
         pil_img = Image.open(sample_data_dir)
         h, w = args.resolution.split(',')[0], args.resolution.split(',')[1]
+        mask_pil_img = mask_pil_img.resize((int(h.strip()), int(w.strip())), Image.BICUBIC)
+        mask_pil_img.save(mask_save_dir)
         pil_img = pil_img.resize((int(h.strip()), int(w.strip())), Image.BICUBIC)
         pil_img.save(compare_save_dir)
         img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
@@ -112,28 +115,28 @@ def main(args):
             image.save(save_dir)
 
     print(f'\n step 3. inference')
-    save_dir = os.path.join(args.output_dir, 'vae_result_check')
+    save_dir = os.path.join(args.output_dir, 'inference/vae_result_check')
     os.makedirs(save_dir, exist_ok=True)
     save_base_dir = os.path.join(save_dir, f'student_epoch_{student_epoch}')
     os.makedirs(save_base_dir, exist_ok=True)
-    test_save_dir = os.path.join(save_base_dir, 'test_dataset')
-    os.makedirs(test_save_dir, exist_ok=True)
-
     print(' (3.1) anormal test')
     anormal_folder = args.anormal_folder
     classes = os.listdir(anormal_folder)
     for class_ in classes:
         class_dir = os.path.join(anormal_folder, class_)
-        class_save_dir = os.path.join(test_save_dir, class_)
+        class_save_dir = os.path.join(save_base_dir, class_)
         os.makedirs(class_save_dir, exist_ok=True)
         sample_data_dir = os.path.join(class_dir, 'rgb')
+        mask_data_dir = os.path.join(class_dir, 'gt')
         images = os.listdir(sample_data_dir)
         for image in images :
             name, ext = os.path.splitext(image)
+            mask_dir = os.path.join(mask_data_dir, image)
             img_dir = os.path.join(sample_data_dir, image)
             img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
             compare_save_dir = os.path.join(class_save_dir, image)
-            recon(img_dir, img_save_dir, compare_save_dir)
+            mask_save_dir = os.path.join(class_save_dir, f'{name}_mask.png')
+            recon(mask_dir, img_dir, mask_save_dir, img_save_dir, compare_save_dir)
 
 
 if __name__ == "__main__":
