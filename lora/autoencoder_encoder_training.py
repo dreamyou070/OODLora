@@ -43,7 +43,7 @@ class NetworkTrainer:
     def train(self, args):
 
         print(f'\n step 1. setting')
-        
+
         print(f' (1) session')
         if args.process_title:
             setproctitle(args.process_title)
