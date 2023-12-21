@@ -11,7 +11,7 @@ conda activate venv_lora
 ml purge
 ml load cuda/11.0
 
-accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 50189 autoencoder_inference.py \
+accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 50189 autoencoder_inference.py \
   --process_title parksooyeon \
   --seed 42 \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
