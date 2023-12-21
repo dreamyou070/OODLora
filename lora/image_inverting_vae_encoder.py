@@ -498,6 +498,7 @@ def main(args) :
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
+
     print(f' \n step 2. make stable diffusion model')
     device = accelerator.device
     print(f' (2.1) tokenizer')
@@ -720,9 +721,33 @@ def main(args) :
                 image_gt_np = load_512(train_img_dir)
                 # ------------------------------------------------------------------------------ #
                 latent = customizing_image2latent(image_gt_np, student, device, weight_dtype)
+
+
                 inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
                 flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
                 original_latent = latent.clone().detach()
+
+                with torch.no_grad():
+                    np_img = latent2image(latent, vae, return_type='np')
+                vae_recon = Image.fromarray(np_img)
+
+                original_latent = image2latent(image_gt_np, vae, device, weight_dtype)
+                print(f'student_latent : {latent.shape}')
+                print(f'original_latent : {original_latent.shape}')
+                """
+
+
+
+
+
+
+
+
+
+
+
+
+
                 for ii, final_time in enumerate(flip_times[1:]):
                     if final_time.item() == args.final_time:
                         timewise_save_base_folder = os.path.join(save_base_dir, f'final_time_{final_time.item()}')
@@ -757,6 +782,9 @@ def main(args) :
                                                              vae_factor_dict=inference_decoding_factor,
                                                              weight_dtype=weight_dtype)
                         attention_storer.reset()
+                """
+                break
+            break
 
 
 if __name__ == "__main__":
