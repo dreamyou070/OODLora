@@ -436,6 +436,7 @@ class NetworkTrainer:
         for enc_t_enc in enc_text_encoders:
             enc_t_enc.requires_grad_(False)
 
+
         # acceleratorがなんかよろしくやってくれるらしい
         # TODO めちゃくちゃ冗長なのでコードを整理する
         if train_unet and train_text_encoder:
@@ -486,6 +487,7 @@ class NetworkTrainer:
         unet, network = train_util.transform_models_if_DDP([unet, network])
         enc_text_encoders = train_util.transform_models_if_DDP(enc_text_encoders)
         enc_unet = train_util.transform_models_if_DDP([enc_unet])[0]
+        del enc_text_encoders, enc_vae
 
 
         if args.gradient_checkpointing:
@@ -777,7 +779,7 @@ class NetworkTrainer:
                             beta = beta.expand(noise_diff.shape)
                             gamma = gamma.expand(noise_diff.shape)
                             noise_diff_org = noise_diff * (beta - gamma).to(noise_diff.device)
-                            del beta, gamma
+
 
                         with accelerator.autocast():
                             noise_pred = self.call_unet(args, accelerator, unet,

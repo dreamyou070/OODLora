@@ -839,7 +839,7 @@ class NetworkTrainer:
                 self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
             if attention_storer is not None:
                 attention_storer.step_store = {}
-                
+
         accelerator.end_training()
         if is_main_process:
             network = accelerator.unwrap_model(network)
