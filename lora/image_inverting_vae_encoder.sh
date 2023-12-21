@@ -13,7 +13,7 @@ ml purge
 ml load cuda/11.0
 
 
-accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 57689 image_inverting_vaee_encoder.py \
+accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 57689 image_inverting_vae_encoder.py \
   --process_title parksooyeon \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 \
