@@ -356,6 +356,17 @@ class NetworkTrainer:
         student_vae_decoder_quantize = student_vae.post_quant_conv
         student = Student(student_vae_decoder, student_vae_decoder_quantize)
 
+        if args.student_resume :
+            student_pretrained_dir = args.student_pretrained_dir
+            model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
+            state_dict = {}
+            for k, v in model_state_dict.items():
+                k_ = '.'.join(k.split('.')[1:])
+                state_dict[k_] = v
+            student.load_state_dict(state_dict, strict=True)
+
+
+
         teacher.requires_grad_(False)
         teacher.eval()
         teacher.to(dtype=weight_dtype)
@@ -854,7 +865,7 @@ class NetworkTrainer:
                 print('saving model')
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
-                    trg_epoch = str(epoch + 1).zfill(6)
+                    trg_epoch = str(epoch + 2).zfill(6)
                     save_directory = os.path.join(args.output_dir, f'vae_student_model')
                     os.makedirs(save_directory, exist_ok=True)
                     state_dict = student.state_dict()
@@ -926,7 +937,9 @@ if __name__ == "__main__":
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
     parser.add_argument("--net_key_names", type=str, default='text')
     parser.add_argument("--mask_threshold", type=float, default=0.5)
-    parser.add_argument("--contrastive_eps", type=float, default=0.00005)
+
+    parser.add_argument("--student_resume", action = 'store_true')
+    parser.add_argument("--student_pretrained_dir", type=str)
     # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
