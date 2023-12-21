@@ -193,13 +193,6 @@ class NetworkTrainer:
         student.train()
         student.to(dtype=vae_dtype)
 
-
-        l1_loss = L1Loss()
-        adv_loss = PatchAdversarialLoss(criterion="least_squares")
-        adv_weight = 0.01
-        perceptual_weight = args.perceptual_weight
-
-
         # epoch数を計算する
         num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
         num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
