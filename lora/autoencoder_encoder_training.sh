@@ -12,3 +12,5 @@ conda activate venv_lora
 ml purge
 ml load cuda/11.0
 
+
+accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 57689 autoencoder_encoder_training.py
