@@ -723,11 +723,9 @@ def main(args) :
                 save_base_dir = os.path.join(class_base_folder, concept_name)
                 os.makedirs(save_base_dir, exist_ok=True)
                 image_gt_np = load_512(train_img_dir)
-                with torch.no_grad():
-                    np_img = latent2image(latent, vae, return_type='np')
-                    org_vae_latent = image2latent(image_gt_np, vae, device, weight_dtype)
 
                 with torch.no_grad():
+                    org_vae_latent = image2latent(image_gt_np, vae, device, weight_dtype)
                     latent = customizing_image2latent(image_gt_np, student, device, weight_dtype)
                 mse = ((latent - org_vae_latent).square() * 2) - thredhold
                 mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
