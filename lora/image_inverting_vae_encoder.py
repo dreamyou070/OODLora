@@ -732,6 +732,11 @@ def main(args) :
                 vae_recon = Image.fromarray(np_img)
 
                 original_latent = image2latent(image_gt_np, vae, device, weight_dtype)
+
+                mse = ((latent -original_latent).square() * 2) - 1
+                mse_threshold = mse > 0 # if true = 1, else = 0
+                mse_threshold = (mse_threshold.float() * 2) - 1
+
                 print(f'student_latent : {latent.shape}')
                 print(f'original_latent : {original_latent.shape}')
                 """
