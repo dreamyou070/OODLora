@@ -13,7 +13,7 @@ ml purge
 ml load cuda/11.0
 # srun -p suma_rtx4090 -q big_qos --job-name=s_learn_recon --gres=gpu:2 --pty bash -i
 
-accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port 57689 autoencoder_encoder_training.py \
+accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port 50089 autoencoder_encoder_training.py \
   --process_title parksooyeon --max_token_length 225 \
   --logging_dir ../result/logs \
   --log_with wandb \
