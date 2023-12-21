@@ -724,9 +724,6 @@ class NetworkTrainer:
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
                                                                 weight_dtype)
-
-                    print(f'test_indexs : {test_indexs}')
-                    print(f'train indexs: {train_indexs}')
                     # (3.1) contrastive learning
                     log_loss = {}
                     if len(test_indexs) > 0 :
@@ -736,11 +733,8 @@ class NetworkTrainer:
                         input_latents = torch.cat([test_latents, test_good_latents], dim=0)
                         input_condition = text_encoder_conds[test_indexs, :, :]
                         input_condition = torch.cat([input_condition] * 2, dim=0)
-                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                           noise_scheduler,
-                                                                                                           input_latents)
+                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler,input_latents)
                         # Predict the noise residual
-
                         with accelerator.autocast():
                             self.call_unet(args, accelerator, unet,
                                            noisy_latents, timesteps,
