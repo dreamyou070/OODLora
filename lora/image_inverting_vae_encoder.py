@@ -723,22 +723,19 @@ def main(args) :
                 save_base_dir = os.path.join(class_base_folder, concept_name)
                 os.makedirs(save_base_dir, exist_ok=True)
                 image_gt_np = load_512(train_img_dir)
-                # ------------------------------------------------------------------------------ #
-                latent = customizing_image2latent(image_gt_np, student, device, weight_dtype)
+                with torch.no_grad():
+                    np_img = latent2image(latent, vae, return_type='np')
+                    org_vae_latent = image2latent(image_gt_np, vae, device, weight_dtype)
+
+                with torch.no_grad():
+                    latent = customizing_image2latent(image_gt_np, student, device, weight_dtype)
+                mse = ((latent - org_vae_latent).square() * 2) - thredhold
+                mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
+                mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
 
                 inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
                 flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
                 original_latent = latent.clone().detach()
-                with torch.no_grad():
-                    np_img = latent2image(latent, vae, return_type='np')
-                vae_recon = Image.fromarray(np_img)
-
-                original_latent = image2latent(image_gt_np, vae, device, weight_dtype)
-                mse = ((latent -original_latent).square() * 2) - thredhold
-                mse_threshold = mse < 0 # if true = 1, false = 0 # if true -> bad
-                #print(f'mse_threshold : {mse_threshold}')
-                mse_threshold = (mse_threshold.float()) # 0 = background, 1 = bad point
-
                 for ii, final_time in enumerate(flip_times[1:]):
                     if final_time.item() == args.final_time:
                         timewise_save_base_folder = os.path.join(save_base_dir, f'final_time_{final_time.item()}')
