@@ -392,6 +392,7 @@ class NetworkTrainer:
             accelerator.print(
                 "Deprecated: use prepare_optimizer_params(text_encoder_lr, unet_lr, learning_rate) instead of prepare_optimizer_params(text_encoder_lr, unet_lr)")
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+        print(f'trainable params : {trainable_params}')
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         # dataloaderを準備する
@@ -731,11 +732,10 @@ class NetworkTrainer:
                     print(f'train indexs: {train_indexs}')
                     # (3.1) contrastive learning
                     log_loss = {}
-                    if len(test_indexs) > 0:
+                    if len(test_indexs) > 0 :
                         if test_latents.dim() != 4:
                             test_latents = test_latents.unsqueeze(0)
                             test_good_latents = test_good_latents.unsqueeze(0)
-
                         input_latents = torch.cat([test_latents, test_good_latents], dim=0)
                         input_condition = text_encoder_conds[test_indexs, :, :]
                         input_condition = torch.cat([input_condition] * 2, dim=0)
@@ -789,26 +789,25 @@ class NetworkTrainer:
                                                         input_condition, batch, weight_dtype,
                                                         None,
                                                         mask_imgs =None)
-                            attention_storer.reset()
-                            beta_prime = (1 - alpha_prod_t)**0.5
-                            gamma_prime = ((alpha_prod_t/alpha_prod_t_next) * (1-alpha_prod_t_next)) ** 0.5
-                            beta_prime = beta_prime.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-                            gamma_prime = gamma_prime.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-                            beta_prime = beta_prime.expand(noise_pred.shape)
-                            gamma_prime = gamma_prime.expand(noise_pred.shape)
-                            noise_diff_pred = noise_pred * (beta_prime - gamma_prime).to(noise_pred.device)
+                        attention_storer.reset()
+                        beta_prime = (1 - alpha_prod_t)**0.5
+                        gamma_prime = ((alpha_prod_t/alpha_prod_t_next) * (1-alpha_prod_t_next)) ** 0.5
+                        beta_prime = beta_prime.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+                        gamma_prime = gamma_prime.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+                        beta_prime = beta_prime.expand(noise_pred.shape)
+                        gamma_prime = gamma_prime.expand(noise_pred.shape)
+                        noise_diff_pred = noise_pred * (beta_prime - gamma_prime).to(noise_pred.device)
 
                         #if args.v_parameterization:
                         #    target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         #else:
                         #    target = noise
                         #task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
-                        task_loss = torch.nn.functional.mse_loss(noise_diff_org.float(),
-                                                                 noise_diff_pred.float(), reduction="none")
-                        # task_loss = task_loss.mean([1, 2, 3]) * batch["loss_weights"]  # 各sampleごとのweight
+                        task_loss = torch.nn.functional.mse_loss(noise_diff_org.float(), noise_diff_pred.float(), reduction="none")
+                        task_loss = task_loss.mean([1, 2, 3]) #* batch["loss_weights"]  # 各sampleごとのweight
                         task_loss = task_loss.mean()
                         log_loss["loss/task_loss"] = task_loss
-                        if test_latents.shape[0] != 0:
+                        if len(test_indexs) > 0 :
                             loss += task_loss
                         else:
                             loss = task_loss
@@ -845,7 +844,6 @@ class NetworkTrainer:
                                 remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as,
                                                                                  remove_step_no)
                                 remove_model(remove_ckpt_name)
-
                 current_loss = loss.detach().item()
                 log_loss["loss/current_loss"] = current_loss
                 # ------------------------------------------------------------------------------------------------------------------------------
@@ -863,7 +861,6 @@ class NetworkTrainer:
                     progress_bar.set_postfix(**{**max_mean_logs, **log_loss})
                 if args.logging_dir is not None:
                     logs = self.generate_step_logs(log_loss, lr_scheduler, keys_scaled, mean_norm, maximum_norm)
-
                     accelerator.log(logs, step=global_step)
                 if is_main_process:
                     wandb.log(logs)
@@ -880,17 +877,15 @@ class NetworkTrainer:
                     save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch + 1)
                     remove_epoch_no = train_util.get_remove_epoch_no(args, epoch + 1)
                     if remove_epoch_no is not None:
-                        remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as,
-                                                                          remove_epoch_no)
+                        remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, remove_epoch_no)
                         remove_model(remove_ckpt_name)
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
             if epoch % args.sample_every_n_epochs == 0 and is_main_process:
                 self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
                                    text_encoder, unet)
-                attention_storer.reset()
             if attention_storer is not None:
-                attention_storer.step_store = {}
+                attention_storer.reset()
             # end of epoch
         # metadata["ss_epoch"] = str(num_train_epochs)
         metadata["ss_training_finished_at"] = str(time.time())
