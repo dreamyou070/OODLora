@@ -18,17 +18,16 @@ from diffusers import DDPMScheduler
 from library.config_util import (ConfigSanitizer, BlueprintGenerator, )
 from library.custom_train_functions import prepare_scheduler_for_custom_training
 from STTraining import Encoder_Teacher, Encoder_Student
-
+import torch
+from torch.nn import L1Loss
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
-import torch
-from torch.nn import L1Loss
 
 
 class NetworkTrainer:
-    """
+
     def __init__(self):
         self.vae_scale_factor = 0.18215
         self.is_sdxl = False
@@ -40,11 +39,11 @@ class NetworkTrainer:
     def load_tokenizer(self, args):
         tokenizer = train_util.load_tokenizer(args)
         return tokenizer
-    """
+
     def train(self, args):
 
         print(f'\n step 1. setting')
-        """
+        
         print(f' (1) session')
         if args.process_title:
             setproctitle(args.process_title)
@@ -375,7 +374,7 @@ class NetworkTrainer:
                     state_dict = student.state_dict()
                     torch.save(state_dict,
                                os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
-        """
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
