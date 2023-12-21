@@ -703,6 +703,7 @@ def main(args) :
     print(f' (3.2) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
     classes = os.listdir(test_img_folder)
+    thredhold = 1
     for class_name in classes:
         class_folder = os.path.join(test_img_folder, class_name)
         class_base_folder = os.path.join(output_dir, class_name)
@@ -733,11 +734,11 @@ def main(args) :
 
                 original_latent = image2latent(image_gt_np, vae, device, weight_dtype)
 
-                mse = ((latent -original_latent).square() * 2) - 1
-                mse_threshold = mse > 0 # if true = 1, else = 0
+                mse = ((latent -original_latent).square() * 2) - thredhold
+                mse_threshold = mse > 0 # if true = 1, false = 0 # if true -> bad
                 print(f'mse_threshold : {mse_threshold}')
-                mse_threshold = (mse_threshold.float() * 2) - 1
-
+                mse_threshold = (mse_threshold.float() * 2) - 1 #
+                print(f'mse_threshold : {mse_threshold}')
                 print(f'student_latent : {latent.shape}')
                 print(f'original_latent : {original_latent.shape}')
 
