@@ -759,6 +759,8 @@ class NetworkTrainer:
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
                                                                                                            input_latents)
+                        print(f'train_indexs : {train_indexs}')
+                        print(f'timesteps : {timesteps}')
 
                         alpha_prod_t_next = noise_scheduler.alphas_cumprod[timesteps+1]
                         alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps]
