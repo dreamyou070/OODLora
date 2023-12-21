@@ -761,9 +761,10 @@ class NetworkTrainer:
                                                                                                            input_latents)
                         print(f'train_indexs : {train_indexs}')
                         print(f'timesteps : {timesteps}')
-
-                        alpha_prod_t_next = noise_scheduler.alphas_cumprod[timesteps+1]
-                        alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps]
+                        print(f'noise_scheduler.alphas_cumprod : {noise_scheduler.alphas_cumprod}')
+                        next_timesteps = (timesteps+1).tolist()
+                        alpha_prod_t_next = noise_scheduler.alphas_cumprod[next_timesteps]
+                        alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
                         beta = (1 - alpha_prod_t_next)**0.5
                         gamma = ((alpha_prod_t_next/alpha_prod_t) * (1-alpha_prod_t)) ** 0.5
 
