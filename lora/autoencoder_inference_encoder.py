@@ -64,6 +64,7 @@ def main(args):
     vae_encoder_quantize.requires_grad_(False)
     vae_encoder_quantize.eval()
     vae_encoder_quantize.to(accelerator.device, dtype=vae_dtype)
+    vae.to(accelerator.device, dtype=vae_dtype)
 
     config_dict = vae.config
     from diffusers import AutoencoderKL
