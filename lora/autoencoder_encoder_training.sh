@@ -1,8 +1,8 @@
 #!/bin/bash
-
+# start of the script
+#!/bin/bash
 # sbatch -q big_qos --nodes 2 --output=../result/printing_screen/2_contrastive_learning_eps_0.0_new_code_highrepeat_test.txt training_contrastive.sh
 # sbatch -q big_qos --nodes 2 training_contrastive.sh
-
 echo $CUDA_VISIBLE_DEVICES
 echo $SLURM_NODELIST
 echo $SLURM_NODEID
@@ -11,9 +11,9 @@ source ~/.bashrc
 conda activate venv_lora
 ml purge
 ml load cuda/11.0
-# srun -p suma_rtx4090 -q big_qos --job-name=s_learn_recon --gres=gpu:2 --pty bash -i
 
-accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 50089 autoencoder_encoder_training.py \
+
+accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 57689 autoencoder_encoder_training.py \
   --process_title parksooyeon --max_token_length 225 \
   --logging_dir ../result/logs \
   --log_with wandb \
