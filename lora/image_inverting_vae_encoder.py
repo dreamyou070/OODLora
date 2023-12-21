@@ -486,10 +486,12 @@ def main(args) :
 
     output_dir = args.output_dir
     os.makedirs(output_dir, exist_ok=True)
+
     parent, network_dir = os.path.split(args.network_weights)
     super_parenrt, parent_dir = os.path.split(parent)
-    output_dir = os.path.join(super_parenrt, f'lora_{parent_dir}')
+    output_dir = os.path.join(output_dir, f'lora_{parent_dir}')
     os.makedirs(output_dir, exist_ok=True)
+
     network_dir = os.path.splitext(network_dir)[0]
     lora_epoch = int(network_dir.split('-')[-1])
     output_dir = os.path.join(output_dir, f'epoch-{lora_epoch}')
