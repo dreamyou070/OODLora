@@ -478,7 +478,6 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
         pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
-        latent = image2latent(np_img, vae, vae.device, weight_dtype)
         all_latent_dict[prev_time] = latent
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
