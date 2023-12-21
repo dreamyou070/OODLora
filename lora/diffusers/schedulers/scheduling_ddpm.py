@@ -274,8 +274,7 @@ class DDPMScheduler(SchedulerMixin, ConfigMixin):
                 timesteps -= 1
             else:
                 raise ValueError(
-                    f"{self.config.timestep_spacing} is not supported. Please make sure to choose one of 'linspace', 'leading' or 'trailing'."
-                )
+                    f"{self.config.timestep_spacing} is not supported. Please make sure to choose one of 'linspace', 'leading' or 'trailing'.")
 
         self.timesteps = torch.from_numpy(timesteps).to(device)
 

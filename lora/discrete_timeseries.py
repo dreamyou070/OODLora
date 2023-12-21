@@ -560,6 +560,14 @@ class NetworkTrainer:
                                         beta_schedule="scaled_linear",
                                         num_train_timesteps=1000,
                                         clip_sample=False)
+        noise_scheduler.set_timesteps(args.num_ddim_steps)
+        inference_times = noise_scheduler.timesteps
+        step_ratio = noise_scheduler.config.num_train_timesteps // noise_scheduler.num_inference_steps
+        print(f'step_ratio : {step_ratio}}')
+
+
+
+
         prepare_scheduler_for_custom_training(noise_scheduler, accelerator.device)
         if args.zero_terminal_snr:
             custom_train_functions.fix_noise_scheduler_betas_for_zero_terminal_snr(noise_scheduler)
@@ -579,7 +587,6 @@ class NetworkTrainer:
         else:
             on_step_start = lambda *args, **kwargs: None
 
-
         # function for saving/removing
         def save_model(ckpt_name, unwrapped_nw, steps, epoch_no, force_sync_upload=False):
             os.makedirs(args.output_dir, exist_ok=True)
@@ -589,7 +596,7 @@ class NetworkTrainer:
             metadata["ss_training_finished_at"] = str(time.time())
             metadata["ss_steps"] = str(steps)
             metadata["ss_epoch"] = str(epoch_no)
-            minimum_metadata = {}
+
             metadata_to_save = minimum_metadata if args.no_metadata else metadata
             sai_metadata = train_util.get_sai_model_spec(None, args, self.is_sdxl, True, False)
             metadata_to_save.update(sai_metadata)
@@ -690,9 +697,11 @@ class NetworkTrainer:
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
                                                                                                            input_latents)
-                        next_timesteps = (timesteps+1).tolist()
+                        next_timesteps = (timesteps+step_ratio).tolist()
                         next_timesteps = [j if j != len(noise_scheduler.alphas_cumprod.tolist()) else len(noise_scheduler.alphas_cumprod.tolist()) - 1
                                           for j in next_timesteps]
+                        print(f'timesteps : {timesteps}')
+                        print(f'next_timesteps : {next_timesteps}')
                         alpha_prod_t_next = noise_scheduler.alphas_cumprod[next_timesteps]
                         alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
                         gamma = (alpha_prod_t / alpha_prod_t_next) ** 0.5
