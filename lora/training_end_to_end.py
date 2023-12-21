@@ -937,6 +937,8 @@ if __name__ == "__main__":
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
     parser.add_argument("--net_key_names", type=str, default='text')
     parser.add_argument("--mask_threshold", type=float, default=0.5)
+    parser.add_argument("--contrastive_eps", type=float, default=0.0)
+
 
     parser.add_argument("--student_resume", action = 'store_true')
     parser.add_argument("--student_pretrained_dir", type=str)
