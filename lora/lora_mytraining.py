@@ -759,9 +759,6 @@ class NetworkTrainer:
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
                                                                                                            input_latents)
-                        print(f'train_indexs : {train_indexs}')
-                        print(f'timesteps : {timesteps}')
-                        print(f'noise_scheduler.alphas_cumprod : {noise_scheduler.alphas_cumprod}')
                         next_timesteps = (timesteps+1).tolist()
                         alpha_prod_t_next = noise_scheduler.alphas_cumprod[next_timesteps]
                         alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
@@ -785,6 +782,7 @@ class NetworkTrainer:
                                                         noisy_latents, timesteps,
                                                         input_condition, batch, weight_dtype,
                                                         None, None)
+                            attention_storer.reset()
                             beta_prime = (1 - alpha_prod_t)**0.5
                             gamma_prime = ((alpha_prod_t/alpha_prod_t_next) * (1-alpha_prod_t_next)) ** 0.5
                             beta_prime = beta_prime.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
