@@ -487,7 +487,6 @@ class NetworkTrainer:
         unet, network = train_util.transform_models_if_DDP([unet, network])
         enc_text_encoders = train_util.transform_models_if_DDP(enc_text_encoders)
         enc_unet = train_util.transform_models_if_DDP([enc_unet])[0]
-        del enc_text_encoders, enc_vae
 
 
         if args.gradient_checkpointing:
@@ -510,6 +509,8 @@ class NetworkTrainer:
             for enc_t_enc in enc_text_encoders:
                 enc_t_enc.eval()
         del t_enc
+        del enc_text_encoders, enc_vae
+
         network.prepare_grad_etc(text_encoder, unet)
 
         # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
