@@ -699,8 +699,6 @@ class NetworkTrainer:
                         next_timesteps = (timesteps+step_ratio).tolist()
                         next_timesteps = [j if j != len(noise_scheduler.alphas_cumprod.tolist()) else len(noise_scheduler.alphas_cumprod.tolist()) - 1
                                           for j in next_timesteps]
-                        print(f'timesteps : {timesteps}')
-                        print(f'next_timesteps : {next_timesteps}')
                         alpha_prod_t_next = noise_scheduler.alphas_cumprod[next_timesteps]
                         alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
                         gamma = (alpha_prod_t / alpha_prod_t_next) ** 0.5
