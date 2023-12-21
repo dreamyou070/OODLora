@@ -756,7 +756,7 @@ class NetworkTrainer:
                                                                                                            noise_scheduler,
                                                                                                            input_latents)
                         next_timesteps = (timesteps+1).tolist()
-                        next_timesteps = [j if j != len(noise_scheduler.alphas_cumprod.tolist()) else len(noise_scheduler.tolist()) - 1
+                        next_timesteps = [j if j != len(noise_scheduler.alphas_cumprod.tolist()) else len(noise_scheduler.alphas_cumprod.tolist()) - 1
                                           for j in next_timesteps]
 
                         alpha_prod_t_next = noise_scheduler.alphas_cumprod[next_timesteps]
