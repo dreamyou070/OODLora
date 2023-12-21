@@ -21,11 +21,13 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_proces
   --inversion_experiment \
   --sample_sampler ddim \
   --num_ddim_steps 50 \
-  --output_dir ../result/MVTec_experiment/bagel/vae_training/4_TS_encoder_test_contrastive_recon_loss/student_model_encoder_with_lora \
   --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel \
-  --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/4_TS_encoder_test_contrastive_recon_loss/vae_student_model/student_epoch_000003.pth \
-  --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
+  --output_dir ./result/MVTec_experiment/bagel/vae_training/5_TS_encoder_contrastive_recon_loss/inference/with_lora \
+  --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/5_TS_encoder_contrastive_recon_loss/vae_student_model/student_epoch_000008.pth \
+  --network_weights ../result/MVTec_experiment/bagel/4_lora_trining_using_noise_diff_org_loss/epoch-000003.safetensors \
   --repeat_time 51 \
   --self_attn_threshold_time 1000 \
   --final_time 980
+
+
 
