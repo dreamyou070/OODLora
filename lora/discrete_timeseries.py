@@ -563,7 +563,7 @@ class NetworkTrainer:
         noise_scheduler.set_timesteps(args.num_ddim_steps)
         inference_times = noise_scheduler.timesteps
         step_ratio = noise_scheduler.config.num_train_timesteps // noise_scheduler.num_inference_steps
-        print(f'step_ratio : {step_ratio}}')
+        print(f'step_ratio : {step_ratio}')
 
 
 
@@ -596,7 +596,7 @@ class NetworkTrainer:
             metadata["ss_training_finished_at"] = str(time.time())
             metadata["ss_steps"] = str(steps)
             metadata["ss_epoch"] = str(epoch_no)
-
+            minimum_metadata = {}
             metadata_to_save = minimum_metadata if args.no_metadata else metadata
             sai_metadata = train_util.get_sai_model_spec(None, args, self.is_sdxl, True, False)
             metadata_to_save.update(sai_metadata)
