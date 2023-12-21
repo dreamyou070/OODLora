@@ -40,4 +40,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --max_train_steps 48000 \
   --train_data_dir ../../../MyData/anomaly_detection/VisA/MVTecAD/paired_data/bad \
   --class_caption 'good' \
-  --contrastive_eps 0.0
+  --contrastive_eps 0.0 \
+  --num_ddim_steps 50
