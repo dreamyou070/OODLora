@@ -24,7 +24,7 @@ ml purge
 ml load cuda/11.0
 
 
-accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port 54589 lora_mytraining.py \
+accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 54589 lora_mytraining.py \
   --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 \
   --log_with wandb --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
   --wandb_init_name bagel_training --wandb_run_name 3_lora_trining_using_noise_diff \
