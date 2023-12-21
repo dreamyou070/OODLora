@@ -22,7 +22,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --sample_sampler ddim \
   --num_ddim_steps 50 \
   --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel \
-  --output_dir ../result/MVTec_experiment/bagel/vae_training/5_TS_encoder_contrastive_recon_loss/inference/with_lora \
+  --output_dir ../result/MVTec_experiment/bagel/vae_training/5_TS_encoder_contrastive_recon_loss/inference/with_lora_using_binary_mask \
   --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/5_TS_encoder_contrastive_recon_loss/vae_student_model/student_epoch_000008.pth \
   --network_weights ../result/MVTec_experiment/bagel/5_lora_trining_using_noise_diff/epoch-000002.safetensors \
   --repeat_time 51 \

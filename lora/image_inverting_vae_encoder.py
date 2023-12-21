@@ -412,7 +412,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae,  base_fold
 
 
 @torch.no_grad()
-def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir, vae_factor_dict, weight_dtype):
+def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base_folder_dir, vae_factor_dict, weight_dtype, mask):
     uncon, con = context.chunk(2)
     if inference_times[0] < inference_times[1] :
         inference_times.reverse()
@@ -432,7 +432,10 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         time_steps.append(int(t))
         with torch.no_grad():
             noise_pred = call_unet(unet, latent, t, con, t, prev_time)
-            latent = prev_step(noise_pred, int(t), latent, scheduler)
+            new_latent = prev_step(noise_pred, int(t), latent, scheduler)
+            background_latent = latent_dict[prev_time] * (1-mask) # 0 = background, 1 = bad point
+            object_latent = new_latent * mask
+            latent = background_latent + object_latent
             if args.customizing_decoder :
                 if args.using_customizing_scheduling:
                     factor = vae_factor_dict[0]
@@ -737,24 +740,7 @@ def main(args) :
                 mse = ((latent -original_latent).square() * 2) - thredhold
                 mse_threshold = mse > 0 # if true = 1, false = 0 # if true -> bad
                 print(f'mse_threshold : {mse_threshold}')
-                mse_threshold = (mse_threshold.float() * 2) - 1 #
-                print(f'mse_threshold : {mse_threshold}')
-                print(f'student_latent : {latent.shape}')
-                print(f'original_latent : {original_latent.shape}')
-
-                """
-
-
-
-
-
-
-
-
-
-
-
-
+                mse_threshold = (mse_threshold.float() * 2) # 0 = background, 1 = bad point
 
                 for ii, final_time in enumerate(flip_times[1:]):
                     if final_time.item() == args.final_time:
@@ -788,11 +774,13 @@ def main(args) :
                                                              vae=vae,
                                                              base_folder_dir=timewise_save_base_folder,
                                                              vae_factor_dict=inference_decoding_factor,
-                                                             weight_dtype=weight_dtype)
+                                                             weight_dtype=weight_dtype,
+                                                             mask=mse_threshold)
                         attention_storer.reset()
-                """
                 break
             break
+
+
 
 
 if __name__ == "__main__":
