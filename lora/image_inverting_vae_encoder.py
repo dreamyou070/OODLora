@@ -554,8 +554,11 @@ def main(args) :
     model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
     state_dict = {}
     for k, v in model_state_dict.items():
-        #k_ = '.'.join(k.split('.')[1:])
+        #if 'module' in k:
+        #    k_ = '.'.join(k.split('.')[1:])
+        #else :
         k_ = k
+        #k_ = '.'.join(k.split('.')[1:])
         state_dict[k_] = v
     student.load_state_dict(state_dict, strict=True)
     student.requires_grad_(False)
