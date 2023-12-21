@@ -735,10 +735,12 @@ def main(args) :
 
                 mse = ((latent -original_latent).square() * 2) - 1
                 mse_threshold = mse > 0 # if true = 1, else = 0
+                print(f'mse_threshold : {mse_threshold}')
                 mse_threshold = (mse_threshold.float() * 2) - 1
 
                 print(f'student_latent : {latent.shape}')
                 print(f'original_latent : {original_latent.shape}')
+
                 """
 
 
