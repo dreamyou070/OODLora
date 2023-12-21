@@ -493,7 +493,8 @@ def main(args) :
     network_dir = os.path.splitext(network_dir)[0]
     lora_epoch = int(network_dir.split('-')[-1])
     output_dir = os.path.join(output_dir, f'epoch-{lora_epoch}')
-    os.makedirs(output_dir, exist_ok=True)    
+    os.makedirs(output_dir, exist_ok=True)
+    print(f'final output dir : {output_dir}')
 
     print(f' \n step 2. make stable diffusion model')
     device = accelerator.device
