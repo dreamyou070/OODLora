@@ -433,8 +433,8 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, base
         with torch.no_grad():
             noise_pred = call_unet(unet, latent, t, con, t, prev_time)
             new_latent = prev_step(noise_pred, int(t), latent, scheduler)
-            background_latent = latent_dict[prev_time] * (1-mask) # 0 = background, 1 = bad point
-            object_latent = new_latent * mask
+            background_latent = latent_dict[prev_time] * (mask) # 0 = background, 1 = bad point
+            object_latent = new_latent * (1-mask)
             latent = background_latent + object_latent
             if args.customizing_decoder :
                 if args.using_customizing_scheduling:
@@ -726,21 +726,18 @@ def main(args) :
                 # ------------------------------------------------------------------------------ #
                 latent = customizing_image2latent(image_gt_np, student, device, weight_dtype)
 
-
                 inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
                 flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
                 original_latent = latent.clone().detach()
-
                 with torch.no_grad():
                     np_img = latent2image(latent, vae, return_type='np')
                 vae_recon = Image.fromarray(np_img)
 
                 original_latent = image2latent(image_gt_np, vae, device, weight_dtype)
-
                 mse = ((latent -original_latent).square() * 2) - thredhold
-                mse_threshold = mse > 0 # if true = 1, false = 0 # if true -> bad
-                print(f'mse_threshold : {mse_threshold}')
-                mse_threshold = (mse_threshold.float() * 2) # 0 = background, 1 = bad point
+                mse_threshold = mse < 0 # if true = 1, false = 0 # if true -> bad
+                #print(f'mse_threshold : {mse_threshold}')
+                mse_threshold = (mse_threshold.float()) # 0 = background, 1 = bad point
 
                 for ii, final_time in enumerate(flip_times[1:]):
                     if final_time.item() == args.final_time:
