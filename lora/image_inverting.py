@@ -424,7 +424,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, student,
 
 @torch.no_grad()
 def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, student,
-               base_folder_dir, vae_factor_dict):
+               base_folder_dir, vae_factor_dict, weight_dtype):
     uncon, con = context.chunk(2)
     if inference_times[0] < inference_times[1] :
         inference_times.reverse()
@@ -468,7 +468,7 @@ def recon_loop(latent_dict, context, inference_times, scheduler, unet, vae, stud
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
         pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
-        latent = image2latent(np_img, vae, vae.device, vae.weight_dtype)
+        latent = image2latent(np_img, vae, vae.device, weight_dtype)
         all_latent_dict[prev_time] = latent
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
@@ -718,7 +718,8 @@ def main(args) :
                                                          vae=vae,
                                                          student = student,
                                                          base_folder_dir=timewise_save_base_folder,
-                                                         vae_factor_dict = inference_decoding_factor)
+                                                         vae_factor_dict = inference_decoding_factor,
+                                                         weight_dtype=weight_dtype)
                     attention_storer.reset()
 
     """
@@ -782,7 +783,8 @@ def main(args) :
                                                              vae=vae,
                                                              student=student,
                                                              base_folder_dir=timewise_save_base_folder,
-                                                             vae_factor_dict=inference_decoding_factor)
+                                                             vae_factor_dict=inference_decoding_factor,
+                                                             weight_dtype=weight_dtype)
                         attention_storer.reset()
 
 
