@@ -708,7 +708,8 @@ class NetworkTrainer:
 
                         with torch.no_grad():
                             noise_pred_org = self.call_unet(args, accelerator, enc_unet,
-                                                        noisy_latents, timesteps,
+                                                            noisy_latents,
+                                                            timesteps,
                                                         input_condition, batch, weight_dtype,
                                                         None,
                                                         mask_imgs=None)
