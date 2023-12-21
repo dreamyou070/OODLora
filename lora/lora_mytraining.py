@@ -884,6 +884,7 @@ class NetworkTrainer:
             if epoch % args.sample_every_n_epochs == 0 and is_main_process:
                 self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
                                    text_encoder, unet)
+                attention_storer.reset()
             if attention_storer is not None:
                 attention_storer.step_store = {}
             # end of epoch
