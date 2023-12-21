@@ -695,8 +695,7 @@ class NetworkTrainer:
                         alpha_prod_t_next = noise_scheduler.alphas_cumprod[next_timesteps]
                         alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
                         gamma = (alpha_prod_t / alpha_prod_t_next) ** 0.5
-                        gamma = gamma.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-                        gamma = gamma.expand(noise_pred.shape)
+
 
                         with torch.no_grad():
                             noise_pred_org = self.call_unet(args, accelerator, enc_unet,
@@ -705,6 +704,8 @@ class NetworkTrainer:
                                                         None,
                                                         mask_imgs=None)
                             noise_diff = noise - noise_pred_org
+                            gamma = gamma.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+                            gamma = gamma.expand(noise_pred_org.shape)
                             noise_diff_org = noise_diff * gamma.to(noise_diff.device)
                         with accelerator.autocast():
                             noise_pred = self.call_unet(args, accelerator, unet,
