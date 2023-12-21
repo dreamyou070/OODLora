@@ -386,7 +386,7 @@ class NetworkTrainer:
                     torch.save(state_dict,
                                os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
         """
-        
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
