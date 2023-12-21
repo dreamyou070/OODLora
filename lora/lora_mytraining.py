@@ -767,6 +767,8 @@ class NetworkTrainer:
                         alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
                         beta = (1 - alpha_prod_t_next)**0.5
                         gamma = ((alpha_prod_t_next/alpha_prod_t) * (1-alpha_prod_t)) ** 0.5
+                        beta = beta.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+                        gamma = gamma.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
 
                         with torch.no_grad():
                             noise_pred = self.call_unet(args, accelerator, enc_unet,
@@ -774,6 +776,8 @@ class NetworkTrainer:
                                                         input_condition, batch, weight_dtype,
                                                         None, None)
                             noise_diff = noise - noise_pred
+                            beta = beta.expand(noise_diff.shape)
+                            gamma = gamma.expand(noise_diff.shape)
                             noise_diff_org = noise_diff * (beta - gamma)
 
                         with accelerator.autocast():
@@ -783,6 +787,10 @@ class NetworkTrainer:
                                                         None, None)
                             beta_prime = (1 - alpha_prod_t)**0.5
                             gamma_prime = ((alpha_prod_t/alpha_prod_t_next) * (1-alpha_prod_t_next)) ** 0.5
+                            beta_prime = beta_prime.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+                            gamma_prime = gamma_prime.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+                            beta_prime = beta_prime.expand(noise_pred.shape)
+                            gamma_prime = gamma_prime.expand(noise_pred.shape)
                             noise_diff_pred = noise_pred * (beta_prime - gamma_prime)
 
                         #if args.v_parameterization:
