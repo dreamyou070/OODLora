@@ -707,6 +707,10 @@ class NetworkTrainer:
                             noise_diff = noise - noise_pred_org
                             gamma = gamma.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
                             gamma = gamma.expand(noise_pred_org.shape)
+
+                            print (f'gamma : {gamma.shape}')
+                            print(f'noise_diff : {noise_diff.shape}')
+                            print(f'train_indexs : {train_indexs}')
                             noise_diff_org = noise_diff * gamma.to(noise_diff.device)
                         with accelerator.autocast():
                             noise_pred = self.call_unet(args, accelerator, unet,

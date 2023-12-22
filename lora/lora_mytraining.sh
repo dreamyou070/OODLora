@@ -30,7 +30,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --wandb_init_name cable_gland_training \
   --wandb_run_name 1_lora_trining_using_noise_diff \
   --seed 42 \
-  --output_dir ../result/MVTec_experiment/cable_gland/unet_training/1_lora_trining_using_noise_diff \
+  --output_dir ../result/MVTec3D-AD_experiment/cable_gland/unet_training/1_lora_trining_using_noise_diff \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 --train_batch_size 2 \
