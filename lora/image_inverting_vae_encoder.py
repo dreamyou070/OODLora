@@ -438,7 +438,8 @@ def main(args) :
                             torch.manual_seed(args.seed)
                             start_latent = scheduler.add_noise(original_samples = st_latent,
                                                                noise = torch.randn(original_latent.shape, dtype=weight_dtype),
-                                                               timesteps = torch.tensor(time_steps[-1], dtype=torch.int8))
+                                                               timesteps = torch.tensor(time_steps[-1], dtype=torch.int8).to(st_latent.device),
+                                                               )
 
 
                         else :
