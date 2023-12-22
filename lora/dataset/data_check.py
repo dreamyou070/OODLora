@@ -13,13 +13,13 @@ def main(args):
                                                           cache_dir=r'../../../../pretrained_stable_diffusion').to(device)
 
     print(f'\n step 2. dataset')
-    parent, _ = os.path.split(args.data_folder)
-    save_folder = os.path.join(parent, 'MVTec_Experiment')
+    parent, child = os.path.split(args.data_folder)
+    save_folder = os.path.join(parent, f'{child}_Experiment')
     os.makedirs(save_folder, exist_ok=True)
 
     data_folder = args.data_folder
     classes = os.listdir(data_folder)
-    before_classes = ['bottle','cable','capsule','carpet']
+    before_classes = []
     for cls in classes:
         if cls not in before_classes:
             class_dir = os.path.join(data_folder, cls)
@@ -37,7 +37,7 @@ def main(args):
             categories = os.listdir(test_folder)
             for category in categories:
                 if category != 'good':
-                    test_cat         = os.path.join(test_folder, category)
+                    test_cat = os.path.join(test_folder, category)
                     ground_truth_cat = os.path.join(ground_truth_folder, category)
 
                     original_categori_dir = os.path.join(original_img_save_folder, category)
@@ -49,7 +49,10 @@ def main(args):
                     for name_ in images:
                         name, ext = os.path.splitext(name_)
                         image_path = os.path.join(test_cat, name_)
-                        mask_path = os.path.join(ground_truth_cat, f'{name}_mask{ext}')
+                        try :
+                            mask_path = os.path.join(ground_truth_cat, f'{name}_mask{ext}')
+                        except:
+                            mask_path = os.path.join(ground_truth_cat, f'{name}{ext}')
                         image = pipe(prompt=prompt,
                                      image=Image.open(image_path).convert('RGB'),
                                      mask_image=Image.open(mask_path).convert('L'), ).images[0]

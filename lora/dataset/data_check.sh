@@ -11,4 +11,5 @@ ml purge
 ml load cuda/11.0
 
 
-python data_check.py --device cuda
+python data_check.py --device cuda \
+    --data_folder ../../../../MyData/anomaly_detection/MVTec3D-AD
