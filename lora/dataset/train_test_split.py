@@ -65,8 +65,8 @@ def main(args):
             class_dir = os.path.join(args.data_folder, cls)
             save_class_dir = os.path.join(save_folder, cls)
             test_dir = os.path.join(class_dir, 'test')
-            save_test_dir = os.path.join(save_class_dir, f'test/bad')
 
+            save_test_dir = os.path.join(save_class_dir, f'test/bad')
             test_mask_dir = os.path.join(save_class_dir, 'test_mask')
             os.makedirs(save_test_dir, exist_ok=True)
 
@@ -75,16 +75,28 @@ def main(args):
 
             damages = os.listdir(test_dir)
             for damage in damages:
-                damage_dir   = os.path.join(test_dir, damage)
+                damage_dir   = os.path.join(test_dir, f'{damage}/gt')
+                org_images = os.listdir(damage_dir)
+
                 save_damage_dir = os.path.join(save_test_dir, damage)
-                org_imges = os.listdir(damage_dir)
-                print(f'org_imges : {org_imges}')
-                mask_dir    = os.path.join(damage_dir, 'gt')
-                images = os.listdir(mask_dir)
+                tests = os.listdir(save_damage_dir)
+
                 test_damage_dir = os.path.join(test_mask_dir, damage)
                 os.makedirs(test_damage_dir, exist_ok=True)
                 train_damage_dir = os.path.join(train_mask_dir, damage)
                 os.makedirs(train_damage_dir, exist_ok=True)
+
+                for org_image in org_images:
+                    if org_image in tests:
+                        org_image_path = os.path.join(damage_dir, org_image)
+                        re_image_path = os.path.join(test_damage_dir, org_image)
+                        shutil.copy(org_image_path, re_image_path)
+                    else :
+                        org_image_path = os.path.join(damage_dir, org_image)
+                        re_image_path = os.path.join(train_damage_dir, org_image)
+                        shutil.copy(org_image_path, re_image_path)
+
+
                 """
                 for image in images:
                     if image in org_imges:
