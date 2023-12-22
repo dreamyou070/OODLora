@@ -82,6 +82,14 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     return prev_sample
 
 
+def call_unet(unet, noisy_latents, timesteps,
+              text_conds, trg_indexs_list, mask_imgs):
+    noise_pred = unet(noisy_latents,
+                      timesteps,
+                      text_conds,
+                      trg_indexs_list=trg_indexs_list,
+                      mask_imgs=mask_imgs, ).sample
+    return noise_pred
 @torch.no_grad()
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae,  base_folder_dir, ):
     uncond_embeddings, cond_embeddings = context.chunk(2)
@@ -99,8 +107,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae,  base_fold
             next_time = flip_times[i + 1].item()
             latent_dict[int(t.item())] = latent
             time_steps.append(t.item())
-            noise_pred = unet(latent, t, uncond_embeddings, None, None,
-                              return_dict=True).sample
+            noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
+
 
             noise_pred_dict[int(t.item())] = noise_pred
             latent = next_step(noise_pred, int(t.item()), latent, scheduler)
@@ -132,7 +140,7 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
         with torch.no_grad():
-            noise_pred = unet(latent, t, con, None, None, return_dict=True).sample
+            noise_pred = call_unet(unet, latent, t, con, None, None)
             new_latent = prev_step(noise_pred, int(t), latent, scheduler)
             if mask is not None :
                 background_latent = latent_dict[prev_time] * (mask) # 0 = background, 1 = bad point
