@@ -57,6 +57,7 @@ def main(args):
 
                         os.remove(image_path)
     """
+    """
     classes = os.listdir(args.data_folder)
     parent, child = os.path.split(args.data_folder)
     save_folder = os.path.join(parent, f'{child}_Experiment')
@@ -96,6 +97,35 @@ def main(args):
                             org_image_path = os.path.join(damage_dir, org_image)
                             re_image_path = os.path.join(train_damage_dir, org_image)
                             shutil.copy(org_image_path, re_image_path)
+    """
+    classes = os.listdir(args.data_folder)
+    for cls in classes:
+        cls_dir = os.path.join(args.data_folder, f'{cls}/train')
+        damages = os.listdir(cls_dir)
+        for damage in damages:
+            damage_dir = os.path.join(cls_dir, damage)
+            images = os.listdir(damage_dir)
+            if len(images) == 0 :
+                rgb_dir = os.path.join(cls_dir, f'test/bad/{damage}')
+                rgb_corrected_dir = os.path.join(cls_dir, f'test/corrected/{damage}')
+                rgb_images = os.listdir(rgb_dir)
+                rgb_corrected_images = os.listdir(rgb_corrected_dir)
+                total_num = int(len(rgb_images) * 0.2) + 1
+                for i in range(total_num) :
+                    org_img_dir = os.path.join(rgb_dir, rgb_images[i])
+                    re_img_dir = os.path.join(cls_dir, f'train/{damage}/{rgb_images[i]}')
+                    os.rename(org_img_dir, re_img_dir)
+
+                    org_mask_dir = os.path.join(cls_dir, f'test_mask/{damage}/{rgb_images[i]}')
+                    re_mask_dir = os.path.join(cls_dir, f'train_mask/{damage}/{rgb_images[i]}')
+                    os.rename(org_mask_dir, re_mask_dir)
+
+                    org_corrected_dir = os.path.join(rgb_corrected_dir, rgb_corrected_images[i])
+                    os.remove(org_corrected_dir)
+
+
+
+
 
 
                 """
@@ -116,6 +146,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda')
-    parser.add_argument('--data_folder', type=str, default='../../../../MyData/anomaly_detection/MVTec3D-AD')
+    parser.add_argument('--data_folder', type=str, default='../../../../MyData/anomaly_detection/MVTec3D-AD_Experiment')
     args = parser.parse_args()
     main(args)
