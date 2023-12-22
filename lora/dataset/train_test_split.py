@@ -34,6 +34,7 @@ def main(args):
                 train_anomaly_dir = os.path.join(train_dir, damage)
                 os.makedirs(train_anomaly_dir, exist_ok=True)
 
+                bad_damage_dir = os.path.join(bad_dir, damage)
                 damage_dir = os.path.join(corrected_dir, damage)
                 images = os.listdir(damage_dir)
                 for image in images:
@@ -43,10 +44,11 @@ def main(args):
                     np_sum = np.sum(np_img)
                     if np_sum == 0:
                         # save again
-                        bad_dir = os.path.join(bad_dir, f'{damage}/{image}')
-                        os.rename(bad_dir, os.path.join(train_anomaly_dir, image))
+                        bad_dir = os.path.join(bad_damage_dir, image)
+                        redir = os.path.join(train_anomaly_dir, image)
+                        os.rename(bad_dir, redir)
 
-                        os.remove(image_path)
+                        #os.remove(image_path)
             """
             else :
                 train_good_dir = os.path.join(train_dir, 'good')
