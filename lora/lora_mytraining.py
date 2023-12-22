@@ -692,14 +692,9 @@ class NetworkTrainer:
                         next_timesteps = (timesteps+1).tolist()
                         next_timesteps = [j if j != len(noise_scheduler.alphas_cumprod.tolist()) else len(noise_scheduler.alphas_cumprod.tolist()) - 1
                                           for j in next_timesteps]
-
                         alpha_prod_t_next = noise_scheduler.alphas_cumprod[next_timesteps]
                         alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
-                        beta = (1 - alpha_prod_t_next)**0.5
-                        gamma = ((alpha_prod_t_next/alpha_prod_t) * (1-alpha_prod_t)) ** 0.5
-                        beta = beta.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-                        gamma = gamma.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-
+                        gamma = (alpha_prod_t / alpha_prod_t_next) ** 0.5
 
                         with torch.no_grad():
                             noise_pred_org = self.call_unet(args, accelerator, enc_unet,
@@ -708,9 +703,7 @@ class NetworkTrainer:
                                                         None,
                                                         mask_imgs=None)
                             noise_diff = noise - noise_pred_org
-                            beta = beta.expand(noise_diff.shape)
-                            gamma = gamma.expand(noise_diff.shape)
-                            noise_diff_org = noise_diff * (beta - gamma).to(noise_diff.device)
+                            noise_diff_org = noise_diff * gamma.to(noise_diff.device)
 
 
                         with accelerator.autocast():
@@ -726,7 +719,7 @@ class NetworkTrainer:
                         gamma_prime = gamma_prime.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
                         beta_prime = beta_prime.expand(noise_pred.shape)
                         gamma_prime = gamma_prime.expand(noise_pred.shape)
-                        noise_diff_pred = noise_pred * (beta_prime - gamma_prime).to(noise_pred.device)
+                        noise_diff_pred = noise_pred - noise
 
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)

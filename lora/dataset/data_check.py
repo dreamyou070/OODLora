@@ -1,5 +1,7 @@
+import torch, os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from diffusers import StableDiffusionInpaintPipeline
-import torch, os
+
 from PIL import Image
 import argparse
 
