@@ -98,6 +98,7 @@ def main(args):
                             re_image_path = os.path.join(train_damage_dir, org_image)
                             shutil.copy(org_image_path, re_image_path)
     """
+    """
     classes = os.listdir(args.data_folder)
     for cls in classes:
         cls_dir = os.path.join(args.data_folder, f'{cls}/train')
@@ -123,24 +124,32 @@ def main(args):
 
                     org_corrected_dir = os.path.join(rgb_corrected_dir, rgb_corrected_images[i])
                     os.remove(org_corrected_dir)
+    """
+    classes = os.listdir(args.data_folder)
+    for cls in classes:
+        cls_dir = os.path.join(args.data_folder, cls)
+        bad_dir = os.path.join(cls_dir, 'bad')
+        corrected_dir = os.path.join(cls_dir, 'corrected')
+        category = os.listdir(bad_dir)
+        for cate in category:
+            if cate != 'good' :
+                org_cat_dir = os.path.join(bad_dir, cate)
+                re_cat_dir = os.path.join(bad_dir, f'30_{cate}')
+                shutil.copytree(org_cat_dir, re_cat_dir)
+
+                org_cat_dir = os.path.join(corrected_dir, cate)
+                re_cat_dir = os.path.join(corrected_dir, f'30_{cate}')
+                shutil.copytree(org_cat_dir, re_cat_dir)
+            else :
+                org_cat_dir = os.path.join(bad_dir, cate)
+                re_cat_dir = os.path.join(bad_dir, f'50_{cate}')
+                shutil.copytree(org_cat_dir, re_cat_dir)
+
+                org_cat_dir = os.path.join(corrected_dir, cate)
+                re_cat_dir = os.path.join(corrected_dir, f'50_{cate}')
+                shutil.copytree(org_cat_dir, re_cat_dir)
 
 
-
-
-
-
-                """
-                for image in images:
-                    if image in org_imges:
-                        # mask should be on test dataset
-                        image_path = os.path.join(mask_dir, image)
-                        save_image_path = os.path.join(test_damage_dir, image)
-                        shutil.copy(image_path, save_image_path)
-                    else :
-                        image_path = os.path.join(mask_dir, image)
-                        save_image_path = os.path.join(train_damage_dir, image)
-                        shutil.copy(image_path, save_image_path)
-                """
 
 
 
