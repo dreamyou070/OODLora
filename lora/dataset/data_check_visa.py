@@ -56,7 +56,6 @@ def main(args):
                     normal_anomal_info_dir = os.path.join(save_split_dir, 'good')
                     os.makedirs(normal_anomal_info_dir, exist_ok=True)
                     final_image_dir = line_list[3].strip()
-                    print(final_image_dir)
                     img_name = final_image_dir.split('/')[-1]
                     org_img_dir = os.path.join(args.data_folder, f'{final_image_dir}')
                     new_img_dir = os.path.join( normal_anomal_info_dir, img_name)
