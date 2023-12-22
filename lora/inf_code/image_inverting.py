@@ -724,8 +724,8 @@ def main(args) :
 
     """
     print(f' (3.2) test images')
-    test_img_folder = os.path.join(args.concept_image_folder, 'test')
-    test_base_folder = os.path.join(output_dir, 'test')
+    test_img_folder = os.path.join(args.concept_image_folder, '../test')
+    test_base_folder = os.path.join(output_dir, '../test')
     os.makedirs(test_base_folder, exist_ok=True)
     classes = os.listdir(test_img_folder)
     for class_name in classes:

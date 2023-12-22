@@ -58,7 +58,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if is_cross_attention and mask is not None:
                 # if trg_indexs_list is not None and mask is not None:
                 if trg_indexs_list is not None:
-                    org_attention_probs, masked_attention_probs = attention_probs.chunk(2, dim=0)
+                    masked_attention_probs, org_attention_probs = attention_probs.chunk(2, dim=0)
                     batch_num = len(trg_indexs_list)
                     attention_probs_batch = torch.chunk(org_attention_probs, batch_num, dim=0)
                     masked_attention_probs_batch = torch.chunk(masked_attention_probs, batch_num, dim=0)
@@ -68,9 +68,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                         batch_trg_index = trg_indexs_list[batch_idx]  # two times
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
-                            org_attn_vector = attention_prob[:, :, word_idx]
                             masked_attn_vector = masked_attention_prob[:, :, word_idx]
-                            attention_diff = (org_attn_vector-masked_attn_vector).mean() + args.contrastive_eps
+                            org_attn_vector = attention_prob[:, :, word_idx]
+                            attention_diff = (masked_attn_vector - org_attn_vector).mean() + args.contrastive_eps
                             standard = torch.zeros_like(attention_diff)
                             loss = torch.max(attention_diff, standard)
                             controller.store_loss(loss)
@@ -579,6 +579,7 @@ class NetworkTrainer:
         else:
             on_step_start = lambda *args, **kwargs: None
 
+
         # function for saving/removing
         def save_model(ckpt_name, unwrapped_nw, steps, epoch_no, force_sync_upload=False):
             os.makedirs(args.output_dir, exist_ok=True)
@@ -588,7 +589,7 @@ class NetworkTrainer:
             metadata["ss_training_finished_at"] = str(time.time())
             metadata["ss_steps"] = str(steps)
             metadata["ss_epoch"] = str(epoch_no)
-
+            minimum_metadata = {}
             metadata_to_save = minimum_metadata if args.no_metadata else metadata
             sai_metadata = train_util.get_sai_model_spec(None, args, self.is_sdxl, True, False)
             metadata_to_save.update(sai_metadata)
@@ -696,6 +697,7 @@ class NetworkTrainer:
                         alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
                         gamma = (alpha_prod_t / alpha_prod_t_next) ** 0.5
 
+
                         with torch.no_grad():
                             noise_pred_org = self.call_unet(args, accelerator, enc_unet,
                                                         noisy_latents, timesteps,
@@ -703,9 +705,9 @@ class NetworkTrainer:
                                                         None,
                                                         mask_imgs=None)
                             noise_diff = noise - noise_pred_org
+                            gamma = gamma.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+                            gamma = gamma.expand(noise_pred_org.shape)
                             noise_diff_org = noise_diff * gamma.to(noise_diff.device)
-
-
                         with accelerator.autocast():
                             noise_pred = self.call_unet(args, accelerator, unet,
                                                         noisy_latents, timesteps,
@@ -713,33 +715,28 @@ class NetworkTrainer:
                                                         None,
                                                         mask_imgs =None)
                         attention_storer.reset()
-                        beta_prime = (1 - alpha_prod_t)**0.5
-                        gamma_prime = ((alpha_prod_t/alpha_prod_t_next) * (1-alpha_prod_t_next)) ** 0.5
-                        beta_prime = beta_prime.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-                        gamma_prime = gamma_prime.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-                        beta_prime = beta_prime.expand(noise_pred.shape)
-                        gamma_prime = gamma_prime.expand(noise_pred.shape)
                         noise_diff_pred = noise_pred - noise
 
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
                             target = noise
-                        task_loss = torch.nn.functional.mse_loss(noise_pred.float(),
-                                                                 target.float(), reduction="none")
-                        task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
-                        task_loss = task_loss.mean()
-
+                        #task_loss = torch.nn.functional.mse_loss(noise_pred.float(),
+                        #                                         target.float(), reduction="none")
+                        #task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
+                        #task_loss = task_loss.mean()
                         detail_loss = torch.nn.functional.mse_loss(noise_diff_org.float(),
-                                                                 noise_diff_pred.float(), reduction="none")
+                                                                   noise_diff_pred.float(), reduction="none")
                         detail_loss = detail_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
                         detail_loss = detail_loss.mean()
                         log_loss["loss/detail_loss"] = detail_loss
-                        log_loss["loss/task_loss"] = task_loss
+                        #log_loss["loss/task_loss"] = task_loss
                         if len(test_indexs) > 0 :
-                            loss += task_loss + detail_loss
+                            #loss += task_loss + detail_loss
+                            loss +=  detail_loss
                         else:
-                            loss = task_loss + detail_loss
+                            #loss = task_loss + detail_loss
+                            loss = detail_loss
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:

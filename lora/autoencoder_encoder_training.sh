@@ -13,7 +13,7 @@ ml purge
 ml load cuda/11.0
 
 
-accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port 57689 autoencoder_encoder_training.py \
+accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port 57689 autoencoder_encoder_training.py \
   --process_title parksooyeon --max_token_length 225 \
   --logging_dir ../result/logs \
   --log_with wandb \
