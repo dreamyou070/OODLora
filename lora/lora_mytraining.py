@@ -58,7 +58,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if is_cross_attention and mask is not None:
                 # if trg_indexs_list is not None and mask is not None:
                 if trg_indexs_list is not None:
-                    masked_attention_probs, org_attention_probs = attention_probs.chunk(2, dim=0)
+                    org_attention_probs, masked_attention_probs = attention_probs.chunk(2, dim=0)
                     batch_num = len(trg_indexs_list)
                     attention_probs_batch = torch.chunk(org_attention_probs, batch_num, dim=0)
                     masked_attention_probs_batch = torch.chunk(masked_attention_probs, batch_num, dim=0)
@@ -68,9 +68,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                         batch_trg_index = trg_indexs_list[batch_idx]  # two times
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
-                            masked_attn_vector = masked_attention_prob[:, :, word_idx]
                             org_attn_vector = attention_prob[:, :, word_idx]
-                            attention_diff = (masked_attn_vector - org_attn_vector).mean() + args.contrastive_eps
+                            masked_attn_vector = masked_attention_prob[:, :, word_idx]
+                            attention_diff = (org_attn_vector-masked_attn_vector).mean() + args.contrastive_eps
                             standard = torch.zeros_like(attention_diff)
                             loss = torch.max(attention_diff, standard)
                             controller.store_loss(loss)
