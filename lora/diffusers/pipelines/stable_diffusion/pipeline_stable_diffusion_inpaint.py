@@ -651,7 +651,6 @@ class StableDiffusionInpaintPipeline(
             latents = noise * self.scheduler.init_noise_sigma
         outputs = (latents,)
         if return_noise:
-            print(F'check latents == noise (False) : {latents == noise}')
             outputs += (noise,)
         if return_image_latents:
             outputs += (image_latents,)
