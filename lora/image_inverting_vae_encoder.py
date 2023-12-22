@@ -438,7 +438,7 @@ def main(args) :
                             torch.manual_seed(args.seed)
                             start_latent = scheduler.add_noise(original_samples = st_latent,
                                                                noise = torch.randn(original_latent.shape, dtype=weight_dtype),
-                                                               timesteps = torch.Tensor([time_steps[-1]]))
+                                                               timesteps = torch.Tensor([time_steps[-1].long()]))
                         else :
                             start_latent = latent_dict[int(time_steps[-1])]
                         time_steps.reverse()
