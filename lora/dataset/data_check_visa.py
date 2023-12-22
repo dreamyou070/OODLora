@@ -19,7 +19,8 @@ def main(args):
             line = line.strip()
             line = line.split(',')
             split = line[1]
-            print(split)
+            if line[0] == 'candle' and split == 'test' and line[2] == 'normal':
+                print(line)
 
 
 if __name__ == "__main__":
