@@ -382,11 +382,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae,  base_fold
     noise_pred_dict = {}
     latent_dict[0] = latent
     pil_images = []
-    with torch.no_grad():
-        np_img = latent2image(latent, vae, return_type='np')
-    pil_img = Image.fromarray(np_img)
-    pil_images.append(pil_img)
-    pil_img.save(os.path.join(base_folder_dir, f'vae_recon.png'))
+
     flip_times = inference_times
     repeat_time = 0
     for i, t in enumerate(flip_times[:-1]):
@@ -726,38 +722,66 @@ def main(args) :
 
                 with torch.no_grad():
                     org_vae_latent = image2latent(image_gt_np, vae, device, weight_dtype)
-                    latent = customizing_image2latent(image_gt_np, student, device, weight_dtype)
-                mse = ((latent - org_vae_latent).square() * 2) - thredhold
+                    st_latent = customizing_image2latent(image_gt_np, student, device, weight_dtype)
+
+                mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
                 mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
                 mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
 
                 inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
                 flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
-                original_latent = latent.clone().detach()
+                #original_latent = latent.clone().detach()
+                original_latent = org_vae_latent.clone().detach()
                 for ii, final_time in enumerate(flip_times[1:]):
+
                     if final_time.item() == args.final_time:
                         timewise_save_base_folder = os.path.join(save_base_dir, f'final_time_{final_time.item()}')
                         print(f' - save_base_folder : {timewise_save_base_folder}')
                         os.makedirs(timewise_save_base_folder, exist_ok=True)
+
                         mask_pil = Image.open(mask_img_dir).resize((512, 512)).convert('RGB')
                         mask_pil.save(os.path.join(timewise_save_base_folder, 'mask.png'))
+
                         org_pil = Image.open(train_img_dir).resize((512, 512)).convert('RGB')
                         org_pil.save(os.path.join(timewise_save_base_folder, 'org.png'))
-                        latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
-                                                                        context=invers_context,
-                                                                        inference_times=flip_times[:ii + 2],
-                                                                        scheduler=scheduler,
-                                                                        unet=invers_unet,
-                                                                        vae=vae,
-                                                                        base_folder_dir=timewise_save_base_folder,
-                                                                        attention_storer=attention_storer,
-                                                                        alphas_cumprod_dict=alphas_cumprod_dict,
-                                                                        vae_factor_dict=inference_decoding_factor)
+
+                        np_img = latent2image(st_latent, vae, return_type='np')
+                        pil_img = Image.fromarray(np_img)
+                        pil_images.append(pil_img)
+                        pil_img.save(os.path.join(timewise_save_base_folder, f'vae_recon.png'))
+
+                        if args.use_binary_mask :
+                            latent_dict, time_steps, pil_images = ddim_loop(latent=original_latent,
+                                                                            context=invers_context,
+                                                                            inference_times=flip_times[:ii + 2],
+                                                                            scheduler=scheduler,
+                                                                            unet=invers_unet,
+                                                                            vae=vae,
+                                                                            base_folder_dir=timewise_save_base_folder,
+                                                                            attention_storer=attention_storer,
+                                                                            alphas_cumprod_dict=alphas_cumprod_dict,
+                                                                            vae_factor_dict=inference_decoding_factor)
+                        else :
+                            latent_dict, time_steps, pil_images = ddim_loop(latent=st_latent,
+                                                                            context=invers_context,
+                                                                            inference_times=flip_times[:ii + 2],
+                                                                            scheduler=scheduler,
+                                                                            unet=invers_unet,
+                                                                            vae=vae,
+                                                                            base_folder_dir=timewise_save_base_folder,
+                                                                            attention_storer=attention_storer,
+                                                                            alphas_cumprod_dict=alphas_cumprod_dict,
+                                                                            vae_factor_dict=inference_decoding_factor)
+
                         attention_storer.reset()
                         time_steps.reverse()
                         print(f'time_steps : {time_steps}')
                         context = init_prompt(tokenizer, text_encoder, device, prompt)
+
                         print(f' (2.3.2) recon')
+                        #start_latent = st_latent # noising
+                        #scheduler.
+                        #latent_dict[]
                         recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
                                                              context=context,
                                                              inference_times=time_steps,  # [20,0]
@@ -828,6 +852,7 @@ if __name__ == "__main__":
     parser.add_argument("--customizing_decoder", action='store_true')
     parser.add_argument("--with_new_noising_alphas_cumprod", action='store_true')
     parser.add_argument("--student_pretrained_dir", type=str)
+    parser.add_argument("--use_binary_mask", action = 'store_true')
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     main(args)
