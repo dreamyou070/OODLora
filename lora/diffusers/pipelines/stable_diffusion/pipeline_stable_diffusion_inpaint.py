@@ -642,7 +642,6 @@ class StableDiffusionInpaintPipeline(
             image_latents = image_latents.repeat(batch_size // image_latents.shape[0], 1, 1, 1)
 
         if latents is None:
-            print(f'is strength max (True) : {is_strength_max}')
             noise = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
             latents = noise if is_strength_max else self.scheduler.add_noise(image_latents, noise, timestep)
             latents = latents * self.scheduler.init_noise_sigma if is_strength_max else latents
@@ -674,16 +673,13 @@ class StableDiffusionInpaintPipeline(
 
         # 1) mask
         mask = torch.nn.functional.interpolate(mask, size=(height // self.vae_scale_factor, width // self.vae_scale_factor)).to(device=device, dtype=dtype)
-        print(f'mask (1,1,64,64) : {mask.shape}')
         # 2) masked image
         masked_image = masked_image.to(device=device, dtype=dtype)
-        print(f'masked_image.shape : {masked_image.shape}')
 
         if masked_image.shape[1] == 4:
             masked_image_latents = masked_image
         else:
             masked_image_latents = self._encode_vae_image(masked_image, generator=generator)
-            print(f'masked_image_latents.shape (1,3,64,64): {masked_image_latents.shape}')
 
         # duplicate mask and masked_image_latents for each generation per prompt, using mps friendly method
         if mask.shape[0] < batch_size:
