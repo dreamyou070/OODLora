@@ -362,8 +362,7 @@ def main(args) :
     context = init_prompt(tokenizer, text_encoder, device, prompt)
 
     print(f' (3.2) test images')
-    trg_h = int(args.resolution.split(',')[0].strip())
-    trg_w = int(args.resolution.split(',')[1].strip())
+    trg_h, trg_w = args.resolution
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
     classes = os.listdir(test_img_folder)
     thredhold = 1
@@ -382,7 +381,7 @@ def main(args) :
                 print(f' (2.3.1) inversion')
                 save_base_dir = os.path.join(class_base_folder, concept_name)
                 os.makedirs(save_base_dir, exist_ok=True)
-                image_gt_np = load_image(train_img_dir, trg_h = trg_h, trg_w =trg_w)
+                image_gt_np = load_image(train_img_dir, trg_h = int(trg_h), trg_w =int(trg_w))
 
                 with torch.no_grad():
                     org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
