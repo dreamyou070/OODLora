@@ -437,7 +437,7 @@ def main(args) :
                         if args.use_binary_mask :
                             torch.manual_seed(args.seed)
                             start_latent = scheduler.add_noise(original_samples = st_latent,
-                                                               noise = torch.randn(original_latent.shape, dtype=weight_dtype),
+                                                               noise = torch.randn(original_latent.shape, dtype=weight_dtype).to(st_latent.device),
                                                                timesteps = torch.tensor(time_steps[-1], dtype=torch.int8).to(st_latent.device),
                                                                )
 
