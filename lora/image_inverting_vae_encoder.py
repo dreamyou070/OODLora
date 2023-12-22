@@ -747,7 +747,7 @@ def main(args) :
 
                         np_img = latent2image(st_latent, vae, return_type='np')
                         pil_img = Image.fromarray(np_img)
-                        pil_images.append(pil_img)
+                        #pil_images.append(pil_img)
                         pil_img.save(os.path.join(timewise_save_base_folder, f'vae_recon.png'))
 
                         if args.use_binary_mask :
