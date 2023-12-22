@@ -127,7 +127,7 @@ def main(args):
     """
     classes = os.listdir(args.data_folder)
     for cls in classes:
-        cls_dir = os.path.join(args.data_folder, cls)
+        cls_dir = os.path.join(args.data_folder, f'{cls}/test')
         bad_dir = os.path.join(cls_dir, 'bad')
         corrected_dir = os.path.join(cls_dir, 'corrected')
         category = os.listdir(bad_dir)
