@@ -2,6 +2,7 @@ from PIL import Image
 import numpy as np
 from torchvision import transforms
 import torch
+from diffusers.models.vae import DiagonalGaussianDistribution
 
 IMAGE_TRANSFORMS = transforms.Compose([transforms.ToTensor(),
                                        transforms.Normalize([0.5], [0.5]),])
@@ -14,6 +15,7 @@ def load_image(image_path, trg_h, trg_w):
     img = np.array(image, np.uint8)
     return img
 
+
 @torch.no_grad()
 def image2latent(image, vae, device, weight_dtype):
     if type(image) is Image:
@@ -24,6 +26,19 @@ def image2latent(image, vae, device, weight_dtype):
         image = torch.from_numpy(image).float() / 127.5 - 1
         image = image.permute(2, 0, 1).unsqueeze(0).to(device, weight_dtype)
         latents = vae.encode(image)['latent_dist'].mean
+        latents = latents * 0.18215
+    return latents
+
+@torch.no_grad()
+def customizing_image2latent(image, student, device, weight_dtype):
+    if type(image) is Image:
+        image = np.array(image)
+    if type(image) is torch.Tensor and image.dim() == 4:
+        latents = image
+    else:
+        image = torch.from_numpy(image).float() / 127.5 - 1
+        image = image.permute(2, 0, 1).unsqueeze(0).to(device, weight_dtype)
+        latents = DiagonalGaussianDistribution(student(image)).sample()
         latents = latents * 0.18215
     return latents
 

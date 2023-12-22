@@ -13,7 +13,7 @@ ml purge
 ml load cuda/11.0
 
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 57689 image_inverting_vae_encoder.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 51689 image_inverting_vae_encoder.py \
   --process_title parksooyeon \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 \
@@ -26,5 +26,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/5_TS_encoder_contrastive_recon_loss/vae_student_model/student_epoch_000008.pth \
   --network_weights ../result/MVTec_experiment/bagel/6_discrete_timeseries/epoch-000005.safetensors \
   --repeat_time 51 \
-  --self_attn_threshold_time 1000 \
+  --resolution 512,512 \
+  --seed 42 \
   --final_time 980
+
+
