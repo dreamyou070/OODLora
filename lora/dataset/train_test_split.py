@@ -61,40 +61,41 @@ def main(args):
     parent, child = os.path.split(args.data_folder)
     save_folder = os.path.join(parent, f'{child}_Experiment')
     for cls in classes:
-        if cls != 'carpet' or cls != 'erase' :
-            class_dir = os.path.join(args.data_folder, cls)
-            save_class_dir = os.path.join(save_folder, cls)
-            test_dir = os.path.join(class_dir, 'test')
+        if cls != 'carpet' :
+            if cls != 'erase' :
+                class_dir = os.path.join(args.data_folder, cls)
+                save_class_dir = os.path.join(save_folder, cls)
+                test_dir = os.path.join(class_dir, 'test')
 
-            save_test_dir = os.path.join(save_class_dir, f'test/bad')
-            test_mask_dir = os.path.join(save_class_dir, 'test_mask')
-            os.makedirs(save_test_dir, exist_ok=True)
+                save_test_dir = os.path.join(save_class_dir, f'test/bad')
+                test_mask_dir = os.path.join(save_class_dir, 'test_mask')
+                os.makedirs(save_test_dir, exist_ok=True)
 
-            train_mask_dir = os.path.join(save_class_dir, 'train_mask')
-            os.makedirs(train_mask_dir, exist_ok=True)
+                train_mask_dir = os.path.join(save_class_dir, 'train_mask')
+                os.makedirs(train_mask_dir, exist_ok=True)
 
-            damages = os.listdir(test_dir)
-            for damage in damages:
-                damage_dir   = os.path.join(test_dir, f'{damage}/gt')
-                org_images = os.listdir(damage_dir)
+                damages = os.listdir(test_dir)
+                for damage in damages:
+                    damage_dir   = os.path.join(test_dir, f'{damage}/gt')
+                    org_images = os.listdir(damage_dir)
 
-                save_damage_dir = os.path.join(save_test_dir, damage)
-                tests = os.listdir(save_damage_dir)
+                    save_damage_dir = os.path.join(save_test_dir, damage)
+                    tests = os.listdir(save_damage_dir)
 
-                test_damage_dir = os.path.join(test_mask_dir, damage)
-                os.makedirs(test_damage_dir, exist_ok=True)
-                train_damage_dir = os.path.join(train_mask_dir, damage)
-                os.makedirs(train_damage_dir, exist_ok=True)
+                    test_damage_dir = os.path.join(test_mask_dir, damage)
+                    os.makedirs(test_damage_dir, exist_ok=True)
+                    train_damage_dir = os.path.join(train_mask_dir, damage)
+                    os.makedirs(train_damage_dir, exist_ok=True)
 
-                for org_image in org_images:
-                    if org_image in tests:
-                        org_image_path = os.path.join(damage_dir, org_image)
-                        re_image_path = os.path.join(test_damage_dir, org_image)
-                        shutil.copy(org_image_path, re_image_path)
-                    else :
-                        org_image_path = os.path.join(damage_dir, org_image)
-                        re_image_path = os.path.join(train_damage_dir, org_image)
-                        shutil.copy(org_image_path, re_image_path)
+                    for org_image in org_images:
+                        if org_image in tests:
+                            org_image_path = os.path.join(damage_dir, org_image)
+                            re_image_path = os.path.join(test_damage_dir, org_image)
+                            shutil.copy(org_image_path, re_image_path)
+                        else :
+                            org_image_path = os.path.join(damage_dir, org_image)
+                            re_image_path = os.path.join(train_damage_dir, org_image)
+                            shutil.copy(org_image_path, re_image_path)
 
 
                 """
