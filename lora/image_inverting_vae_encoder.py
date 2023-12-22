@@ -354,32 +354,6 @@ def main(args) :
     vae_encoder_quantize.to(device, dtype=vae_dtype)
     student.to(device, dtype=vae_dtype)
 
-    print(f' (2.4) scheduling factors')
-    alphas_cumprod_dict = {}
-    inference_decoding_factor = {}
-    if args.using_customizing_scheduling :
-        vae_factor_dict = '../result/decoder_factor.txt'
-        with open(vae_factor_dict, 'r') as f:
-            content = f.readlines()
-        for line in content:
-            line = line.strip()
-            line = line.split(' : ')
-            t, f = int(line[0]), float(line[1])
-            inference_decoding_factor[t] = f
-
-
-    elif args.with_new_noising_alphas_cumprod :
-        alphas_cumprod_dict_dir = r'../result/inference_decoding_factor_txt.txt'
-        with open(alphas_cumprod_dict_dir, 'r') as f:
-            content = f.readlines()
-        for line in content:
-            line = line.strip()
-            line = line.split(' : ')
-            t, f = int(line[0]), float(line[1])
-            alphas_cumprod_dict[t] = f
-    print(f'inference_decoding_factor : {inference_decoding_factor}')
-
-
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
@@ -519,8 +493,6 @@ if __name__ == "__main__":
     parser.add_argument("--num_ddim_steps", type=int, default=30)
     parser.add_argument("--folder_name", type=str)
     parser.add_argument("--repeat_time", type=int, default=1)
-    parser.add_argument("--self_attn_threshold_time", type=int, default=1)
-    parser.add_argument("--using_customizing_scheduling", action="store_true",)
     parser.add_argument("--final_time", type=int, default = 600)
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--use_binary_mask", action = 'store_true')

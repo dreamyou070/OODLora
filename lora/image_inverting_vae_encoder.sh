@@ -18,16 +18,13 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 \
   --prompt 'good' \
-  --inversion_experiment \
   --sample_sampler ddim \
   --num_ddim_steps 50 \
   --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel \
   --output_dir ../result/MVTec_experiment/bagel/vae_training/5_TS_encoder_contrastive_recon_loss/inference/with_lora \
   --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/5_TS_encoder_contrastive_recon_loss/vae_student_model/student_epoch_000008.pth \
-  --network_weights ../result/MVTec_experiment/bagel/6_discrete_timeseries/epoch-000005.safetensors \
+  --network_weights ../result/MVTec_experiment/bagel/4_lora_trining_using_noise_diff_org_loss/epoch-000011.safetensors \
   --repeat_time 51 \
   --resolution 512,512 \
   --seed 42 \
   --final_time 980
-
-
