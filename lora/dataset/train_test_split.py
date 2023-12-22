@@ -103,21 +103,22 @@ def main(args):
         cls_dir = os.path.join(args.data_folder, f'{cls}/train')
         damages = os.listdir(cls_dir)
         for damage in damages:
-            damage_dir = os.path.join(cls_dir, damage)
+            damage_dir = os.path.join(args.data_folder, f'{cls}/{damage}')
             images = os.listdir(damage_dir)
             if len(images) == 0 :
-                rgb_dir = os.path.join(cls_dir, f'test/bad/{damage}')
-                rgb_corrected_dir = os.path.join(cls_dir, f'test/corrected/{damage}')
+                rgb_dir = os.path.join(args.data_folder, f'{cls}/test/bad/{damage}')
+                rgb_corrected_dir = os.path.join(args.data_folder, f'{cls}/test/corrected/{damage}')
                 rgb_images = os.listdir(rgb_dir)
                 rgb_corrected_images = os.listdir(rgb_corrected_dir)
                 total_num = int(len(rgb_images) * 0.2) + 1
+
                 for i in range(total_num) :
                     org_img_dir = os.path.join(rgb_dir, rgb_images[i])
-                    re_img_dir = os.path.join(cls_dir, f'train/{damage}/{rgb_images[i]}')
+                    re_img_dir = os.path.join(args.data_folder, f'{cls}/train/{damage}/{rgb_images[i]}')
                     os.rename(org_img_dir, re_img_dir)
 
-                    org_mask_dir = os.path.join(cls_dir, f'test_mask/{damage}/{rgb_images[i]}')
-                    re_mask_dir = os.path.join(cls_dir, f'train_mask/{damage}/{rgb_images[i]}')
+                    org_mask_dir = os.path.join(args.data_folder, f'{cls}/test_mask/{damage}/{rgb_images[i]}')
+                    re_mask_dir = os.path.join(args.data_folder, f'{cls}/train_mask/{damage}/{rgb_images[i]}')
                     os.rename(org_mask_dir, re_mask_dir)
 
                     org_corrected_dir = os.path.join(rgb_corrected_dir, rgb_corrected_images[i])
