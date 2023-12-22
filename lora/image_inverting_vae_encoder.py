@@ -435,9 +435,10 @@ def main(args) :
                                                                         vae=vae,
                                                                         base_folder_dir=timewise_save_base_folder,)
                         if args.use_binary_mask :
-                            generator = torch.Generator(device='cuda').manual_seed(args.seed)
-                            start_latent = scheduler.add_noise(original_samples = st_latent, noise =randn_tensor(original_latent.shape,
-                                                                                                                 generator=generator, device=device, dtype=weight_dtype), timesteps = time_steps[-1])
+                            torch.manual_seed(args.seed)
+                            start_latent = scheduler.add_noise(original_samples = st_latent,
+                                                               noise = torch.randn(original_latent.shape, dtype=weight_dtype),
+                                                               timesteps = time_steps[-1])
                         else :
                             start_latent = latent_dict[int(time_steps[-1])]
                         time_steps.reverse()
