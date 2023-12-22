@@ -60,35 +60,40 @@ def main(args):
     classes = os.listdir(args.data_folder)
     parent, child = os.path.split(args.data_folder)
     save_folder = os.path.join(parent, f'{child}_Experiment')
-
     for cls in classes:
-        if cls != 'erase' :
-            class_dir = os.path.join(args.data_folder, cls)
-            new_class_dir = os.path.join(save_folder, cls)
+        class_dir = os.path.join(args.data_folder, cls)
+        save_class_dir = os.path.join(save_folder, cls)
+        test_dir = os.path.join(class_dir, 'test')
+        save_test_dir = os.path.join(save_class_dir, f'test/bad')
 
-            test_good_dir = os.path.join(class_dir, 'test', 'good')
-            new_test_good_dir = os.path.join(new_class_dir, 'train', 'good')
-            validation_dir  = os.path.join(class_dir, 'validation')
-            new_validation_dir = os.path.join(new_class_dir, 'validation')
-            shutil.move(validation_dir, new_validation_dir)
-            shutil.move(test_good_dir, new_test_good_dir)
+        test_mask_dir = os.path.join(save_class_dir, 'test_mask')
+        os.makedirs(save_test_dir, exist_ok=True)
 
+        train_mask_dir = os.path.join(save_class_dir, 'train_gt')
+        os.makedirs(train_mask_dir, exist_ok=True)
 
+        damages = os.listdir(test_dir)
+        for damage in damages:
+            damage_dir   = os.path.join(test_dir, damage)
+            save_damage_dir = os.path.join(save_test_dir, damage)
+            org_imges = os.listdir(damage_dir)
+            mask_dir    = os.path.join(damage_dir, 'gt')
+            images = os.listdir(mask_dir)
+            test_damage_dir = os.path.join(test_mask_dir, damage)
+            os.makedirs(test_damage_dir, exist_ok=True)
+            train_damage_dir = os.path.join(train_mask_dir, damage)
+            os.makedirs(train_damage_dir, exist_ok=True)
 
-        """
-        else :
-            train_good_dir = os.path.join(train_dir, 'good')
-            os.makedirs(train_good_dir, exist_ok=True)
-
-            damage_dir = os.path.join(corrected_dir, damage)
-            damage_corrected_dir = os.path.join(corrected_dir, 'good')
-            images = os.listdir(damage_dir)
             for image in images:
-                image_path = os.path.join(damage_dir, image)
-                os.rename(image_path, os.path.join(train_good_dir, image))
-                a = os.path.join(damage_corrected_dir, image)
-                os.remove(a)
-        """
+                if image in org_imges:
+                    # mask should be on test dataset
+                    image_path = os.path.join(mask_dir, image)
+                    save_image_path = os.path.join(test_damage_dir, image)
+                    shutil.copy(image_path, save_image_path)
+                else :
+                    image_path = os.path.join(mask_dir, image)
+                    save_image_path = os.path.join(train_damage_dir, image)
+                    shutil.copy(image_path, save_image_path)
 
 
 
