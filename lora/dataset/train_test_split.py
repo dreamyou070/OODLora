@@ -70,7 +70,7 @@ def main(args):
             test_mask_dir = os.path.join(save_class_dir, 'test_mask')
             os.makedirs(save_test_dir, exist_ok=True)
 
-            train_mask_dir = os.path.join(save_class_dir, 'train_gt')
+            train_mask_dir = os.path.join(save_class_dir, 'train_mask')
             os.makedirs(train_mask_dir, exist_ok=True)
 
             damages = os.listdir(test_dir)
