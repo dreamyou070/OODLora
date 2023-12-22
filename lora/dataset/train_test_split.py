@@ -135,19 +135,19 @@ def main(args):
             if cate != 'good' :
                 org_cat_dir = os.path.join(bad_dir, cate)
                 re_cat_dir = os.path.join(bad_dir, f'30_{cate}')
-                shutil.copytree(org_cat_dir, re_cat_dir)
+                shutil.move(org_cat_dir, re_cat_dir)
 
                 org_cat_dir = os.path.join(corrected_dir, cate)
                 re_cat_dir = os.path.join(corrected_dir, f'30_{cate}')
-                shutil.copytree(org_cat_dir, re_cat_dir)
+                shutil.move(org_cat_dir, re_cat_dir)
             else :
                 org_cat_dir = os.path.join(bad_dir, cate)
                 re_cat_dir = os.path.join(bad_dir, f'50_{cate}')
-                shutil.copytree(org_cat_dir, re_cat_dir)
+                shutil.move(org_cat_dir, re_cat_dir)
 
                 org_cat_dir = os.path.join(corrected_dir, cate)
                 re_cat_dir = os.path.join(corrected_dir, f'50_{cate}')
-                shutil.copytree(org_cat_dir, re_cat_dir)
+                shutil.move(org_cat_dir, re_cat_dir)
 
 
 
