@@ -99,7 +99,8 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae,  base_fold
             next_time = flip_times[i + 1].item()
             latent_dict[int(t.item())] = latent
             time_steps.append(t.item())
-            noise_pred = unet(latent, t, uncond_embeddings, None, None).sample
+            noise_pred = unet(latent, t, uncond_embeddings, None, None,
+                              return_dict=True).sample
 
             noise_pred_dict[int(t.item())] = noise_pred
             latent = next_step(noise_pred, int(t.item()), latent, scheduler)
@@ -131,7 +132,7 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
         with torch.no_grad():
-            noise_pred = unet(latent, t, con, None, None).sample
+            noise_pred = unet(latent, t, con, None, None, return_dict=True).sample
             new_latent = prev_step(noise_pred, int(t), latent, scheduler)
             if mask is not None :
                 background_latent = latent_dict[prev_time] * (mask) # 0 = background, 1 = bad point
