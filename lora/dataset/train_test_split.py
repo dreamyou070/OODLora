@@ -103,7 +103,7 @@ def main(args):
         cls_dir = os.path.join(args.data_folder, f'{cls}/train')
         damages = os.listdir(cls_dir)
         for damage in damages:
-            damage_dir = os.path.join(args.data_folder, f'{cls}/{damage}')
+            damage_dir = os.path.join(args.data_folder, f'{cls}/train/{damage}')
             images = os.listdir(damage_dir)
             if len(images) == 0 :
                 rgb_dir = os.path.join(args.data_folder, f'{cls}/test/bad/{damage}')
