@@ -13,7 +13,7 @@ ml purge
 ml load cuda/11.0
 
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 51689 image_inverting_vae_encoder.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 50289 image_inverting_vae_encoder.py \
   --process_title parksooyeon \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 \
@@ -23,8 +23,10 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel \
   --output_dir ../result/MVTec_experiment/bagel/vae_training/5_TS_encoder_contrastive_recon_loss/inference/with_lora \
   --student_pretrained_dir ../result/MVTec_experiment/bagel/vae_training/5_TS_encoder_contrastive_recon_loss/vae_student_model/student_epoch_000008.pth \
-  --network_weights ../result/MVTec_experiment/bagel/4_lora_trining_using_noise_diff_org_loss/epoch-000011.safetensors \
+  --network_weights ../result/MVTec_experiment/bagel/5_lora_trining_using_noise_diff/epoch-000006.safetensors \
   --repeat_time 51 \
   --resolution 512,512 \
   --seed 42 \
-  --final_time 980
+  --use_binary_mask \
+  --mask_thredhold 0.5 \
+  --final_time 100

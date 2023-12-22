@@ -181,8 +181,9 @@ def main(args) :
 
     print(f" (1.3) save dir")
     output_dir = args.output_dir
-    os.makedirs(output_dir, exist_ok=True)
-
+    if args.use_binary_mask :
+        parent, child = os.path.split(args.output_dir)
+        output_dir = os.path.join(parent, f'{child}_binary_mask_thred_{args.mask_thredhold}')
     parent, network_dir = os.path.split(args.network_weights)
     super_parenrt, parent_dir = os.path.split(parent)
     output_dir = os.path.join(output_dir, f'lora_{parent_dir}')
@@ -374,7 +375,7 @@ def main(args) :
     trg_h, trg_w = args.resolution
     test_img_folder = os.path.join(args.concept_image_folder, 'test')
     classes = os.listdir(test_img_folder)
-    thredhold = 1
+    thredhold = args.mask_thredhold
     for class_name in classes:
         class_folder = os.path.join(test_img_folder, class_name)
         class_base_folder = os.path.join(output_dir, class_name)
@@ -503,6 +504,7 @@ if __name__ == "__main__":
     parser.add_argument("--repeat_time", type=int, default=1)
     parser.add_argument("--final_time", type=int, default = 600)
     parser.add_argument("--student_pretrained_dir", type=str)
+    parser.add_argument("--mask_thredhold", type=float, default = 0.5)
     parser.add_argument("--use_binary_mask", action = 'store_true')
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
