@@ -62,15 +62,16 @@ def main(args):
     save_folder = os.path.join(parent, f'{child}_Experiment')
 
     for cls in classes:
-        class_dir = os.path.join(args.data_folder, cls)
-        new_class_dir = os.path.join(save_folder, cls)
+        if cls != 'erase' :
+            class_dir = os.path.join(args.data_folder, cls)
+            new_class_dir = os.path.join(save_folder, cls)
 
-        test_good_dir = os.path.join(class_dir, 'test', 'good')
-        new_test_good_dir = os.path.join(new_class_dir, 'train', 'good')
-        validation_dir  = os.path.join(class_dir, 'validation')
-        new_validation_dir = os.path.join(new_class_dir, 'validation')
-        shutil.move(validation_dir, new_validation_dir)
-        shutil.move(test_good_dir, new_test_good_dir)
+            test_good_dir = os.path.join(class_dir, 'test', 'good')
+            new_test_good_dir = os.path.join(new_class_dir, 'train', 'good')
+            validation_dir  = os.path.join(class_dir, 'validation')
+            new_validation_dir = os.path.join(new_class_dir, 'validation')
+            shutil.move(validation_dir, new_validation_dir)
+            shutil.move(test_good_dir, new_test_good_dir)
 
 
 
