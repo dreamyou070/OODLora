@@ -19,7 +19,8 @@ def main(args):
 
     data_folder = args.data_folder
     classes = os.listdir(data_folder)
-    before_classes = []
+    before_classes = ['grid','hazelnut','leather','metal_nut','pill','screw','tile','toothbrush','transistor',
+                      'wood','zipper']
     for cls in classes:
         if cls not in before_classes:
             class_dir = os.path.join(data_folder, cls)
