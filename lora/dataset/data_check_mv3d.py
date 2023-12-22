@@ -50,7 +50,7 @@ def main(args):
                     inpaint_categori_dir = os.path.join(inpaint_img_save_folder, category)
                     os.makedirs(inpaint_categori_dir, exist_ok=True)
 
-                    images = os.listdir(test_cat)
+                    images = os.listdir(rgb_folder)
                     for name_ in images:
                         name, ext = os.path.splitext(name_)
                         image_path = os.path.join(rgb_folder, name_)
