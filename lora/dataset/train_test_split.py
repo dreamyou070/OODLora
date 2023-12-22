@@ -4,7 +4,7 @@ from diffusers import StableDiffusionInpaintPipeline
 import numpy as np
 from PIL import Image
 import argparse
-
+import shutil
 
 def main(args):
     print(f'\n step 1. make model')
@@ -12,6 +12,7 @@ def main(args):
     pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",
                                                           cache_dir=r'../../../../pretrained_stable_diffusion').to(device)
 
+    """
     print(f'\n step 2. dataset')
 
     data_folder = args.data_folder
@@ -55,26 +56,44 @@ def main(args):
                         os.rename(bad_image_path, redir)
 
                         os.remove(image_path)
-            """
-            else :
-                train_good_dir = os.path.join(train_dir, 'good')
-                os.makedirs(train_good_dir, exist_ok=True)
+    """
+    classes = os.listdir(args.data_folder)
+    parent, child = os.path.split(args.data_folder)
+    save_folder = os.path.join(parent, f'{child}_Experiment')
 
-                damage_dir = os.path.join(corrected_dir, damage)
-                damage_corrected_dir = os.path.join(corrected_dir, 'good')
-                images = os.listdir(damage_dir)
-                for image in images:
-                    image_path = os.path.join(damage_dir, image)
-                    os.rename(image_path, os.path.join(train_good_dir, image))
-                    a = os.path.join(damage_corrected_dir, image)
-                    os.remove(a)
-            """
+    for cls in classes:
+        class_dir = os.path.join(args.data_folder, cls)
+        new_class_dir = os.path.join(save_folder, cls)
+
+        test_good_dir = os.path.join(class_dir, 'test', 'good')
+        new_test_good_dir = os.path.join(new_class_dir, 'train', 'good')
+        validation_dir  = os.path.join(class_dir, 'validation')
+        new_validation_dir = os.path.join(new_class_dir, 'validation')
+        shutil.move(validation_dir, new_validation_dir)
+        shutil.move(test_good_dir, new_test_good_dir)
+
+
+
+        """
+        else :
+            train_good_dir = os.path.join(train_dir, 'good')
+            os.makedirs(train_good_dir, exist_ok=True)
+
+            damage_dir = os.path.join(corrected_dir, damage)
+            damage_corrected_dir = os.path.join(corrected_dir, 'good')
+            images = os.listdir(damage_dir)
+            for image in images:
+                image_path = os.path.join(damage_dir, image)
+                os.rename(image_path, os.path.join(train_good_dir, image))
+                a = os.path.join(damage_corrected_dir, image)
+                os.remove(a)
+        """
 
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda')
-    parser.add_argument('--data_folder', type=str, default='../../../../MyData/anomaly_detection/MVTec3D-AD_Experiment')
+    parser.add_argument('--data_folder', type=str, default='../../../../MyData/anomaly_detection/MVTec3D-AD')
     args = parser.parse_args()
     main(args)
