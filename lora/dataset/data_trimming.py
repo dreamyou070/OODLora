@@ -23,11 +23,12 @@ def main(args):
 
             cls_folder = os.path.join(data_folder, cls)
             train_folder = os.path.join(cls_folder, 'train')
+
             bad_folder = os.path.join(train_folder, 'bad')
             corrected_folder = os.path.join(train_folder, 'corrected')
-            masked_folder = os.path.join(train_folder, 'gt')
             os.makedirs(corrected_folder, exist_ok=True)
-            cats = os.listdir(corrected_folder)
+            masked_folder = os.path.join(train_folder, 'gt')
+            cats = os.listdir(bad_folder)
             for cat in cats:
                 if 'good' not in cat :
                     cat_folder = os.path.join(bad_folder, cat)
@@ -50,7 +51,7 @@ def main(args):
                     cat_folder = os.path.join(bad_folder, cat)
                     new_cat_folder = os.path.join(corrected_folder, cat)
                     shutil.copytree(cat_folder, new_cat_folder)
-
+            """
             test_folder = os.path.join(cls_folder, 'test')
             rgb_folder = os.path.join(test_folder, 'rgb')
             gt_dir = os.path.join(test_folder, 'gt')
@@ -70,7 +71,7 @@ def main(args):
                         number = number.split('_')[0]
                         new_img_dir = os.path.join(gt_cat_dir, f'{number}.{ext}')
                         os.rename(img_dir, new_img_dir)
-
+            """
 
 
 if __name__ == "__main__":
