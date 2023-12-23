@@ -12,7 +12,8 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_
   --process_title parksooyeon \
   --seed 42 \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
-  --student_pretrained_dir ../result/MVTec3D-AD_experiment/cable_gland/vae_training/1_TS_encoder_contrastive_recon_loss/vae_student_model/student_epoch_000004.pth \
-  --output_dir ../result/MVTec3D-AD_experiment/cable_gland/vae_training/1_TS_encoder_contrastive_recon_loss \
-  --anormal_folder ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment/cable_gland \
+  --student_pretrained_dir ../result/MVTec3D-AD_experiment/potato/vae_training/1_TS_encoder_contrastive_recon_loss/vae_student_model/student_epoch_000003.pth \
+  --output_dir ../result/MVTec3D-AD_experiment/potato/vae_training/1_TS_encoder_contrastive_recon_loss \
+  --anormal_folder ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato \
   --resolution 512,512
+

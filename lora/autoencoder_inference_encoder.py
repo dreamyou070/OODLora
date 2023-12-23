@@ -106,6 +106,7 @@ def main(args):
             image.save(save_dir)
 
     print(f'\n step 3. inference')
+
     print(' (3.1) anormal test')
     if args.training_data_check :
 
@@ -114,12 +115,12 @@ def main(args):
         save_base_dir = os.path.join(save_dir, f'student_epoch_{student_epoch}')
         os.makedirs(save_base_dir, exist_ok=True)
 
-
-        anormal_folder = os.path.join(args.anormal_folder, 'test/bad')
+        anormal_folder = os.path.join(args.anormal_folder, 'train/bad')
         classes = os.listdir(anormal_folder)
         for class_ in classes:
 
             class_dir = os.path.join(anormal_folder, class_)
+
             class_mask_dir = None
 
             class_save_dir = os.path.join(save_base_dir, class_)
@@ -143,15 +144,13 @@ def main(args):
         save_base_dir = os.path.join(save_dir, f'student_epoch_{student_epoch}')
         os.makedirs(save_base_dir, exist_ok=True)
 
-        anormal_folder = os.path.join(args.anormal_folder, 'train')
-        anormal_mask_folder = os.path.join(args.anormal_folder, 'train_mask')
+        anormal_folder = os.path.join(args.anormal_folder, 'test/rgb')
+        anormal_mask_folder = os.path.join(args.anormal_folder, 'test/gt')
         classes = os.listdir(anormal_folder)
         for class_ in classes:
-
             class_dir = os.path.join(anormal_folder, class_)
             class_mask_dir = os.path.join(anormal_mask_folder, class_)
-
-            if class_ == 'good' :
+            if 'good' in class_ :
                 class_dir = os.path.join(anormal_folder, f'{class_}/rgb')
                 class_mask_dir = os.path.join(anormal_folder, f'{class_}/gt')
 
