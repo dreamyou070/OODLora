@@ -32,13 +32,15 @@ class NetworkTrainer:
         self.vae_scale_factor = 0.18215
         self.is_sdxl = False
 
+    """
     def load_target_model(self, args, weight_dtype, accelerator):
         text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
         return model_util.get_model_version_str_for_sd1_sd2(args.v2, args.v_parameterization), text_encoder, vae, unet
-
+    
     def load_tokenizer(self, args):
         tokenizer = train_util.load_tokenizer(args)
         return tokenizer
+    """
 
     def train(self, args):
 
@@ -115,11 +117,29 @@ class NetworkTrainer:
         print(f'\n step 5. mixed precision and model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
+        from library.model_util import create_vae_diffusers_config, convert_ldm_vae_checkpoint, load_checkpoint_with_text_encoder_conversion
+        from diffusers import AutoencoderKL
+
+        name_or_path = args.pretrained_model_name_or_path
+        vae_config = create_vae_diffusers_config()
+        _, state_dict = load_checkpoint_with_text_encoder_conversion(name_or_path,
+                                                                     device='cpu')
+        state_dict = torch.load(args.vae_checkpoint,
+                                map_location="cpu")
+        converted_vae_checkpoint = convert_ldm_vae_checkpoint(state_dict, vae_config)
+
+        vae = AutoencoderKL(**vae_config)#.to(device)
+        info = vae.load_state_dict(converted_vae_checkpoint)
+
+        """
         model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
         train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
         if torch.__version__ >= "2.0.0":  # PyTorch 2.0.0 以上対応のxformersなら以下が使える
             vae.set_use_memory_efficient_attention_xformers(args.xformers)
+        """
+
+
         vae_encoder = vae.encoder
         vae_encoder_quantize = vae.quant_conv
         vae_encoder.requires_grad_(False)
@@ -162,9 +182,9 @@ class NetworkTrainer:
         teacher_decoder.to(dtype=weight_dtype)
         teacher_decoder.to(accelerator.device)
 
-        unet.requires_grad_(False)
-        unet.to(dtype=weight_dtype)
-        for t_enc in text_encoders: t_enc.requires_grad_(False)
+        #unet.requires_grad_(False)
+        #unet.to(dtype=weight_dtype)
+        #for t_enc in text_encoders: t_enc.requires_grad_(False)
 
         print(f' step 6. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
