@@ -13,7 +13,7 @@ ml purge
 ml load cuda/11.0
 
 
-accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port 52189 autoencoder_encoder_training.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port 52189 autoencoder_encoder_training.py \
   --process_title parksooyeon --max_token_length 225 \
   --logging_dir ../result/logs \
   --log_with wandb \
@@ -29,4 +29,5 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_pr
   --train_batch_size 2 \
   --max_train_steps 100000 \
   --student_reconst_loss \
+  --color_aug \
   --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato/train_normal/bad
