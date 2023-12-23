@@ -31,7 +31,7 @@ def main(args):
     classes = os.listdir(data_folder)
     not_cls = ['cable_gland', 'erase','carpet']
     for cls in classes:
-        if cls not in not_cls :
+        if cls == 'cable_gland' :
             print(f'cls : {cls}')
             class_dir = os.path.join(data_folder, cls)
             save_class_dir = os.path.join(save_folder, cls)

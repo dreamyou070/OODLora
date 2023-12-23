@@ -18,10 +18,10 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_pr
   --logging_dir ../result/logs \
   --log_with wandb \
   --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
-  --wandb_init_name tire_training \
+  --wandb_init_name potato_training \
   --wandb_run_name 1_TS_encoder_contrastive_recon_loss \
   --seed 42 \
-  --output_dir ../result/MVTec3D-AD_experiment/tire/vae_training/1_TS_encoder_contrastive_recon_loss \
+  --output_dir ../result/MVTec3D-AD_experiment/potato/vae_training/1_TS_encoder_contrastive_recon_loss \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --resolution 512,512 \
   --save_every_n_epochs 1 \
@@ -29,5 +29,7 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_pr
   --train_batch_size 2 \
   --max_train_steps 100000 \
   --student_reconst_loss \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment/tire/test/bad
+  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato/train/bad
+
+
 
