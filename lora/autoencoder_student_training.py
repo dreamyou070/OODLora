@@ -36,11 +36,11 @@ class NetworkTrainer:
     def load_target_model(self, args, weight_dtype, accelerator):
         text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
         return model_util.get_model_version_str_for_sd1_sd2(args.v2, args.v_parameterization), text_encoder, vae, unet
-    
+    """
     def load_tokenizer(self, args):
         tokenizer = train_util.load_tokenizer(args)
         return tokenizer
-    """
+
 
     def train(self, args):
 
