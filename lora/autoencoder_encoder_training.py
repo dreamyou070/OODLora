@@ -452,6 +452,8 @@ if __name__ == "__main__":
     parser.add_argument("--discriminator_pretrained_dir", type=str)
     parser.add_argument("--student_reconst_loss", action="store_true")
     parser.add_argument("--anormal_training", action="store_true")
+    parser.add_argument("--only_normal_training", action="store_true")
+
 
     # class_caption
     args = parser.parse_args()
