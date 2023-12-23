@@ -57,7 +57,7 @@ def main(args):
             os.makedirs(gt_dir, exist_ok=True)
             cats = os.listdir(rgb_folder)
             for cat in cats:
-                cat_dir = os.path.join(test_folder, cat)
+                cat_dir = os.path.join(rgb_folder, cat)
                 images = os.listdir(cat_dir)
                 for image in images:
                     img_dir = os.path.join(cat_dir, image)
