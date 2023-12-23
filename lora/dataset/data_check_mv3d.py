@@ -11,11 +11,14 @@ def main(args):
     device = args.device
 
     pipe = AutoPipelineForInpainting.from_pretrained("diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
-                                                    # torch_dtype=torch.float16, #variant = "fp16",
+                                                     torch_dtype=torch.float16,
+                                                     variant = "fp16",
                                                      cache_dir=r'../../../../pretrained_stable_diffusion').to(device)
 
-
-    #pipe.enable_model_cpu_offload()
+    """
+    pipe.enable_model_cpu_offload() --> 
+    """
+    #
     #pipe.enable_xformers_memory_efficient_attention()
 
 
@@ -26,10 +29,9 @@ def main(args):
 
     data_folder = args.data_folder
     classes = os.listdir(data_folder)
-    before_classes = ['bagel','cable_gland','carrot','cookie',
-                      'dowel','foam','peach','potato','rope','tire']
+    not_cls = ['cable_gland', 'erase','carpet']
     for cls in classes:
-        if cls == 'cable_gland' :
+        if cls not in not_cls :
             print(f'cls : {cls}')
             class_dir = os.path.join(data_folder, cls)
             save_class_dir = os.path.join(save_folder, cls)

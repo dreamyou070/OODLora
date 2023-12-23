@@ -12,17 +12,17 @@ def main(args):
 
 
     print(f'\n step 2. dataset')
+    base_folder = 'C:/Users/hpuser/Desktop/수연/[연구2]/MVTec3D-AD_Experiment_SDXL'
     data_folder = args.data_folder
     classes = os.listdir(data_folder)
 
     for cls in classes:
-        if cls == 'cable_gland' :
-
-            test_folder = os.path.join(data_folder, cls, 'data/test')
+        if cls != 'cable_gland' :
             test_mask_folder = os.path.join(data_folder, cls, 'data/test_mask')
-            org_folder = os.path.join(test_folder, 'bad')
-            inpainted_folder = os.path.join(test_folder, 'corrected')
-            new_folder = os.path.join(test_folder, 'corrected_new')
+            org_folder = os.path.join(data_folder, cls, 'data/test/bad')
+            base_folder_dir = os.path.join(base_folder, cls)
+            inpainted_folder = os.path.join(base_folder_dir, 'corrected')
+            new_folder = os.path.join(base_folder_dir, 'corrected_new')
             os.makedirs(new_folder, exist_ok=True)
 
             sub_classes = os.listdir(org_folder)
@@ -31,7 +31,7 @@ def main(args):
                 if sub != 'good' :
 
                     sub_org_folder = os.path.join(org_folder, sub_cls)
-                    sub_inpainted_folder = os.path.join(inpainted_folder, sub_cls)
+                    sub_inpainted_folder = os.path.join(inpainted_folder, sub)
                     new_sub_folder = os.path.join(new_folder, sub_cls)
                     os.makedirs(new_sub_folder, exist_ok=True)
                     images = os.listdir(sub_org_folder)
@@ -44,7 +44,7 @@ def main(args):
                         np_org = np.array(org_pil)
 
                         inpainted_image_path = os.path.join(sub_inpainted_folder, image)
-                        inpainted_pil = Image.open(inpainted_image_path)
+                        inpainted_pil = Image.open(inpainted_image_path).resize((512, 512))
                         inpainted_pil.save(os.path.join(new_sub_folder, f'{name}_inpainted.{ext}'))
                         np_inpainted = np.array(inpainted_pil)
 
@@ -54,16 +54,16 @@ def main(args):
                         mask_pil.save(os.path.join(new_sub_folder, f'{name}_mask.{ext}'))
 
 
-                        np_mask = np.array(mask_pil)
-                        np_mask = np.where(np_mask < 100, 0, 1) # black = 0 = background, white = 1
+                        #np_mask = np.array(mask_pil)
+                        #np_mask = np.where(np_mask < 100, 0, 1) # black = 0 = background, white = 1
 
                         #print(f'np_org : {np_org.shape}')
                         #print(f'np_inpainted : {np_inpainted.shape}')
                         #print(f'np_mask : {np_mask.shape}')
 
-                        new_np = np_org * (1-np_mask) + np_inpainted * (np_mask)
-                        new_pil = Image.fromarray(new_np.astype(np.uint8))
-                        new_pil.save(os.path.join(new_sub_folder, f'{name}_new.{ext}'))
+                        #new_np = np_org * (1-np_mask) + np_inpainted * (np_mask)
+                        #new_pil = Image.fromarray(new_np.astype(np.uint8))
+                        #new_pil.save(os.path.join(new_sub_folder, f'{name}_new.{ext}'))
                 else :
                     sub_org_folder = os.path.join(org_folder, sub_cls)
                     new_sub_folder = os.path.join(new_folder, sub_cls)
