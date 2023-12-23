@@ -12,7 +12,7 @@ for cat in cats :
         categories = os.listdir(cat_dir)
         for category in categories :
             category_dir = os.path.join(cat_dir, category)
-            gt_dir = os.path.join(category_dir, f'{category}/gt')
+            gt_dir = os.path.join(category_dir, f'gt')
             images = os.listdir(gt_dir)
             for image in images :
                 org_img_dir = os.path.join(category_dir, f'{category}/rgb/{image}')
