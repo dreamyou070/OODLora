@@ -1053,59 +1053,40 @@ class BaseDataset(torch.utils.data.Dataset):
             loss_weights.append(self.prior_loss_weight if image_info.is_reg else 1.0)
             flipped = subset.flip_aug and random.random() < 0.5  # not flipped or flipped with 50% chance
             # image/latentsを処理する
-            if image_info.latents is not None:  # cache_latents=Trueの場合
-                original_size = image_info.latents_original_size
-                crop_ltrb = image_info.latents_crop_ltrb  # calc values later if flipped
-                if not flipped:
-                    latents = image_info.latents
-                else:
-                    latents = image_info.latents_flipped
-                image = None
-            elif image_info.latents_npz is not None:  # FineTuningDatasetまたはcache_latents_to_disk=Trueの場合
-                latents, original_size, crop_ltrb, flipped_latents = load_latents_from_disk(image_info.latents_npz)
-                if flipped:
-                    latents = flipped_latents
-                    del flipped_latents
-                latents = torch.FloatTensor(latents)
-                image = None
+
+
+            img = load_image(absolute_path, self.height, self.width) # ndarray
+            masked_img = load_image(mask_dir, self.height, self.width)
+            if self.enable_bucket:
+                img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
+                masked_img, _, _ = trim_and_resize_if_required(subset.random_crop, masked_img, image_info.bucket_reso, image_info.resized_size)
             else:
-                img = load_image(absolute_path, self.height, self.width) # ndarray
-                masked_img = load_image(mask_dir, self.height, self.width)
-                """     
-                img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset,image_info.absolute_path, is_resize = True,trg_h = self.height, trg_w = self.width)
-                if mask_dir is not None:
-                    masked_img, face_cx, face_cy, face_w, face_h = self.load_image_with_face_info(subset,mask_dir,is_resize=True,trg_h=self.height,trg_w=self.width)
-                """
-                if self.enable_bucket:
-                    img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
-                    masked_img, _, _ = trim_and_resize_if_required(subset.random_crop, masked_img, image_info.bucket_reso, image_info.resized_size)
-                else:
-                    """
-                    if face_cx > 0:  # 顔位置情報あり
-                        img = self.crop_target(subset, img, face_cx, face_cy, face_w, face_h)
-                        masked_img = self.crop_target(subset, masked_img, face_cx, face_cy, face_w, face_h)
-                    """
-                    im_h, im_w = img.shape[0:2]
-                    if im_h > self.height or im_w > self.width:
-                        assert (subset.random_crop ), f"image too large, but cropping and bucketing are disabled / 画像サイズが大きいのでface_crop_aug_rangeかrandom_crop、またはbucketを有効にしてください: {image_info.absolute_path}"
-                        if im_h > self.height:
-                            p = random.randint(0, im_h - self.height)
-                            img = img[p : p + self.height]
-                            masked_img = masked_img[p : p + self.height]
-                        if im_w > self.width:
-                            p = random.randint(0, im_w - self.width)
-                            img = img[:, p : p + self.width]
-                            masked_img = masked_img[:, p : p + self.width]
-                    im_h, im_w = img.shape[0:2]
-                    masked_img_h, masked_img_w = masked_img.shape[0:2]
-                    assert (im_h == self.height and im_w == self.width), f"image size is small / 画像サイズが小さいようです: {image_info.absolute_path}"
-                    original_size = [im_w, im_h]
-                    crop_ltrb = (0, 0, 0, 0)
+                im_h, im_w = img.shape[0:2]
+                if im_h > self.height or im_w > self.width:
+                    assert (subset.random_crop ), f"image too large, but cropping and bucketing are disabled / 画像サイズが大きいのでface_crop_aug_rangeかrandom_crop、またはbucketを有効にしてください: {image_info.absolute_path}"
+                    if im_h > self.height:
+                        p = random.randint(0, im_h - self.height)
+                        img = img[p : p + self.height]
+                        masked_img = masked_img[p : p + self.height]
+                    if im_w > self.width:
+                        p = random.randint(0, im_w - self.width)
+                        img = img[:, p : p + self.width]
+                        masked_img = masked_img[:, p : p + self.width]
+                im_h, im_w = img.shape[0:2]
+                masked_img_h, masked_img_w = masked_img.shape[0:2]
+                assert (im_h == self.height and im_w == self.width), f"image size is small / 画像サイズが小さいようです: {image_info.absolute_path}"
+                original_size = [im_w, im_h]
+                crop_ltrb = (0, 0, 0, 0)
                 # augmentation
+
                 aug = self.aug_helper.get_augmentor(subset.color_aug)
+                print(f'img type : {type(img)}')
                 if aug is not None:
                     img = aug(image=img)["image"]
                     masked_img = aug(image=masked_img)["image"]
+
+
+
                 if flipped:
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                     masked_img = masked_img[:, ::-1, :].copy()
@@ -1113,6 +1094,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)
                 torch_equal = torch.equal(image, masked_image)
+
             images.append(image)
             mask_imgs.append(masked_image)
             latents_list.append(latents)
