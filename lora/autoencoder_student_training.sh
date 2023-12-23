@@ -30,6 +30,3 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --max_train_steps 100000 \
   --student_reconst_loss \
   --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato/train/bad
-
-
-
