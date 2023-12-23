@@ -46,10 +46,14 @@ def main(args):
                     np_mask = np.array(mask_pil)
                     np_mask = np.where(np_mask < 50, 0, 1) # black = 0 = background, white = 1
 
+                    print(f'np_org : {np_org.shape}')
+                    print(f'np_inpainted : {np_inpainted.shape}')
+                    print(f'np_mask : {np_mask.shape}')
+
                     new_np = np_org * (1-np_mask) + np_inpainted * (np_mask)
                     new_pil = Image.fromarray(new_np)
                     new_pil.save(os.path.join(new_sub_folder, image))
-                    
+
 
 
 
