@@ -119,29 +119,25 @@ def main(args):
         class_dir = os.path.join(anormal_folder, class_)
         class_mask_dir = os.path.join(anormal_mask_folder, class_)
 
+        if class_ == 'good' :
+            class_dir = os.path.join(anormal_folder, f'{class_}/rgb')
+            class_mask_dir = os.path.join(anormal_folder, f'{class_}/gt')
+
         class_save_dir = os.path.join(save_base_dir, class_)
         os.makedirs(class_save_dir, exist_ok=True)
 
         images = os.listdir(class_dir)
-        if class_ != 'good' :
-            mask_images = os.listdir(class_mask_dir)
+        mask_images = os.listdir(class_mask_dir)
 
         for image in images :
 
             image_dir = os.path.join(class_dir, image)
-            if class_ != 'good' :
-                mask_dir = os.path.join(class_mask_dir, image)
-            else :
-                mask_dir = None
+            mask_dir = os.path.join(class_mask_dir, image)
             name, ext = os.path.splitext(image)
 
             img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
             compare_save_dir = os.path.join(class_save_dir, image)
-            if class_ != 'good':
-                mask_save_dir = os.path.join(class_save_dir, f'{name}_mask.png')
-            else :
-                mask_save_dir = None
-
+            mask_save_dir = os.path.join(class_save_dir, f'{name}_mask.png')
             recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir)
 
 
