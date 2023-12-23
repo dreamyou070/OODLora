@@ -143,6 +143,8 @@ class NetworkTrainer:
 
         teacher_encoder = Encoder_Teacher(vae_encoder, vae_encoder_quantize)
         teacher_decoder = Decoder_Teacher(vae_decoder, vae_decoder_quantize)
+        teacher_encoder.to(dtype=weight_dtype, device=accelerator.device)
+        teacher_decoder.to(dtype=weight_dtype, device=accelerator.device)
 
         print(f' (5.1.2) student encoder')
         config_dict = vae.config
@@ -249,6 +251,7 @@ class NetworkTrainer:
         del train_dataset_group
         # training loop
         for epoch in range(num_train_epochs):
+            """
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
@@ -320,6 +323,19 @@ class NetworkTrainer:
                     os.makedirs(save_directory, exist_ok=True)
                     torch.save(student_decoder.state_dict(),
                                os.path.join(save_directory, f'decoder_student_epoch_{trg_epoch}.pth'))
+            """
+            # inference
+            with torch.no_grad():
+                if is_main_process :
+                    org_img = batch['images'].to(dtype=weight_dtype)
+                    recon = student_decoder(DiagonalGaussianDistribution(student_encoder(masked_img)).sample())
+                    recon_img = recon[0]
+                    recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                    import numpy as np
+                    image = (recon_img * 255).astype(np.uint8)
+                    wandb.log({"recon": [wandb.Image(image, caption="recon")]})
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
