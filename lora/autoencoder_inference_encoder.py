@@ -1,21 +1,8 @@
 import argparse
-from generative.losses import PatchAdversarialLoss, PerceptualLoss
-from generative.networks.nets import AutoencoderKL, PatchDiscriminator
-from monai.networks.layers import Act
-from STTraining import Teacher, Student
-from torch.nn import L1Loss
-import math
+from diffusers.models.vae import DiagonalGaussianDistribution
 import os
-from torch.cuda.amp import GradScaler, autocast
 import random
-import time
-import json
-from multiprocessing import Value
-from tqdm import tqdm
-import toml
 from accelerate.utils import set_seed
-from diffusers import DDPMScheduler
-from library import model_util
 import library.train_util as train_util
 from library.train_util import (DreamBoothDataset, )
 import library.config_util as config_util
@@ -77,17 +64,19 @@ def main(args):
     vae_encoder_quantize.requires_grad_(False)
     vae_encoder_quantize.eval()
     vae_encoder_quantize.to(accelerator.device, dtype=vae_dtype)
+    vae.to(accelerator.device, dtype=vae_dtype)
 
     config_dict = vae.config
     from diffusers import AutoencoderKL
+    from STTraining import Encoder_Teacher, Encoder_Student
+
     student_vae = AutoencoderKL.from_config(config_dict)
-    student_vae_decoder = student_vae.decoder
-    student_vae_decoder_quantize = student_vae.post_quant_conv
-    student = Student(student_vae_decoder, student_vae_decoder_quantize)
+    student_vae_encoder = student_vae.encoder
+    student_vae_encoder_quantize = student_vae.quant_conv
+    student = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
 
 
     print(f' (4) making decoder of vae')
-
     student_pretrained_dir = args.student_pretrained_dir
     model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
     state_dict = {}
@@ -104,50 +93,70 @@ def main(args):
     student_epoch = int(student_epoch.split('_')[-1])
     print(f'student_epoch: {student_epoch}')
 
-    def recon(sample_data_dir, save_dir, compare_save_dir):
+    def recon(mask_dir, sample_data_dir, mask_save_dir, save_dir, compare_save_dir):
         pil_img = Image.open(sample_data_dir)
         h, w = args.resolution.split(',')[0], args.resolution.split(',')[1]
+
+        if mask_dir is not None :
+            mask_pil_img = Image.open(mask_dir)
+            mask_pil_img = mask_pil_img.resize((int(h.strip()), int(w.strip())), Image.BICUBIC)
+            mask_pil_img.save(mask_save_dir)
+
         pil_img = pil_img.resize((int(h.strip()), int(w.strip())), Image.BICUBIC)
         pil_img.save(compare_save_dir)
+
         img = load_image(sample_data_dir, int(h.strip()), int(w.strip()))
         img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
+
         with torch.no_grad():
             img = img.to(accelerator.device)
-            # (1) encoder
-            from diffusers.models.vae import DiagonalGaussianDistribution
-            h = vae_encoder(img.to(dtype=vae_dtype))
-            latent = DiagonalGaussianDistribution(vae_encoder_quantize(h)).sample()
-
+            # (1) encoder make latent
+            latent = DiagonalGaussianDistribution(student(img)).sample()
             # (2) decoder
-            recon_img = student(latent)  # .sample
+            recon_img = vae.decode(latent)['sample']
             recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
             image = (recon_img * 255).astype(np.uint8)
             image = Image.fromarray(image)
             image.save(save_dir)
 
     print(f'\n step 3. inference')
-    save_dir = os.path.join(args.output_dir, 'vae_result_check')
+    save_dir = os.path.join(args.output_dir, 'inference/vae_result_check')
     os.makedirs(save_dir, exist_ok=True)
     save_base_dir = os.path.join(save_dir, f'student_epoch_{student_epoch}')
     os.makedirs(save_base_dir, exist_ok=True)
-    test_save_dir = os.path.join(save_base_dir, 'test_dataset')
-    os.makedirs(test_save_dir, exist_ok=True)
-
     print(' (3.1) anormal test')
-    anormal_folder = args.anormal_folder
+    anormal_folder = os.path.join(args.anormal_folder, 'train')
+    anormal_mask_folder = os.path.join(args.anormal_mask_folder, 'train_mask')
     classes = os.listdir(anormal_folder)
     for class_ in classes:
+
         class_dir = os.path.join(anormal_folder, class_)
-        class_save_dir = os.path.join(test_save_dir, class_)
+        class_mask_dir = os.path.join(anormal_mask_folder, class_)
+
+        class_save_dir = os.path.join(save_base_dir, class_)
         os.makedirs(class_save_dir, exist_ok=True)
-        sample_data_dir = os.path.join(class_dir, 'rgb')
-        images = os.listdir(sample_data_dir)
+
+        images = os.listdir(class_dir)
+        if class_ != 'good' :
+            mask_images = os.listdir(class_mask_dir)
+
         for image in images :
+
+            image_dir = os.path.join(class_dir, image)
+            if class_ != 'good' :
+                mask_dir = os.path.join(class_mask_dir, image)
+            else :
+                mask_dir = None
             name, ext = os.path.splitext(image)
-            img_dir = os.path.join(sample_data_dir, image)
+
             img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
             compare_save_dir = os.path.join(class_save_dir, image)
-            recon(img_dir, img_save_dir, compare_save_dir)
+            if class_ != 'good':
+                mask_save_dir = os.path.join(class_save_dir, f'{name}_mask.png')
+            else :
+                mask_save_dir = None
+
+            recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir)
 
 
 if __name__ == "__main__":
