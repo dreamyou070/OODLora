@@ -11,7 +11,7 @@ def main(args):
     device = args.device
 
     pipe = AutoPipelineForInpainting.from_pretrained("diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
-                                                     torch_dtype=torch.float16, #variant = "fp16",
+                                                    # torch_dtype=torch.float16, #variant = "fp16",
                                                      cache_dir=r'../../../../pretrained_stable_diffusion').to(device)
 
 
