@@ -1,7 +1,7 @@
 import torch, os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from diffusers import AutoPipelineForInpainting
-
+from diffusers.utils import load_image
 from PIL import Image
 import argparse
 
@@ -11,7 +11,7 @@ def main(args):
     device = args.device
 
     pipe = AutoPipelineForInpainting.from_pretrained("diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
-                                                     torch_dtype=torch.float16, variant = "fp16",
+                                                     torch_dtype=torch.float16, #variant = "fp16",
                                                      cache_dir=r'../../../../pretrained_stable_diffusion').to(device)
 
 
@@ -64,14 +64,35 @@ def main(args):
                         name, ext = os.path.splitext(name_)
                         image_path = os.path.join(rgb_folder, name_)
                         mask_path = os.path.join(gt_folder, name_)
+                        """
                         image = pipe(prompt=prompt,
                                      #negative_prompt = negative_prompt,
                                      image=Image.open(image_path).convert('RGB'),
                                      mask_image=Image.open(mask_path).convert('L'), ).images[0]
+                        """
+                        image = load_image(image_path).resize((1024, 1024))
+                        mask_image = load_image(mask_path).resize((1024, 1024))
+                        generator = torch.Generator(device="cuda").manual_seed(0)
+
+                        image = pipe(
+                            prompt=prompt,
+                            image=image,
+                            mask_image=mask_image,
+                            guidance_scale=8.0,
+                            num_inference_steps=20,  # steps between 15 and 30 work well for us
+                            strength=0.99,  # make sure to use `strength` below 1.0
+                            generator=generator,
+                        ).images[0]
+
                         image.save(os.path.join(inpaint_categori_dir, name_))
 
                         original_image = Image.open(image_path)
                         original_image.save(os.path.join(original_categori_dir, name_))
+
+
+
+
+
 
             train_folder = os.path.join(class_dir, 'train/good/rgb')
             train_images = os.listdir(train_folder)
