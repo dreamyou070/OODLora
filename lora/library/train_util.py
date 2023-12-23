@@ -1087,7 +1087,6 @@ class BaseDataset(torch.utils.data.Dataset):
                 #    img = aug(image=img)["image"]
                 #    masked_img = aug(image=masked_img)["image"]
                 if aug is not None:
-                    print('aut patches')
                     def patch_shuffle_with_index(patch_indexs, np_img):
                         patches = []
                         for i in range(h_num):
@@ -1096,10 +1095,11 @@ class BaseDataset(torch.utils.data.Dataset):
                                         int(j * patch_w):int((j + 1) * patch_w)]
                                 patches.append(patch)
                         zero_image = np.zeros((org_h, org_w, 3), dtype=np.uint8)
-
+                        m = 0
                         for i in range(h_num):
                             for j in range(w_num):
-                                p_index = patch_indexs.pop()
+                                p_index = patch_indexs[m]
+                                m+= 1
                                 patch = patches[p_index]
                                 zero_image[int(i * patch_h):int((i + 1) * patch_h),
                                 int(j * patch_w):int((j + 1) * patch_w)] = patch
@@ -1122,8 +1122,6 @@ class BaseDataset(torch.utils.data.Dataset):
                 latents = None
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)
-                torch_equal = torch.equal(image, masked_image)
-
             images.append(image)
             mask_imgs.append(masked_image)
             latents_list.append(latents)
