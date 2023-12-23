@@ -8,7 +8,7 @@ import shutil
 def main(args):
 
     print(f'\n step 1. make model')
-    device = args.device
+    #device = args.device
 
 
     print(f'\n step 2. dataset')
@@ -18,8 +18,8 @@ def main(args):
     for cls in classes:
         if cls == 'cable_gland' :
 
-            test_folder = os.path.join(data_folder, cls, 'test')
-            test_mask_folder = os.path.join(data_folder, cls, 'test_mask')
+            test_folder = os.path.join(data_folder, cls, 'data/test')
+            test_mask_folder = os.path.join(data_folder, cls, 'data/test_mask')
             org_folder = os.path.join(test_folder, 'bad')
             inpainted_folder = os.path.join(test_folder, 'corrected')
             new_folder = os.path.join(test_folder, 'corrected_new')
@@ -36,18 +36,24 @@ def main(args):
                     os.makedirs(new_sub_folder, exist_ok=True)
                     images = os.listdir(sub_org_folder)
                     for image in images:
+                        name, ext = image.split('.')
                         org_image_path = os.path.join(sub_org_folder, image)
                         org_pil = Image.open(org_image_path)
                         org_pil = org_pil.resize((512, 512))
+                        org_pil.save(os.path.join(new_sub_folder, image))
                         np_org = np.array(org_pil)
 
                         inpainted_image_path = os.path.join(sub_inpainted_folder, image)
                         inpainted_pil = Image.open(inpainted_image_path)
+                        inpainted_pil.save(os.path.join(new_sub_folder, f'{name}_inpainted.{ext}'))
                         np_inpainted = np.array(inpainted_pil)
 
                         mask_image_path = os.path.join(test_mask_folder, sub, image)
                         mask_pil = Image.open(mask_image_path).convert('RGB')
                         mask_pil = mask_pil.resize((512, 512))
+                        mask_pil.save(os.path.join(new_sub_folder, f'{name}_mask.{ext}'))
+
+
                         np_mask = np.array(mask_pil)
                         np_mask = np.where(np_mask < 100, 0, 1) # black = 0 = background, white = 1
 
@@ -57,8 +63,7 @@ def main(args):
 
                         new_np = np_org * (1-np_mask) + np_inpainted * (np_mask)
                         new_pil = Image.fromarray(new_np.astype(np.uint8))
-                        new_dir = os.path.join(new_sub_folder, image)
-                        new_pil.save(new_dir)
+                        new_pil.save(os.path.join(new_sub_folder, f'{name}_new.{ext}'))
                 else :
                     sub_org_folder = os.path.join(org_folder, sub_cls)
                     new_sub_folder = os.path.join(new_folder, sub_cls)
@@ -67,7 +72,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--device', type=str, default='cuda')
-    parser.add_argument('--data_folder', type=str, default='../../../../MyData/anomaly_detection/MVTec3D-AD_Experiment')
+    #parser.add_argument('--device', type=str, default='cuda')
+    parser.add_argument('--data_folder', type=str, default='C:/Users/hpuser/Desktop/수연/[연구2]/MVTec3D-AD_Experiment')
     args = parser.parse_args()
     main(args)

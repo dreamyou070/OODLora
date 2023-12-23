@@ -1,6 +1,6 @@
 import torch, os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from diffusers import StableDiffusionInpaintPipeline
+from diffusers import AutoPipelineForInpainting
 
 from PIL import Image
 import argparse
@@ -9,12 +9,16 @@ import argparse
 def main(args):
     print(f'\n step 1. make model')
     device = args.device
-    pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting",
-                                                          cache_dir=r'../../../../pretrained_stable_diffusion').to(device)
+
+    pipe = AutoPipelineForInpainting.from_pretrained("diffusers/stable-diffusion-xl-1.0-inpainting-0.1", torch_dtype=torch.float16,
+                                                     cache_dir=r'../../../../pretrained_stable_diffusion').to(device)
+    pipe.enable_model_cpu_offload()
+    pipe.enable_xformers_memory_efficient_attention()
+
 
     print(f'\n step 2. dataset')
     parent, child = os.path.split(args.data_folder)
-    save_folder = os.path.join(parent, f'{child}_Experiment')
+    save_folder = os.path.join(parent, f'{child}_Experiment_SDXL')
     os.makedirs(save_folder, exist_ok=True)
 
     data_folder = args.data_folder
@@ -22,7 +26,7 @@ def main(args):
     before_classes = ['bagel','cable_gland','carrot','cookie',
                       'dowel','foam','peach','potato','rope','tire']
     for cls in classes:
-        if cls not in before_classes:
+        if cls == 'cable_gland' :
             print(f'cls : {cls}')
             class_dir = os.path.join(data_folder, cls)
             save_class_dir = os.path.join(save_folder, cls)
@@ -33,18 +37,18 @@ def main(args):
             inpaint_img_save_folder = os.path.join(save_class_dir, 'corrected')
             os.makedirs(inpaint_img_save_folder, exist_ok=True)
 
-            prompt = cls
+
+            prompt_list = '_'.split(cls)
+            prompt = 'a image of ' + ' '.join(prompt_list)
             test_folder = os.path.join(class_dir, 'test')
             categories = os.listdir(test_folder)
+            negative_prompt = ', '.join(prompt_list)
 
             for category in categories:
                 if category != 'good':
                     test_cat = os.path.join(test_folder, category)
                     rgb_folder = os.path.join(test_cat, 'rgb')
                     gt_folder = os.path.join(test_cat, 'gt')
-
-
-
                     #ground_truth_cat = os.path.join(ground_truth_folder, category)
 
                     original_categori_dir = os.path.join(original_img_save_folder, category)
@@ -58,6 +62,7 @@ def main(args):
                         image_path = os.path.join(rgb_folder, name_)
                         mask_path = os.path.join(gt_folder, name_)
                         image = pipe(prompt=prompt,
+                                     negative_prompt = negative_prompt,
                                      image=Image.open(image_path).convert('RGB'),
                                      mask_image=Image.open(mask_path).convert('L'), ).images[0]
                         image.save(os.path.join(inpaint_categori_dir, name_))
