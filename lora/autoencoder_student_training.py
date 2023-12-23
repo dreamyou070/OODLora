@@ -19,7 +19,7 @@ from library.config_util import (ConfigSanitizer, BlueprintGenerator, )
 from library.custom_train_functions import prepare_scheduler_for_custom_training
 from STTraining import Encoder_Teacher, Encoder_Student, Decoder_Student, Decoder_Teacher
 import torch
-from torch.nn import L1Loss
+from library.model_util import create_vae_diffusers_config, convert_ldm_vae_checkpoint, load_checkpoint_with_text_encoder_conversion
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -32,11 +32,6 @@ class NetworkTrainer:
         self.vae_scale_factor = 0.18215
         self.is_sdxl = False
 
-    """
-    def load_target_model(self, args, weight_dtype, accelerator):
-        text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
-        return model_util.get_model_version_str_for_sd1_sd2(args.v2, args.v_parameterization), text_encoder, vae, unet
-    """
     def load_tokenizer(self, args):
         tokenizer = train_util.load_tokenizer(args)
         return tokenizer
@@ -57,7 +52,6 @@ class NetworkTrainer:
         if args.seed is None:
             args.seed = random.randint(0, 2 ** 32)
         set_seed(args.seed)
-
 
         print(f'\n step 2. dataset')
         tokenizer = self.load_tokenizer(args)
@@ -117,27 +111,18 @@ class NetworkTrainer:
         print(f'\n step 5. mixed precision and model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
-        from library.model_util import create_vae_diffusers_config, convert_ldm_vae_checkpoint, load_checkpoint_with_text_encoder_conversion
-        from diffusers import AutoencoderKL
+
 
         name_or_path = args.pretrained_model_name_or_path
         vae_config = create_vae_diffusers_config()
         _, state_dict = load_checkpoint_with_text_encoder_conversion(name_or_path,
                                                                      device='cpu')
         converted_vae_checkpoint = convert_ldm_vae_checkpoint(state_dict, vae_config)
-
-        vae = AutoencoderKL(**vae_config)#.to(device)
+        from diffusers import AutoencoderKL
+        vae = AutoencoderKL(**vae_config)
         info = vae.load_state_dict(converted_vae_checkpoint)
 
-        """
-        model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
-        text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-        train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
-        if torch.__version__ >= "2.0.0":  # PyTorch 2.0.0 以上対応のxformersなら以下が使える
-            vae.set_use_memory_efficient_attention_xformers(args.xformers)
-        """
-
-
+        print(f' (5.1) autoencoder encoder')
         vae_encoder = vae.encoder
         vae_encoder_quantize = vae.quant_conv
         vae_encoder.requires_grad_(False)
@@ -146,7 +131,7 @@ class NetworkTrainer:
         vae_encoder_quantize.eval()
         vae_encoder.to(dtype=weight_dtype)
         vae_encoder_quantize.to(dtype=weight_dtype)
-
+        print(f' (5.2) autoencoder decoder')
         vae_decoder = vae.decoder
         vae_decoder_quantize = vae.post_quant_conv
         vae_decoder.requires_grad_(False)
@@ -155,34 +140,27 @@ class NetworkTrainer:
         vae_decoder_quantize.eval()
         vae_decoder.to(dtype=weight_dtype)
         vae_decoder_quantize.to(dtype=weight_dtype)
-
-
+        print(f' (5.3) teacher')
         teacher_encoder = Encoder_Teacher(vae_encoder, vae_encoder_quantize)
         teacher_decoder = Decoder_Teacher(vae_decoder, vae_decoder_quantize)
-
+        print(f' (5.2.1) student encoder')
         config_dict = vae.config
-        from diffusers import AutoencoderKL
         student_vae = AutoencoderKL.from_config(config_dict)
         student_vae_encoder = student_vae.encoder
         student_vae_encoder_quantize = student_vae.quant_conv
         student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
         student_vae_decoder = student_vae.decoder
-        student_vae_decoder_quantize = student_vae.post_quant_conv
-        student_decoder = Decoder_Student(student_vae_decoder, student_vae_decoder_quantize)
-
         teacher_encoder.requires_grad_(False)
         teacher_encoder.eval()
         teacher_encoder.to(dtype=weight_dtype)
         teacher_encoder.to(accelerator.device)
-
+        print(f' (5.2.2) student decoder')
+        student_vae_decoder_quantize = student_vae.post_quant_conv
+        student_decoder = Decoder_Student(student_vae_decoder, student_vae_decoder_quantize)
         teacher_decoder.requires_grad_(False)
         teacher_decoder.eval()
         teacher_decoder.to(dtype=weight_dtype)
         teacher_decoder.to(accelerator.device)
-
-        #unet.requires_grad_(False)
-        #unet.to(dtype=weight_dtype)
-        #for t_enc in text_encoders: t_enc.requires_grad_(False)
 
         print(f' step 6. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
@@ -203,17 +181,12 @@ class NetworkTrainer:
             train_util.patch_accelerator_for_fp16_training(accelerator)
 
         print(f'\n step 8. resume')
-        train_util.resume_from_local_or_hf_if_specified(accelerator, args)
-
-
         if args.resume_vae_training :
             vae_pretrained_dir = args.vae_pretrained_dir
-            discriminator_pretrained_dir = args.discriminator_pretrained_dir
             vae.load_state_dict(torch.load(vae_pretrained_dir))
 
-
-        student_encoder, student_decoder, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student_encoder, student_decoder, optimizer, train_dataloader, lr_scheduler,)
-
+        student_encoder, student_decoder, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student_encoder, student_decoder,
+                                                                                                         optimizer, train_dataloader, lr_scheduler,)
         # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
         student_encoder.requires_grad_(True)
         student_encoder.train()
@@ -236,12 +209,7 @@ class NetworkTrainer:
         # TODO: find a way to handle total batch size when there are multiple datasets
         total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
         accelerator.print("running training / 学習開始")
-        # accelerator.print(f"  num train images * repeats / 学習画像の数×繰り返し回数: {train_dataset_group.num_train_images}")
-        # accelerator.print(f"  num reg images / 正則化画像の数: {train_dataset_group.num_reg_images}")
-        accelerator.print(f"  num batches per epoch / 1epochのバッチ数: {len(train_dataloader)}")
         accelerator.print(f"  num epochs / epoch数: {num_train_epochs}")
-        # accelerator.print(f"  batch size per device / バッチサイズ: {', '.join([str(d.batch_size) for d in train_dataset_group.datasets])}")
-        # accelerator.print(f"  total train batch size (with parallel & distributed & accumulation) / 総バッチサイズ（並列学習、勾配合計含む）: {total_batch_size}")
         accelerator.print(f"  gradient accumulation steps / 勾配を合計するステップ数 = {args.gradient_accumulation_steps}")
         accelerator.print(f"  total optimization steps / 学習ステップ数: {args.max_train_steps}")
         training_started_at = time.time()
