@@ -183,6 +183,7 @@ class NetworkTrainer:
             student_encoder.load_state_dict(torch.load(vae_pretrained_dir))
             student_decoder.load_state_dict(torch.load(vae_pretrained_dir))
 
+        print(f'\n step 9. accelerate prepare')
         student_encoder, student_decoder, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student_encoder, student_decoder,
                                                                                                          optimizer, train_dataloader, lr_scheduler,)
         # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
@@ -194,7 +195,8 @@ class NetworkTrainer:
         student_decoder.train()
         student_decoder.to(dtype=vae_dtype)
 
-        # epoch数を計算する
+
+        print(f'\n step 10. epoch check')
         num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
         num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
         if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
