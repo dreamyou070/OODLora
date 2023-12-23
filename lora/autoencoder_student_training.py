@@ -121,61 +121,58 @@ class NetworkTrainer:
         from diffusers import AutoencoderKL
         vae = AutoencoderKL(**vae_config)
         info = vae.load_state_dict(converted_vae_checkpoint)
+        vae.to(dtype=weight_dtype)
 
         print(f' (5.1) autoencoder encoder')
+        print(f' (5.1.1) teacher model')
         vae_encoder = vae.encoder
-        vae_encoder_quantize = vae.quant_conv
         vae_encoder.requires_grad_(False)
-        vae_encoder_quantize.requires_grad_(False)
         vae_encoder.eval()
+
+        vae_encoder_quantize = vae.quant_conv
+        vae_encoder_quantize.requires_grad_(False)
         vae_encoder_quantize.eval()
-        vae_encoder.to(dtype=weight_dtype)
-        vae_encoder_quantize.to(dtype=weight_dtype)
-        print(f' (5.2) autoencoder decoder')
+
         vae_decoder = vae.decoder
-        vae_decoder_quantize = vae.post_quant_conv
         vae_decoder.requires_grad_(False)
-        vae_decoder_quantize.requires_grad_(False)
         vae_decoder.eval()
+
+        vae_decoder_quantize = vae.post_quant_conv
+        vae_decoder_quantize.requires_grad_(False)
         vae_decoder_quantize.eval()
-        vae_decoder.to(dtype=weight_dtype)
-        vae_decoder_quantize.to(dtype=weight_dtype)
-        print(f' (5.3) teacher')
+
         teacher_encoder = Encoder_Teacher(vae_encoder, vae_encoder_quantize)
         teacher_decoder = Decoder_Teacher(vae_decoder, vae_decoder_quantize)
-        print(f' (5.2.1) student encoder')
+
+        print(f' (5.1.2) student encoder')
         config_dict = vae.config
         student_vae = AutoencoderKL.from_config(config_dict)
+
         student_vae_encoder = student_vae.encoder
         student_vae_encoder_quantize = student_vae.quant_conv
-        student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
+
         student_vae_decoder = student_vae.decoder
-        teacher_encoder.requires_grad_(False)
-        teacher_encoder.eval()
-        teacher_encoder.to(dtype=weight_dtype)
-        teacher_encoder.to(accelerator.device)
-        print(f' (5.2.2) student decoder')
         student_vae_decoder_quantize = student_vae.post_quant_conv
+
+        student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
         student_decoder = Decoder_Student(student_vae_decoder, student_vae_decoder_quantize)
-        teacher_decoder.requires_grad_(False)
-        teacher_decoder.eval()
-        teacher_decoder.to(dtype=weight_dtype)
-        teacher_decoder.to(accelerator.device)
 
         print(f' step 6. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
-        train_dataloader = torch.utils.data.DataLoader(train_dataset_group, batch_size=args.train_batch_size, shuffle=True,
-                                                       collate_fn=collater, num_workers=n_workers,
+        train_dataloader = torch.utils.data.DataLoader(train_dataset_group,
+                                                       batch_size=args.train_batch_size,
+                                                       shuffle=True,
+                                                       collate_fn=collater,
+                                                       num_workers=n_workers,
                                                        persistent_workers=args.persistent_data_loader_workers, )
         if args.max_train_epochs is not None:
             args.max_train_steps = args.max_train_epochs * math.ceil(len(train_dataloader) / accelerator.num_processes / args.gradient_accumulation_steps)
             accelerator.print( f"override steps. steps for {args.max_train_epochs} epochs is / 指定エポックまでのステップ数: {args.max_train_steps}")
 
         print(f'\n step 7. optimizer and lr')
-        optimizer = torch.optim.AdamW([{'params' : student_encoder.parameters(),'lr' :1e-4 },
-                                       {'params': student_decoder.parameters(), 'lr': 1e-4}],)
+        optimizer = torch.optim.AdamW([{'params' : student_encoder.parameters(), 'lr' :1e-4 },
+                                       {'params' : student_decoder.parameters(), 'lr': 1e-4}],)
         lr_scheduler = train_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
-
 
         if args.full_fp16:
             train_util.patch_accelerator_for_fp16_training(accelerator)
@@ -183,7 +180,8 @@ class NetworkTrainer:
         print(f'\n step 8. resume')
         if args.resume_vae_training :
             vae_pretrained_dir = args.vae_pretrained_dir
-            vae.load_state_dict(torch.load(vae_pretrained_dir))
+            student_encoder.load_state_dict(torch.load(vae_pretrained_dir))
+            student_decoder.load_state_dict(torch.load(vae_pretrained_dir))
 
         student_encoder, student_decoder, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student_encoder, student_decoder,
                                                                                                          optimizer, train_dataloader, lr_scheduler,)
@@ -202,9 +200,6 @@ class NetworkTrainer:
         if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
             args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
 
-        vae_encoder.to(accelerator.device, dtype=vae_dtype)
-        vae_encoder_quantize.to(accelerator.device, dtype=vae_dtype)
-
         # 学習する
         # TODO: find a way to handle total batch size when there are multiple datasets
         total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
@@ -212,59 +207,8 @@ class NetworkTrainer:
         accelerator.print(f"  num epochs / epoch数: {num_train_epochs}")
         accelerator.print(f"  gradient accumulation steps / 勾配を合計するステップ数 = {args.gradient_accumulation_steps}")
         accelerator.print(f"  total optimization steps / 学習ステップ数: {args.max_train_steps}")
-        training_started_at = time.time()
         # TODO refactor metadata creation and move to util
-        metadata = {
-            "ss_session_id": session_id,  # random integer indicating which group of epochs the model came from
-            "ss_training_started_at": training_started_at,  # unix timestamp
-            "ss_output_name": args.output_name,
-            "ss_learning_rate": args.learning_rate,
-            "ss_text_encoder_lr": args.text_encoder_lr,
-            "ss_unet_lr": args.unet_lr,
-            # "ss_num_train_images": train_dataset_group.num_train_images,
-            # "ss_num_reg_images": train_dataset_group.num_reg_images,
-            "ss_num_batches_per_epoch": len(train_dataloader),
-            "ss_num_epochs": num_train_epochs,
-            "ss_gradient_checkpointing": args.gradient_checkpointing,
-            "ss_gradient_accumulation_steps": args.gradient_accumulation_steps,
-            "ss_max_train_steps": args.max_train_steps,
-            "ss_lr_warmup_steps": args.lr_warmup_steps,
-            "ss_lr_scheduler": args.lr_scheduler,
-            "ss_network_module": args.network_module,
-            "ss_network_dim": args.network_dim,
-            # None means default because another network than LoRA may have another default dim
-            "ss_network_alpha": args.network_alpha,  # some networks may not have alpha
-            "ss_network_dropout": args.network_dropout,  # some networks may not have dropout
-            "ss_mixed_precision": args.mixed_precision,
-            "ss_full_fp16": bool(args.full_fp16),
-            "ss_v2": bool(args.v2),
-            "ss_base_model_version": model_version,
-            "ss_clip_skip": args.clip_skip,
-            "ss_max_token_length": args.max_token_length,
-            "ss_cache_latents": bool(args.cache_latents),
-            "ss_seed": args.seed,
-            "ss_lowram": args.lowram,
-            "ss_noise_offset": args.noise_offset,
-            "ss_multires_noise_iterations": args.multires_noise_iterations,
-            "ss_multires_noise_discount": args.multires_noise_discount,
-            "ss_adaptive_noise_scale": args.adaptive_noise_scale,
-            "ss_zero_terminal_snr": args.zero_terminal_snr,
-            "ss_training_comment": args.training_comment,  # will not be updated after training
-            "ss_sd_scripts_commit_hash": train_util.get_git_revision_hash(),
-           # "ss_optimizer": optimizer_name + (f"({optimizer_args})" if len(optimizer_args) > 0 else ""),
-            "ss_max_grad_norm": args.max_grad_norm,
-            "ss_caption_dropout_rate": args.caption_dropout_rate,
-            "ss_caption_dropout_every_n_epochs": args.caption_dropout_every_n_epochs,
-            "ss_caption_tag_dropout_rate": args.caption_tag_dropout_rate,
-            "ss_face_crop_aug_range": args.face_crop_aug_range,
-            "ss_prior_loss_weight": args.prior_loss_weight,
-            "ss_min_snr_gamma": args.min_snr_gamma,
-            "ss_scale_weight_norms": args.scale_weight_norms,
-            "ss_ip_noise_gamma": args.ip_noise_gamma,
-        }
-
         metadata = {}
-
         # model name and hash
         if args.pretrained_model_name_or_path is not None:
             sd_model_name = args.pretrained_model_name_or_path
@@ -289,10 +233,8 @@ class NetworkTrainer:
         progress_bar = tqdm(range(args.max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process,
                             desc="steps")
         global_step = 0
-        noise_scheduler = DDPMScheduler(
-            beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", num_train_timesteps=1000,
-            clip_sample=False
-        )
+        noise_scheduler = DDPMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", num_train_timesteps=1000,
+                                        clip_sample=False)
         prepare_scheduler_for_custom_training(noise_scheduler, accelerator.device)
         if args.zero_terminal_snr:
             custom_train_functions.fix_noise_scheduler_betas_for_zero_terminal_snr(noise_scheduler)
@@ -305,7 +247,6 @@ class NetworkTrainer:
 
         del train_dataset_group
         # training loop
-        autoencoder_warm_up_n_epochs = args.autoencoder_warm_up_n_epochs
         for epoch in range(num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
@@ -326,8 +267,7 @@ class NetworkTrainer:
                 log_loss['loss/student_encoder'] = loss.item()
 
                 with torch.no_grad():
-                    y_sample = DiagonalGaussianDistribution(y).sample()
-                    y_dec = teacher_decoder(y_sample)
+                    y_dec = teacher_decoder(DiagonalGaussianDistribution(y).sample())
                 y_hat_dec = student_decoder(DiagonalGaussianDistribution(y_hat).sample())
                 loss_dec = torch.nn.functional.mse_loss(y_dec, y_hat_dec, reduction='none')
                 loss_dec = loss_dec.mean([1, 2, 3])
@@ -380,8 +320,6 @@ class NetworkTrainer:
                     torch.save(student_decoder.state_dict(),
                                os.path.join(save_directory, f'decoder_student_epoch_{trg_epoch}.pth'))
 
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
@@ -389,14 +327,12 @@ if __name__ == "__main__":
     # parser.add_argument("--wandb_init_name", type=str)
     parser.add_argument("--wandb_log_template_path", type=str)
     parser.add_argument("--wandb_key", type=str)
-
     # step 2. dataset
     train_util.add_dataset_arguments(parser, True, True, True)
     parser.add_argument("--mask_dir", type=str, default='')
     parser.add_argument("--class_caption", type=str, default='')
     parser.add_argument("--no_metadata", action="store_true",
                         help="do not save metadata in output model / メタデータを出力先モデルに保存しない")
-
     # step 3. model
     train_util.add_sd_models_arguments(parser)
     parser.add_argument("--network_weights", type=str, default=None,
@@ -411,7 +347,6 @@ if __name__ == "__main__":
                         help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
-
     # step 4. training
     train_util.add_training_arguments(parser, True)
     custom_train_functions.add_custom_train_arguments(parser)
@@ -420,9 +355,7 @@ if __name__ == "__main__":
                         help="learning rate for Text Encoder / Text Encoderの学習率")
     # step 5. optimizer
     train_util.add_optimizer_arguments(parser)
-
     config_util.add_config_arguments(parser)
-
     parser.add_argument("--save_model_as", type=str, default="safetensors",
                         choices=[None, "ckpt", "pt", "safetensors"],
                         help="format to save the model (default is .safetensors) / モデル保存時の形式（デフォルトはsafetensors）", )
