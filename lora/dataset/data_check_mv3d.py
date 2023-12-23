@@ -10,9 +10,9 @@ def main(args):
     print(f'\n step 1. make model')
     device = args.device
 
-    pipe = AutoPipelineForInpainting.from_pretrained("diffusers/stable-diffusion-xl-1.0-inpainting-0.1",#torch_dtype=torch.float16,
+    pipe = AutoPipelineForInpainting.from_pretrained("diffusers/stable-diffusion-xl-1.0-inpainting-0.1",torch_dtype=torch.float16,
                                                      cache_dir=r'../../../../pretrained_stable_diffusion').to(device)
-    pipe.enable_model_cpu_offload()
+    #pipe.enable_model_cpu_offload()
     #pipe.enable_xformers_memory_efficient_attention()
 
 
