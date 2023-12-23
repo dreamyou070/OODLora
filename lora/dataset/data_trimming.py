@@ -12,67 +12,70 @@ def main(args):
 
 
     print(f'\n step 2. dataset')
-    base_folder = 'C:/Users/hpuser/Desktop/수연/[연구2]/MVTec3D-AD_Experiment_SDXL'
+    base_folder = '../../../../MyData/anomaly_detection/MVTec3D-AD'
+
     data_folder = args.data_folder
     classes = os.listdir(data_folder)
 
     for cls in classes:
-        if cls != 'cable_gland' :
-            test_mask_folder = os.path.join(data_folder, cls, 'data/test_mask')
-            org_folder = os.path.join(data_folder, cls, 'data/test/bad')
-            base_folder_dir = os.path.join(base_folder, cls)
-            inpainted_folder = os.path.join(base_folder_dir, 'corrected')
-            new_folder = os.path.join(base_folder_dir, 'corrected_new')
-            os.makedirs(new_folder, exist_ok=True)
 
-            sub_classes = os.listdir(org_folder)
-            for sub_cls in sub_classes:
-                repeat_num, sub = sub_cls.split('_')
-                if sub != 'good' :
+        if cls == 'cable_gland' :
 
-                    sub_org_folder = os.path.join(org_folder, sub_cls)
-                    sub_inpainted_folder = os.path.join(inpainted_folder, sub)
-                    new_sub_folder = os.path.join(new_folder, sub_cls)
-                    os.makedirs(new_sub_folder, exist_ok=True)
-                    images = os.listdir(sub_org_folder)
+            cls_folder = os.path.join(data_folder, cls)
+            train_folder = os.path.join(cls_folder, 'train')
+            bad_folder = os.path.join(train_folder, 'bad')
+            corrected_folder = os.path.join(train_folder, 'corrected')
+            masked_folder = os.path.join(train_folder, 'gt')
+            os.makedirs(corrected_folder, exist_ok=True)
+            cats = os.listdir(corrected_folder)
+            for cat in cats:
+                if 'good' not in cat :
+                    cat_folder = os.path.join(bad_folder, cat)
+                    inpainted_folder = os.path.join(corrected_folder, cat)
+                    os.makedirs(inpainted_folder, exist_ok=True)
+                    images = os.listdir(cat_folder)
                     for image in images:
                         name, ext = image.split('.')
-                        org_image_path = os.path.join(sub_org_folder, image)
-                        org_pil = Image.open(org_image_path)
-                        org_pil = org_pil.resize((512, 512))
-                        org_pil.save(os.path.join(new_sub_folder, image))
-                        np_org = np.array(org_pil)
-
-                        inpainted_image_path = os.path.join(sub_inpainted_folder, image)
-                        inpainted_pil = Image.open(inpainted_image_path).resize((512, 512))
-                        inpainted_pil.save(os.path.join(new_sub_folder, f'{name}_inpainted.{ext}'))
-                        np_inpainted = np.array(inpainted_pil)
-
-                        mask_image_path = os.path.join(test_mask_folder, sub, image)
-                        mask_pil = Image.open(mask_image_path).convert('RGB')
-                        mask_pil = mask_pil.resize((512, 512))
-                        mask_pil.save(os.path.join(new_sub_folder, f'{name}_mask.{ext}'))
-
-
-                        #np_mask = np.array(mask_pil)
-                        #np_mask = np.where(np_mask < 100, 0, 1) # black = 0 = background, white = 1
-
-                        #print(f'np_org : {np_org.shape}')
-                        #print(f'np_inpainted : {np_inpainted.shape}')
-                        #print(f'np_mask : {np_mask.shape}')
-
-                        #new_np = np_org * (1-np_mask) + np_inpainted * (np_mask)
-                        #new_pil = Image.fromarray(new_np.astype(np.uint8))
-                        #new_pil.save(os.path.join(new_sub_folder, f'{name}_new.{ext}'))
+                        if 'inpainted' in name:
+                            img_dir = os.path.join(cat_folder, image)
+                            number = name.split('_')[0]
+                            new_img_dir = os.path.join(inpainted_folder,f'{number}.{ext}')
+                            os.rename(img_dir, new_img_dir)
+                        if 'mask' in name:
+                            img_dir = os.path.join(cat_folder, image)
+                            number = name.split('_')[0]
+                            new_img_dir = os.path.join(masked_folder,f'{number}.{ext}')
+                            os.rename(img_dir, new_img_dir)
                 else :
-                    sub_org_folder = os.path.join(org_folder, sub_cls)
-                    new_sub_folder = os.path.join(new_folder, sub_cls)
-                    shutil.copytree(sub_org_folder, new_sub_folder)
+                    cat_folder = os.path.join(bad_folder, cat)
+                    new_cat_folder = os.path.join(corrected_folder, cat)
+                    shutil.copytree(cat_folder, new_cat_folder)
+
+            test_folder = os.path.join(cls_folder, 'test')
+            rgb_folder = os.path.join(test_folder, 'rgb')
+            gt_dir = os.path.join(test_folder, 'gt')
+            os.makedirs(gt_dir, exist_ok=True)
+            cats = os.listdir(rgb_folder)
+            for cat in cats:
+                cat_dir = os.path.join(test_folder, cat)
+                images = os.listdir(cat_dir)
+                for image in images:
+                    img_dir = os.path.join(cat_dir, image)
+                    if 'inpainted' in image:
+                        os.remove(img_dir)
+                    elif 'mask' in image:
+                        gt_cat_dir = os.path.join(gt_dir, cat)
+                        os.makedirs(gt_cat_dir, exist_ok=True)
+                        number, ext = image.split('.')
+                        number = number.split('_')[0]
+                        new_img_dir = os.path.join(gt_cat_dir, f'{number}.{ext}')
+                        os.rename(img_dir, new_img_dir)
+
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     #parser.add_argument('--device', type=str, default='cuda')
-    parser.add_argument('--data_folder', type=str, default='C:/Users/hpuser/Desktop/수연/[연구2]/MVTec3D-AD_Experiment')
+    parser.add_argument('--data_folder', type=str, default='../../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL')
     args = parser.parse_args()
     main(args)
