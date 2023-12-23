@@ -251,7 +251,7 @@ class NetworkTrainer:
         del train_dataset_group
         # training loop
         for epoch in range(num_train_epochs):
-            """
+
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
@@ -323,21 +323,20 @@ class NetworkTrainer:
                     os.makedirs(save_directory, exist_ok=True)
                     torch.save(student_decoder.state_dict(),
                                os.path.join(save_directory, f'decoder_student_epoch_{trg_epoch}.pth'))
-            """
+
             # inference
-            for step, batch in enumerate(train_dataloader):
-                with torch.no_grad():
-                    if is_main_process :
-                        img = batch['images'].to(dtype=weight_dtype)
-                        recon = student_decoder(DiagonalGaussianDistribution(student_encoder(img)).sample())
-                        batch = recon.shape[0]
-                        if batch != 1 :
-                            recon = recon[0]
-                            recon = recon.unsqueeze(0)
-                        recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                        import numpy as np
-                        image = (recon_img * 255).astype(np.uint8)
-                        wandb.log({"recon": [wandb.Image(image, caption="recon")]})
+            with torch.no_grad():
+                if is_main_process :
+                    img = batch['images'].to(dtype=weight_dtype)
+                    recon = student_decoder(DiagonalGaussianDistribution(student_encoder(img)).sample())
+                    batch = recon.shape[0]
+                    if batch != 1 :
+                        recon = recon[0]
+                        recon = recon.unsqueeze(0)
+                    recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                    import numpy as np
+                    image = (recon_img * 255).astype(np.uint8)
+                    wandb.log({"recon": [wandb.Image(image, caption="recon")]})
 
 
 
