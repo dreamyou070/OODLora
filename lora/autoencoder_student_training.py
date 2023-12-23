@@ -330,7 +330,10 @@ class NetworkTrainer:
                     if is_main_process :
                         img = batch['images'].to(dtype=weight_dtype)
                         recon = student_decoder(DiagonalGaussianDistribution(student_encoder(img)).sample())
-                        recon_img = recon[0]
+                        batch = recon.shape[0]
+                        if batch != 1 :
+                            recon = recon[0]
+                            recon = recon.unsqueeze(0)
                         recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                         import numpy as np
                         image = (recon_img * 255).astype(np.uint8)
