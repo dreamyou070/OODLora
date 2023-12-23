@@ -124,8 +124,6 @@ class NetworkTrainer:
         vae_config = create_vae_diffusers_config()
         _, state_dict = load_checkpoint_with_text_encoder_conversion(name_or_path,
                                                                      device='cpu')
-        state_dict = torch.load(args.vae_checkpoint,
-                                map_location="cpu")
         converted_vae_checkpoint = convert_ldm_vae_checkpoint(state_dict, vae_config)
 
         vae = AutoencoderKL(**vae_config)#.to(device)
