@@ -24,13 +24,13 @@ ml purge
 ml load cuda/11.0
 
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 52089 lora_mytraining.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 51489 lora_mytraining.py \
   --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 \
   --log_with wandb --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
-  --wandb_init_name potato_training \
+  --wandb_init_name cookie_training \
   --wandb_run_name 1_lora_trining_using_noise_diff \
   --seed 42 \
-  --output_dir ../result/MVTec3D-AD_experiment/potato/unet_training/1_lora_trining_using_noise_diff \
+  --output_dir ../result/MVTec3D-AD_experiment/cookie/unet_training/1_lora_trining_using_noise_diff \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 --train_batch_size 2 \
@@ -41,6 +41,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/object/inference.txt \
   --max_train_steps 48000 \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato/train/bad \
+  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/cookie/train/bad \
   --class_caption 'good' \
   --contrastive_eps 0.0

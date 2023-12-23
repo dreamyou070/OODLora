@@ -10,7 +10,7 @@ from utils.image_utils import load_image, IMAGE_TRANSFORMS
 import numpy as np
 from PIL import Image
 from diffusers import AutoencoderKL
-from STTraining import Encoder_Teacher, Encoder_Student
+from STTraining import Encoder_Teacher, Encoder_Student, Decoder_Student
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -59,25 +59,50 @@ def main(args):
     student_vae = AutoencoderKL.from_config(config_dict)
     student_vae_encoder = student_vae.encoder
     student_vae_encoder_quantize = student_vae.quant_conv
-    student = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
+    student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
 
+
+    #
+    student_vae_decoder = student_vae.decoder
+    student_vae_decoder_quantize = student_vae.post_quant_conv
+    student_decoder = Decoder_Student(student_vae_decoder, student_vae_decoder_quantize)
 
     print(f' (4) making decoder of vae')
-    student_pretrained_dir = args.student_pretrained_dir
-    model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
-    state_dict = {}
-    for k, v in model_state_dict.items():
-        k_ = '.'.join(k.split('.')[1:])
-        state_dict[k_] = v
-    student.load_state_dict(state_dict, strict=True)
-    student.requires_grad_(False)
-    student.eval()
-    student.to(accelerator.device, dtype=vae_dtype)
+    def get_state_dict(dir) :
+        model_state_dict = torch.load(dir, map_location="cpu")
+        state_dict = {}
+        for k, v in model_state_dict.items():
+            k_ = '.'.join(k.split('.')[1:])
+            state_dict[k_] = v
+        return state_dict
 
-    student_epoch = os.path.split(student_pretrained_dir)[-1]
-    student_epoch = os.path.splitext(student_epoch)[0]
-    student_epoch = int(student_epoch.split('_')[-1])
-    print(f'student_epoch: {student_epoch}')
+    if args.student_encoder_pretrained_dir is not None:
+        encoder_state_dict = get_state_dict(args.student_encoder_pretrained_dir)
+        student_encoder.load_state_dict(encoder_state_dict, strict=True)
+        if args.student_decoder_pretrained_dir is not None:
+            decoder_state_dict = get_state_dict(args.student_decoder_pretrained_dir)
+            student_decoder.load_state_dict(decoder_state_dict, strict=True)
+        else :
+            student_decoder = Decoder_Student(student_vae_decoder, student_vae_decoder_quantize)
+    else :
+        student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
+        if args.student_decoder_pretrained_dir is not None:
+            decoder_state_dict = get_state_dict(args.student_decoder_pretrained_dir)
+            student_decoder.load_state_dict(decoder_state_dict, strict=True)
+        else :
+            student_decoder = Decoder_Student(student_vae_decoder, student_vae_decoder_quantize)
+
+    student_encoder.requires_grad_(False)
+    student_encoder.eval()
+    student_encoder.to(accelerator.device, dtype=vae_dtype)
+    student_decoder.requires_grad_(False)
+    student_decoder.eval()
+    student_decoder.to(accelerator.device, dtype=vae_dtype)
+
+    #student_epoch = os.path.split(student_pretrained_dir)[-1]
+    #student_epoch = os.path.splitext(student_epoch)[0]
+    #student_epoch = int(student_epoch.split('_')[-1])
+    #print(f'student_epoch: {student_epoch}')
 
     def recon(mask_dir, sample_data_dir, mask_save_dir, save_dir, compare_save_dir):
         pil_img = Image.open(sample_data_dir)
@@ -97,9 +122,9 @@ def main(args):
         with torch.no_grad():
             img = img.to(accelerator.device)
             # (1) encoder make latent
-            latent = DiagonalGaussianDistribution(student(img)).sample()
+            latent = DiagonalGaussianDistribution(student_encoder(img)).sample()
             # (2) decoder
-            recon_img = vae.decode(latent)['sample']
+            recon_img = student_decoder(latent)#['sample']
             recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
             image = (recon_img * 255).astype(np.uint8)
             image = Image.fromarray(image)
@@ -109,9 +134,8 @@ def main(args):
 
     print(' (3.1) anormal test')
     if args.training_data_check :
-        save_dir = os.path.join(args.output_dir, 'inference/vae_result_check/training_dataset')
-        os.makedirs(save_dir, exist_ok=True)
-        save_base_dir = os.path.join(save_dir, f'student_epoch_{student_epoch}')
+
+        save_base_dir = os.path.join(args.output_dir, 'inference/vae_result_check/training_dataset')
         os.makedirs(save_base_dir, exist_ok=True)
 
         anormal_folder = os.path.join(args.anormal_folder, 'train/bad')
@@ -148,9 +172,7 @@ def main(args):
 
     else :
 
-        save_dir = os.path.join(args.output_dir, 'inference/vae_result_check/test_dataset')
-        os.makedirs(save_dir, exist_ok=True)
-        save_base_dir = os.path.join(save_dir, f'student_epoch_{student_epoch}')
+        save_base_dir = os.path.join(args.output_dir, 'inference/vae_result_check/test_dataset')
         os.makedirs(save_base_dir, exist_ok=True)
 
         anormal_folder = os.path.join(args.anormal_folder, 'test/rgb')
@@ -211,8 +233,8 @@ if __name__ == "__main__":
     parser.add_argument("--anormal_folder", type=str,)
     parser.add_argument("--normal_sample_data_dir", type=str,
                         default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png')
-    parser.add_argument("--student_pretrained_dir", type=str,
-                        default='../result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000005/pytorch_model.bin')
+    parser.add_argument("--student_encoder_pretrained_dir", type=str,)
+    parser.add_argument("--student_decoder_pretrained_dir", type=str, )
     parser.add_argument("--training_data_check", action="store_true",)
     args = parser.parse_args()
     main(args)

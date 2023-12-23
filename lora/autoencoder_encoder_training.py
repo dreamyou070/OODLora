@@ -316,18 +316,21 @@ class NetworkTrainer:
             for step, batch in enumerate(train_dataloader):
                 log_loss = {}
                 # generator training
-                optimizer.zero_grad(set_to_none=True)
-                with torch.no_grad():
-                    org_img = batch['images'].to(dtype=weight_dtype)
-                    masked_img = batch['mask_imgs'].to(dtype=weight_dtype)
-                    y = teacher(masked_img)
-                y_hat = student(org_img)
-                loss = torch.nn.functional.mse_loss(y, y_hat, reduction='none')
-                loss = loss.mean([1, 2, 3])
-                loss = loss.mean()
-                log_loss['loss/student_encoder'] = loss.item()
 
-                if args.student_reconst_loss :
+                if args.anormal_training :
+                    optimizer.zero_grad(set_to_none=True)
+                    with torch.no_grad():
+                        org_img = batch['images'].to(dtype=weight_dtype)
+                        masked_img = batch['mask_imgs'].to(dtype=weight_dtype)
+                        y = teacher(masked_img)
+                    y_hat = student(org_img)
+                    loss = torch.nn.functional.mse_loss(y, y_hat, reduction='none')
+                    loss = loss.mean([1, 2, 3])
+                    loss = loss.mean()
+                    log_loss['loss/student_encoder'] = loss.item()
+
+                if args.only_normal_training :
+                #if args.student_reconst_loss :
                     batch_size = org_img.shape[0]
                     normal_indexs = []
                     for i in range(batch_size):
@@ -335,8 +338,18 @@ class NetworkTrainer:
                         mask = masked_img[i]
                         if torch.equal(org, mask):
                             normal_indexs.append(i)
+
                     if len(normal_indexs) > 0:
                         normal_org = org_img[normal_indexs]
+                        with torch.no_grad():
+                            y = teacher(normal_org)
+                        y_hat = student(normal_org)
+                        loss = torch.nn.functional.mse_loss(y, y_hat, reduction='none')
+                        loss = loss.mean([1, 2, 3])
+                        loss = loss.mean()
+                        log_loss['loss/student_encoder_normal'] = loss.item()
+
+                        """
                         latent = DiagonalGaussianDistribution(y_hat[normal_indexs]).sample()
                         normal_recon = vae_decoder(vae_decoder_quantize(latent))
                         recon_loss = torch.nn.functional.mse_loss(normal_org, normal_recon, reduction='none')
@@ -344,7 +357,7 @@ class NetworkTrainer:
                         recon_loss = recon_loss.mean()
                         log_loss['loss/recon'] = recon_loss.mean().item()
                         loss = loss + recon_loss
-
+                        """
                 # ------------------------------------------------------------------------------------
                 accelerator.backward(loss)
                 optimizer.step()
