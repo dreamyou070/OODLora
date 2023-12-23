@@ -325,15 +325,16 @@ class NetworkTrainer:
                                os.path.join(save_directory, f'decoder_student_epoch_{trg_epoch}.pth'))
             """
             # inference
-            with torch.no_grad():
-                if is_main_process :
-                    org_img = batch['images'].to(dtype=weight_dtype)
-                    recon = student_decoder(DiagonalGaussianDistribution(student_encoder(masked_img)).sample())
-                    recon_img = recon[0]
-                    recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                    import numpy as np
-                    image = (recon_img * 255).astype(np.uint8)
-                    wandb.log({"recon": [wandb.Image(image, caption="recon")]})
+            for step, batch in enumerate(train_dataloader):
+                with torch.no_grad():
+                    if is_main_process :
+                        img = batch['images'].to(dtype=weight_dtype)
+                        recon = student_decoder(DiagonalGaussianDistribution(student_encoder(img)).sample())
+                        recon_img = recon[0]
+                        recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        import numpy as np
+                        image = (recon_img * 255).astype(np.uint8)
+                        wandb.log({"recon": [wandb.Image(image, caption="recon")]})
 
 
 
