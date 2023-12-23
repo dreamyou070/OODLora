@@ -53,7 +53,7 @@ def main(args):
                     print(f'np_mask : {np_mask.shape}')
 
                     new_np = np_org * (1-np_mask) + np_inpainted * (np_mask)
-                    new_pil = Image.fromarray(new_np)
+                    new_pil = Image.fromarray(new_np.astype(np.uint8))
                     new_pil.save(os.path.join(new_sub_folder, image))
 
 
