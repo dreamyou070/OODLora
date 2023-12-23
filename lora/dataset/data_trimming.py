@@ -31,6 +31,7 @@ def main(args):
                 sub_org_folder = os.path.join(org_folder, sub_cls)
                 sub_inpainted_folder = os.path.join(inpainted_folder, sub_cls)
                 new_sub_folder = os.path.join(new_folder, sub_cls)
+                os.makedirs(new_sub_folder, exist_ok=True)
                 images = os.listdir(sub_org_folder)
                 for image in images:
                     org_image_path = os.path.join(sub_org_folder, image)
@@ -48,13 +49,14 @@ def main(args):
                     np_mask = np.array(mask_pil)
                     np_mask = np.where(np_mask < 50, 0, 1) # black = 0 = background, white = 1
 
-                    print(f'np_org : {np_org.shape}')
-                    print(f'np_inpainted : {np_inpainted.shape}')
-                    print(f'np_mask : {np_mask.shape}')
+                    #print(f'np_org : {np_org.shape}')
+                    #print(f'np_inpainted : {np_inpainted.shape}')
+                    #print(f'np_mask : {np_mask.shape}')
 
                     new_np = np_org * (1-np_mask) + np_inpainted * (np_mask)
                     new_pil = Image.fromarray(new_np.astype(np.uint8))
-                    new_pil.save(os.path.join(new_sub_folder, image))
+                    new_dir = os.path.join(new_sub_folder, image)
+                    new_pil.save(new_dir)
 
 
 
