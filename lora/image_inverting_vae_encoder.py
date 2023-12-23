@@ -392,8 +392,8 @@ def main(args) :
                 print(f' (2.3.1) inversion')
                 save_base_dir = os.path.join(class_base_folder, concept_name)
                 os.makedirs(save_base_dir, exist_ok=True)
-                image_gt_np = load_image(train_img_dir, trg_h = int(trg_h), trg_w =int(trg_w))
 
+                image_gt_np = load_image(train_img_dir, trg_h = int(trg_h), trg_w =int(trg_w))
                 with torch.no_grad():
                     org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
                     st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
@@ -401,7 +401,12 @@ def main(args) :
                 mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
                 mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
                 mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
+                mask_np_img = latent2image(mse_threshold, vae, return_type='np')
+                pil_img = Image.fromarray(mask_np_img)
+                pil_img.save(os.path.join(save_base_dir, f'vae_mask_{test_img}'))
 
+
+                """
                 inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
                 flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
                 #original_latent = latent.clone().detach()
@@ -463,6 +468,7 @@ def main(args) :
                                                                  vae=vae,
                                                                  base_folder_dir=timewise_save_base_folder,
                                                                  mask=mask)
+                """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
