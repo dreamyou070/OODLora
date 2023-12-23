@@ -405,7 +405,7 @@ def main(args) :
                 mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
 
 
-                new_latent = org_vae_latent * (1-mse_threshold) + st_latent (mse_threshold)
+                new_latent = org_vae_latent * (1-mse_threshold) + st_latent * mse_threshold
                 mask_np_img = latent2image(new_latent, vae, return_type='np')
                 pil_img = Image.fromarray(mask_np_img)
                 pil_img.save(os.path.join(save_base_dir, f'vae_masked_{test_img}'))
