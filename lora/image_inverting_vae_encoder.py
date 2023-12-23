@@ -370,7 +370,6 @@ def main(args) :
     print(f' (3.2) test images')
     trg_h, trg_w = args.resolution
 
-
     test_img_folder = os.path.join(args.concept_image_folder, 'train')
     test_mask_folder = os.path.join(args.concept_image_folder, 'train_mask')
     classes = os.listdir(test_img_folder)
