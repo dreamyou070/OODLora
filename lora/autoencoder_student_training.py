@@ -334,7 +334,7 @@ class NetworkTrainer:
                         if batch != 1 :
                             recon = recon[0]
                             recon = recon.unsqueeze(0)
-                        recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                         import numpy as np
                         image = (recon_img * 255).astype(np.uint8)
                         wandb.log({"recon": [wandb.Image(image, caption="recon")]})
