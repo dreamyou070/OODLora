@@ -1,7 +1,7 @@
 import os, shutil
 
-gt_base_folder = r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD'
-save_base_folder = r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL'
+gt_base_folder = r'../../../../MyData/anomaly_detection/MVTec3D-AD'
+save_base_folder = r'../../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL'
 cats = os.listdir(gt_base_folder)
 bad = ['carpet','erase','potato']
 for cat in cats :
