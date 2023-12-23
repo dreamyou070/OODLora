@@ -337,7 +337,7 @@ class AutoEncoder(nn.Module):
         return x
 
 
-class Teacher(nn.Module):
+class Decoder_Teacher(nn.Module):
     def __init__(self, base_model, base_quant_layer) -> None:
         super().__init__()
         self.quant_layer = base_quant_layer
@@ -348,7 +348,7 @@ class Teacher(nn.Module):
         x = self.model(x)
         return x
 
-class Student(nn.Module):
+class Decoder_Student(nn.Module):
     def __init__(self, base_model, base_quant_layer) -> None:
         super().__init__()
         self.quant_layer = base_quant_layer

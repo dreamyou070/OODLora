@@ -133,11 +133,17 @@ def main(args):
             for i, image in enumerate(images) :
                 if i < 5 :
                     image_dir = os.path.join(class_dir, image)
-                    mask_dir = os.path.join(class_mask_dir, image)
+                    if 'good' not in class_ :
+                        mask_dir = os.path.join(class_mask_dir, image)
+                    else :
+                        mask_dir = None
                     name, ext = os.path.splitext(image)
                     img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
                     compare_save_dir = os.path.join(class_save_dir, image)
-                    mask_save_dir = os.path.join(class_save_dir, f'{name}_gt.png')
+                    if 'good' not in class_ :
+                        mask_save_dir = os.path.join(class_save_dir, f'{name}_gt.png')
+                    else :
+                        mask_save_dir = None
                     recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir)
 
     else :
