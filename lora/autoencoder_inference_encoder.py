@@ -4,27 +4,17 @@ import os
 import random
 from accelerate.utils import set_seed
 import library.train_util as train_util
-from library.train_util import (DreamBoothDataset, )
 import library.config_util as config_util
-from library.config_util import (ConfigSanitizer, BlueprintGenerator, )
-import library.huggingface_util as huggingface_util
-import library.custom_train_functions as custom_train_functions
-from library.custom_train_functions import prepare_scheduler_for_custom_training
 import torch
-from utils.image_utils import load_image, latent2image, IMAGE_TRANSFORMS
+from utils.image_utils import load_image, IMAGE_TRANSFORMS
 import numpy as np
 from PIL import Image
+from diffusers import AutoencoderKL
+from STTraining import Encoder_Teacher, Encoder_Student
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
-try:
-    import intel_extension_for_pytorch as ipex
-    if torch.xpu.is_available():
-        from library.ipex import ipex_init
-        ipex_init()
-except Exception:
-    pass
 from accelerate import Accelerator
 
 def main(args):
@@ -44,7 +34,6 @@ def main(args):
 
     print(f' (3) accelerator')
     accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps,)
-    is_main_process = accelerator.is_main_process
 
     print(f'\n step 2. model')
     print(f' (1) mixed precision and model')
@@ -52,8 +41,6 @@ def main(args):
     vae_dtype = torch.float32
     print(f' (2) model')
     text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
-
-    print(f'accelerator.device : {accelerator.device}')
 
     print(f' (3) making encoder of vae')
     vae_encoder = vae.encoder
@@ -67,8 +54,7 @@ def main(args):
     vae.to(accelerator.device, dtype=vae_dtype)
 
     config_dict = vae.config
-    from diffusers import AutoencoderKL
-    from STTraining import Encoder_Teacher, Encoder_Student
+
 
     student_vae = AutoencoderKL.from_config(config_dict)
     student_vae_encoder = student_vae.encoder
@@ -126,7 +112,7 @@ def main(args):
     os.makedirs(save_base_dir, exist_ok=True)
     print(' (3.1) anormal test')
     anormal_folder = os.path.join(args.anormal_folder, 'train')
-    anormal_mask_folder = os.path.join(args.anormal_mask_folder, 'train_mask')
+    anormal_mask_folder = os.path.join(args.anormal_folder, 'train_mask')
     classes = os.listdir(anormal_folder)
     for class_ in classes:
 
