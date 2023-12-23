@@ -35,6 +35,7 @@ def main(args):
                 for image in images:
                     org_image_path = os.path.join(sub_org_folder, image)
                     org_pil = Image.open(org_image_path)
+                    org_pil.resize((512, 512))
                     np_org = np.array(org_pil)
 
                     inpainted_image_path = os.path.join(sub_inpainted_folder, image)
@@ -43,6 +44,7 @@ def main(args):
 
                     mask_image_path = os.path.join(test_mask_folder, sub, image)
                     mask_pil = Image.open(mask_image_path).convert('RGB')
+                    mask_pil.resize((512, 512))
                     np_mask = np.array(mask_pil)
                     np_mask = np.where(np_mask < 50, 0, 1) # black = 0 = background, white = 1
 
