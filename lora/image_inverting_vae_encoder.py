@@ -373,15 +373,20 @@ def main(args) :
 
     print(f' (3.2) test images')
     trg_h, trg_w = args.resolution
-    test_img_folder = os.path.join(args.concept_image_folder, '../test')
+
+
+    test_img_folder = os.path.join(args.concept_image_folder, 'train')
+    test_mask_folder = os.path.join(args.concept_image_folder, 'train_mask')
     classes = os.listdir(test_img_folder)
     thredhold = args.mask_thredhold
     for class_name in classes:
-        class_folder = os.path.join(test_img_folder, class_name)
+
         class_base_folder = os.path.join(output_dir, class_name)
         os.makedirs(class_base_folder, exist_ok=True)
-        image_folder = os.path.join(class_folder, 'rgb')
-        mask_folder = os.path.join(class_folder, 'gt')
+
+        image_folder = os.path.join(test_img_folder, class_name)
+        mask_folder = os.path.join(test_mask_folder, class_name)
+
         test_images = os.listdir(image_folder)
         for j, test_img in enumerate(test_images):
             if j < 100 :
