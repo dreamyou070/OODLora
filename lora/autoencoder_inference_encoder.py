@@ -109,33 +109,36 @@ def main(args):
 
     print(' (3.1) anormal test')
     if args.training_data_check :
-
         save_dir = os.path.join(args.output_dir, 'inference/vae_result_check/training_dataset')
         os.makedirs(save_dir, exist_ok=True)
         save_base_dir = os.path.join(save_dir, f'student_epoch_{student_epoch}')
         os.makedirs(save_base_dir, exist_ok=True)
 
         anormal_folder = os.path.join(args.anormal_folder, 'train/bad')
+        mask_folder = os.path.join(args.anormal_folder, 'train/gt')
         classes = os.listdir(anormal_folder)
         for class_ in classes:
 
             class_dir = os.path.join(anormal_folder, class_)
+            if '_' in class_:
+                class__ = class_.split('_')[1:]
+                class__ = '_'.join(class__)
+            class_mask_dir = os.path.join(mask_folder, class__)
 
-            class_mask_dir = None
-
-            class_save_dir = os.path.join(save_base_dir, class_)
+            class_save_dir = os.path.join(save_base_dir, class__)
             os.makedirs(class_save_dir, exist_ok=True)
 
             images = os.listdir(class_dir)
 
-            for image in images:
-                image_dir = os.path.join(class_dir, image)
-                mask_dir = None
-                name, ext = os.path.splitext(image)
-                img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
-                compare_save_dir = os.path.join(class_save_dir, image)
-                mask_save_dir = None
-                recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir)
+            for i, image in enumerate(images) :
+                if i < 5 :
+                    image_dir = os.path.join(class_dir, image)
+                    mask_dir = os.path.join(class_mask_dir, image)
+                    name, ext = os.path.splitext(image)
+                    img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
+                    compare_save_dir = os.path.join(class_save_dir, image)
+                    mask_save_dir = os.path.join(class_save_dir, f'{name}_gt.png')
+                    recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir)
 
     else :
 
