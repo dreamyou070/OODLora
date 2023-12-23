@@ -15,7 +15,7 @@ for cat in cats :
             gt_dir = os.path.join(category_dir, f'gt')
             images = os.listdir(gt_dir)
             for image in images :
-                org_img_dir = os.path.join(category_dir, f'{category}/rgb/{image}')
+                org_img_dir = os.path.join(gt_dir , image)
                 save_category_dir = os.path.join(save_cat_dir, f'gt/{category}')
                 os.makedirs(save_category_dir, exist_ok=True)
                 new_img_dir = os.path.join(save_category_dir, image)
