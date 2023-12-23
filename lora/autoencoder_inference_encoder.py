@@ -106,39 +106,71 @@ def main(args):
             image.save(save_dir)
 
     print(f'\n step 3. inference')
-    save_dir = os.path.join(args.output_dir, 'inference/vae_result_check')
-    os.makedirs(save_dir, exist_ok=True)
-    save_base_dir = os.path.join(save_dir, f'student_epoch_{student_epoch}')
-    os.makedirs(save_base_dir, exist_ok=True)
     print(' (3.1) anormal test')
-    anormal_folder = os.path.join(args.anormal_folder, 'train')
-    anormal_mask_folder = os.path.join(args.anormal_folder, 'train_mask')
-    classes = os.listdir(anormal_folder)
-    for class_ in classes:
+    if args.training_data_check :
 
-        class_dir = os.path.join(anormal_folder, class_)
-        class_mask_dir = os.path.join(anormal_mask_folder, class_)
+        save_dir = os.path.join(args.output_dir, 'inference/vae_result_check/training_dataset')
+        os.makedirs(save_dir, exist_ok=True)
+        save_base_dir = os.path.join(save_dir, f'student_epoch_{student_epoch}')
+        os.makedirs(save_base_dir, exist_ok=True)
 
-        if class_ == 'good' :
-            class_dir = os.path.join(anormal_folder, f'{class_}/rgb')
-            class_mask_dir = os.path.join(anormal_folder, f'{class_}/gt')
 
-        class_save_dir = os.path.join(save_base_dir, class_)
-        os.makedirs(class_save_dir, exist_ok=True)
+        anormal_folder = os.path.join(args.anormal_folder, 'test/bad')
+        classes = os.listdir(anormal_folder)
+        for class_ in classes:
 
-        images = os.listdir(class_dir)
-        mask_images = os.listdir(class_mask_dir)
+            class_dir = os.path.join(anormal_folder, class_)
+            class_mask_dir = None
 
-        for image in images :
+            class_save_dir = os.path.join(save_base_dir, class_)
+            os.makedirs(class_save_dir, exist_ok=True)
 
-            image_dir = os.path.join(class_dir, image)
-            mask_dir = os.path.join(class_mask_dir, image)
-            name, ext = os.path.splitext(image)
+            images = os.listdir(class_dir)
 
-            img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
-            compare_save_dir = os.path.join(class_save_dir, image)
-            mask_save_dir = os.path.join(class_save_dir, f'{name}_mask.png')
-            recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir)
+            for image in images:
+                image_dir = os.path.join(class_dir, image)
+                mask_dir = None
+                name, ext = os.path.splitext(image)
+                img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
+                compare_save_dir = os.path.join(class_save_dir, image)
+                mask_save_dir = None
+                recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir)
+
+    else :
+
+        save_dir = os.path.join(args.output_dir, 'inference/vae_result_check/test_dataset')
+        os.makedirs(save_dir, exist_ok=True)
+        save_base_dir = os.path.join(save_dir, f'student_epoch_{student_epoch}')
+        os.makedirs(save_base_dir, exist_ok=True)
+
+        anormal_folder = os.path.join(args.anormal_folder, 'train')
+        anormal_mask_folder = os.path.join(args.anormal_folder, 'train_mask')
+        classes = os.listdir(anormal_folder)
+        for class_ in classes:
+
+            class_dir = os.path.join(anormal_folder, class_)
+            class_mask_dir = os.path.join(anormal_mask_folder, class_)
+
+            if class_ == 'good' :
+                class_dir = os.path.join(anormal_folder, f'{class_}/rgb')
+                class_mask_dir = os.path.join(anormal_folder, f'{class_}/gt')
+
+            class_save_dir = os.path.join(save_base_dir, class_)
+            os.makedirs(class_save_dir, exist_ok=True)
+
+            images = os.listdir(class_dir)
+            mask_images = os.listdir(class_mask_dir)
+
+            for image in images :
+
+                image_dir = os.path.join(class_dir, image)
+                mask_dir = os.path.join(class_mask_dir, image)
+                name, ext = os.path.splitext(image)
+
+                img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
+                compare_save_dir = os.path.join(class_save_dir, image)
+                mask_save_dir = os.path.join(class_save_dir, f'{name}_mask.png')
+                recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir)
 
 
 if __name__ == "__main__":
@@ -173,6 +205,7 @@ if __name__ == "__main__":
                         default=r'../../../MyData/anomaly_detection/VisA/MVTecAD/bagel/test/good/rgb/000.png')
     parser.add_argument("--student_pretrained_dir", type=str,
                         default='../result/MVTec_experiment/bagel/vae_training/vae_model/vae_epoch_000005/pytorch_model.bin')
+    parser.add_argument("--training_data_check", action="store_true",)
     args = parser.parse_args()
     main(args)
 
