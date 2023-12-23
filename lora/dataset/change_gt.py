@@ -7,12 +7,13 @@ print(cats)
 bad = ['carpet','erase','potato']
 for cat in cats :
     if cat in bad :
+        print(f'cat : {cat}')
         cat_dir = os.path.join(gt_base_folder, f'{cat}/test')
         save_cat_dir = os.path.join(save_base_folder, f'{cat}')
         categories = os.listdir(cat_dir)
         for category in categories :
             category_dir = os.path.join(cat_dir, category)
-            gt_dir = os.path.join(category_dir, f'gt')
+            gt_dir = os.path.join(category_dir, 'gt')
             images = os.listdir(gt_dir)
             for image in images :
                 org_img_dir = os.path.join(gt_dir , image)
