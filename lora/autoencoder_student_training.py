@@ -195,7 +195,6 @@ class NetworkTrainer:
         student_decoder.train()
         student_decoder.to(dtype=vae_dtype)
 
-
         print(f'\n step 10. epoch check')
         num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
         num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
