@@ -6,7 +6,7 @@ cats = os.listdir(gt_base_folder)
 print(cats)
 bad = ['carpet','erase','potato']
 for cat in cats :
-    if cat in bad :
+    if cat not in bad :
         print(f'cat : {cat}')
         cat_dir = os.path.join(gt_base_folder, f'{cat}/test')
         save_cat_dir = os.path.join(save_base_folder, f'{cat}')
