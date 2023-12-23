@@ -185,16 +185,12 @@ def main(args) :
         parent, child = os.path.split(args.output_dir)
         output_dir = os.path.join(parent, f'{child}_binary_mask_thred_{args.mask_thredhold}')
     parent, network_dir = os.path.split(args.network_weights)
-    super_parenrt, parent_dir = os.path.split(parent)
-    output_dir = os.path.join(output_dir, f'lora_{parent_dir}')
-    os.makedirs(output_dir, exist_ok=True)
-
     model_name = os.path.splitext(network_dir)[0]
     if 'last' not in model_name:
         model_epoch = int(model_name.split('-')[-1])
     else:
         model_epoch = 'last'
-    output_dir = os.path.join(output_dir, f'epoch-{model_epoch}')
+    output_dir = os.path.join(output_dir, f'lora-epoch-{model_epoch}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
