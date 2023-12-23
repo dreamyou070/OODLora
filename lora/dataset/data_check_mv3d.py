@@ -62,7 +62,7 @@ def main(args):
                         image_path = os.path.join(rgb_folder, name_)
                         mask_path = os.path.join(gt_folder, name_)
                         image = pipe(prompt=prompt,
-                                     negative_prompt = negative_prompt,
+                                     #negative_prompt = negative_prompt,
                                      image=Image.open(image_path).convert('RGB'),
                                      mask_image=Image.open(mask_path).convert('L'), ).images[0]
                         image.save(os.path.join(inpaint_categori_dir, name_))
