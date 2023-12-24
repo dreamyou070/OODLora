@@ -317,7 +317,7 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_linear_start", type=float, default=0.00085)
     parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
     parser.add_argument("--scheduler_timesteps", type=int, default=1000)
-    parser.add_argument("--scheduler_scheduler", type=str, default="scaled_linear")
+    parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
     parser.add_argument("--unet_only_inference_times", type=int, default = 30)
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
