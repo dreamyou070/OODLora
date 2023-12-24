@@ -2,9 +2,8 @@ from transformers import ViTImageProcessor, ViTModel
 from PIL import Image
 import os
 import numpy as np
+
 def main() :
-
-
 
     #url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
     #image = Image.open(requests.get(url, stream=True).raw)
@@ -46,6 +45,20 @@ def main() :
                 background_2 = Image.fromarray(background_2)
                 object_1 = Image.fromarray(object_1)
                 object_2 = Image.fromarray(object_2)
+
+                background_1_inputs = processor(background_1, return_tensors="pt")
+                background_1_outputs = model(**background_1_inputs).last_hidden_state
+                print(f'background_1_outputs.shape : {background_1_outputs.shape}')
+
+                background_2_inputs = processor(background_2, return_tensors="pt")
+                background_2_outputs = model(**background_2_inputs).last_hidden_state
+
+                object_1_inputs = processor(object_1, return_tensors="pt")
+                object_1_outputs = model(**object_1_inputs).last_hidden_state
+
+                object_2_inputs = processor(object_2, return_tensors="pt")
+                object_2_outputs = model(**object_2_inputs).last_hidden_state
+
                 break
             break
         break
