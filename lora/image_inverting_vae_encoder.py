@@ -147,13 +147,9 @@ def main(args) :
     print(f'final output dir : {output_dir}')
 
     print(f' (2.4) scheduler')
-    scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)
-    SCHEDULER_LINEAR_START = 0.00085
-    SCHEDULER_LINEAR_END = 0.0120
-    SCHEDULER_TIMESTEPS = 1000
-    SCHEDLER_SCHEDULE = "scaled_linear"
-    scheduler = scheduler_cls(num_train_timesteps=SCHEDULER_TIMESTEPS, beta_start=SCHEDULER_LINEAR_START,
-                              beta_end=SCHEDULER_LINEAR_END, beta_schedule=SCHEDLER_SCHEDULE,)
+    scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
+    scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
+                              beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
 
@@ -318,6 +314,10 @@ if __name__ == "__main__":
     parser.add_argument("--prompt", type=str, default = 'teddy bear, wearing like a super hero')
     parser.add_argument("--concept_image_folder", type=str)
     parser.add_argument("--num_ddim_steps", type=int, default=50)
+    parser.add_argument("--scheduler_linear_start", type=float, default=0.00085)
+    parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
+    parser.add_argument("--scheduler_timesteps", type=int, default=1000)
+    parser.add_argument("--scheduler_scheduler", type=str, default="scaled_linear")
     parser.add_argument("--unet_only_inference_times", type=int, default = 30)
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
