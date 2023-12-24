@@ -95,7 +95,7 @@ def call_unet(unet, noisy_latents, timesteps,
 
 
 @torch.no_grad()
-def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, ):
+def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, is_org):
     if context.shape[0] == 1:
         cond_embeddings = context
     else :
@@ -119,7 +119,10 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
-            pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
+            if is_org:
+                pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
+            else :
+                pil_img.save(os.path.join(base_folder_dir, f'student_noising_{next_time}.png'))
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
@@ -479,14 +482,16 @@ def main(args) :
                                                                         scheduler=scheduler,
                                                                         unet=invers_unet,
                                                                         vae=vae,
-                                                                        base_folder_dir=class_base_folder)
+                                                                        base_folder_dir=class_base_folder,
+                                                                        is_org = True)
                     latent_dict, time_steps, pil_images = ddim_loop(latent=st_latent,
                                                                         context=inv_c,
                                                                         inference_times=inf_time,
                                                                         scheduler=scheduler,
                                                                         unet=invers_unet,
                                                                         vae=vae,
-                                                                        base_folder_dir=class_base_folder)
+                                                                        base_folder_dir=class_base_folder,
+                                                                        is_org = False)
 
                     base_num = 40
                     noising_time = inference_times[base_num] # 100
