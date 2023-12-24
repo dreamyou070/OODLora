@@ -183,7 +183,7 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
                 mask_list.append(totensor(Image.fromarray(image).resize((64, 64))))
             mask = torch.stack(mask_list, dim=0).mean([0]).unsqueeze(0)
             print(f'mask : {mask.shape}')
-            y_latent = z_latent * (1-mask) + x_latent * (mask) # 1,4,64,64
+            y_latent = z_latent * (1-mask).to(z_latent.device) + x_latent * (mask).to(z_latent.device) # 1,4,64,64
             y_noise_pred = call_unet(unet, y_latent, t, con, None, None)
             controller.reset()
             # --------------------- mask --------------------- #
