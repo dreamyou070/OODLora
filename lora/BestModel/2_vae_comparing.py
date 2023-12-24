@@ -45,8 +45,10 @@ def main():
                         binary = np.where(mse > 0.5, 1, 0)
 
                         print(f'cat : {cat}, number : {number}, mask_img : {mask_img}')
-
-                        mask = Image.open(mask_img).convert("RGB")
+                        if mask_img == None and 'good' in cat :
+                            mask = np.zeros_like(x)
+                        else :
+                            mask = Image.open(mask_img).convert("RGB")
                         gt = np.array(mask)
                         gt = np.where(gt > 100, 1, 0)
 
@@ -76,7 +78,11 @@ def main():
                         x_hat = np.array(Image.open(recon_img))
                         mse = np.square(x - x_hat) ** 0.5
                         binary = np.where(mse > 0.5, 1, 0)
-                        mask = Image.open(mask_img).convert("RGB")
+                        print(f'cat : {cat}, number : {number}, mask_img : {mask_img}')
+                        if mask_img == None and 'good' in cat:
+                            mask = np.zeros_like(x)
+                        else:
+                            mask = Image.open(mask_img).convert("RGB")
                         gt = np.array(mask)
                         gt = np.where(gt > 100, 1, 0)
 
