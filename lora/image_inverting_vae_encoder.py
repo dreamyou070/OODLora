@@ -109,8 +109,6 @@ def main(args) :
 
     print(f" (1.3) save dir")
     output_dir = args.output_dir
-    parent, child = os.path.split(args.output_dir)
-    output_dir = os.path.join(parent, f'{child}_binary_mask_thred_{args.mask_thredhold}')
     parent, network_dir = os.path.split(args.network_weights)
     model_name = os.path.splitext(network_dir)[0]
     if 'last' not in model_name:
@@ -141,10 +139,14 @@ def main(args) :
     student_epoch = os.path.split(args.student_pretrained_dir)[-1]
     student_epoch = os.path.splitext(student_epoch)[0]
     student_epoch = int(student_epoch.split('_')[-1])
-    print(f'student_epoch: {student_epoch}')
-    output_dir = os.path.join(output_dir, f'lora-epoch-{model_epoch}-student-epoch-{student_epoch}')
+
+    base_num = (args.num_ddim_steps - args.unet_only_inference_times)
+    assert base_num >= 0, f'base_num should be larger than 0, but {base_num}'
+    output_dir = os.path.join(output_dir,
+                           f'lora_epoch_{model_epoch}_student_epoch_{student_epoch}_mask_thred_{args.mask_thredhold}_from_{base_num}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
+
 
     print(f' (2.4) scheduler')
     scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
@@ -257,8 +259,7 @@ def main(args) :
                                                                     vae=vae,
                                                                     base_folder_dir=class_base_folder,
                                                                     is_org = False)
-                    base_num = (args.num_ddim_steps - args.unet_only_inference_times)
-                    assert base_num >= 0, f'base_num should be larger than 0, but {base_num}'
+
                     noising_time = inference_times[base_num]  # 100
                     recon_1_times = inference_times[:base_num+1].tolist()
                     recon_latent_dict, _, _ = recon_loop(args,
