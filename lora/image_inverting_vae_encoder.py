@@ -257,7 +257,7 @@ def main(args) :
                                                                     vae=vae,
                                                                     base_folder_dir=class_base_folder,
                                                                     is_org = False)
-                    base_num = (args.num_ddim - args.unet_only_inference_times)
+                    base_num = (args.num_ddim_steps - args.unet_only_inference_times)
                     assert base_num >= 0, f'base_num should be larger than 0, but {base_num}'
                     noising_time = inference_times[base_num]  # 100
                     recon_1_times = inference_times[:base_num+1].tolist()
