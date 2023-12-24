@@ -181,7 +181,6 @@ def org_recon_loop(start_latent, context, inference_times, scheduler, unet, vae,
             noise_pred = call_unet(unet, latent, t, con, None, None)
             latent = prev_step(noise_pred, int(t), latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')
-        if prev_time == 0 :
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
@@ -391,7 +390,7 @@ def main(args) :
                     inf_times.reverse()
                     org_recon_loop(org_noise_latent, # 780 noise latent
                                    invers_context,
-                                   inference_times,
+                                   inf_times,
                                    scheduler,
                                    invers_unet, vae, class_base_folder)
 
