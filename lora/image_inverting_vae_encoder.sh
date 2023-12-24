@@ -21,6 +21,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --output_dir ../result/MVTec3D-AD_experiment/potato/inference \
   --resolution 512,512 \
   --seed 42 \
-  --mask_thredhold 0.001 \
+  --mask_thredhold 0.000001 \
   --num_ddim_steps 50 \
-  --unet_only_inference_times 30
+  --unet_only_inference_times 48
