@@ -91,16 +91,20 @@ def call_unet(unet, noisy_latents, timesteps,
                       trg_indexs_list=trg_indexs_list,
                       mask_imgs=mask_imgs,).sample
     return noise_pred
+
+
 @torch.no_grad()
-def ddim_loop(latent, context, inference_times, scheduler, unet, vae,  base_folder_dir, ):
-    uncond_embeddings, cond_embeddings = context.chunk(2)
+def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, ):
+    if context.shape[0] == 1:
+        cond_embeddings = context
+    else :
+        uncond_embeddings, cond_embeddings = context.chunk(2)
     time_steps = []
     latent = latent.clone().detach()
     latent_dict = {}
     noise_pred_dict = {}
     latent_dict[0] = latent
     pil_images = []
-
     flip_times = inference_times
     repeat_time = 0
     for i, t in enumerate(flip_times[:-1]):
@@ -109,14 +113,12 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae,  base_fold
             latent_dict[int(t.item())] = latent
             time_steps.append(t.item())
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
-
-
             noise_pred_dict[int(t.item())] = noise_pred
             latent = next_step(noise_pred, int(t.item()), latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')
-            #pil_img = Image.fromarray(np_img)
-            #pil_images.append(pil_img)
-            #pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
+            pil_img = Image.fromarray(np_img)
+            pil_images.append(pil_img)
+            pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
             repeat_time += 1
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
@@ -381,6 +383,17 @@ def main(args) :
                 with torch.no_grad():
                     org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
                     st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
+                    inf_time = inference_times.tolist()
+                    inf_time.reverse() # [0,20,40,60,80,100 , ... 980]
+                    org_latent_dict, time_steps, pil_images = ddim_loop(latent=org_vae_latent,
+                                                                    context=inv_c,
+                                                                    inference_times=inf_time,
+                                                                    scheduler=scheduler,
+                                                                    unet=invers_unet,
+                                                                    vae=vae,
+                                                                    base_folder_dir=class_base_folder)
+
+                    """
                     standard_noise = torch.randn_like(org_vae_latent).to(device)
                     print(f'inference_times : {inference_times}')
                     base_num = 40
@@ -398,6 +411,7 @@ def main(args) :
                                    inf_times,
                                    scheduler,
                                    invers_unet, vae, class_base_folder)
+                    """
 
 
     """
