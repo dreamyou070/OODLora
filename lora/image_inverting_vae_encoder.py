@@ -264,6 +264,9 @@ def main(args) :
     inference_times = scheduler.timesteps
 
     alphas_cumprod = scheduler.alphas_cumprod
+    alphas_cumprod = alphas_cumprod.to(accelerator.device, dtype=vae_dtype)
+    print(f'alphas_cumprod: {alphas_cumprod}')
+    """
     sqrt_alpha_prod = alphas_cumprod[torch.IntTensor(700).long()] ** 0.5
 
     print(f' (2.4.+) model to accelerator device')
@@ -365,7 +368,7 @@ def main(args) :
                     mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
                     mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
                     mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
-
+    """
 
                 """
                 mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
