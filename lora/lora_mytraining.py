@@ -612,7 +612,7 @@ class NetworkTrainer:
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
             for step, batch in enumerate(train_dataloader):
-                """
+
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
@@ -793,10 +793,8 @@ class NetworkTrainer:
                     wandb.log(logs)
                 if global_step >= args.max_train_steps:
                     break
-                """
-                print('Test ...')
-                break
-            """
+
+
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_total / len(loss_list)}
                 accelerator.log(logs, step=epoch + 1)
@@ -812,7 +810,7 @@ class NetworkTrainer:
                         remove_model(remove_ckpt_name)
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
-            """
+
             if epoch % args.sample_every_n_epochs == 0 and is_main_process:
                 self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
                                    text_encoder, unet)
@@ -830,12 +828,7 @@ class NetworkTrainer:
             ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
             save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
             print("model saved.")
-            # saving attn loss
-            import csv
-            attn_loss_save_dir = os.path.join(args.output_dir, 'record', f'{args.wandb_run_name}_attn_loss.csv')
-            with open(attn_loss_save_dir, 'w') as f:
-                writer = csv.writer(f)
-                writer.writerows(attn_loss_records)
+            
 
 
 if __name__ == "__main__":
