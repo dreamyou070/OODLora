@@ -387,9 +387,9 @@ def main(args) :
 
 
 
-                    inf_times = inference_times[10:]
+                    inf_times = inference_times[10:].tolist() # from 780
                     inf_times.reverse()
-                    org_recon_loop(org_noise_latent,
+                    org_recon_loop(org_noise_latent, # 780 noise latent
                                    invers_context,
                                    inference_times,
                                    scheduler,
