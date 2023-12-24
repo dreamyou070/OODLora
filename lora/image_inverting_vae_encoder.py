@@ -370,80 +370,80 @@ def main(args) :
                     mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
     """
 
-                """
-                mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
-                mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
-                mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
+    """
+    mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
+    mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
+    mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
 
 
-                new_latent = org_vae_latent * (1-mse_threshold) + st_latent * mse_threshold
-                mask_np_img = latent2image(new_latent, vae, return_type='np')
-                pil_img = Image.fromarray(mask_np_img)
-                pil_img.save(os.path.join(save_base_dir, f'vae_masked_{test_img}'))
-                
-                
-                inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
-                flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
-                #original_latent = latent.clone().detach()
-                original_latent = org_vae_latent.clone().detach()
-                for ii, final_time in enumerate(flip_times[1:]):
+    new_latent = org_vae_latent * (1-mse_threshold) + st_latent * mse_threshold
+    mask_np_img = latent2image(new_latent, vae, return_type='np')
+    pil_img = Image.fromarray(mask_np_img)
+    pil_img.save(os.path.join(save_base_dir, f'vae_masked_{test_img}'))
+    
+    
+    inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
+    flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
+    #original_latent = latent.clone().detach()
+    original_latent = org_vae_latent.clone().detach()
+    for ii, final_time in enumerate(flip_times[1:]):
 
-                    if final_time.item() == args.final_time:
-                        timewise_save_base_folder = os.path.join(save_base_dir, f'final_time_{final_time.item()}')
-                        print(f' - save_base_folder : {timewise_save_base_folder}')
-                        os.makedirs(timewise_save_base_folder, exist_ok=True)
+        if final_time.item() == args.final_time:
+            timewise_save_base_folder = os.path.join(save_base_dir, f'final_time_{final_time.item()}')
+            print(f' - save_base_folder : {timewise_save_base_folder}')
+            os.makedirs(timewise_save_base_folder, exist_ok=True)
 
-                        mask_pil = Image.open(mask_img_dir).resize((512, 512)).convert('RGB')
-                        mask_pil.save(os.path.join(timewise_save_base_folder, 'mask.png'))
+            mask_pil = Image.open(mask_img_dir).resize((512, 512)).convert('RGB')
+            mask_pil.save(os.path.join(timewise_save_base_folder, 'mask.png'))
 
-                        org_pil = Image.open(train_img_dir).resize((512, 512)).convert('RGB')
-                        org_pil.save(os.path.join(timewise_save_base_folder, 'org.png'))
+            org_pil = Image.open(train_img_dir).resize((512, 512)).convert('RGB')
+            org_pil.save(os.path.join(timewise_save_base_folder, 'org.png'))
 
-                        np_img = latent2image(st_latent, vae, return_type='np')
-                        pil_img = Image.fromarray(np_img)
-                        pil_img.save(os.path.join(timewise_save_base_folder, f'vae_recon.png'))
+            np_img = latent2image(st_latent, vae, return_type='np')
+            pil_img = Image.fromarray(np_img)
+            pil_img.save(os.path.join(timewise_save_base_folder, f'vae_recon.png'))
 
-                        if args.use_binary_mask :
-                            latent = original_latent
-                        else :
-                            latent = st_latent
+            if args.use_binary_mask :
+                latent = original_latent
+            else :
+                latent = st_latent
 
-                        latent_dict, time_steps, pil_images = ddim_loop(latent=latent,
-                                                                        context=invers_context,
-                                                                        inference_times=flip_times[:ii + 2],
-                                                                        scheduler=scheduler,
-                                                                        unet=invers_unet,
-                                                                        vae=vae,
-                                                                        base_folder_dir=timewise_save_base_folder,)
-                        if args.use_binary_mask :
-                            torch.manual_seed(args.seed)
-                            start_latent = scheduler.add_noise(original_samples = st_latent,
-                                                               noise = torch.randn(original_latent.shape, dtype=weight_dtype).to(st_latent.device),
-                                                               timesteps = torch.tensor(time_steps[-1], dtype=torch.int8).to(st_latent.device),
-                                                               )
+            latent_dict, time_steps, pil_images = ddim_loop(latent=latent,
+                                                            context=invers_context,
+                                                            inference_times=flip_times[:ii + 2],
+                                                            scheduler=scheduler,
+                                                            unet=invers_unet,
+                                                            vae=vae,
+                                                            base_folder_dir=timewise_save_base_folder,)
+            if args.use_binary_mask :
+                torch.manual_seed(args.seed)
+                start_latent = scheduler.add_noise(original_samples = st_latent,
+                                                   noise = torch.randn(original_latent.shape, dtype=weight_dtype).to(st_latent.device),
+                                                   timesteps = torch.tensor(time_steps[-1], dtype=torch.int8).to(st_latent.device),
+                                                   )
 
 
-                        else :
-                            start_latent = latent_dict[int(time_steps[-1])]
-                        time_steps.reverse()
-                        print(f'time_steps : {time_steps}')
-                        context = init_prompt(tokenizer, text_encoder, device, prompt)
+            else :
+                start_latent = latent_dict[int(time_steps[-1])]
+            time_steps.reverse()
+            print(f'time_steps : {time_steps}')
+            context = init_prompt(tokenizer, text_encoder, device, prompt)
 
-                        print(f' (2.3.2) recon')
-                        if args.use_binary_mask :
-                            mask = mse_threshold
-                        else :
-                            mask = None
-                        recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
-                                                                 start_latent = start_latent,
-                                                                 context=context,
-                                                                 inference_times=time_steps,  # [20,0]
-                                                                 scheduler=scheduler,
-                                                                 unet=unet,
-                                                                 vae=vae,
-                                                                 base_folder_dir=timewise_save_base_folder,
-                                                                 mask=mask)
-                """
+            print(f' (2.3.2) recon')
+            if args.use_binary_mask :
+                mask = mse_threshold
+            else :
+                mask = None
+            recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
+                                                     start_latent = start_latent,
+                                                     context=context,
+                                                     inference_times=time_steps,  # [20,0]
+                                                     scheduler=scheduler,
+                                                     unet=unet,
+                                                     vae=vae,
+                                                     base_folder_dir=timewise_save_base_folder,
+                                                     mask=mask)
+    """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
