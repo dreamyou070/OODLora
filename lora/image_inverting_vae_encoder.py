@@ -269,7 +269,6 @@ def main(args) :
     sqrt_alpha_prod = alphas_cumprod[torch.IntTensor(700).long()] ** 0.5
 
     print(f' (2.4.+) model to accelerator device')
-    device = args.device
     if len(invers_text_encoders) > 1:
         invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device),invers_text_encoders[1].to(device)
         invers_text_encoder = [invers_t_enc1, invers_t_enc2]
@@ -367,7 +366,7 @@ def main(args) :
                     mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
                     mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
                     mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
-   
+
 
     """
     mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
