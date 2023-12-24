@@ -158,6 +158,38 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
 
+
+@torch.no_grad()
+def org_recon_loop(start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir):
+    uncon, con = context.chunk(2)
+    if inference_times[0] < inference_times[1] :
+        inference_times.reverse()
+    latent = start_latent
+    all_latent_dict = {}
+    all_latent_dict[inference_times[0]] = latent
+    time_steps = []
+    pil_images = []
+    with torch.no_grad():
+        np_img = latent2image(latent, vae, return_type='np')
+    pil_img = Image.fromarray(np_img)
+    pil_images.append(pil_img)
+    pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
+    for i, t in enumerate(inference_times[:-1]):
+        prev_time = int(inference_times[i + 1])
+        time_steps.append(int(t))
+        with torch.no_grad():
+            noise_pred = call_unet(unet, latent, t, con, None, None)
+            latent = prev_step(noise_pred, int(t), latent, scheduler)
+            np_img = latent2image(latent, vae, return_type='np')
+        if prev_time == 0 :
+            pil_img = Image.fromarray(np_img)
+            pil_images.append(pil_img)
+            pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+        all_latent_dict[prev_time] = latent
+    time_steps.append(prev_time)
+    return all_latent_dict, time_steps, pil_images
+
+
 def main(args) :
 
     print(f' \n step 1. setting')
@@ -344,30 +376,24 @@ def main(args) :
                     org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
                     st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
                     standard_noise = torch.randn_like(org_vae_latent).to(device)
-                    noising_time = 20
-
+                    print(f'inference_times : {inference_times}')
+                    noising_time = inference_times[10]
                     org_noise_latent = scheduler.add_noise(original_samples = org_vae_latent, noise = standard_noise, timesteps = torch.tensor(int(noising_time)))
                     st_noise_latent = scheduler.add_noise(original_samples = st_latent, noise = standard_noise, timesteps = torch.tensor(int(noising_time)))
-
                     Image.fromarray(latent2image(org_noise_latent, vae, return_type='np')).save(os.path.join(class_base_folder,
                                                                                                       f'{name}_org_vae_noise_latent_{noising_time}{ext}'))
-                    Image.fromarray(latent2image(st_noise_latent, vae, return_type='np')).save(
-                        os.path.join(class_base_folder,
-                                     f'{name}_st_vae_noise_latent_{noising_time}{ext}'))
+                    Image.fromarray(latent2image(st_noise_latent, vae, return_type='np')).save(os.path.join(class_base_folder,
+                                                                                                            f'{name}_st_vae_noise_latent_{noising_time}{ext}'))
 
-                    org_pred_noise = call_unet(invers_unet, org_noise_latent, 700, invers_context.chunk(2)[0], trg_indexs_list=None, mask_imgs=None)
-                    st_pred_noise = call_unet(unet, st_noise_latent, 700, context.chunk(2)[1], trg_indexs_list=None, mask_imgs=None)
 
-                    org_recon = scheduler.step(org_pred_noise, 700, org_vae_latent, return_dict = True)['pred_original_sample']
-                    Image.fromarray(latent2image(org_recon, vae, return_type='np')).save(os.path.join(class_base_folder,
-                                                                                                      f'{name}_org_vae_org_unet_recon_from_{noising_time}{ext}'))
-                    st_recon  = scheduler.step(st_pred_noise, 700, st_latent, return_dict = True)['pred_original_sample']
-                    Image.fromarray(latent2image(st_recon, vae, return_type='np')).save(os.path.join(class_base_folder,
-                                                                                                     f'{name}_st_vae_lora_unet_recon_from_{noising_time}{ext}'))
 
-                    mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
-                    mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
-                    mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
+                    inf_times = inference_times[10:]
+                    inf_times.reverse()
+                    org_recon_loop(org_noise_latent,
+                                   invers_context,
+                                   inference_times,
+                                   scheduler,
+                                   invers_unet, vae, class_base_folder)
 
 
     """
