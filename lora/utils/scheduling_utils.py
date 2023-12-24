@@ -2,11 +2,12 @@ import torch
 import numpy as np
 from typing import Union
 import sys
-sys.path.append(__file__)
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from model_utils import call_unet
 from image_utils import latent2image
 from PIL import Image
-import os
+
 from diffusers import (DDPMScheduler,EulerAncestralDiscreteScheduler,DPMSolverMultistepScheduler,DPMSolverSinglestepScheduler,
                        LMSDiscreteScheduler,PNDMScheduler,EulerDiscreteScheduler,HeunDiscreteScheduler,
                        KDPM2DiscreteScheduler,KDPM2AncestralDiscreteScheduler, DDIMScheduler)
