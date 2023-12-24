@@ -173,6 +173,7 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
             totensor = torchvision.transforms.ToTensor()
             for layer_name in layer_names:
                 mask_torch = mask_dict[layer_name][0] # head, pix_num, 1
+                print(f'mask_torch : {mask_torch.shape}')
                 head, pix_num, _ = mask_torch.shape
                 res = int(pix_num ** 0.5)
                 cross_maps = mask_torch.reshape(head, res, res, mask_torch.shape[-1])
