@@ -795,6 +795,7 @@ class NetworkTrainer:
                     break
                 """
                 print('Test ...')
+                break
             """
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_total / len(loss_list)}

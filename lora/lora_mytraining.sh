@@ -24,7 +24,7 @@ ml purge
 ml load cuda/11.0
 
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 51489 lora_mytraining.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 52489 lora_mytraining.py \
   --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 \
   --log_with wandb --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
   --wandb_init_name potato_training \
