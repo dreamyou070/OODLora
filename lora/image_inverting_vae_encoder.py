@@ -192,6 +192,7 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
                 y_noise_pred = call_unet(unet, y_latent, t, con, None, None)
 
             else :
+                y_latent = x_latent
                 y_noise_pred = noise_pred
             # --------------------- mask --------------------- #
             controller.reset()
