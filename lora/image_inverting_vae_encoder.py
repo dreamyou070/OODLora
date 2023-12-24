@@ -156,7 +156,6 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
             input_latent = torch.cat([z_latent, x_latent], dim=0)
             input_cond = torch.cat([con, con], dim=0)
             trg_indexs_list = [[1]]
-            print(f'input_latent : {input_latent.shape} , input_cond : {input_cond.shape}')
             noise_pred = call_unet(unet,
                                    input_latent,
                                    t,
@@ -168,9 +167,21 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
             mask_dict = controller.step_store
             controller.reset()
             layer_names = mask_dict.keys()
+            print(f'noise_pred : {noise_pred.shape}')
+            mask_list = []
+            import torchvision
+            totensor = torchvision.transforms.ToTensor()
             for layer_name in layer_names:
-                mask_list = mask_dict[layer_name]
-                print(f'layer_name : {layer_name} , mask_list : {len(mask_list)}')
+                mask_torch = mask_dict[layer_name][0] # head, pix_num, 1
+                head, pix_num, _ = mask_torch.shape
+                res = int(pix_num ** 0.5)
+                cross_maps = mask_torch.reshape(head, res, res, mask_torch.shape[-1])
+                cross_maps = cross_maps.mean([-1])
+                cross_maps = cross_maps.mean([0])
+                image = cross_maps.numpy().astype(np.uint8)
+                mask_list.append(totensor(Image.fromarray(image).resize((64, 64))))
+            mask = torch.stack(mask_list, dim=0)
+            print(f'mask : {mask.shape}')
             y_latent = z_latent * (1) + x_latent * (0)
             y_noise_pred = call_unet(unet, y_latent, t, input_cond, con, None, None)
             controller.reset()
@@ -219,10 +230,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     batch_trg_index = trg_indexs_list[batch_idx]  # two times
                     for word_idx in batch_trg_index:
                         word_idx = int(word_idx)
-                        print('word_idx', word_idx)
-                        masked_attn_vector = masked_attention_prob[:, :, word_idx]
+                        masked_attn_vector = masked_attention_prob[:, :, word_idx] # head, pix_num, 1
                         org_attn_vector = attention_prob[:, :, word_idx]
-                        attention_diff = (masked_attn_vector - org_attn_vector).mean()
+                        attention_diff = (masked_attn_vector - org_attn_vector).mean() # head, pix_num, 1
                         controller.store(attention_diff,layer_name)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
