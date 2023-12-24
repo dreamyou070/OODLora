@@ -7,7 +7,7 @@ def main() :
     #image = Image.open(requests.get(url, stream=True).raw)
 
     processor = ViTImageProcessor.from_pretrained('facebook/dino-vitb8',
-                                                  cache_dir='/home/dreamyou070/pretrained_models'
+                                                  cache_dir='/home/dreamyou070/pretrained_models')
     model = ViTModel.from_pretrained('facebook/dino-vitb8',
                                      cache_dir='/home/dreamyou070/pretrained_models')
 
