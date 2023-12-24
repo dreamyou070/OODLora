@@ -112,7 +112,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
             next_time = flip_times[i + 1]
             latent_dict[int(t)] = latent
             time_steps.append(t)
-            noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
+            noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
             noise_pred_dict[int(t)] = noise_pred
             latent = next_step(noise_pred, int(t), latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')
@@ -386,12 +386,12 @@ def main(args) :
                     inf_time = inference_times.tolist()
                     inf_time.reverse() # [0,20,40,60,80,100 , ... 980]
                     org_latent_dict, time_steps, pil_images = ddim_loop(latent=org_vae_latent,
-                                                                    context=inv_c,
-                                                                    inference_times=inf_time,
-                                                                    scheduler=scheduler,
-                                                                    unet=invers_unet,
-                                                                    vae=vae,
-                                                                    base_folder_dir=class_base_folder)
+                                                                        context=inv_c,
+                                                                        inference_times=inf_time,
+                                                                        scheduler=scheduler,
+                                                                        unet=invers_unet,
+                                                                        vae=vae,
+                                                                        base_folder_dir=class_base_folder)
 
                     """
                     standard_noise = torch.randn_like(org_vae_latent).to(device)
