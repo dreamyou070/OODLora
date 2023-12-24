@@ -36,7 +36,7 @@ def main():
                                 base_img = os.path.join(number_dir, image)
                             elif 'recon' in name:
                                 recon_img = os.path.join(number_dir, image)
-                            else :
+                            elif '_' in name and 'recon' not in name :
                                 mask_img = os.path.join(number_dir, image)
 
                         x = np.array(Image.open(base_img))
@@ -67,7 +67,7 @@ def main():
                                 base_img = os.path.join(number_dir, image)
                             elif 'recon' in name:
                                 recon_img = os.path.join(number_dir, image)
-                            else:
+                            elif '_' in name and 'recon' not in name:
                                 mask_img = os.path.join(number_dir, image)
 
                         x = np.array(Image.open(base_img))
