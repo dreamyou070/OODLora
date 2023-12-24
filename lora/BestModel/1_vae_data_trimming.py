@@ -24,13 +24,12 @@ def main():
                         if '_' in folder:
                             pure = folder.split('_')[0]
                             pure_dir = os.path.join(cat_dir, pure)
+
                             folder_dir = os.path.join(cat_dir, folder)
                             org_img_dir = os.path.join(folder_dir, f'{folder}.png')
                             new_img_dir = os.path.join(pure_dir, f'{folder}.png')
                             os.rename(org_img_dir, new_img_dir)
                             #os.remove(folder_dir)
-
-
 
                 cats = os.listdir(test_dir)  ####################
                 for cat in cats:
@@ -46,44 +45,6 @@ def main():
                             os.rename(org_img_dir, new_img_dir)
                            # os.remove(folder_dir)
 
-                    """
-                    images = os.listdir(cat_dir)
-                    for image in images:
-                        name, ext = os.path.splitext(image)
-                        if '_' in name :
-                            name.split('_')[0]
-                        new_folder = os.path.join(cat_dir, name)
-                        os.makedirs(new_folder, exist_ok=True)
-                        org_img_dir = os.path.join(cat_dir, image)
-                        new_img_dir = os.path.join(new_folder, image)
-                        os.rename(org_img_dir, new_img_dir)
-
-                    images = os.listdir(cat_dir)
-                    for image in images:
-                        name, ext = os.path.splitext(image)
-                        if '_' in name:
-                            name.split('_')[0]
-                        image_dir = os.path.join(cat_dir, image)
-                        new_folder = os.path.join(cat_dir, name)
-                        os.makedirs(new_folder, exist_ok=True)
-                        new_image_dir = os.path.join(new_folder, image)
-                        os.rename(image_dir, new_image_dir)
-                    """
-                """
-                cats = os.listdir(test_dir)
-                for cat in cats:
-                    cat_dir = os.path.join(test_dir, cat)
-                    images = os.listdir(cat_dir)
-                    for image in images:
-                        name, ext = os.path.splitext(image)
-                        if '_' in name:
-                            name.split('_')[0]
-                        image_dir = os.path.join(cat_dir, image)
-                        new_folder = os.path.join(cat_dir, name)
-                        os.makedirs(new_folder, exist_ok=True)
-                        new_image_dir = os.path.join(new_folder, image)
-                        os.rename(image_dir, new_image_dir)
-                """
 
 if __name__ == '__main__':
     main()
