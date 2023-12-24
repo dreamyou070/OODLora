@@ -481,7 +481,8 @@ class DDIMScheduler(SchedulerMixin, ConfigMixin):
         # Make sure alphas_cumprod and timestep have same device and dtype as original_samples
         alphas_cumprod = self.alphas_cumprod.to(device=original_samples.device, dtype=original_samples.dtype)
         timesteps = timesteps.to(original_samples.device)
-
+        # ------------------------------------------------------------------------------------------------- #
+        timesteps = int(timesteps.item())
         sqrt_alpha_prod = alphas_cumprod[timesteps] ** 0.5
         sqrt_alpha_prod = sqrt_alpha_prod.flatten()
         while len(sqrt_alpha_prod.shape) < len(original_samples.shape):
