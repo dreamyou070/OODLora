@@ -156,8 +156,12 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
             input_latent = torch.cat([z_latent, x_latent], dim=0)
             input_cond = torch.cat([con, con], dim=0)
             trg_indexs_list = [[1]]
-            noise_pred = call_unet(unet, input_latent, t,
-                                   input_cond,trg_indexs_list, None)
+            print(f'input_latent : {input_latent.shape} , input_cond : {input_cond.shape}')
+            noise_pred = call_unet(unet,
+                                   input_latent,
+                                   t,
+                                   input_cond,
+                                   trg_indexs_list, None)
 
 
 
@@ -182,42 +186,7 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
     return all_latent_dict, time_steps, pil_images
 
 
-@torch.no_grad()
-def org_recon_loop(start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir):
-
-    if context.shape[0] == 2 :
-        uncon, con = context.chunk(2)
-    else :
-        con = context
-    if inference_times[0] < inference_times[1] :
-        inference_times.reverse()
-    latent = start_latent
-    all_latent_dict = {}
-    all_latent_dict[inference_times[0]] = latent
-    time_steps = []
-    pil_images = []
-    with torch.no_grad():
-        np_img = latent2image(latent, vae, return_type='np')
-    pil_img = Image.fromarray(np_img)
-    pil_images.append(pil_img)
-    pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
-    for i, t in enumerate(inference_times[:-1]):
-        prev_time = int(inference_times[i + 1])
-        time_steps.append(int(t))
-        with torch.no_grad():
-            noise_pred = call_unet(unet, latent, t, con, None, None)
-            latent = prev_step(noise_pred, int(t), latent, scheduler)
-            np_img = latent2image(latent, vae, return_type='np')
-            pil_img = Image.fromarray(np_img)
-            pil_images.append(pil_img)
-            pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
-        all_latent_dict[prev_time] = latent
-    time_steps.append(prev_time)
-    return all_latent_dict, time_steps, pil_images
-
-
-def register_attention_control(unet: nn.Module, controller: AttentionStore,
-                               mask_threshold: float = 1):  # if mask_threshold is 1, use itself
+def register_attention_control(unet: nn.Module, controller: AttentionStore,  mask_threshold: float = 1):  # if mask_threshold is 1, use itself
 
     def ca_forward(self, layer_name):
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
@@ -505,7 +474,7 @@ def main(args) :
                                base_folder_dir = class_base_folder,
                                controller = controller,)
 
-                    
+
 
 
 
