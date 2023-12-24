@@ -23,9 +23,11 @@ def main() :
             train_cat_dir = os.path.join(train_datasets, cat)
             pure_names = os.listdir(train_cat_dir)
             for pure_name in pure_names:
-                pure_img_dir = os.path.join(train_cat_dir, f'{pure_name}.png')
-                mask_img_dir = os.path.join(train_cat_dir, f'{pure_name}_mask.png')
-                recon_img_dir = os.path.join(train_cat_dir, f'{pure_name}_recon_0.png')
+                pure_name_dir = os.path.join(train_cat_dir, pure_name)
+
+                pure_img_dir = os.path.join(pure_name_dir, f'{pure_name}.png')
+                mask_img_dir = os.path.join(pure_name_dir, f'{pure_name}_mask.png')
+                recon_img_dir = os.path.join(pure_name_dir, f'{pure_name}_recon_0.png')
 
                 pure_img = Image.open(pure_img_dir).resize((512,512))
                 pure_np_img = np.array(pure_img)
