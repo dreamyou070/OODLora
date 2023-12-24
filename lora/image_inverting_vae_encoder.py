@@ -485,9 +485,12 @@ def main(args) :
                                                                     vae=vae,
                                                                     base_folder_dir=class_base_folder,
                                                                     is_org = False)
-                    base_num = 40
+                    base_num = 48
                     noising_time = inference_times[base_num]  # 100
                     recon_1_times = inference_times[:base_num+1].tolist()
+                    start_time = time_steps[-1]
+                    print(f'unet only start_time : {start_time}')
+                    print(f'unet only inference : {recon_1_times}')
                     recon_latent_dict, _, _ = recon_loop(None,
                                                          start_latent=latent_dict[int(time_steps[-1])],
                                                          context=context,
