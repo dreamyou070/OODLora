@@ -51,18 +51,18 @@ def main() :
                 object_1 = Image.fromarray(object_1)
                 object_2 = Image.fromarray(object_2)
 
-                background_1_inputs = processor(background_1, return_tensors="pt")
+                background_1_inputs = processor(background_1, return_tensors="pt").to(device)
                 background_1_outputs = model(**background_1_inputs).last_hidden_state.mean(dim=1)
                 print(f'background_1_outputs : {background_1_outputs.shape}')
 
-                background_2_inputs = processor(background_2, return_tensors="pt")
+                background_2_inputs = processor(background_2, return_tensors="pt").to(device)
                 background_2_outputs = model(**background_2_inputs).last_hidden_state.mean(dim=1)
 
 
-                object_1_inputs = processor(object_1, return_tensors="pt")
+                object_1_inputs = processor(object_1, return_tensors="pt").to(device)
                 object_1_outputs = model(**object_1_inputs).last_hidden_state
 
-                object_2_inputs = processor(object_2, return_tensors="pt")
+                object_2_inputs = processor(object_2, return_tensors="pt").to(device)
                 object_2_outputs = model(**object_2_inputs).last_hidden_state
 
                 break
