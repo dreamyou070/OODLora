@@ -197,12 +197,13 @@ def main(args) :
     prompt = args.prompt
     context = init_prompt(tokenizer, text_encoder, device, prompt)
 
-    print(f' (3.2) test images')
+    print(f' (3.2) train images')
     trg_h, trg_w = args.resolution
     train_img_folder = os.path.join(args.concept_image_folder, 'train/bad')
     train_mask_folder = os.path.join(args.concept_image_folder, 'train/gt')
     classes = os.listdir(train_img_folder)
-
+    output_dir = os.path.join(args.output_dir, 'train_dataset')
+    os.makedirs(output_dir, exist_ok=True)
     for class_name in classes:
         repeat, c_name = class_name.split('_')
 
@@ -219,7 +220,7 @@ def main(args) :
 
         train_images = os.listdir(image_folder)
         for j, train_img in enumerate(train_images):
-            if j < 1 :
+
                 name, ext = os.path.splitext(train_img)
 
                 train_img_dir = os.path.join(image_folder, train_img)
@@ -286,6 +287,91 @@ def main(args) :
                                vae = vae,
                                base_folder_dir = class_base_folder,
                                controller = controller,)
+    print(f' (3.3) test images')
+    train_img_folder = os.path.join(args.concept_image_folder, 'test/rgb')
+    train_mask_folder = os.path.join(args.concept_image_folder, 'test/gt')
+    classes = os.listdir(train_img_folder)
+    output_dir = os.path.join(args.output_dir, 'test')
+    os.makedirs(output_dir, exist_ok=True)
+    for class_name in classes:
+        class_base_folder = os.path.join(output_dir, class_name)
+        os.makedirs(class_base_folder, exist_ok=True)
+
+        image_folder = os.path.join(train_img_folder, class_name)
+        mask_folder = os.path.join(train_mask_folder, class_name)
+
+        invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
+        inv_unc, inv_c = invers_context.chunk(2)
+        train_images = os.listdir(image_folder)
+        for j, train_img in enumerate(train_images):
+
+            name, ext = os.path.splitext(train_img)
+
+            train_img_dir = os.path.join(image_folder, train_img)
+
+            shutil.copy(train_img_dir, os.path.join(class_base_folder, train_img))
+            if 'good' not in class_name:
+                mask_img_dir = os.path.join(mask_folder, train_img)
+                shutil.copy(mask_img_dir, os.path.join(class_base_folder, f'{name}_mask{ext}'))
+
+            print(f' (2.3.1) inversion')
+            image_gt_np = load_image(train_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+            with torch.no_grad():
+                org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
+                st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
+                recon_img = vae.decode(st_latent / 0.18215)['sample']
+                recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                image = (recon_img * 255).astype(np.uint8)
+                image = Image.fromarray(image)
+                print(f'vae recon save')
+                image.save(os.path.join(class_base_folder, 'student_vae_recon.png'))
+                inf_time = inference_times.tolist()
+                inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                org_latent_dict, time_steps, pil_images = ddim_loop(args,
+                                                                    latent=org_vae_latent,
+                                                                    context=inv_c,
+                                                                    inference_times=inf_time,
+                                                                    scheduler=scheduler,
+                                                                    unet=invers_unet,
+                                                                    vae=vae,
+                                                                    base_folder_dir=class_base_folder,
+                                                                    is_org=True)
+                latent_dict, time_steps, pil_images = ddim_loop(args,
+                                                                latent=st_latent,
+                                                                context=inv_c,
+                                                                inference_times=inf_time,
+                                                                scheduler=scheduler,
+                                                                unet=invers_unet,
+                                                                vae=vae,
+                                                                base_folder_dir=class_base_folder,
+                                                                is_org=False)
+
+                noising_time = inference_times[base_num]  # 100
+                recon_1_times = inference_times[:base_num + 1].tolist()
+                recon_latent_dict, _, _ = recon_loop(args,
+                                                     None,
+                                                     start_latent=latent_dict[int(time_steps[-1])],
+                                                     context=context,
+                                                     inference_times=recon_1_times,
+                                                     scheduler=scheduler,
+                                                     unet=unet,
+                                                     vae=vae,
+                                                     base_folder_dir=class_base_folder,
+                                                     controller=controller)
+
+                recon_times = inference_times[base_num:].tolist()
+                st_noise_latent = recon_latent_dict[int(noising_time.item())]
+                recon_loop(args,
+                           org_latent_dict,
+                           start_latent=st_noise_latent,
+                           context=context,
+                           inference_times=recon_times,
+                           scheduler=scheduler,
+                           unet=unet,
+                           vae=vae,
+                           base_folder_dir=class_base_folder,
+                           controller=controller, )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

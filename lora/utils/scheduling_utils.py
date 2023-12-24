@@ -101,10 +101,11 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, base
         np_img = latent2image(latent, vae, return_type='np')
         pil_img = Image.fromarray(np_img)
         pil_images.append(pil_img)
-        if is_org:
-            pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
-        else :
-            pil_img.save(os.path.join(base_folder_dir, f'student_noising_{next_time}.png'))
+        if next_time >= 980:
+            if is_org:
+                pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
+            else :
+                pil_img.save(os.path.join(base_folder_dir, f'student_noising_{next_time}.png'))
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
     return latent_dict, time_steps, pil_images
@@ -171,7 +172,6 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 mask = torch.stack(mask_list, dim=0).mean([0]).unsqueeze(0)
                 mask = torch.where(mask > args.mask_thredhold, 1, 0)
                 mask_sum = mask.sum()
-                print(f'mask_sum : {mask_sum}')
                 y_latent = z_latent * (1-mask).to(z_latent.device) + x_latent * (mask).to(z_latent.device) # 1,4,64,64
                 y_noise_pred = call_unet(unet, y_latent, t, con, None, None)
 
@@ -182,10 +182,11 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
             controller.reset()
             latent = prev_step(y_noise_pred, t, y_latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')
+            if prev_time == 0:
 
-            pil_img = Image.fromarray(np_img)
-            pil_images.append(pil_img)
-            pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+                pil_img = Image.fromarray(np_img)
+                pil_images.append(pil_img)
+                pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
 
         all_latent_dict[prev_time] = latent
     time_steps.append(prev_time)
