@@ -80,7 +80,9 @@ def main():
                         error = np.square(binary - gt) ** 0.5
                         test_score += error
 
+
                 line = f'{student_epoch}, {training_score}, {test_score}'
+                print(line)
                 experiments_records.append(line)
             experiments_record = os.path.join(save_folder, f'score_{experiment}.txt')
             with open(experiments_record, 'w') as f:
