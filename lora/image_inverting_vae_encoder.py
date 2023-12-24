@@ -348,6 +348,12 @@ def main(args) :
                     org_noise_latent = scheduler.add_noise(original_samples = org_vae_latent, noise = standard_noise, timesteps = torch.tensor(int(700)))
                     st_noise_latent = scheduler.add_noise(original_samples = st_latent, noise = standard_noise, timesteps = torch.tensor(int(700)))
 
+                    Image.fromarray(latent2image(org_noise_latent, vae, return_type='np')).save(os.path.join(class_base_folder,
+                                                                                                      f'{name}_org_vae_noise_latent_700{ext}'))
+                    Image.fromarray(latent2image(st_noise_latent, vae, return_type='np')).save(
+                        os.path.join(class_base_folder,
+                                     f'{name}_st_vae_noise_latent_700{ext}'))
+
                     org_pred_noise = call_unet(invers_unet, org_noise_latent, 700, invers_context.chunk(2)[0], trg_indexs_list=None, mask_imgs=None)
                     st_pred_noise = call_unet(unet, st_noise_latent, 700, context.chunk(2)[1], trg_indexs_list=None, mask_imgs=None)
 
