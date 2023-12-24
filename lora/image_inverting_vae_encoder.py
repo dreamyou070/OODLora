@@ -156,13 +156,11 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
             input_latent = torch.cat([z_latent, x_latent], dim=0)
             input_cond = torch.cat([con, con], dim=0)
             trg_indexs_list = [[1]]
-            noise_pred = call_unet(unet,
-                                   input_latent,
-                                   t,
-                                   input_cond,
-                                   con,
-                                   trg_indexs_list,
-                                   None)
+            noise_pred = call_unet(unet, input_latent, t,
+                                   input_cond,trg_indexs_list, None)
+
+
+
             mask_dict = controller.step_store
             controller.reset()
             layer_names = mask_dict.keys()
@@ -506,6 +504,8 @@ def main(args) :
                                vae = vae,
                                base_folder_dir = class_base_folder,
                                controller = controller,)
+
+                    
 
 
 
