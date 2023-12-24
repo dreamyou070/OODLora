@@ -44,6 +44,8 @@ def main():
                         mse = np.square(x - x_hat) ** 0.5
                         binary = np.where(mse > 0.5, 1, 0)
 
+                        print(f'cat : {cat}, number : {number}, mask_img : {mask_img}')
+
                         mask = Image.open(mask_img).convert("RGB")
                         gt = np.array(mask)
                         gt = np.where(gt > 100, 1, 0)
