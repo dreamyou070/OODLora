@@ -154,7 +154,8 @@ def main(args):
                             mask_save_dir = os.path.join(class_save_dir, f'{name}_gt.png')
                         else :
                             mask_save_dir = None
-                        recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir)
+                        recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir,accelerator,student_encoder, student_decoder, vae, vae_dtype)
+
 
         else :
 
@@ -186,7 +187,8 @@ def main(args):
                     img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
                     compare_save_dir = os.path.join(class_save_dir, image)
                     mask_save_dir = os.path.join(class_save_dir, f'{name}_mask.png')
-                    recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir)
+                    recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir, accelerator,
+                          student_encoder, student_decoder, vae, vae_dtype)
 
 
 if __name__ == "__main__":
