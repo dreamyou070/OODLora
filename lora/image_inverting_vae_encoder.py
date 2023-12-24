@@ -263,11 +263,6 @@ def main(args) :
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
 
-    alphas_cumprod = scheduler.alphas_cumprod
-    alphas_cumprod = alphas_cumprod.to(accelerator.device, dtype=vae_dtype)
-
-    sqrt_alpha_prod = alphas_cumprod[torch.IntTensor(700).long()] ** 0.5
-
     print(f' (2.4.+) model to accelerator device')
     if len(invers_text_encoders) > 1:
         invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device),invers_text_encoders[1].to(device)
