@@ -8,7 +8,7 @@ def main(args) :
     model_state = torch.load(model_dir, map_location="cpu")
     student_model = model_state['student']
     teacher_model = model_state['teacher']
-    print(type(student_model))
+    print(student_model.keys())
 
 
 if __name__ == '__main__':
