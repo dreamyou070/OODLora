@@ -1,4 +1,5 @@
 from transformers import ViTImageProcessor, ViTModel
+from transformers import AutoImageProcessor, AutoModel
 from PIL import Image
 import os
 import numpy as np
@@ -8,10 +9,12 @@ def main() :
     #url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
     #image = Image.open(requests.get(url, stream=True).raw)
 
-    processor = ViTImageProcessor.from_pretrained('facebook/dino-vitb8',
-                                                  cache_dir='../../../../pretrained_models')
-    model = ViTModel.from_pretrained('facebook/dino-vitb8',
-                                     cache_dir='../../../../pretrained_models')
+    #processor = ViTImageProcessor.from_pretrained('facebook/dino-vitb8',cache_dir='../../../../pretrained_models')
+    #model = ViTModel.from_pretrained('facebook/dino-vitb8',cache_dir='../../../../pretrained_models')
+    device = 'cuda:0'
+    processor = AutoImageProcessor.from_pretrained('facebook/dinov2-base',cache_dir='../../../../pretrained_models')
+    model = AutoModel.from_pretrained('facebook/dinov2-base',cache_dir='../../../../pretrained_models').to(device)
+
     img_base_folder = '../../../../sample'
     lora_epochs = os.listdir(img_base_folder)
     for lora_epoch in lora_epochs:
@@ -49,11 +52,12 @@ def main() :
                 object_2 = Image.fromarray(object_2)
 
                 background_1_inputs = processor(background_1, return_tensors="pt")
-                background_1_outputs = model(**background_1_inputs).last_hidden_state
-                print(f'background_1_outputs.shape : {background_1_outputs.shape}')
+                background_1_outputs = model(**background_1_inputs).last_hidden_state.mean(dim=1)
+                print(f'background_1_outputs : {background_1_outputs.shape}')
 
                 background_2_inputs = processor(background_2, return_tensors="pt")
-                background_2_outputs = model(**background_2_inputs).last_hidden_state
+                background_2_outputs = model(**background_2_inputs).last_hidden_state.mean(dim=1)
+
 
                 object_1_inputs = processor(object_1, return_tensors="pt")
                 object_1_outputs = model(**object_1_inputs).last_hidden_state
