@@ -131,7 +131,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
 
 @torch.no_grad()
 def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir, controller):
-    if context.shape[0] == 1:
+    if context.shape[0] == 2:
         uncon, con = context.chunk(2)
     else:
         con = context
