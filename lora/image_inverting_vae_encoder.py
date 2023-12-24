@@ -376,7 +376,7 @@ def main(args) :
                     st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
                     standard_noise = torch.randn_like(org_vae_latent).to(device)
                     print(f'inference_times : {inference_times}')
-                    noising_time = inference_times[10]
+                    noising_time = inference_times[40]
                     org_noise_latent = scheduler.add_noise(original_samples = org_vae_latent, noise = standard_noise, timesteps = torch.tensor(int(noising_time)))
                     st_noise_latent = scheduler.add_noise(original_samples = st_latent, noise = standard_noise, timesteps = torch.tensor(int(noising_time)))
                     Image.fromarray(latent2image(org_noise_latent, vae, return_type='np')).save(os.path.join(class_base_folder,
