@@ -188,6 +188,7 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
                     image = cross_maps.numpy().astype(np.uint8)
                     mask_list.append(totensor(Image.fromarray(image).resize((64, 64))))
                 mask = torch.stack(mask_list, dim=0).mean([0]).unsqueeze(0)
+                mask = torch.where(mask > 0.5, 1, 0)
                 y_latent = z_latent * (1-mask).to(z_latent.device) + x_latent * (mask).to(z_latent.device) # 1,4,64,64
                 y_noise_pred = call_unet(unet, y_latent, t, con, None, None)
 
@@ -485,7 +486,7 @@ def main(args) :
                                                                     vae=vae,
                                                                     base_folder_dir=class_base_folder,
                                                                     is_org = False)
-                    base_num = 47
+                    base_num = 30
                     noising_time = inference_times[base_num]  # 100
                     recon_1_times = inference_times[:base_num+1].tolist()
                     start_time = time_steps[-1]
