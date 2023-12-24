@@ -239,7 +239,8 @@ def main(args) :
                     image.save(os.path.join(class_base_folder,'student_vae_recon.png'))
                     inf_time = inference_times.tolist()
                     inf_time.reverse() # [0,20,40,60,80,100 , ... 980]
-                    org_latent_dict, time_steps, pil_images = ddim_loop(latent=org_vae_latent,
+                    org_latent_dict, time_steps, pil_images = ddim_loop(args,
+                                                                        latent=org_vae_latent,
                                                                         context=inv_c,
                                                                         inference_times=inf_time,
                                                                         scheduler=scheduler,
@@ -247,7 +248,8 @@ def main(args) :
                                                                         vae=vae,
                                                                         base_folder_dir=class_base_folder,
                                                                         is_org = True)
-                    latent_dict, time_steps, pil_images = ddim_loop(latent=st_latent,
+                    latent_dict, time_steps, pil_images = ddim_loop(args,
+                                                                    latent=st_latent,
                                                                     context=inv_c,
                                                                     inference_times=inf_time,
                                                                     scheduler=scheduler,
@@ -259,7 +261,8 @@ def main(args) :
                     assert base_num >= 0, f'base_num should be larger than 0, but {base_num}'
                     noising_time = inference_times[base_num]  # 100
                     recon_1_times = inference_times[:base_num+1].tolist()
-                    recon_latent_dict, _, _ = recon_loop(None,
+                    recon_latent_dict, _, _ = recon_loop(args,
+                                                         None,
                                                          start_latent=latent_dict[int(time_steps[-1])],
                                                          context=context,
                                                          inference_times=recon_1_times,
