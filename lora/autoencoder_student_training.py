@@ -183,6 +183,13 @@ class NetworkTrainer:
             student_encoder.load_state_dict(torch.load(vae_pretrained_dir))
             student_decoder.load_state_dict(torch.load(vae_pretrained_dir))
 
+
+
+
+
+
+
+
         print(f'\n step 9. accelerate prepare')
         student_encoder, student_decoder, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student_encoder, student_decoder,
                                                                                                          optimizer, train_dataloader, lr_scheduler,)

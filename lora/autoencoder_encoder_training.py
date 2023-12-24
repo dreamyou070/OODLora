@@ -19,7 +19,7 @@ from library.config_util import (ConfigSanitizer, BlueprintGenerator, )
 from library.custom_train_functions import prepare_scheduler_for_custom_training
 from STTraining import Encoder_Teacher, Encoder_Student
 import torch
-from torch.nn import L1Loss
+from utils.model_util import get_state_dict
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -178,8 +178,8 @@ class NetworkTrainer:
 
         print(f'\n step 8. resume')
         if args.resume_vae_training :
-            vae_pretrained_dir = args.vae_pretrained_dir
-            student.load_state_dict(torch.load(vae_pretrained_dir))
+            encoder_state_dict = get_state_dict(args.student_encoder_pretrained_dir)
+            student.load_state_dict(encoder_state_dict, strict=True)
 
         student, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student, optimizer, train_dataloader, lr_scheduler,)
 
