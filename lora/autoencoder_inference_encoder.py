@@ -49,7 +49,7 @@ def main(args):
     converted_vae_checkpoint = convert_ldm_vae_checkpoint(state_dict, vae_config)
     vae = AutoencoderKL(**vae_config)
     info = vae.load_state_dict(converted_vae_checkpoint)
-    vae.to(dtype=weight_dtype)
+    vae.to(dtype=weight_dtype, device=accelerator.device)
 
     print(f' (3) vae student encoder')
     student_vae = AutoencoderKL.from_config(vae.config)
