@@ -16,3 +16,6 @@ import torchvision
 image = cross_maps.numpy().astype(np.uint8)
 totensor = torchvision.transforms.ToTensor()
 image = totensor(Image.fromarray(image).resize((64, 64)))
+a = [image, image]
+a = torch.stack(a).mean([0]).unsqueeze(0)
+print(a.shape)

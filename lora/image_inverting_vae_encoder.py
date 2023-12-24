@@ -167,13 +167,13 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
             mask_dict = controller.step_store
             controller.reset()
             layer_names = mask_dict.keys()
-            print(f'noise_pred : {noise_pred.shape}')
             mask_list = []
             import torchvision
             totensor = torchvision.transforms.ToTensor()
             for layer_name in layer_names:
                 mask_torch = mask_dict[layer_name][0] # head, pix_num, 1
-                print(f'mask_torch : {mask_torch.shape}')
+                if mask_torch.dim() == 2 :
+                    mask_torch = mask_torch.unsqueeze(-1)
                 head, pix_num, _ = mask_torch.shape
                 res = int(pix_num ** 0.5)
                 cross_maps = mask_torch.reshape(head, res, res, mask_torch.shape[-1])
@@ -181,10 +181,10 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
                 cross_maps = cross_maps.mean([0])
                 image = cross_maps.numpy().astype(np.uint8)
                 mask_list.append(totensor(Image.fromarray(image).resize((64, 64))))
-            mask = torch.stack(mask_list, dim=0)
+            mask = torch.stack(mask_list, dim=0).mean([0]).unsqueeze(0)
             print(f'mask : {mask.shape}')
-            y_latent = z_latent * (1) + x_latent * (0)
-            y_noise_pred = call_unet(unet, y_latent, t, input_cond, con, None, None)
+            y_latent = z_latent * (1-mask) + x_latent * (mask) # 1,4,64,64
+            y_noise_pred = call_unet(unet, y_latent, t, con, None, None)
             controller.reset()
             # --------------------- mask --------------------- #
             latent = prev_step(y_noise_pred, t, y_latent, scheduler)
