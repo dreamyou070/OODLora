@@ -11,7 +11,7 @@ def main():
     experiments = os.listdir(base_folder)
     for experiment in experiments:
 
-        if '1_' not in experiment  :
+        if '3_' in experiment  :
             experiment_folder = os.path.join(base_folder, experiment)
 
             inference_dir = os.path.join(experiment_folder, 'inference_finding_best_epoch')
