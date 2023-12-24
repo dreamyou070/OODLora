@@ -479,7 +479,7 @@ def main(args) :
                                                                     vae=vae,
                                                                     base_folder_dir=class_base_folder,
                                                                     is_org = False)
-                    base_num = 40
+                    base_num = 20
                     noising_time = inference_times[base_num]  # 100
                     recon_1_times = inference_times[:base_num+1].tolist()
                     recon_latent_dict, _, _ = recon_loop(None,
