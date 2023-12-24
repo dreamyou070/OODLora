@@ -274,7 +274,8 @@ def main(args) :
 
                     recon_times = inference_times[base_num:].tolist()
                     st_noise_latent = recon_latent_dict[int(noising_time.item())]
-                    recon_loop(org_latent_dict,
+                    recon_loop(args,
+                               org_latent_dict,
                                start_latent = st_noise_latent,
                                context = context,
                                inference_times = recon_times,
