@@ -22,12 +22,14 @@ def main():
                     sub_folders = os.listdir(cat_dir)
                     for sub_folder in sub_folders:
                         if '_' in sub_folder:
-                            name = sub_folder.split('_')[0]
-                            name_dir = os.path.join(cat_dir, name)
                             sub_folder_dir = os.path.join(cat_dir, sub_folder)
-                            image = os.path.join(sub_folder_dir, f'{sub_folder}.png')
-                            new_img_dir = os.path.join(name_dir, f'{sub_folder}.png')
-                            os.rename(image, new_img_dir)
+                            os.rmdir(sub_folder_dir)
+                            #name = sub_folder.split('_')[0]
+                            #name_dir = os.path.join(cat_dir, name)
+                            #sub_folder_dir = os.path.join(cat_dir, sub_folder)
+                            #image = os.path.join(sub_folder_dir, f'{sub_folder}.png')
+                            #new_img_dir = os.path.join(name_dir, f'{sub_folder}.png')
+                            #os.rename(image, new_img_dir)
 
                 cats = os.listdir(test_dir)  ####################
                 for cat in cats:
