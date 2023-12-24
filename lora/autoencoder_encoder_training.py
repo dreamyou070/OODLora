@@ -4,7 +4,6 @@ import library.train_util as train_util
 import library.config_util as config_util
 import library.custom_train_functions as custom_train_functions
 from diffusers.models.vae import DiagonalGaussianDistribution
-from generative.losses import PatchAdversarialLoss
 import math
 import os
 import random
@@ -102,7 +101,6 @@ class NetworkTrainer:
             import wandb
             wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
 
-
         print(f'\n step 4. save directory')
         save_base_dir = args.output_dir
         _, folder_name = os.path.split(save_base_dir)
@@ -110,7 +108,6 @@ class NetworkTrainer:
         os.makedirs(record_save_dir, exist_ok=True)
         with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
-
 
         print(f'\n step 5. mixed precision and model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
@@ -178,7 +175,7 @@ class NetworkTrainer:
 
         print(f'\n step 8. resume')
         if args.resume_vae_training :
-            encoder_state_dict = get_state_dict(args.student_encoder_pretrained_dir)
+            encoder_state_dict = get_state_dict(args.student_pretrained_dir)
             student.load_state_dict(encoder_state_dict, strict=True)
 
         student, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student, optimizer, train_dataloader, lr_scheduler,)
@@ -457,9 +454,7 @@ if __name__ == "__main__":
     parser.add_argument("--resume_vae_training", action = "store_true")
     parser.add_argument("--perceptual_weight", type = float, default = 0.001)
     parser.add_argument("--autoencoder_warm_up_n_epochs", type=int, default=2)
-    parser.add_argument("--vae_pretrained_dir", type=str)
-    parser.add_argument("--discriminator_pretrained_dir", type=str)
-    parser.add_argument("--student_reconst_loss", action="store_true")
+    parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--anormal_training", action="store_true")
     parser.add_argument("--only_normal_training", action="store_true")
     parser.add_argument("--start_epoch", type = int)
