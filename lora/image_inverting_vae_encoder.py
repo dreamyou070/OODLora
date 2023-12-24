@@ -265,7 +265,7 @@ def main(args) :
 
     alphas_cumprod = scheduler.alphas_cumprod
     timesteps = torch.IntTensor(700)
-    timesteps = timesteps.to(device)
+    timesteps = timesteps.to(scheduler.device)
     sqrt_alpha_prod = alphas_cumprod[timesteps] ** 0.5
     """
     print(f' (2.4.+) model to accelerator device')
