@@ -465,6 +465,7 @@ def main(args) :
                     recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                     image = (recon_img * 255).astype(np.uint8)
                     image = Image.fromarray(image)
+                    print(f'vae recon save')
                     image.save(os.path.join(class_base_folder,'student_vae_recon.png'))
                     inf_time = inference_times.tolist()
                     inf_time.reverse() # [0,20,40,60,80,100 , ... 980]
