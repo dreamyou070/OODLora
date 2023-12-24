@@ -264,10 +264,8 @@ def main(args) :
     inference_times = scheduler.timesteps
 
     alphas_cumprod = scheduler.alphas_cumprod
-    timesteps = torch.IntTensor(700)
-    timesteps = timesteps.to(scheduler.device)
-    sqrt_alpha_prod = alphas_cumprod[timesteps] ** 0.5
-    """
+    sqrt_alpha_prod = alphas_cumprod[torch.IntTensor(700)] ** 0.5
+
     print(f' (2.4.+) model to accelerator device')
     device = args.device
     if len(invers_text_encoders) > 1:
@@ -351,8 +349,8 @@ def main(args) :
                     st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
                     standard_noise = torch.randn_like(org_vae_latent).to(device)
 
-                    org_noise_latent = scheduler.add_noise(original_samples = org_vae_latent, noise = standard_noise, timesteps = torch.IntTensor([700]))
-                    st_noise_latent = scheduler.add_noise(original_samples = st_latent, noise = standard_noise, timesteps = torch.IntTensor([700]))
+                    org_noise_latent = scheduler.add_noise(original_samples = org_vae_latent, noise = standard_noise, timesteps = torch.IntTensor(700))
+                    st_noise_latent = scheduler.add_noise(original_samples = st_latent, noise = standard_noise, timesteps = torch.IntTensor(700))
 
                     org_pred_noise = call_unet(invers_unet, org_noise_latent, 700, invers_context.chunk(2)[0], trg_indexs_list=None, mask_imgs=None)
                     st_pred_noise = call_unet(unet, st_noise_latent, 700, context.chunk(2)[1], trg_indexs_list=None, mask_imgs=None)
@@ -369,7 +367,7 @@ def main(args) :
                     mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
 
 
-                
+                """
                 mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
                 mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
                 mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
@@ -442,7 +440,7 @@ def main(args) :
                                                                  vae=vae,
                                                                  base_folder_dir=timewise_save_base_folder,
                                                                  mask=mask)
-    """
+                """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
