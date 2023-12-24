@@ -189,7 +189,7 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
             # --------------------- mask --------------------- #
             latent = prev_step(y_noise_pred, t, y_latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')
-        if prev_time == 0:
+        #if prev_time == 0:
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
