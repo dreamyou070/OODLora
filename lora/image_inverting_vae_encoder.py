@@ -461,6 +461,11 @@ def main(args) :
                 with torch.no_grad():
                     org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
                     st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
+                    recon_img = vae.decode(st_latent)['sample']
+                    recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                    image = (recon_img * 255).astype(np.uint8)
+                    image = Image.fromarray(image)
+                    image.save(os.path.join(class_base_folder,'student_vae_recon.png'))
                     inf_time = inference_times.tolist()
                     inf_time.reverse() # [0,20,40,60,80,100 , ... 980]
                     org_latent_dict, time_steps, pil_images = ddim_loop(latent=org_vae_latent,

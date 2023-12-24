@@ -308,9 +308,6 @@ class NetworkTrainer:
                 weights_sd = load_file(network_file)
                 layer_names = weights_sd.keys()
                 efficient_layers = args.efficient_layer.split(",")
-                #unefficient_layers = args.unefficient_layer.split(",")
-                #save_folder_name = 'unefficient_' + '_'.join(efficient_layers)
-                #save_folder_name = 'efficient_' +'_'.join(efficient_layers )
                 save_folder_name = args.save_folder_name
                 for layer_name in layer_names:
                     score = 0
