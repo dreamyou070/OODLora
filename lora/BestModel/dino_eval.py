@@ -14,4 +14,4 @@ if __name__ == '__main__':
     parser.add_argument('--model_dir', default=r'../../../../pretrained_models/dino_deitsmall16_pretrain_full_checkpoint.pth',
                         type=str, help='path to the model')
     args = parser.parse_args()
-    main()
+    main(args)
