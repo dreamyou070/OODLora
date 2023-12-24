@@ -265,6 +265,9 @@ def main(args) :
 
     alphas_cumprod = scheduler.alphas_cumprod
     alphas_cumprod = alphas_cumprod.to(accelerator.device, dtype=vae_dtype)
+    t_step = torch.tensor(int(1))
+    t_step = t_step.to(accelerator.device, dtype=vae_dtype)
+    sqrt_alpha_prod = alphas_cumprod[t_step] ** 0.5
     print(f'alphas_cumprod: {alphas_cumprod}')
     """
     sqrt_alpha_prod = alphas_cumprod[torch.IntTensor(700).long()] ** 0.5
