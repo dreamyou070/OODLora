@@ -177,14 +177,9 @@ class NetworkTrainer:
             train_util.patch_accelerator_for_fp16_training(accelerator)
 
         print(f'\n step 8. resume')
-        train_util.resume_from_local_or_hf_if_specified(accelerator, args)
-
-
         if args.resume_vae_training :
             vae_pretrained_dir = args.vae_pretrained_dir
-            discriminator_pretrained_dir = args.discriminator_pretrained_dir
-            vae.load_state_dict(torch.load(vae_pretrained_dir))
-
+            student.load_state_dict(torch.load(vae_pretrained_dir))
 
         student, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student, optimizer, train_dataloader, lr_scheduler,)
 
@@ -308,7 +303,7 @@ class NetworkTrainer:
         del train_dataset_group
         # training loop
         autoencoder_warm_up_n_epochs = args.autoencoder_warm_up_n_epochs
-        for epoch in range(num_train_epochs):
+        for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
@@ -385,7 +380,7 @@ class NetworkTrainer:
                 if is_main_process:
                     img = batch['images'].to(dtype=weight_dtype)
                     latent = DiagonalGaussianDistribution(img).sample()
-                    recon = vae_decoder(vae_decoder_quantize(latent))
+                    recon = vae.decode(latent)['sample']
                     batch = recon.shape[0]
                     if batch != 1:
                         recon = recon[0]
@@ -467,7 +462,7 @@ if __name__ == "__main__":
     parser.add_argument("--student_reconst_loss", action="store_true")
     parser.add_argument("--anormal_training", action="store_true")
     parser.add_argument("--only_normal_training", action="store_true")
-
+    parser.add_argument("--start_epoch", type = int)
 
     # class_caption
     args = parser.parse_args()

@@ -11,11 +11,14 @@ import numpy as np
 from PIL import Image
 from diffusers import AutoencoderKL
 from STTraining import Encoder_Teacher, Encoder_Student, Decoder_Student
+from library.model_util import create_vae_diffusers_config, convert_ldm_vae_checkpoint, load_checkpoint_with_text_encoder_conversion
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
 from accelerate import Accelerator
+from diffusers import AutoencoderKL
+
 
 def main(args):
 
@@ -25,7 +28,6 @@ def main(args):
         setproctitle(args.process_title)
     else:
         setproctitle('parksooyeon')
-    session_id = random.randint(0, 2 ** 32)
 
     print(f' (2) seed')
     if args.seed is None:
@@ -39,35 +41,28 @@ def main(args):
     print(f' (1) mixed precision and model')
     weight_dtype, save_dtype = train_util.prepare_dtype(args)
     vae_dtype = torch.float32
-    print(f' (2) model')
-    text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
+    print(f' (2) vae pretrained')
+    name_or_path = args.pretrained_model_name_or_path
+    vae_config = create_vae_diffusers_config()
+    _, state_dict = load_checkpoint_with_text_encoder_conversion(name_or_path,
+                                                                 device='cpu')
+    converted_vae_checkpoint = convert_ldm_vae_checkpoint(state_dict, vae_config)
+    vae = AutoencoderKL(**vae_config)
+    info = vae.load_state_dict(converted_vae_checkpoint)
+    vae.to(dtype=weight_dtype)
 
-    print(f' (3) making encoder of vae')
-    vae_encoder = vae.encoder
-    vae_encoder_quantize = vae.quant_conv
-    vae_encoder.requires_grad_(False)
-    vae_encoder.eval()
-    vae_encoder.to(accelerator.device, dtype=vae_dtype)
-    vae_encoder_quantize.requires_grad_(False)
-    vae_encoder_quantize.eval()
-    vae_encoder_quantize.to(accelerator.device, dtype=vae_dtype)
-    vae.to(accelerator.device, dtype=vae_dtype)
-
-    config_dict = vae.config
-
-
-    student_vae = AutoencoderKL.from_config(config_dict)
+    print(f' (3) vae student encoder')
+    student_vae = AutoencoderKL.from_config(vae.config)
     student_vae_encoder = student_vae.encoder
     student_vae_encoder_quantize = student_vae.quant_conv
     student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
 
-
-    #
+    print(f' (4) vae student decoder')
     student_vae_decoder = student_vae.decoder
     student_vae_decoder_quantize = student_vae.post_quant_conv
     student_decoder = Decoder_Student(student_vae_decoder, student_vae_decoder_quantize)
 
-    print(f' (4) making decoder of vae')
+    print(f' (5) student model loading')
     def get_state_dict(dir) :
         model_state_dict = torch.load(dir, map_location="cpu")
         state_dict = {}
@@ -79,18 +74,9 @@ def main(args):
     if args.student_encoder_pretrained_dir is not None:
         encoder_state_dict = get_state_dict(args.student_encoder_pretrained_dir)
         student_encoder.load_state_dict(encoder_state_dict, strict=True)
-        if args.student_decoder_pretrained_dir is not None:
-            decoder_state_dict = get_state_dict(args.student_decoder_pretrained_dir)
-            student_decoder.load_state_dict(decoder_state_dict, strict=True)
-        else :
-            student_decoder = Decoder_Student(student_vae_decoder, student_vae_decoder_quantize)
-    else :
-        student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
-        if args.student_decoder_pretrained_dir is not None:
-            decoder_state_dict = get_state_dict(args.student_decoder_pretrained_dir)
-            student_decoder.load_state_dict(decoder_state_dict, strict=True)
-        else :
-            student_decoder = Decoder_Student(student_vae_decoder, student_vae_decoder_quantize)
+    if args.student_decoder_pretrained_dir is not None:
+        decoder_state_dict = get_state_dict(args.student_decoder_pretrained_dir)
+        student_decoder.load_state_dict(decoder_state_dict, strict=True)
 
     student_encoder.requires_grad_(False)
     student_encoder.eval()
@@ -98,11 +84,6 @@ def main(args):
     student_decoder.requires_grad_(False)
     student_decoder.eval()
     student_decoder.to(accelerator.device, dtype=vae_dtype)
-
-    #student_epoch = os.path.split(student_pretrained_dir)[-1]
-    #student_epoch = os.path.splitext(student_epoch)[0]
-    #student_epoch = int(student_epoch.split('_')[-1])
-    #print(f'student_epoch: {student_epoch}')
 
     def recon(mask_dir, sample_data_dir, mask_save_dir, save_dir, compare_save_dir):
         pil_img = Image.open(sample_data_dir)
@@ -122,23 +103,26 @@ def main(args):
         with torch.no_grad():
             img = img.to(accelerator.device)
             # (1) encoder make latent
-            latent = DiagonalGaussianDistribution(student_encoder(img)).sample()
+            if args.student_encoder_pretrained_dir is not None:
+                latent = DiagonalGaussianDistribution(student_encoder(img)).sample()
+            else :
+                latent = DiagonalGaussianDistribution(vae.encode(img)).sample()
+
             # (2) decoder
-            #recon_img = student_decoder(latent)#['sample']
-            recon_img = vae.decode(latent)['sample']
+            if args.student_decoder_pretrained_dir is not None:
+                recon_img = student_decoder(latent)
+            else :
+                recon_img = vae.decode(latent)['sample']
             recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
             image = (recon_img * 255).astype(np.uint8)
             image = Image.fromarray(image)
             image.save(save_dir)
 
     print(f'\n step 3. inference')
-
     print(' (3.1) anormal test')
     if args.training_data_check :
-
         save_base_dir = os.path.join(args.output_dir, 'inference/vae_result_check/training_dataset')
         os.makedirs(save_base_dir, exist_ok=True)
-
         anormal_folder = os.path.join(args.anormal_folder, 'train/bad')
         mask_folder = os.path.join(args.anormal_folder, 'train/gt')
         classes = os.listdir(anormal_folder)

@@ -1079,14 +1079,14 @@ class BaseDataset(torch.utils.data.Dataset):
                 crop_ltrb = (0, 0, 0, 0)
                 # augmentation
 
-                #aug = self.aug_helper.get_augmentor(subset.color_aug)
-                p = random.choice(range(0, 2))
+                aug = self.aug_helper.get_augmentor(subset.color_aug)
+
                 # ------------------------------------------------------------------------------------------------------------------------ #
                 # augmentationを行う
 
                 #    img = aug(image=img)["image"]
                 #    masked_img = aug(image=masked_img)["image"]
-                if p == 0 :
+                if aug is not None:
                     def patch_shuffle_with_index(patch_indexs, np_img):
                         patches = []
                         for i in range(h_num):
@@ -1107,8 +1107,8 @@ class BaseDataset(torch.utils.data.Dataset):
                         return shuffled_img
 
                     org_h, org_w, c = img.shape
-                    patch_h, patch_w = org_h / 2, org_w / 2
-                    h_num, w_num = 2,2
+                    patch_h, patch_w = org_h / 4, org_w / 4
+                    h_num, w_num = 4, 4
                     total_patch_num = h_num * w_num
                     patch_indexs = [i for i in range(total_patch_num)]
                     random.shuffle(patch_indexs)
@@ -1119,7 +1119,6 @@ class BaseDataset(torch.utils.data.Dataset):
                 if flipped:
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                     masked_img = masked_img[:, ::-1, :].copy()
-
                 latents = None
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)

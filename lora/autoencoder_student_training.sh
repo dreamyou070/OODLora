@@ -29,4 +29,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --train_batch_size 2 \
   --max_train_steps 100000 \
   --student_reconst_loss \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/carrot/train/bad
+  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/carrot/train/bad \
+  --resume_vae_training

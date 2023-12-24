@@ -4,11 +4,9 @@ import library.train_util as train_util
 import library.config_util as config_util
 import library.custom_train_functions as custom_train_functions
 from diffusers.models.vae import DiagonalGaussianDistribution
-from generative.losses import PatchAdversarialLoss
 import math
 import os
 import random
-import time
 import json
 from multiprocessing import Value
 from tqdm import tqdm

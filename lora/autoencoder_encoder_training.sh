@@ -31,4 +31,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --student_reconst_loss \
   --color_aug \
   --anormal_training \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato/train_normal/bad
+  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato/train_normal/bad \
+  --resume_vae_training \
+  --start_epoch 18 \
+  --vae_pretrained_dir ../result/MVTec3D-AD_experiment/potato/vae_training/4_TS_encoder_patchwise_augmenting/vae_student_model/student_epoch_000018.pth
