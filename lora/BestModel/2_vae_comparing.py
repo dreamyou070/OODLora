@@ -29,6 +29,7 @@ def main():
                     for number in numbers:
                         number_dir = os.path.join(cat_dir, number)
                         images = os.listdir(number_dir)
+                        base_img, recon_img, mask_img = None, None, None
                         for image in images:
                             name, ext = os.path.splitext(image)
                             if '_' not in name :
@@ -58,6 +59,7 @@ def main():
                     for number in numbers:
                         number_dir = os.path.join(cat_dir, number)
                         images = os.listdir(number_dir)
+                        base_img, recon_img, mask_img = None, None, None
                         for image in images:
                             name, ext = os.path.splitext(image)
                             if '_' not in name:
