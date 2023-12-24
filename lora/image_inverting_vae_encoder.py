@@ -109,12 +109,12 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     repeat_time = 0
     for i, t in enumerate(flip_times[:-1]):
         if repeat_time < args.repeat_time:
-            next_time = flip_times[i + 1].item()
-            latent_dict[int(t.item())] = latent
-            time_steps.append(t.item())
+            next_time = flip_times[i + 1]
+            latent_dict[int(t)] = latent
+            time_steps.append(t)
             noise_pred = call_unet(unet, latent, t, uncond_embeddings, None, None)
-            noise_pred_dict[int(t.item())] = noise_pred
-            latent = next_step(noise_pred, int(t.item()), latent, scheduler)
+            noise_pred_dict[int(t)] = noise_pred
+            latent = next_step(noise_pred, int(t), latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
