@@ -79,7 +79,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
 
 
 @torch.no_grad()
-def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, base_folder_dir, is_org):
+def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, base_folder_dir, is_org, name,):
     if context.shape[0] == 1:
         cond_embeddings = context
     else :
@@ -103,9 +103,9 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, base
         pil_images.append(pil_img)
         if next_time >= 980:
             if is_org:
-                pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
+                pil_img.save(os.path.join(base_folder_dir, f'{name}_noising_{next_time}.png'))
             else :
-                pil_img.save(os.path.join(base_folder_dir, f'student_noising_{next_time}.png'))
+                pil_img.save(os.path.join(base_folder_dir, f'{name}_student_noising_{next_time}.png'))
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
     return latent_dict, time_steps, pil_images
@@ -113,7 +113,8 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, base
 
 
 @torch.no_grad()
-def recon_loop(args, latent_dict, start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir, controller):
+def recon_loop(args, latent_dict, start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir,
+               controller, name):
     if context.shape[0] == 2:
         uncon, con = context.chunk(2)
     else:
@@ -129,7 +130,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
         np_img = latent2image(latent, vae, return_type='np')
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
-    pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
+    pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_start_time_{inference_times[0]}.png'))
     for i, t in enumerate(inference_times[:-1]):
         if latent_dict is not None:
             z_latent = latent_dict[inference_times[i]]
@@ -186,7 +187,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
 
                 pil_img = Image.fromarray(np_img)
                 pil_images.append(pil_img)
-                pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
+                pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
 
         all_latent_dict[prev_time] = latent
     time_steps.append(prev_time)
