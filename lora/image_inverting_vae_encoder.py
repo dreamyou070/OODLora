@@ -1,5 +1,7 @@
 import argparse
 from accelerate.utils import set_seed
+from diffusers import AutoencoderKL
+from STTraining import Encoder_Student
 import os
 import random
 import library.train_util as train_util
@@ -8,205 +10,18 @@ import library.custom_train_functions as custom_train_functions
 import torch
 from PIL import Image
 import sys, importlib
-from typing import Union
 import numpy as np
-from utils.image_utils import image2latent, customizing_image2latent, load_image, latent2image
+from utils.image_utils import image2latent, customizing_image2latent, load_image
+from utils.scheduling_utils import get_scheduler, ddim_loop, recon_loop
+from utils.model_utils import get_state_dict, init_prompt
+from utils.attention_storer_utils import register_attention_control
 import shutil
 from attention_store import AttentionStore
-from torch import nn
+import torch.nn as nn
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
-try:
-    import intel_extension_for_pytorch as ipex
-    if torch.xpu.is_available():
-        from library.ipex import ipex_init
-        ipex_init()
-except Exception:
-    pass
-from diffusers import (DDPMScheduler,EulerAncestralDiscreteScheduler,DPMSolverMultistepScheduler,DPMSolverSinglestepScheduler,
-                       LMSDiscreteScheduler,PNDMScheduler,EulerDiscreteScheduler,HeunDiscreteScheduler, KDPM2DiscreteScheduler,KDPM2AncestralDiscreteScheduler)
-from diffusers import DDIMScheduler
-
-def init_prompt(tokenizer, text_encoder, device, prompt: str):
-    uncond_input = tokenizer([""],
-                             padding="max_length", max_length=tokenizer.model_max_length,
-                             return_tensors="pt")
-    uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
-    text_input = tokenizer([prompt],
-                           padding="max_length",
-                           max_length=tokenizer.model_max_length,
-                           truncation=True,
-                           return_tensors="pt",)
-    text_embeddings = text_encoder(text_input.input_ids.to(device))[0]
-    context = torch.cat([uncond_embeddings, text_embeddings])
-    return context
-
-def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
-              timestep: int,
-              sample: Union[torch.FloatTensor, np.ndarray],
-              scheduler):
-    timestep, next_timestep = timestep, min( timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
-    alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
-    alpha_prod_t_matrix = torch.ones_like(model_output) * alpha_prod_t
-    alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
-    alpha_prod_t_next_matrix = torch.ones_like(model_output) * alpha_prod_t_next
-    beta_prod_t = 1 - alpha_prod_t
-    beta_prod_t_matrix = torch.ones_like(model_output) * beta_prod_t
-    #next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
-    next_original_sample = (sample - beta_prod_t_matrix ** 0.5 * model_output) / alpha_prod_t_matrix ** 0.5
-    #next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
-    next_sample_direction = (torch.ones_like(model_output) - alpha_prod_t_next_matrix) ** 0.5 * model_output
-
-    #next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
-    next_sample = alpha_prod_t_next_matrix ** 0.5 * next_original_sample + next_sample_direction
-    return next_sample
-
-def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
-              timestep: int,
-              sample: Union[torch.FloatTensor, np.ndarray],
-              scheduler):
-    timestep, prev_timestep = timestep, max( timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 0)
-    alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
-    alpha_prod_t_matrix = torch.ones_like(model_output) * alpha_prod_t
-
-    alpha_prod_t_prev = scheduler.alphas_cumprod[prev_timestep]
-    alpha_prod_t_prev_matrix = torch.ones_like(model_output) * alpha_prod_t_prev
-    beta_prod_t = 1 - alpha_prod_t
-    beta_prod_t_matrix = torch.ones_like(model_output) * beta_prod_t
-
-    #prev_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
-    prev_original_sample = (sample - beta_prod_t_matrix ** 0.5 * model_output) / alpha_prod_t_matrix ** 0.5
-    #prev_sample_direction = (1 - alpha_prod_t_prev) ** 0.5 * model_output
-    prev_sample_direction = (torch.ones_like(model_output) - alpha_prod_t_prev_matrix) ** 0.5 * model_output
-    prev_sample = alpha_prod_t_prev_matrix ** 0.5 * prev_original_sample + prev_sample_direction
-    return prev_sample
-
-
-def call_unet(unet, noisy_latents, timesteps,
-              text_conds, trg_indexs_list, mask_imgs):
-    noise_pred = unet(noisy_latents,
-                      timesteps,
-                      text_conds,
-                      trg_indexs_list=trg_indexs_list,
-                      mask_imgs=mask_imgs,).sample
-    return noise_pred
-
-
-@torch.no_grad()
-def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folder_dir, is_org):
-    if context.shape[0] == 1:
-        cond_embeddings = context
-    else :
-        uncond_embeddings, cond_embeddings = context.chunk(2)
-    time_steps = []
-    latent = latent.clone().detach()
-    latent_dict = {}
-    noise_pred_dict = {}
-    latent_dict[0] = latent
-    pil_images = []
-    flip_times = inference_times
-    repeat_time = 0
-    for i, t in enumerate(flip_times[:-1]):
-        if repeat_time < args.repeat_time:
-            next_time = flip_times[i + 1]
-            latent_dict[int(t)] = latent
-            time_steps.append(t)
-            noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
-            noise_pred_dict[int(t)] = noise_pred
-            latent = next_step(noise_pred, int(t), latent, scheduler)
-            np_img = latent2image(latent, vae, return_type='np')
-            pil_img = Image.fromarray(np_img)
-            pil_images.append(pil_img)
-            if is_org:
-                pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
-            else :
-                pil_img.save(os.path.join(base_folder_dir, f'student_noising_{next_time}.png'))
-            repeat_time += 1
-    time_steps.append(next_time)
-    latent_dict[int(next_time)] = latent
-    return latent_dict, time_steps, pil_images
-
-
-
-@torch.no_grad()
-def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir, controller):
-    if context.shape[0] == 2:
-        uncon, con = context.chunk(2)
-    else:
-        con = context
-    # inference_times = [100,80, ... 0]
-    latent = start_latent
-    all_latent_dict = {}
-    all_latent_dict[inference_times[0]] = latent
-
-    time_steps = []
-    pil_images = []
-    with torch.no_grad():
-        np_img = latent2image(latent, vae, return_type='np')
-    pil_img = Image.fromarray(np_img)
-    pil_images.append(pil_img)
-    pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
-    for i, t in enumerate(inference_times[:-1]):
-        if latent_dict is not None:
-            z_latent = latent_dict[inference_times[i]]
-        x_latent = latent
-        prev_time = int(inference_times[i + 1])
-        time_steps.append(int(t))
-        with torch.no_grad():
-            if latent_dict is not None:
-                input_latent = torch.cat([z_latent, x_latent], dim=0)
-                input_cond = torch.cat([con, con], dim=0)
-                trg_indexs_list = [[1]]
-            else :
-                input_latent = x_latent
-                input_cond = con
-                trg_indexs_list = None
-
-            noise_pred = call_unet(unet,
-                                   input_latent,
-                                   t,
-                                   input_cond,
-                                   trg_indexs_list, None)
-            if latent_dict is not None:
-                mask_dict = controller.step_store
-                controller.reset()
-                layer_names = mask_dict.keys()
-                mask_list = []
-                import torchvision
-                totensor = torchvision.transforms.ToTensor()
-                for layer_name in layer_names:
-                    mask_torch = mask_dict[layer_name][0] # head, pix_num, 1
-                    if mask_torch.dim() == 2 :
-                        mask_torch = mask_torch.unsqueeze(-1)
-                    head, pix_num, _ = mask_torch.shape
-                    res = int(pix_num ** 0.5)
-                    cross_maps = mask_torch.reshape(head, res, res, mask_torch.shape[-1])
-                    cross_maps = cross_maps.mean([-1])
-                    cross_maps = cross_maps.mean([0]).to('cpu')
-                    image = cross_maps.numpy().astype(np.uint8)
-                    mask_list.append(totensor(Image.fromarray(image).resize((64, 64))))
-                mask = torch.stack(mask_list, dim=0).mean([0]).unsqueeze(0)
-                mask = torch.where(mask > 0.5, 1, 0)
-                y_latent = z_latent * (1-mask).to(z_latent.device) + x_latent * (mask).to(z_latent.device) # 1,4,64,64
-                y_noise_pred = call_unet(unet, y_latent, t, con, None, None)
-
-            else :
-                y_latent = x_latent
-                y_noise_pred = noise_pred
-            # --------------------- mask --------------------- #
-            controller.reset()
-            latent = prev_step(y_noise_pred, t, y_latent, scheduler)
-            np_img = latent2image(latent, vae, return_type='np')
-        #if prev_time == 0:
-            pil_img = Image.fromarray(np_img)
-            pil_images.append(pil_img)
-            pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
-        all_latent_dict[prev_time] = latent
-    time_steps.append(prev_time)
-    return all_latent_dict, time_steps, pil_images
-
 
 def register_attention_control(unet: nn.Module, controller: AttentionStore,  mask_threshold: float = 1):  # if mask_threshold is 1, use itself
 
@@ -295,9 +110,8 @@ def main(args) :
 
     print(f" (1.3) save dir")
     output_dir = args.output_dir
-    if args.use_binary_mask :
-        parent, child = os.path.split(args.output_dir)
-        output_dir = os.path.join(parent, f'{child}_binary_mask_thred_{args.mask_thredhold}')
+    parent, child = os.path.split(args.output_dir)
+    output_dir = os.path.join(parent, f'{child}_binary_mask_thred_{args.mask_thredhold}')
     parent, network_dir = os.path.split(args.network_weights)
     model_name = os.path.splitext(network_dir)[0]
     if 'last' not in model_name:
@@ -305,13 +119,10 @@ def main(args) :
     else:
         model_epoch = 'last'
 
-
-
     print(f' \n step 2. make stable diffusion model')
     device = accelerator.device
     print(f' (2.1) tokenizer')
     tokenizer = train_util.load_tokenizer(args)
-    tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
     print(f' (2.2) SD')
     invers_text_encoder, vae, invers_unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype,device,
                                                                                                         unet_use_linear_projection_in_v2=False, )
@@ -322,9 +133,6 @@ def main(args) :
     vae.to(accelerator.device, dtype=vae_dtype)
 
     print(f' (2.3) vae student model')
-    from diffusers import AutoencoderKL
-    from STTraining import Encoder_Student
-    from utils.model_util import get_state_dict
     student_vae = AutoencoderKL.from_config(vae.config)
     student = Encoder_Student(student_vae.encoder, student_vae.quant_conv)
     student.load_state_dict(get_state_dict(args.student_pretrained_dir), strict=True)
@@ -340,34 +148,7 @@ def main(args) :
     print(f'final output dir : {output_dir}')
 
     print(f' (2.4) scheduler')
-    sched_init_args = {}
-    if args.sample_sampler == "ddim":
-        scheduler_cls = DDIMScheduler
-    elif args.sample_sampler == "ddpm":
-        scheduler_cls = DDPMScheduler
-    elif args.sample_sampler == "pndm" :
-        scheduler_cls = PNDMScheduler
-    elif args.sample_sampler == "lms" or args.sample_sampler == "k_lms" :
-        scheduler_cls = LMSDiscreteScheduler
-    elif args.sample_sampler == "euler" or args.sample_sampler == "k_euler":
-        scheduler_cls = EulerDiscreteScheduler
-    elif args.sample_sampler == "euler_a" or args.sample_sampler == "k_euler_a":
-        scheduler_cls = EulerAncestralDiscreteScheduler
-    elif args.sample_sampler == "dpmsolver" or args.sample_sampler == "dpmsolver++":
-        scheduler_cls = DPMSolverMultistepScheduler
-        sched_init_args["algorithm_type"] = args.sample_sampler
-    elif args.sample_sampler == "dpmsingle":
-        scheduler_cls = DPMSolverSinglestepScheduler
-    elif args.sample_sampler == "heun":
-        scheduler_cls = HeunDiscreteScheduler
-    elif args.sample_sampler == "dpm_2" or args.sample_sampler == "k_dpm_2":
-        scheduler_cls = KDPM2DiscreteScheduler
-    elif args.sample_sampler == "dpm_2_a" or args.sample_sampler == "k_dpm_2_a":
-        scheduler_cls = KDPM2AncestralDiscreteScheduler
-    else :
-        scheduler_cls = DDIMScheduler
-    if args.v_parameterization:
-        sched_init_args["prediction_type"] = "v_prediction "
+    scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)
     SCHEDULER_LINEAR_START = 0.00085
     SCHEDULER_LINEAR_END = 0.0120
     SCHEDULER_TIMESTEPS = 1000
@@ -387,9 +168,7 @@ def main(args) :
         del t_enc1, t_enc2
     else:
         invers_unet, invers_text_encoder = invers_unet.to(device), invers_text_encoder.to(device)
-        invers_text_encoders = [invers_text_encoder]
         unet, text_encoder = unet.to(device), text_encoder.to(device)
-        text_encoders = [text_encoder]
 
     print(f' (2.5) network')
     sys.path.append(os.path.dirname(__file__))
@@ -405,10 +184,8 @@ def main(args) :
         network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
                                                                 **net_kwargs)
     else:
-        network = network_module.create_network(1.0,args.network_dim,
-                                                args.network_alpha,
-                                                vae, text_encoder, unet, neuron_dropout=args.network_dropout,
-                                                **net_kwargs, )
+        network = network_module.create_network(1.0,args.network_dim, args.network_alpha, vae, text_encoder, unet,
+                                                neuron_dropout=args.network_dropout, **net_kwargs, )
     print(f' (2.5.3) apply trained state dict')
     network.apply_to(text_encoder, unet, True, True)
     if args.network_weights is not None:
@@ -420,7 +197,6 @@ def main(args) :
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
     prompt = args.prompt
-
     context = init_prompt(tokenizer, text_encoder, device, prompt)
 
     print(f' (3.2) test images')
@@ -428,8 +204,6 @@ def main(args) :
     train_img_folder = os.path.join(args.concept_image_folder, 'train/bad')
     train_mask_folder = os.path.join(args.concept_image_folder, 'train/gt')
     classes = os.listdir(train_img_folder)
-
-    thredhold = args.mask_thredhold
 
     for class_name in classes:
         repeat, c_name = class_name.split('_')
@@ -486,12 +260,10 @@ def main(args) :
                                                                     vae=vae,
                                                                     base_folder_dir=class_base_folder,
                                                                     is_org = False)
-                    base_num = 30
+                    base_num = (args.num_ddim - args.unet_only_inference_times)
+                    assert base_num >= 0, f'base_num should be larger than 0, but {base_num}'
                     noising_time = inference_times[base_num]  # 100
                     recon_1_times = inference_times[:base_num+1].tolist()
-                    start_time = time_steps[-1]
-                    print(f'unet only start_time : {start_time}')
-                    print(f'unet only inference : {recon_1_times}')
                     recon_latent_dict, _, _ = recon_loop(None,
                                                          start_latent=latent_dict[int(time_steps[-1])],
                                                          context=context,
@@ -514,106 +286,6 @@ def main(args) :
                                base_folder_dir = class_base_folder,
                                controller = controller,)
 
-
-
-
-
-
-                    """
-                    
-                    print(f'inference_times : {inference_times}')
-                    
-                    org_noise_latent = scheduler.add_noise(original_samples = org_vae_latent, noise = standard_noise, timesteps = torch.tensor(int(noising_time)))
-                    
-                    Image.fromarray(latent2image(org_noise_latent, vae, return_type='np')).save(os.path.join(class_base_folder,
-                                                                                                      f'{name}_org_vae_noise_latent_{noising_time}{ext}'))
-                    Image.fromarray(latent2image(st_noise_latent, vae, return_type='np')).save(os.path.join(class_base_folder,
-                                                                                                            f'{name}_st_vae_noise_latent_{noising_time}{ext}'))
-                    inf_times = inference_times[base_num:].tolist() # from 780
-                    inf_times.reverse()
-                    org_recon_loop(org_noise_latent, # 780 noise latent
-                                   inv_c,
-                                   inf_times,
-                                   scheduler,
-                                   invers_unet, vae, class_base_folder)
-                    """
-
-
-    """
-    mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
-    mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
-    mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
-
-
-    new_latent = org_vae_latent * (1-mse_threshold) + st_latent * mse_threshold
-    mask_np_img = latent2image(new_latent, vae, return_type='np')
-    pil_img = Image.fromarray(mask_np_img)
-    pil_img.save(os.path.join(save_base_dir, f'vae_masked_{test_img}'))
-    
-    
-    inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
-    flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
-    #original_latent = latent.clone().detach()
-    original_latent = org_vae_latent.clone().detach()
-    for ii, final_time in enumerate(flip_times[1:]):
-
-        if final_time.item() == args.final_time:
-            timewise_save_base_folder = os.path.join(save_base_dir, f'final_time_{final_time.item()}')
-            print(f' - save_base_folder : {timewise_save_base_folder}')
-            os.makedirs(timewise_save_base_folder, exist_ok=True)
-
-            mask_pil = Image.open(mask_img_dir).resize((512, 512)).convert('RGB')
-            mask_pil.save(os.path.join(timewise_save_base_folder, 'mask.png'))
-
-            org_pil = Image.open(train_img_dir).resize((512, 512)).convert('RGB')
-            org_pil.save(os.path.join(timewise_save_base_folder, 'org.png'))
-
-            np_img = latent2image(st_latent, vae, return_type='np')
-            pil_img = Image.fromarray(np_img)
-            pil_img.save(os.path.join(timewise_save_base_folder, f'vae_recon.png'))
-
-            if args.use_binary_mask :
-                latent = original_latent
-            else :
-                latent = st_latent
-
-            latent_dict, time_steps, pil_images = ddim_loop(latent=latent,
-                                                            context=invers_context,
-                                                            inference_times=flip_times[:ii + 2],
-                                                            scheduler=scheduler,
-                                                            unet=invers_unet,
-                                                            vae=vae,
-                                                            base_folder_dir=timewise_save_base_folder,)
-            if args.use_binary_mask :
-                torch.manual_seed(args.seed)
-                start_latent = scheduler.add_noise(original_samples = st_latent,
-                                                   noise = torch.randn(original_latent.shape, dtype=weight_dtype).to(st_latent.device),
-                                                   timesteps = torch.tensor(time_steps[-1], dtype=torch.int8).to(st_latent.device),
-                                                   )
-
-
-            else :
-                start_latent = latent_dict[int(time_steps[-1])]
-            time_steps.reverse()
-            print(f'time_steps : {time_steps}')
-            context = init_prompt(tokenizer, text_encoder, device, prompt)
-
-            print(f' (2.3.2) recon')
-            if args.use_binary_mask :
-                mask = mse_threshold
-            else :
-                mask = None
-            recon_latent_dict, _, _ = recon_loop(latent_dict=latent_dict,
-                                                     start_latent = start_latent,
-                                                     context=context,
-                                                     inference_times=time_steps,  # [20,0]
-                                                     scheduler=scheduler,
-                                                     unet=unet,
-                                                     vae=vae,
-                                                     base_folder_dir=timewise_save_base_folder,
-                                                     mask=mask)
-    """
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
@@ -626,42 +298,29 @@ if __name__ == "__main__":
     config_util.add_config_arguments(parser)
     custom_train_functions.add_custom_train_arguments(parser)
     # step 2. model
-
     parser.add_argument("--no_half_vae", action="store_true",
-                        help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
+                        help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precision", )
     parser.add_argument("--network_module", type=str, default=None,
-                        help="network module to train / 学習対象のネットワークのモジュール")
+                        help="network module to train")
     parser.add_argument("--base_weights", type=str, default=None, nargs="*",
-                        help="network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みファイル", )
+                        help="network weights to merge into the model before training", )
     parser.add_argument("--base_weights_multiplier", type=float, default=None, nargs="*",
-                        help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率", )
+                        help="multiplier for network weights to merge into the model before training", )
     parser.add_argument("--network_dim", type=int, default=None,
-                        help="network dimensions (depends on each network) / モジュールの次元数（ネットワークにより定義は異なります）")
+                        help="network dimensions (depends on each network)")
     parser.add_argument("--network_alpha", type=float, default=1,
-                        help="alpha for LoRA weight scaling, default 1 (same as network_dim for same behavior as old version)", )
-    parser.add_argument("--network_dropout", type=float, default=None,
-                        help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
-    parser.add_argument("--network_args", type=str, default=None, nargs="*",
-                        help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
-    parser.add_argument("--dim_from_weights", action="store_true",
-                        help="automatically determine dim (rank) from network_weights / dim (rank)をnetwork_weightsで指定した重みから自動で決定する", )
-    parser.add_argument("--network_weights", type=str, default=None,
-                        help="pretrained weights for network / 学習するネットワークの初期重み")
+                        help="alpha for LoRA weight scaling, default 1", )
+    parser.add_argument("--network_dropout", type=float, default=None,)
+    parser.add_argument("--network_args", type=str, default=None, nargs="*",)
+    parser.add_argument("--dim_from_weights", action="store_true",)
+    parser.add_argument("--network_weights", type=str, default=None,help="pretrained weights for network")
     parser.add_argument("--concept_image", type=str,
                         default = '/data7/sooyeon/MyData/perfusion_dataset/td_100/100_td/td_1.jpg')
-    parser.add_argument("--mask_image_folder", type=str,)
-    parser.add_argument("--prompt", type=str,
-                        default = 'teddy bear, wearing like a super hero')
-    parser.add_argument("--negative_prompt", type=str,
-                        default = 'low quality, worst quality, bad anatomy,bad composition, poor, low effort')
+    parser.add_argument("--prompt", type=str, default = 'teddy bear, wearing like a super hero')
     parser.add_argument("--concept_image_folder", type=str)
-    parser.add_argument("--num_ddim_steps", type=int, default=30)
-    parser.add_argument("--folder_name", type=str)
-    parser.add_argument("--repeat_time", type=int, default=1)
-    parser.add_argument("--final_time", type=int, default = 600)
+    parser.add_argument("--num_ddim_steps", type=int, default=50)
+    parser.add_argument("--unet_only_inference_times", type=int, default = 30)
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
-    parser.add_argument("--use_binary_mask", action = 'store_true')
     args = parser.parse_args()
-    args = train_util.read_config_from_file(args, parser)
     main(args)

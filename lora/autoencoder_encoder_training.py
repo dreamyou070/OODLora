@@ -18,7 +18,7 @@ from library.config_util import (ConfigSanitizer, BlueprintGenerator, )
 from library.custom_train_functions import prepare_scheduler_for_custom_training
 from STTraining import Encoder_Teacher, Encoder_Student
 import torch
-from utils.model_util import get_state_dict
+from utils.model_utils import get_state_dict
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
