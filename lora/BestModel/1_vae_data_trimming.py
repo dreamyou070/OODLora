@@ -24,7 +24,7 @@ def main():
                         if '_' in folder:
 
                             folder_dir = os.path.join(cat_dir, folder)
-                            os.remove(folder_dir)
+                            os.rmdir(folder_dir)
 
                 cats = os.listdir(test_dir)  ####################
                 for cat in cats:
@@ -33,7 +33,7 @@ def main():
                     for folder in folders :
                         if '_' in folder :
                             folder_dir = os.path.join(cat_dir, folder)
-                            os.remove(folder_dir)
+                            os.rmdir(folder_dir)
 
 
 if __name__ == '__main__':
