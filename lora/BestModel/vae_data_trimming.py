@@ -12,11 +12,11 @@ def main():
             inference_dir = os.path.join(experiment_folder, 'inference_finding_best_epoch')
             student_epochs = os.listdir(inference_dir)
             for student_epoch in student_epochs:
-                student_epoch_folder = os.path.join(base_folder, student_epoch)
+                student_epoch_folder = os.path.join(inference_dir, student_epoch)
                 training_dir = os.path.join(student_epoch_folder, 'training_dataset')
                 test_dir = os.path.join(student_epoch_folder, 'test_dataset')
 
-                cats = os.listdir(training_dir)
+                cats = os.listdir(training_dir) ####################
                 for cat in cats:
                     cat_dir = os.path.join(training_dir, cat)
                     images = os.listdir(cat_dir)
