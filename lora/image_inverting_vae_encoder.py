@@ -263,6 +263,11 @@ def main(args) :
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
 
+    alphas_cumprod = scheduler.alphas_cumprod
+    timesteps = torch.IntTensor(700)
+    timesteps = timesteps.to(device)
+    sqrt_alpha_prod = alphas_cumprod[timesteps] ** 0.5
+    """
     print(f' (2.4.+) model to accelerator device')
     device = args.device
     if len(invers_text_encoders) > 1:
@@ -364,7 +369,7 @@ def main(args) :
                     mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
 
 
-                """
+                
                 mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
                 mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
                 mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
@@ -374,10 +379,8 @@ def main(args) :
                 mask_np_img = latent2image(new_latent, vae, return_type='np')
                 pil_img = Image.fromarray(mask_np_img)
                 pil_img.save(os.path.join(save_base_dir, f'vae_masked_{test_img}'))
-                """
-
-
-                """
+                
+                
                 inference_times = torch.cat([torch.tensor([999]), scheduler.timesteps, ], dim=0)
                 flip_times = torch.flip(inference_times, dims=[0])  # [0,20, ..., 980]
                 #original_latent = latent.clone().detach()
@@ -439,7 +442,7 @@ def main(args) :
                                                                  vae=vae,
                                                                  base_folder_dir=timewise_save_base_folder,
                                                                  mask=mask)
-                """
+    """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
