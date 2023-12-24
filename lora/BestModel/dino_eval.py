@@ -44,6 +44,8 @@ def main() :
                 mask_np_img = np.array(mask_img)
                 mask_np_img = np.where(mask_np_img > 100, 1, 0)
 
+                total_area = np.ones(mask_np_img.shape).sum()
+
                 background_1 = (pure_np_img * (1-mask_np_img)).astype(np.uint8)
                 background_2 = (recon_np_img * (1-mask_np_img)).astype(np.uint8)
 
@@ -61,7 +63,9 @@ def main() :
                 background_2_outputs = model(**background_2_inputs).last_hidden_state.mean(dim=1)
                 back_sim = cos(background_1_outputs[0], background_2_outputs[0]).item()
                 back_area = (1-mask_np_img).sum()
-                back_sim = back_sim / back_area
+                back_sim = back_sim * (back_area/total_area)
+
+
 
 
 
@@ -71,7 +75,7 @@ def main() :
                 object_2_outputs = model(**object_2_inputs).last_hidden_state.mean(dim=1)
                 obj_sim = cos(object_1_outputs[0], object_2_outputs[0]).item()
                 obj_area = mask_np_img.sum()
-                obj_sim = obj_sim / obj_area
+                obj_sim = obj_sim * (obj_area/total_area)
                 print(f'{pure_name} : back sim = {back_sim}, obj sim = {obj_sim}')
 
 
