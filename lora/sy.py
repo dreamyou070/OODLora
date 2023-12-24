@@ -5,5 +5,5 @@ import torch
 """
 
 """
-a = torch.IntTensor([700])
+a = torch.IntTensor(700).long()
 a.to('cpu')
