@@ -41,7 +41,7 @@ def main():
                         x = np.array(Image.open(base_img))
                         x_hat = np.array(Image.open(recon_img))
                         mse = np.square(x - x_hat) ** 0.5
-                        binary = np.where(mse > 0.5, 1, 0)
+                        binary = np.where(mse > 1, 1, 0)
                         if mask_img == None and 'good' in cat :
                             mask = np.zeros_like(x)
                         else :
@@ -71,7 +71,7 @@ def main():
                         x = np.array(Image.open(base_img))
                         x_hat = np.array(Image.open(recon_img))
                         mse = np.square(x - x_hat) ** 0.5
-                        binary = np.where(mse > 0.5, 1, 0)
+                        binary = np.where(mse > 1, 1, 0)
                         if mask_img == None and 'good' in cat:
                             mask = np.zeros_like(x)
                         else:
