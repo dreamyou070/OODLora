@@ -1,25 +1,19 @@
-import os
-import argparse
-import torch
-from vision_transformer import vit_tiny
-def main(args) :
+from transformers import ViTImageProcessor, ViTModel
+from PIL import Image
+import requests
 
-    print(f'step 1. load pretrained model')
-    model_dir = args.model_dir
-    model_state = torch.load(model_dir, map_location="cpu")
-    student_model_state_dict = model_state['student']
-    teacher_model_state_dict = model_state['teacher']
+def main() :
+    #url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
+    #image = Image.open(requests.get(url, stream=True).raw)
 
-    print(f'step 2. model')
-    small_model = vit_tiny()
-    small_model_state_dict = small_model.state_dict()
-    print(f'small_model_state_dict : {small_model_state_dict.keys()}')
+    processor = ViTImageProcessor.from_pretrained('facebook/dino-vitb8',
+                                                  cache_dir='/home/dreamyou070/pretrained_models'
+    model = ViTModel.from_pretrained('facebook/dino-vitb8',
+                                     cache_dir='/home/dreamyou070/pretrained_models')
 
+    #inputs = processor(images=image, return_tensors="pt")
+    #outputs = model(**inputs)
+    #last_hidden_states = outputs.last_hidden_state
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='DINO evaluation script')
-    parser.add_argument('--model_dir', default=r'../../../../pretrained_models/dino_deitsmall16_pretrain_full_checkpoint.pth',
-                        type=str, help='path to the model')
-    args = parser.parse_args()
-    main(args)
+if __name__ == '__main__' :
+    main()
