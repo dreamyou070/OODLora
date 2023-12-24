@@ -774,7 +774,7 @@ class NetworkTrainer:
                 current_loss = loss.detach().item()
                 log_loss["loss/current_loss"] = current_loss
                 # ------------------------------------------------------------------------------------------------------------------------------
-                if epoch == 0:
+                if epoch == args.start_epoch :
                     loss_list.append(current_loss)
                 else:
                     loss_total -= loss_list[step]
