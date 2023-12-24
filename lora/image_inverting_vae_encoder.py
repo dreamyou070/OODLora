@@ -461,7 +461,9 @@ def main(args) :
                 with torch.no_grad():
                     org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
                     st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
-                    recon_img = vae.decode(st_latent)['sample']
+
+                    from diffusers.models.vae import DiagonalGaussianDistribution
+                    recon_img = vae.decode(DiagonalGaussianDistribution(st_latent).sample())['sample']
                     recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                     image = (recon_img * 255).astype(np.uint8)
                     image = Image.fromarray(image)
@@ -485,7 +487,7 @@ def main(args) :
                                                                     vae=vae,
                                                                     base_folder_dir=class_base_folder,
                                                                     is_org = False)
-                    base_num = 48
+                    base_num = 47
                     noising_time = inference_times[base_num]  # 100
                     recon_1_times = inference_times[:base_num+1].tolist()
                     start_time = time_steps[-1]
