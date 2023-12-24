@@ -161,7 +161,11 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
 
 @torch.no_grad()
 def org_recon_loop(start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir):
-    uncon, con = context.chunk(2)
+
+    if context.shape[0] == 2 :
+        uncon, con = context.chunk(2)
+    else :
+        con = context
     if inference_times[0] < inference_times[1] :
         inference_times.reverse()
     latent = start_latent
@@ -335,7 +339,7 @@ def main(args) :
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
     prompt = args.prompt
-    invers_context = init_prompt(tokenizer, invers_text_encoder, device, prompt)
+
     context = init_prompt(tokenizer, text_encoder, device, prompt)
 
     print(f' (3.2) test images')
@@ -355,6 +359,9 @@ def main(args) :
         image_folder = os.path.join(train_img_folder, class_name)
         if '_' in class_name:
             class_name =  '_'.join(class_name.split('_')[1:])
+
+        invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {c_name}')
+        inv_unc, inv_c = invers_context.chunk(2)
         mask_folder = os.path.join(train_mask_folder, class_name)
 
         train_images = os.listdir(image_folder)
@@ -376,20 +383,18 @@ def main(args) :
                     st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
                     standard_noise = torch.randn_like(org_vae_latent).to(device)
                     print(f'inference_times : {inference_times}')
-                    noising_time = inference_times[40]
+                    base_num = 40
+                    noising_time = inference_times[base_num]
                     org_noise_latent = scheduler.add_noise(original_samples = org_vae_latent, noise = standard_noise, timesteps = torch.tensor(int(noising_time)))
                     st_noise_latent = scheduler.add_noise(original_samples = st_latent, noise = standard_noise, timesteps = torch.tensor(int(noising_time)))
                     Image.fromarray(latent2image(org_noise_latent, vae, return_type='np')).save(os.path.join(class_base_folder,
                                                                                                       f'{name}_org_vae_noise_latent_{noising_time}{ext}'))
                     Image.fromarray(latent2image(st_noise_latent, vae, return_type='np')).save(os.path.join(class_base_folder,
                                                                                                             f'{name}_st_vae_noise_latent_{noising_time}{ext}'))
-
-
-
-                    inf_times = inference_times[10:].tolist() # from 780
+                    inf_times = inference_times[base_num:].tolist() # from 780
                     inf_times.reverse()
                     org_recon_loop(org_noise_latent, # 780 noise latent
-                                   invers_context,
+                                   inv_c,
                                    inf_times,
                                    scheduler,
                                    invers_unet, vae, class_base_folder)
