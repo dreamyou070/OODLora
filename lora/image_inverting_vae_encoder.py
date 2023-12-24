@@ -129,6 +129,7 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     return latent_dict, time_steps, pil_images
 
 
+
 @torch.no_grad()
 def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir, controller):
     if context.shape[0] == 2:
@@ -148,45 +149,52 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
     for i, t in enumerate(inference_times[:-1]):
-        z_latent = latent_dict[inference_times[i]]
+        if latent_dict is not None:
+            z_latent = latent_dict[inference_times[i]]
         x_latent = latent
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
         with torch.no_grad():
-            input_latent = torch.cat([z_latent, x_latent], dim=0)
-            input_cond = torch.cat([con, con], dim=0)
-            trg_indexs_list = [[1]]
+            if latent_dict is not None:
+                input_latent = torch.cat([z_latent, x_latent], dim=0)
+                input_cond = torch.cat([con, con], dim=0)
+                trg_indexs_list = [[1]]
+            else :
+                input_latent = x_latent
+                input_cond = con
+                trg_indexs_list = None
+
             noise_pred = call_unet(unet,
                                    input_latent,
                                    t,
                                    input_cond,
                                    trg_indexs_list, None)
+            if latent_dict is not None:
+                mask_dict = controller.step_store
+                controller.reset()
+                layer_names = mask_dict.keys()
+                mask_list = []
+                import torchvision
+                totensor = torchvision.transforms.ToTensor()
+                for layer_name in layer_names:
+                    mask_torch = mask_dict[layer_name][0] # head, pix_num, 1
+                    if mask_torch.dim() == 2 :
+                        mask_torch = mask_torch.unsqueeze(-1)
+                    head, pix_num, _ = mask_torch.shape
+                    res = int(pix_num ** 0.5)
+                    cross_maps = mask_torch.reshape(head, res, res, mask_torch.shape[-1])
+                    cross_maps = cross_maps.mean([-1])
+                    cross_maps = cross_maps.mean([0]).to('cpu')
+                    image = cross_maps.numpy().astype(np.uint8)
+                    mask_list.append(totensor(Image.fromarray(image).resize((64, 64))))
+                mask = torch.stack(mask_list, dim=0).mean([0]).unsqueeze(0)
+                y_latent = z_latent * (1-mask).to(z_latent.device) + x_latent * (mask).to(z_latent.device) # 1,4,64,64
+                y_noise_pred = call_unet(unet, y_latent, t, con, None, None)
 
-
-
-            mask_dict = controller.step_store
-            controller.reset()
-            layer_names = mask_dict.keys()
-            mask_list = []
-            import torchvision
-            totensor = torchvision.transforms.ToTensor()
-            for layer_name in layer_names:
-                mask_torch = mask_dict[layer_name][0] # head, pix_num, 1
-                if mask_torch.dim() == 2 :
-                    mask_torch = mask_torch.unsqueeze(-1)
-                head, pix_num, _ = mask_torch.shape
-                res = int(pix_num ** 0.5)
-                cross_maps = mask_torch.reshape(head, res, res, mask_torch.shape[-1])
-                cross_maps = cross_maps.mean([-1])
-                cross_maps = cross_maps.mean([0]).to('cpu')
-                image = cross_maps.numpy().astype(np.uint8)
-                mask_list.append(totensor(Image.fromarray(image).resize((64, 64))))
-            mask = torch.stack(mask_list, dim=0).mean([0]).unsqueeze(0)
-            print(f'mask : {mask.shape}')
-            y_latent = z_latent * (1-mask).to(z_latent.device) + x_latent * (mask).to(z_latent.device) # 1,4,64,64
-            y_noise_pred = call_unet(unet, y_latent, t, con, None, None)
-            controller.reset()
+            else :
+                y_noise_pred = noise_pred
             # --------------------- mask --------------------- #
+            controller.reset()
             latent = prev_step(y_noise_pred, t, y_latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')
         #if prev_time == 0:
@@ -463,18 +471,29 @@ def main(args) :
                                                                         base_folder_dir=class_base_folder,
                                                                         is_org = True)
                     latent_dict, time_steps, pil_images = ddim_loop(latent=st_latent,
-                                                                        context=inv_c,
-                                                                        inference_times=inf_time,
-                                                                        scheduler=scheduler,
-                                                                        unet=invers_unet,
-                                                                        vae=vae,
-                                                                        base_folder_dir=class_base_folder,
-                                                                        is_org = False)
-
+                                                                    context=inv_c,
+                                                                    inference_times=inf_time,
+                                                                    scheduler=scheduler,
+                                                                    unet=invers_unet,
+                                                                    vae=vae,
+                                                                    base_folder_dir=class_base_folder,
+                                                                    is_org = False)
                     base_num = 40
-                    noising_time = inference_times[base_num] # 100
+                    noising_time = inference_times[base_num]  # 100
+                    recon_1_times = inference_times[:base_num+1].tolist()
+                    recon_latent_dict, _, _ = recon_loop(None,
+                               start_latent = latent_dict(time_steps[-1]),
+                               context = context,
+                               inference_times = recon_1_times,
+                               scheduler = scheduler,
+                               unet = unet,
+                               vae = vae,
+                               base_folder_dir = class_base_folder,
+                               controller = controller)
+
+
                     recon_times = inference_times[base_num:].tolist()
-                    st_noise_latent = latent_dict[int(noising_time.item())]
+                    st_noise_latent = recon_latent_dict[int(noising_time.item())]
                     recon_loop(org_latent_dict,
                                start_latent = st_noise_latent,
                                context = context,
