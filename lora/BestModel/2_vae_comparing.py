@@ -10,8 +10,7 @@ def main():
     os.makedirs(save_folder, exist_ok=True)
     experiments = os.listdir(base_folder)
     for experiment in experiments:
-
-        if '3_' not in experiment and '1_' not in experiment :
+        if '1_' not in experiment :
             experiment_folder = os.path.join(base_folder, experiment)
 
             inference_dir = os.path.join(experiment_folder, 'inference_finding_best_epoch')
@@ -43,18 +42,14 @@ def main():
                         x_hat = np.array(Image.open(recon_img))
                         mse = np.square(x - x_hat) ** 0.5
                         binary = np.where(mse > 0.5, 1, 0)
-
                         if mask_img == None and 'good' in cat :
                             mask = np.zeros_like(x)
                         else :
                             mask = Image.open(mask_img).convert("RGB")
                         gt = np.array(mask)
                         gt = np.where(gt > 100, 1, 0)
-
                         error = np.square(binary - gt) ** 0.5
                         training_score += error
-
-
                 test_score = 0
                 cats = os.listdir(test_dir)  ####################
                 for cat in cats:
@@ -72,29 +67,26 @@ def main():
                                 recon_img = os.path.join(number_dir, image)
                             elif '_' in name and 'recon' not in name:
                                 mask_img = os.path.join(number_dir, image)
-
                         x = np.array(Image.open(base_img))
                         x_hat = np.array(Image.open(recon_img))
                         mse = np.square(x - x_hat) ** 0.5
                         binary = np.where(mse > 0.5, 1, 0)
-
                         if mask_img == None and 'good' in cat:
                             mask = np.zeros_like(x)
                         else:
                             mask = Image.open(mask_img).convert("RGB")
                         gt = np.array(mask)
                         gt = np.where(gt > 100, 1, 0)
-
                         error = np.square(binary - gt) ** 0.5
                         test_score += error
 
-                elem = [student_epoch, training_score, test_score]
-                experiments_records.append(elem)
+                line = f'{student_epoch}, {training_score}, {test_score}'
+                experiments_records.append(line)
             experiments_record = os.path.join(save_folder, f'score_{experiment}.txt')
             with open(experiments_record, 'w') as f:
-                f.write(f'epoch | training_score | test_score \n')
+                f.write(f'epoch,training_score,test_score \n')
                 for record in experiments_records:
-                    f.write(f'{record[0]} | {record[1]} | {record[2]}\n')
+                    f.write(f'{record}\n')
 
 
 
