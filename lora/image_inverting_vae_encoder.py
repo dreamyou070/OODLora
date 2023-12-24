@@ -11,6 +11,7 @@ import sys, importlib
 from typing import Union
 import numpy as np
 from utils.image_utils import image2latent, customizing_image2latent, load_image, latent2image
+import shutil
 from diffusers.utils.torch_utils import randn_tensor
 try:
     from setproctitle import setproctitle
@@ -189,9 +190,7 @@ def main(args) :
         model_epoch = int(model_name.split('-')[-1])
     else:
         model_epoch = 'last'
-    output_dir = os.path.join(output_dir, f'lora-epoch-{model_epoch}')
-    os.makedirs(output_dir, exist_ok=True)
-    print(f'final output dir : {output_dir}')
+
 
 
     print(f' \n step 2. make stable diffusion model')
@@ -222,6 +221,9 @@ def main(args) :
     student_epoch = os.path.splitext(student_epoch)[0]
     student_epoch = int(student_epoch.split('_')[-1])
     print(f'student_epoch: {student_epoch}')
+    output_dir = os.path.join(output_dir, f'lora-epoch-{model_epoch}-student-epoch-{student_epoch}')
+    os.makedirs(output_dir, exist_ok=True)
+    print(f'final output dir : {output_dir}')
 
     print(f' (2.4) scheduler')
     sched_init_args = {}
@@ -325,12 +327,17 @@ def main(args) :
 
         train_images = os.listdir(image_folder)
         for j, train_img in enumerate(train_images):
-            if j < 100 :
+            if j < 1 :
+                name, ext = os.path.splitext(train_img)
+
                 train_img_dir = os.path.join(image_folder, train_img)
-                mask_img_dir = os.path.join(mask_folder, train_img)
+
+                shutil.copy(train_img_dir, os.path.join(class_base_folder, train_img))
+                if 'good' not in class_name:
+                    mask_img_dir = os.path.join(mask_folder, train_img)
+                    shutil.copy(mask_img_dir, os.path.join(class_base_folder, f'{name}_mask{ext}'))
 
                 print(f' (2.3.1) inversion')
-
                 image_gt_np = load_image(train_img_dir, trg_h = int(trg_h), trg_w =int(trg_w))
                 with torch.no_grad():
                     org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
@@ -344,7 +351,11 @@ def main(args) :
                     st_pred_noise = call_unet(unet, st_noise_latent, 700, context.chunk(2)[1], trg_indexs_list=None, mask_imgs=None)
 
                     org_recon = scheduler.step(org_pred_noise, 700, org_vae_latent, return_dict = True)['pred_original_sample']
+                    Image.fromarray(latent2image(org_recon, vae, return_type='np')).save(os.path.join(class_base_folder,
+                                                                                                      f'{name}_org_vae_org_unet_recon{ext}'))
                     st_recon  = scheduler.step(st_pred_noise, 700, st_latent, return_dict = True)['pred_original_sample']
+                    Image.fromarray(latent2image(st_recon, vae, return_type='np')).save(os.path.join(class_base_folder,
+                                                                                                     f'{name}_st_vae_lora_unet_recon{ext}'))
 
                     mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
                     mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad

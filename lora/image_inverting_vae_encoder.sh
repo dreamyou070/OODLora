@@ -20,9 +20,9 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --prompt 'good' \
   --sample_sampler ddim \
   --num_ddim_steps 50 \
-  --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment/cable_gland \
-  --output_dir ../result/MVTec3D-AD_experiment/cable_gland/ldm_inference \
-  --student_pretrained_dir ../result/MVTec3D-AD_experiment/cable_gland/vae_training/1_TS_encoder_contrastive_recon_loss/vae_student_model/student_epoch_000054.pth \
+  --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment/potato \
+  --output_dir ../result/MVTec3D-AD_experiment/potato/inference \
+  --student_pretrained_dir ../result/MVTec3D-AD_experiment/potato/vae_training/1_TS_encoder_patchwise_augmenting/vae_student_model/student_epoch_000020.pth \
   --network_weights ../result/MVTec3D-AD_experiment/potato/unet_training/1_lora_trining_using_noise_diff/epoch-000001.safetensors \
   --repeat_time 51 \
   --resolution 512,512 \
