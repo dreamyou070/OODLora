@@ -91,23 +91,20 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, base
     latent_dict[0] = latent
     pil_images = []
     flip_times = inference_times
-    repeat_time = 0
     for i, t in enumerate(flip_times[:-1]):
-        if repeat_time < args.repeat_time:
-            next_time = flip_times[i + 1]
-            latent_dict[int(t)] = latent
-            time_steps.append(t)
-            noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
-            noise_pred_dict[int(t)] = noise_pred
-            latent = next_step(noise_pred, int(t), latent, scheduler)
-            np_img = latent2image(latent, vae, return_type='np')
-            pil_img = Image.fromarray(np_img)
-            pil_images.append(pil_img)
-            if is_org:
-                pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
-            else :
-                pil_img.save(os.path.join(base_folder_dir, f'student_noising_{next_time}.png'))
-            repeat_time += 1
+        next_time = flip_times[i + 1]
+        latent_dict[int(t)] = latent
+        time_steps.append(t)
+        noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
+        noise_pred_dict[int(t)] = noise_pred
+        latent = next_step(noise_pred, int(t), latent, scheduler)
+        np_img = latent2image(latent, vae, return_type='np')
+        pil_img = Image.fromarray(np_img)
+        pil_images.append(pil_img)
+        if is_org:
+            pil_img.save(os.path.join(base_folder_dir, f'noising_{next_time}.png'))
+        else :
+            pil_img.save(os.path.join(base_folder_dir, f'student_noising_{next_time}.png'))
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
     return latent_dict, time_steps, pil_images
