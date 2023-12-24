@@ -523,7 +523,8 @@ class NetworkTrainer:
             train_util.patch_accelerator_for_fp16_training(accelerator)
 
         # resumeする
-        train_util.resume_from_local_or_hf_if_specified(accelerator, args)
+        if args.resume_lora_training :
+            info = network.load_weights(args.network_weights)
 
         # epoch数を計算する
         num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
@@ -605,13 +606,13 @@ class NetworkTrainer:
                 os.remove(old_ckpt_file)
 
         # training loop
-        attn_loss_records = [['epoch', 'global_step', 'attn_loss']]
-        for epoch in range(num_train_epochs):
+        for epoch in range(args.start_epoch, args.start_epoch+num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
             for step, batch in enumerate(train_dataloader):
+                """
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
@@ -792,6 +793,9 @@ class NetworkTrainer:
                     wandb.log(logs)
                 if global_step >= args.max_train_steps:
                     break
+                """
+                print('Test ...')
+            """
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_total / len(loss_list)}
                 accelerator.log(logs, step=epoch + 1)
@@ -807,6 +811,7 @@ class NetworkTrainer:
                         remove_model(remove_ckpt_name)
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
+            """
             if epoch % args.sample_every_n_epochs == 0 and is_main_process:
                 self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
                                    text_encoder, unet)
@@ -861,19 +866,16 @@ if __name__ == "__main__":
                         help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
-
     # step 4. training
     train_util.add_training_arguments(parser, True)
     custom_train_functions.add_custom_train_arguments(parser)
     parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")
     parser.add_argument("--text_encoder_lr", type=float, default=None,
                         help="learning rate for Text Encoder / Text Encoderの学習率")
-
     # step 5. optimizer
     train_util.add_optimizer_arguments(parser)
 
     config_util.add_config_arguments(parser)
-
     parser.add_argument("--save_model_as", type=str, default="safetensors",
                         choices=[None, "ckpt", "pt", "safetensors"],
                         help="format to save the model (default is .safetensors) / モデル保存時の形式（デフォルトはsafetensors）", )
@@ -896,6 +898,8 @@ if __name__ == "__main__":
     parser.add_argument("--net_key_names", type=str, default='text')
     parser.add_argument("--mask_threshold", type=float, default=0.5)
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
+    parser.add_argument("--resume_lora_training", action="store_true",)
+    parser.add_argument("--start_epoch", type = int, default = 0)
     # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)

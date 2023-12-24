@@ -43,4 +43,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --max_train_steps 48000 \
   --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato/train/bad \
   --class_caption 'good' \
-  --contrastive_eps 0.0
+  --resume_lora_training \
+  --network_weights ../result/MVTec3D-AD_experiment/potato/unet_training/1_lora_trining_using_noise_diff/models/epoch-000003.safetensors \
+  --contrastive_eps 0.0 \
+  --start_epoch 3
