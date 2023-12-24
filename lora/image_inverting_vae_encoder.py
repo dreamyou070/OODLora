@@ -267,7 +267,7 @@ def main(args) :
     alphas_cumprod = alphas_cumprod.to(accelerator.device, dtype=vae_dtype)
     t_step = torch.tensor(int(1))
     t_step = t_step.to(accelerator.device, dtype=vae_dtype)
-    sqrt_alpha_prod = alphas_cumprod[t_step] ** 0.5
+    sqrt_alpha_prod = alphas_cumprod[int(t_step.item())] ** 0.5
     print(f'alphas_cumprod: {alphas_cumprod}')
     """
     sqrt_alpha_prod = alphas_cumprod[torch.IntTensor(700).long()] ** 0.5
@@ -355,8 +355,8 @@ def main(args) :
                     st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
                     standard_noise = torch.randn_like(org_vae_latent).to(device)
 
-                    org_noise_latent = scheduler.add_noise(original_samples = org_vae_latent, noise = standard_noise, timesteps = torch.IntTensor(700))
-                    st_noise_latent = scheduler.add_noise(original_samples = st_latent, noise = standard_noise, timesteps = torch.IntTensor(700))
+                    org_noise_latent = scheduler.add_noise(original_samples = org_vae_latent, noise = standard_noise, timesteps = torch.tensor(int(700)))
+                    st_noise_latent = scheduler.add_noise(original_samples = st_latent, noise = standard_noise, timesteps = torch.tensor(int(700)))
 
                     org_pred_noise = call_unet(invers_unet, org_noise_latent, 700, invers_context.chunk(2)[0], trg_indexs_list=None, mask_imgs=None)
                     st_pred_noise = call_unet(unet, st_noise_latent, 700, context.chunk(2)[1], trg_indexs_list=None, mask_imgs=None)
