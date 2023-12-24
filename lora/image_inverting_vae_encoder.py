@@ -57,7 +57,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         word_idx = int(word_idx)
                         masked_attn_vector = masked_attention_prob[:, :, word_idx] # head, pix_num, 1
                         org_attn_vector = attention_prob[:, :, word_idx]
-                        attention_diff = (masked_attn_vector - org_attn_vector) # head, pix_num, 1
+                        attention_diff = torch.nn.mse_loss(masked_attn_vector, org_attn_vector,
+                                                           reduction='none')
                         controller.store(attention_diff,layer_name)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
