@@ -57,16 +57,14 @@ def main() :
 
                 background_1_inputs = processor(background_1, return_tensors="pt").to(device)
                 background_1_outputs = model(**background_1_inputs).last_hidden_state.mean(dim=1)
-
                 background_2_inputs = processor(background_2, return_tensors="pt").to(device)
                 background_2_outputs = model(**background_2_inputs).last_hidden_state.mean(dim=1)
                 back_sim = cos(background_1_outputs[0], background_2_outputs[0]).item()
 
                 object_1_inputs = processor(object_1, return_tensors="pt").to(device)
-                object_1_outputs = model(**object_1_inputs).last_hidden_state
-
+                object_1_outputs = model(**object_1_inputs).last_hidden_state.mean(dim=1)
                 object_2_inputs = processor(object_2, return_tensors="pt").to(device)
-                object_2_outputs = model(**object_2_inputs).last_hidden_state
+                object_2_outputs = model(**object_2_inputs).last_hidden_state.mean(dim=1)
                 obj_sim = cos(object_1_outputs[0], object_2_outputs[0]).item()
                 print(f'{pure_name} : back sim = {back_sim}, obj sim = {obj_sim}')
 
