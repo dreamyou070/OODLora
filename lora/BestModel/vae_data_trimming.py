@@ -7,7 +7,7 @@ def main():
     base_folder = '../../result/MVTec3D-AD_experiment/potato/vae_training'
     experiments = os.listdir(base_folder)
     for experiment in experiments:
-        if '3_' in experiment or '4_' in experiment
+        if '3_' in experiment or '4_' in experiment :
             experiment_folder = os.path.join(base_folder, experiment)
             inference_dir = os.path.join(experiment_folder, 'inference_finding_best_epoch')
             student_epochs = os.listdir(inference_dir)
