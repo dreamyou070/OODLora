@@ -1,7 +1,9 @@
 import torch
 import numpy as np
 from typing import Union
-from model_utils import call_unet, init_prompt, get_state_dict
+import sys
+sys.path.append(__file__)
+from model_utils import call_unet
 from image_utils import latent2image
 from PIL import Image
 import os
