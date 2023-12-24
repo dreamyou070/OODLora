@@ -109,7 +109,7 @@ def main(args) :
     vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
 
     print(f" (1.3) save dir")
-    weights = os.lsitdir(args.network_weights)
+    weights = os.lisidir(args.network_weights)
     for weight in weights:
         weight_dir = os.path.join(args.network_weights, weight)
 
