@@ -44,7 +44,8 @@ def main():
                         mse = np.square(x - x_hat) ** 0.5
                         binary = np.where(mse > 0.5, 1, 0)
 
-                        gt = np.array(Image.open(mask_img).convert("RGB"))
+                        mask = Image.open(mask_img).convert("RGB")
+                        gt = np.array(mask)
                         gt = np.where(gt > 100, 1, 0)
 
                         error = np.square(binary - gt) ** 0.5
@@ -73,8 +74,8 @@ def main():
                         x_hat = np.array(Image.open(recon_img))
                         mse = np.square(x - x_hat) ** 0.5
                         binary = np.where(mse > 0.5, 1, 0)
-
-                        gt = np.array(Image.open(mask_img).convert("RGB"))
+                        mask = Image.open(mask_img).convert("RGB")
+                        gt = np.array(mask)
                         gt = np.where(gt > 100, 1, 0)
 
                         error = np.square(binary - gt) ** 0.5
