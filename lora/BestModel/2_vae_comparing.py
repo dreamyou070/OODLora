@@ -86,6 +86,7 @@ def main():
             with open(experiments_record, 'w') as f:
                 f.write(f'epoch,training_score,test_score \n')
                 for record in experiments_records:
+                    print(record)
                     f.write(f'{record}\n')
 
 
