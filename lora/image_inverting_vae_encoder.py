@@ -478,19 +478,19 @@ def main(args) :
                                                                     vae=vae,
                                                                     base_folder_dir=class_base_folder,
                                                                     is_org = False)
+                    print(f'latent_dict : {latent_dict.keys()}')
                     base_num = 40
                     noising_time = inference_times[base_num]  # 100
                     recon_1_times = inference_times[:base_num+1].tolist()
                     recon_latent_dict, _, _ = recon_loop(None,
-                               start_latent = latent_dict(time_steps[-1]),
-                               context = context,
-                               inference_times = recon_1_times,
-                               scheduler = scheduler,
-                               unet = unet,
-                               vae = vae,
-                               base_folder_dir = class_base_folder,
-                               controller = controller)
-
+                                                         start_latent=latent_dict(time_steps[-1]),
+                                                         context=context,
+                                                         inference_times=recon_1_times,
+                                                         scheduler=scheduler,
+                                                         unet=unet,
+                                                         vae=vae,
+                                                         base_folder_dir=class_base_folder,
+                                                         controller=controller)
 
                     recon_times = inference_times[base_num:].tolist()
                     st_noise_latent = recon_latent_dict[int(noising_time.item())]
