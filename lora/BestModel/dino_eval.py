@@ -11,7 +11,8 @@ def main(args) :
     teacher_model_state_dict = model_state['teacher']
 
     print(f'step 2. model')
-    smal_model = vit_tiny()
+    small_model = vit_tiny()
+    small_model.load_state_dict(student_model_state_dict)
 
 
 
