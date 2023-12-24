@@ -323,6 +323,8 @@ def main(args) :
         os.makedirs(class_base_folder, exist_ok=True)
 
         image_folder = os.path.join(train_img_folder, class_name)
+        if '_' in class_name:
+            class_name =  '_'.join(class_name.split('_')[1:])
         mask_folder = os.path.join(train_mask_folder, class_name)
 
         train_images = os.listdir(image_folder)

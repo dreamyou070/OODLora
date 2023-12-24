@@ -20,7 +20,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --prompt 'good' \
   --sample_sampler ddim \
   --num_ddim_steps 50 \
-  --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment/potato \
+  --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato \
   --output_dir ../result/MVTec3D-AD_experiment/potato/inference \
   --student_pretrained_dir ../result/MVTec3D-AD_experiment/potato/vae_training/1_TS_encoder_patchwise_augmenting/vae_student_model/student_epoch_000020.pth \
   --network_weights ../result/MVTec3D-AD_experiment/potato/unet_training/1_lora_trining_using_noise_diff/epoch-000001.safetensors \
