@@ -178,7 +178,7 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
                 res = int(pix_num ** 0.5)
                 cross_maps = mask_torch.reshape(head, res, res, mask_torch.shape[-1])
                 cross_maps = cross_maps.mean([-1])
-                cross_maps = cross_maps.mean([0])
+                cross_maps = cross_maps.mean([0]).to('cpu')
                 image = cross_maps.numpy().astype(np.uint8)
                 mask_list.append(totensor(Image.fromarray(image).resize((64, 64))))
             mask = torch.stack(mask_list, dim=0).mean([0]).unsqueeze(0)
