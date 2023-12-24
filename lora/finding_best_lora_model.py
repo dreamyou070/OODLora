@@ -147,7 +147,7 @@ def main(args) :
 
         base_num = (args.num_ddim_steps - args.unet_only_inference_times)
         assert base_num >= 0, f'base_num should be larger than 0, but {base_num}'
-        
+
 
         print(f' (2.4) scheduler')
         scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
