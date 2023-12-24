@@ -37,13 +37,13 @@ def main() :
                 mask_np_img = np.array(mask_img)
                 mask_np_img = np.where(mask_np_img > 100, 1, 0)
 
-                background_1 = pure_np_img * (1-mask_np_img)
-                background_2 = recon_np_img * (1-mask_np_img)
+                background_1 = (pure_np_img * (1-mask_np_img)).astype(np.uint8)
+                background_2 = (recon_np_img * (1-mask_np_img)).astype(np.uint8)
 
-                object_1 = pure_np_img * mask_np_img
-                object_2 = recon_np_img * mask_np_img
+                object_1 = (pure_np_img * mask_np_img).astype(np.uint8)
+                object_2 = (recon_np_img * mask_np_img).astype(np.uint8)
 
-                background_1 = Image.fromarray(background_1)
+                background_1 = Image.fromarray(background_1 )
                 background_2 = Image.fromarray(background_2)
                 object_1 = Image.fromarray(object_1)
                 object_2 = Image.fromarray(object_2)
