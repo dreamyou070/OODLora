@@ -23,10 +23,13 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_proces
   --num_ddim_steps 50 \
   --output_dir ../result/MVTec_experiment/bagel/5_train_end_to_end/student_model_decoding_every_step- \
   --concept_image_folder ../../../MyData/anomaly_detection/VisA/MVTecAD/bagel \
-  --student_pretrained_dir ../result/MVTec_experiment/bagel/5_train_end_to_end/vae_student_model/student_epoch_000001.pth \
-  --network_weights ../result/MVTec_experiment/bagel/unet_training/model/epoch-000003.safetensors \
-  --customizing_decoder \
+  --student_pretrained_dir ../result/MVTec3D-AD_experiment/potato/vae_training/1_TS_encoder_patchwise_augmenting/vae_student_model/student_epoch_000013.pth \
+  --network_weights ../result/MVTec3D-AD_experiment/bagel/unet_training/model/epoch-000003.safetensors \
   --repeat_time 51 \
   --self_attn_threshold_time 1000 \
   --final_time 700
+
+
+
+
 

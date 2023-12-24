@@ -297,20 +297,7 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
     #next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     next_sample = alpha_prod_t_next_matrix ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
-"""
-def customizing_next_step(model_output: Union[torch.FloatTensor, np.ndarray],
-                          timestep: int,
-                          next_timestep: int,
-                          sample: Union[torch.FloatTensor, np.ndarray],
-                          alphas_cumprod_dict):
-    alpha_prod_t = alphas_cumprod_dict[timestep]
-    alpha_prod_t_next = alphas_cumprod_dict[next_timestep]
-    beta_prod_t = 1 - alpha_prod_t
-    next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
-    next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
-    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
-    return next_sample
-"""
+
 def customizing_next_step(model_output: Union[torch.FloatTensor, np.ndarray],
                           alpha_prod_t,
                           alpha_prod_t_next,
@@ -724,8 +711,8 @@ def main(args) :
 
     """
     print(f' (3.2) test images')
-    test_img_folder = os.path.join(args.concept_image_folder, '../test')
-    test_base_folder = os.path.join(output_dir, '../test')
+    test_img_folder = os.path.join(args.concept_image_folder, 'test')
+    test_base_folder = os.path.join(output_dir, 'test')
     os.makedirs(test_base_folder, exist_ok=True)
     classes = os.listdir(test_img_folder)
     for class_name in classes:

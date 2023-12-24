@@ -88,7 +88,7 @@ def call_unet(unet, noisy_latents, timesteps,
                       timesteps,
                       text_conds,
                       trg_indexs_list=trg_indexs_list,
-                      mask_imgs=mask_imgs, ).sample
+                      mask_imgs=mask_imgs,).sample
     return noise_pred
 @torch.no_grad()
 def ddim_loop(latent, context, inference_times, scheduler, unet, vae,  base_folder_dir, ):
@@ -173,7 +173,6 @@ def main(args) :
 
     print(f'\n step 3. preparing accelerator')
     accelerator = train_util.prepare_accelerator(args)
-    is_main_process = accelerator.is_main_process
 
     print(f" (1.2) save directory and save config")
     weight_dtype, save_dtype = train_util.prepare_dtype(args)
@@ -207,43 +206,24 @@ def main(args) :
     text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
                                                                                           unet_use_linear_projection_in_v2=False, )
     text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-
-    print(f' (2.3) vae student model')
-    print(f' (2.3.1) making encoder of vae')
-    from diffusers import AutoencoderKL
-    from STTraining import Student
-    vae_encoder = vae.encoder
-    vae_encoder_quantize = vae.quant_conv
-    vae_encoder.requires_grad_(False)
-    vae_encoder.eval()
-    vae_encoder.to(accelerator.device, dtype=vae_dtype)
-    vae_encoder_quantize.requires_grad_(False)
-    vae_encoder_quantize.eval()
-    vae_encoder_quantize.to(accelerator.device, dtype=vae_dtype)
     vae.to(accelerator.device, dtype=vae_dtype)
 
-    config_dict = vae.config
+    print(f' (2.3) vae student model')
     from diffusers import AutoencoderKL
-    from STTraining import Encoder_Teacher, Encoder_Student
-
-    student_vae = AutoencoderKL.from_config(config_dict)
-    student_vae_encoder = student_vae.encoder
-    student_vae_encoder_quantize = student_vae.quant_conv
-    student = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
-
-    print(f' (4) making decoder of vae')
-    student_pretrained_dir = args.student_pretrained_dir
-    model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
-    state_dict = {}
-    for k, v in model_state_dict.items():
-        k_ = '.'.join(k.split('.')[1:])
-        state_dict[k_] = v
-    student.load_state_dict(state_dict, strict=True)
+    from STTraining import Encoder_Student
+    from utils.model_util import get_state_dict
+    student_vae = AutoencoderKL.from_config(vae.config)
+    student = Encoder_Student(student_vae.encoder, student_vae.quant_conv)
+    student.load_state_dict(get_state_dict(args.student_pretrained_dir), strict=True)
     student.requires_grad_(False)
     student.eval()
     student.to(accelerator.device, dtype=vae_dtype)
+    student_epoch = os.path.split(args.student_pretrained_dir)[-1]
+    student_epoch = os.path.splitext(student_epoch)[0]
+    student_epoch = int(student_epoch.split('_')[-1])
+    print(f'student_epoch: {student_epoch}')
 
-    print(f' (2.3) scheduler')
+    print(f' (2.4) scheduler')
     sched_init_args = {}
     if args.sample_sampler == "ddim":
         scheduler_cls = DDIMScheduler
@@ -281,7 +261,7 @@ def main(args) :
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
 
-    print(f' (2.4) model to accelerator device')
+    print(f' (2.4.+) model to accelerator device')
     device = args.device
     if len(invers_text_encoders) > 1:
         invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device),invers_text_encoders[1].to(device)
@@ -296,70 +276,29 @@ def main(args) :
         unet, text_encoder = unet.to(device), text_encoder.to(device)
         text_encoders = [text_encoder]
 
-    vae_encoder = vae.encoder
-    vae_encoder_quantize = vae.quant_conv
-    vae_encoder.requires_grad_(False)
-    vae_encoder.eval()
-    vae_encoder.to(accelerator.device, dtype=vae_dtype)
-    vae_encoder_quantize.requires_grad_(False)
-    vae_encoder_quantize.eval()
-    vae_encoder_quantize.to(accelerator.device, dtype=vae_dtype)
-    vae.to(accelerator.device, dtype=vae_dtype)
-
-    config_dict = vae.config
-    from diffusers import AutoencoderKL
-    from STTraining import Encoder_Teacher, Encoder_Student
-
-    student_vae = AutoencoderKL.from_config(config_dict)
-    student_vae_encoder = student_vae.encoder
-    student_vae_encoder_quantize = student_vae.quant_conv
-    student = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
-
-    print(f' (4) making decoder of vae')
-    student_pretrained_dir = args.student_pretrained_dir
-    model_state_dict = torch.load(student_pretrained_dir, map_location="cpu")
-    state_dict = {}
-    for k, v in model_state_dict.items():
-        k_ = '.'.join(k.split('.')[1:])
-        state_dict[k_] = v
-    student.load_state_dict(state_dict, strict=True)
-    student.requires_grad_(False)
-    student.eval()
-    student.to(accelerator.device, dtype=vae_dtype)
-
-    student_epoch = os.path.split(student_pretrained_dir)[-1]
-    student_epoch = os.path.splitext(student_epoch)[0]
-    student_epoch = int(student_epoch.split('_')[-1])
-    print(f'student_epoch: {student_epoch}')
-
     print(f' (2.5) network')
     sys.path.append(os.path.dirname(__file__))
     network_module = importlib.import_module(args.network_module)
-    print(f' (1.3.1) merging weights')
+    print(f' (2.5.1) merging weights')
     net_kwargs = {}
     if args.network_args is not None:
         for net_arg in args.network_args:
             key, value = net_arg.split("=")
             net_kwargs[key] = value
-    print(f' (1.3.3) make network')
+    print(f' (2.5.2) make network')
     if args.dim_from_weights:
         network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
                                                                 **net_kwargs)
     else:
-        network = network_module.create_network(1.0,
-                                                args.network_dim,
+        network = network_module.create_network(1.0,args.network_dim,
                                                 args.network_alpha,
                                                 vae, text_encoder, unet, neuron_dropout=args.network_dropout,
                                                 **net_kwargs, )
-    print(f' (2.3.4) apply trained state dict')
+    print(f' (2.5.3) apply trained state dict')
     network.apply_to(text_encoder, unet, True, True)
     if args.network_weights is not None:
         info = network.load_weights(args.network_weights)
     network.to(device)
-    vae_encoder.to(device, dtype=vae_dtype)
-    vae_encoder_quantize.to(device, dtype=vae_dtype)
-    student.to(device, dtype=vae_dtype)
-
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
@@ -369,36 +308,50 @@ def main(args) :
 
     print(f' (3.2) test images')
     trg_h, trg_w = args.resolution
+    train_img_folder = os.path.join(args.concept_image_folder, 'train/bad')
+    train_mask_folder = os.path.join(args.concept_image_folder, 'train/gt')
+    classes = os.listdir(train_img_folder)
 
-    test_img_folder = os.path.join(args.concept_image_folder, 'train')
-    test_mask_folder = os.path.join(args.concept_image_folder, 'train_mask')
-    classes = os.listdir(test_img_folder)
     thredhold = args.mask_thredhold
-    for class_name in classes:
 
-        class_base_folder = os.path.join(output_dir, class_name)
+    for class_name in classes:
+        repeat, c_name = class_name.split('_')
+
+        class_base_folder = os.path.join(output_dir, c_name)
         os.makedirs(class_base_folder, exist_ok=True)
 
-        image_folder = os.path.join(test_img_folder, class_name)
-        mask_folder = os.path.join(test_mask_folder, class_name)
+        image_folder = os.path.join(train_img_folder, class_name)
+        mask_folder = os.path.join(train_mask_folder, class_name)
 
-        test_images = os.listdir(image_folder)
-        for j, test_img in enumerate(test_images):
+        train_images = os.listdir(image_folder)
+        for j, train_img in enumerate(train_images):
             if j < 100 :
-                train_img_dir = os.path.join(image_folder, test_img)
-                mask_img_dir = os.path.join(mask_folder, test_img)
-                concept_name = test_img.split('.')[0]
+                train_img_dir = os.path.join(image_folder, train_img)
+                mask_img_dir = os.path.join(mask_folder, train_img)
+
                 print(f' (2.3.1) inversion')
-                save_base_dir = os.path.join(class_base_folder, concept_name)
-                os.makedirs(save_base_dir, exist_ok=True)
-                save_base_dir = os.path.join(save_base_dir, 'only_vae_masked')
-                os.makedirs(save_base_dir, exist_ok=True)
 
                 image_gt_np = load_image(train_img_dir, trg_h = int(trg_h), trg_w =int(trg_w))
                 with torch.no_grad():
                     org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
                     st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
+                    standard_noise = torch.randn_like(org_vae_latent).to(device)
 
+                    org_noise_latent = scheduler.add_noise(original_samples = org_vae_latent, noise = standard_noise, timesteps = torch.Tensor([700]))
+                    st_noise_latent = scheduler.add_noise(original_samples = st_latent, noise = standard_noise, timesteps = torch.Tensor([700]))
+
+                    org_pred_noise = call_unet(invers_unet, org_noise_latent, 700, invers_context.chunk(2)[0], trg_indexs_list=None, mask_imgs=None)
+                    st_pred_noise = call_unet(unet, st_noise_latent, 700, context.chunk(2)[1], trg_indexs_list=None, mask_imgs=None)
+
+                    org_recon = scheduler.step(org_pred_noise, 700, org_vae_latent, return_dict = True)['pred_original_sample']
+                    st_recon  = scheduler.step(st_pred_noise, 700, st_latent, return_dict = True)['pred_original_sample']
+
+                    mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
+                    mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
+                    mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
+
+
+                """
                 mse = ((st_latent - org_vae_latent).square() * 2) - thredhold
                 mse_threshold = mse < 0  # if true = 1, false = 0 # if true -> bad
                 mse_threshold = (mse_threshold.float())  # 0 = background, 1 = bad point
@@ -408,6 +361,7 @@ def main(args) :
                 mask_np_img = latent2image(new_latent, vae, return_type='np')
                 pil_img = Image.fromarray(mask_np_img)
                 pil_img.save(os.path.join(save_base_dir, f'vae_masked_{test_img}'))
+                """
 
 
                 """

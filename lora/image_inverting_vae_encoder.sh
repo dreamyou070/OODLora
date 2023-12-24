@@ -23,10 +23,9 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment/cable_gland \
   --output_dir ../result/MVTec3D-AD_experiment/cable_gland/ldm_inference \
   --student_pretrained_dir ../result/MVTec3D-AD_experiment/cable_gland/vae_training/1_TS_encoder_contrastive_recon_loss/vae_student_model/student_epoch_000054.pth \
-  --network_weights ../result/MVTec3D-AD_experiment/cable_gland/unet_training/1_lora_trining_using_noise_diff/epoch-000021.safetensors \
+  --network_weights ../result/MVTec3D-AD_experiment/potato/unet_training/1_lora_trining_using_noise_diff/epoch-000001.safetensors \
   --repeat_time 51 \
   --resolution 512,512 \
   --seed 42 \
-  --use_binary_mask \
   --mask_thredhold 0.3 \
   --final_time 980
