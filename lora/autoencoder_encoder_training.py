@@ -308,18 +308,16 @@ class NetworkTrainer:
             for step, batch in enumerate(train_dataloader):
                 log_loss = {}
                 # generator training
-
-                if args.anormal_training :
-                    optimizer.zero_grad(set_to_none=True)
-                    with torch.no_grad():
-                        org_img = batch['images'].to(dtype=weight_dtype)
-                        masked_img = batch['mask_imgs'].to(dtype=weight_dtype)
-                        y = teacher(masked_img)
-                    y_hat = student(org_img)
-                    loss = torch.nn.functional.mse_loss(y, y_hat, reduction='none')
-                    loss = loss.mean([1, 2, 3])
-                    loss = loss.mean()
-                    log_loss['loss/student_encoder'] = loss.item()
+                optimizer.zero_grad(set_to_none=True)
+                with torch.no_grad():
+                    org_img = batch['images'].to(dtype=weight_dtype)
+                    masked_img = batch['mask_imgs'].to(dtype=weight_dtype)
+                    y = teacher(masked_img)
+                y_hat = student(org_img)
+                loss = torch.nn.functional.mse_loss(y, y_hat, reduction='none')
+                loss = loss.mean([1, 2, 3])
+                loss = loss.mean()
+                log_loss['loss/student_encoder'] = loss.item()
 
                 if args.only_normal_training :
                 #if args.student_reconst_loss :
@@ -455,10 +453,8 @@ if __name__ == "__main__":
     parser.add_argument("--perceptual_weight", type = float, default = 0.001)
     parser.add_argument("--autoencoder_warm_up_n_epochs", type=int, default=2)
     parser.add_argument("--student_pretrained_dir", type=str)
-    parser.add_argument("--anormal_training", action="store_true")
     parser.add_argument("--only_normal_training", action="store_true")
     parser.add_argument("--start_epoch", type = int)
-
     # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
