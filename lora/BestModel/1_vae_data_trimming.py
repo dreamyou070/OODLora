@@ -22,14 +22,9 @@ def main():
                     folders = os.listdir(cat_dir)
                     for folder in folders:
                         if '_' in folder:
-                            pure = folder.split('_')[0]
-                            pure_dir = os.path.join(cat_dir, pure)
 
                             folder_dir = os.path.join(cat_dir, folder)
-                            org_img_dir = os.path.join(folder_dir, f'{folder}.png')
-                            new_img_dir = os.path.join(pure_dir, f'{folder}.png')
-                            os.rename(org_img_dir, new_img_dir)
-                            #os.remove(folder_dir)
+                            os.remove(folder_dir)
 
                 cats = os.listdir(test_dir)  ####################
                 for cat in cats:
@@ -37,13 +32,8 @@ def main():
                     folders = os.listdir(cat_dir)
                     for folder in folders :
                         if '_' in folder :
-                            pure = folder.split('_')[0]
-                            pure_dir = os.path.join(cat_dir, pure)
                             folder_dir = os.path.join(cat_dir, folder)
-                            org_img_dir = os.path.join(folder_dir, f'{folder}.png')
-                            new_img_dir = os.path.join(pure_dir, f'{folder}.png')
-                            os.rename(org_img_dir, new_img_dir)
-                           # os.remove(folder_dir)
+                            os.remove(folder_dir)
 
 
 if __name__ == '__main__':
