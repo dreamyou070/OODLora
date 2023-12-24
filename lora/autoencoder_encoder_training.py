@@ -376,7 +376,7 @@ class NetworkTrainer:
             with torch.no_grad():
                 if is_main_process:
                     img = batch['images'].to(dtype=weight_dtype)
-                    latent = DiagonalGaussianDistribution(img).sample()
+                    latent = DiagonalGaussianDistribution(student(img)).sample()
                     recon = vae.decode(latent)['sample']
                     batch = recon.shape[0]
                     if batch != 1:
