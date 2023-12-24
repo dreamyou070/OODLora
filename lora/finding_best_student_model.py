@@ -121,74 +121,73 @@ def main(args):
 
         print(f'\n step 3. inference')
         print(' (3.1) anormal test')
-        if args.training_data_check :
-            save_base_dir = os.path.join(output_dir, 'training_dataset')
-            os.makedirs(save_base_dir, exist_ok=True)
-            anormal_folder = os.path.join(args.anormal_folder, 'train/bad')
-            mask_folder = os.path.join(args.anormal_folder, 'train/gt')
-            classes = os.listdir(anormal_folder)
-            for class_ in classes:
+        save_base_dir = os.path.join(output_dir, 'training_dataset')
+        os.makedirs(save_base_dir, exist_ok=True)
+        anormal_folder = os.path.join(args.anormal_folder, 'train/bad')
+        mask_folder = os.path.join(args.anormal_folder, 'train/gt')
+        classes = os.listdir(anormal_folder)
+        for class_ in classes:
 
-                class_dir = os.path.join(anormal_folder, class_)
-                if '_' in class_:
-                    class__ = class_.split('_')[1:]
-                    class__ = '_'.join(class__)
-                class_mask_dir = os.path.join(mask_folder, class__)
+            class_dir = os.path.join(anormal_folder, class_)
+            if '_' in class_:
+                class__ = class_.split('_')[1:]
+                class__ = '_'.join(class__)
+            class_mask_dir = os.path.join(mask_folder, class__)
 
-                class_save_dir = os.path.join(save_base_dir, class__)
-                os.makedirs(class_save_dir, exist_ok=True)
+            class_save_dir = os.path.join(save_base_dir, class__)
+            os.makedirs(class_save_dir, exist_ok=True)
 
-                images = os.listdir(class_dir)
+            images = os.listdir(class_dir)
 
-                for i, image in enumerate(images) :
-                    if i < 5 :
-                        image_dir = os.path.join(class_dir, image)
-                        if 'good' not in class_ :
-                            mask_dir = os.path.join(class_mask_dir, image)
-                        else :
-                            mask_dir = None
-                        name, ext = os.path.splitext(image)
-                        img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
-                        compare_save_dir = os.path.join(class_save_dir, image)
-                        if 'good' not in class_ :
-                            mask_save_dir = os.path.join(class_save_dir, f'{name}_gt.png')
-                        else :
-                            mask_save_dir = None
-                        recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir,accelerator,student_encoder, student_decoder, vae, vae_dtype)
-
-
-        else :
-
-            save_base_dir = os.path.join(output_dir, 'test_dataset')
-            os.makedirs(save_base_dir, exist_ok=True)
-
-            anormal_folder = os.path.join(args.anormal_folder, 'test/rgb')
-            anormal_mask_folder = os.path.join(args.anormal_folder, 'test/gt')
-            classes = os.listdir(anormal_folder)
-            for class_ in classes:
-                class_dir = os.path.join(anormal_folder, class_)
-                class_mask_dir = os.path.join(anormal_mask_folder, class_)
-                if 'good' in class_ :
-                    class_dir = os.path.join(anormal_folder, f'{class_}/rgb')
-                    class_mask_dir = os.path.join(anormal_folder, f'{class_}/gt')
-
-                class_save_dir = os.path.join(save_base_dir, class_)
-                os.makedirs(class_save_dir, exist_ok=True)
-
-                images = os.listdir(class_dir)
-                mask_images = os.listdir(class_mask_dir)
-
-                for image in images :
-
+            for i, image in enumerate(images) :
+                if i < 5 :
                     image_dir = os.path.join(class_dir, image)
-                    mask_dir = os.path.join(class_mask_dir, image)
+                    if 'good' not in class_ :
+                        mask_dir = os.path.join(class_mask_dir, image)
+                    else :
+                        mask_dir = None
                     name, ext = os.path.splitext(image)
-
                     img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
                     compare_save_dir = os.path.join(class_save_dir, image)
-                    mask_save_dir = os.path.join(class_save_dir, f'{name}_mask.png')
-                    recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir, accelerator,
-                          student_encoder, student_decoder, vae, vae_dtype)
+                    if 'good' not in class_ :
+                        mask_save_dir = os.path.join(class_save_dir, f'{name}_gt.png')
+                    else :
+                        mask_save_dir = None
+                    recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir,accelerator,student_encoder, student_decoder, vae, vae_dtype)
+
+
+
+
+        save_base_dir = os.path.join(output_dir, 'test_dataset')
+        os.makedirs(save_base_dir, exist_ok=True)
+
+        anormal_folder = os.path.join(args.anormal_folder, 'test/rgb')
+        anormal_mask_folder = os.path.join(args.anormal_folder, 'test/gt')
+        classes = os.listdir(anormal_folder)
+        for class_ in classes:
+            class_dir = os.path.join(anormal_folder, class_)
+            class_mask_dir = os.path.join(anormal_mask_folder, class_)
+            if 'good' in class_ :
+                class_dir = os.path.join(anormal_folder, f'{class_}/rgb')
+                class_mask_dir = os.path.join(anormal_folder, f'{class_}/gt')
+
+            class_save_dir = os.path.join(save_base_dir, class_)
+            os.makedirs(class_save_dir, exist_ok=True)
+
+            images = os.listdir(class_dir)
+            mask_images = os.listdir(class_mask_dir)
+
+            for image in images :
+
+                image_dir = os.path.join(class_dir, image)
+                mask_dir = os.path.join(class_mask_dir, image)
+                name, ext = os.path.splitext(image)
+
+                img_save_dir = os.path.join(class_save_dir, f'{name}_recon.png')
+                compare_save_dir = os.path.join(class_save_dir, image)
+                mask_save_dir = os.path.join(class_save_dir, f'{name}_mask.png')
+                recon(mask_dir, image_dir, mask_save_dir, img_save_dir, compare_save_dir, accelerator,
+                      student_encoder, student_decoder, vae, vae_dtype)
 
 
 if __name__ == "__main__":
