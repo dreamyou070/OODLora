@@ -28,7 +28,7 @@ def main():
                             org_img_dir = os.path.join(folder_dir, f'{folder}.png')
                             new_img_dir = os.path.join(pure_dir, f'{folder}.png')
                             os.rename(org_img_dir, new_img_dir)
-                            os.remove(folder_dir)
+                            #os.remove(folder_dir)
 
 
 
@@ -44,7 +44,7 @@ def main():
                             org_img_dir = os.path.join(folder_dir, f'{folder}.png')
                             new_img_dir = os.path.join(pure_dir, f'{folder}.png')
                             os.rename(org_img_dir, new_img_dir)
-                            os.remove(folder_dir)
+                           # os.remove(folder_dir)
 
                     """
                     images = os.listdir(cat_dir)
