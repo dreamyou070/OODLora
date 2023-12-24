@@ -12,7 +12,8 @@ def main(args) :
 
     print(f'step 2. model')
     small_model = vit_tiny()
-    small_model.load_state_dict(student_model_state_dict)
+    small_model_state_dict = small_model.state_dict
+    print(f'small_model_state_dict : {small_model_state_dict.keys()}')
 
 
 
