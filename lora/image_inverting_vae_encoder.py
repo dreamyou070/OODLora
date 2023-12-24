@@ -12,7 +12,8 @@ from typing import Union
 import numpy as np
 from utils.image_utils import image2latent, customizing_image2latent, load_image, latent2image
 import shutil
-from diffusers.utils.torch_utils import randn_tensor
+from attention_store import AttentionStore
+from torch import nn
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -124,14 +125,18 @@ def ddim_loop(latent, context, inference_times, scheduler, unet, vae, base_folde
     latent_dict[int(next_time)] = latent
     return latent_dict, time_steps, pil_images
 
+
 @torch.no_grad()
-def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir, mask):
-    uncon, con = context.chunk(2)
-    if inference_times[0] < inference_times[1] :
-        inference_times.reverse()
+def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir, controller):
+    if context.shape[0] == 1:
+        uncon, con = context.chunk(2)
+    else:
+        con = context
+    # inference_times = [100,80, ... 0]
     latent = start_latent
     all_latent_dict = {}
     all_latent_dict[inference_times[0]] = latent
+
     time_steps = []
     pil_images = []
     with torch.no_grad():
@@ -140,19 +145,34 @@ def recon_loop(latent_dict, start_latent, context, inference_times, scheduler, u
     pil_images.append(pil_img)
     pil_img.save(os.path.join(base_folder_dir, f'recon_start_time_{inference_times[0]}.png'))
     for i, t in enumerate(inference_times[:-1]):
+        z_latent = latent_dict[inference_times[i]]
+        x_latent = latent
         prev_time = int(inference_times[i + 1])
         time_steps.append(int(t))
         with torch.no_grad():
-            noise_pred = call_unet(unet, latent, t, con, None, None)
-            new_latent = prev_step(noise_pred, int(t), latent, scheduler)
-            if mask is not None :
-                background_latent = latent_dict[prev_time] * (mask) # 0 = background, 1 = bad point
-                object_latent = new_latent * (1-mask)
-                latent = background_latent + object_latent
-            else :
-                latent = new_latent
+            input_latent = torch.cat([z_latent, x_latent], dim=0)
+            input_cond = torch.cat([con, con], dim=0)
+            trg_indexs_list = [[1]]
+            noise_pred = call_unet(unet,
+                                   input_latent,
+                                   t,
+                                   input_cond,
+                                   con,
+                                   trg_indexs_list,
+                                   None)
+            mask_dict = controller.step_store
+            controller.reset()
+            layer_names = mask_dict.keys()
+            for layer_name in layer_names:
+                mask_list = mask_dict[layer_name]
+                print(f'layer_name : {layer_name} , mask_list : {len(mask_list)}')
+            y_latent = z_latent * (1) + x_latent * (0)
+            y_noise_pred = call_unet(unet, y_latent, t, input_cond, con, None, None)
+            controller.reset()
+            # --------------------- mask --------------------- #
+            latent = prev_step(y_noise_pred, t, y_latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')
-        if prev_time == 0 :
+        if prev_time == 0:
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'recon_{prev_time}.png'))
@@ -194,6 +214,72 @@ def org_recon_loop(start_latent, context, inference_times, scheduler, unet, vae,
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
 
+
+def register_attention_control(unet: nn.Module, controller: AttentionStore,
+                               mask_threshold: float = 1):  # if mask_threshold is 1, use itself
+
+    def ca_forward(self, layer_name):
+        def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
+            is_cross_attention = False
+            if context is not None:
+                is_cross_attention = True
+            query = self.to_q(hidden_states)
+            context = context if context is not None else hidden_states
+            key = self.to_k(context)
+            value = self.to_v(context)
+
+            query = self.reshape_heads_to_batch_dim(query)
+            key = self.reshape_heads_to_batch_dim(key)
+            value = self.reshape_heads_to_batch_dim(value)
+            if self.upcast_attention:
+                query = query.float()
+                key = key.float()
+            attention_scores = torch.baddbmm(
+                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                            device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            attention_probs = attention_scores.softmax(dim=-1)
+            attention_probs = attention_probs.to(value.dtype)
+            if is_cross_attention and trg_indexs_list is not None:
+                masked_attention_probs, org_attention_probs = attention_probs.chunk(2, dim=0)
+                batch_num = len(trg_indexs_list)
+                attention_probs_batch = torch.chunk(org_attention_probs, batch_num, dim=0)
+                masked_attention_probs_batch = torch.chunk(masked_attention_probs, batch_num, dim=0)
+                vector_diff_list = []
+                for batch_idx, (attention_prob, masked_attention_prob) in enumerate(zip(attention_probs_batch, masked_attention_probs_batch)):
+                    batch_trg_index = trg_indexs_list[batch_idx]  # two times
+                    for word_idx in batch_trg_index:
+                        word_idx = int(word_idx)
+                        print('word_idx', word_idx)
+                        masked_attn_vector = masked_attention_prob[:, :, word_idx]
+                        org_attn_vector = attention_prob[:, :, word_idx]
+                        attention_diff = (masked_attn_vector - org_attn_vector).mean()
+                        controller.store(attention_diff,layer_name)
+            hidden_states = torch.bmm(attention_probs, value)
+            hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
+            hidden_states = self.to_out[0](hidden_states)
+            return hidden_states
+
+        return forward
+
+    def register_recr(net_, count, layer_name):
+        if net_.__class__.__name__ == 'CrossAttention':
+            net_.forward = ca_forward(net_, layer_name)
+            return count + 1
+        elif hasattr(net_, 'children'):
+            for name__, net__ in net_.named_children():
+                full_name = f'{layer_name}_{name__}'
+                count = register_recr(net__, count, full_name)
+        return count
+
+    cross_att_count = 0
+    for net in unet.named_children():
+        if "down" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+        elif "up" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+        elif "mid" in net[0]:
+            cross_att_count += register_recr(net[1], 0, net[0])
+    controller.num_att_layers = cross_att_count
 
 def main(args) :
 
@@ -337,6 +423,8 @@ def main(args) :
     if args.network_weights is not None:
         info = network.load_weights(args.network_weights)
     network.to(device)
+    controller = AttentionStore()
+    register_attention_control(unet, controller)
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
@@ -392,14 +480,37 @@ def main(args) :
                                                                         unet=invers_unet,
                                                                         vae=vae,
                                                                         base_folder_dir=class_base_folder)
+                    latent_dict, time_steps, pil_images = ddim_loop(latent=st_latent,
+                                                                        context=inv_c,
+                                                                        inference_times=inf_time,
+                                                                        scheduler=scheduler,
+                                                                        unet=invers_unet,
+                                                                        vae=vae,
+                                                                        base_folder_dir=class_base_folder)
+
+                    base_num = 40
+                    noising_time = inference_times[base_num] # 100
+                    recon_times = inference_times[base_num:].tolist()
+                    st_noise_latent = latent_dict[int(noising_time.item())]
+                    recon_loop(org_latent_dict,
+                               start_latent = st_noise_latent,
+                               context = context,
+                               inference_times = recon_times,
+                               scheduler = scheduler,
+                               unet = unet,
+                               vae = vae,
+                               base_folder_dir = class_base_folder,
+                               controller = controller,)
+
+
+
 
                     """
-                    standard_noise = torch.randn_like(org_vae_latent).to(device)
+                    
                     print(f'inference_times : {inference_times}')
-                    base_num = 40
-                    noising_time = inference_times[base_num]
+                    
                     org_noise_latent = scheduler.add_noise(original_samples = org_vae_latent, noise = standard_noise, timesteps = torch.tensor(int(noising_time)))
-                    st_noise_latent = scheduler.add_noise(original_samples = st_latent, noise = standard_noise, timesteps = torch.tensor(int(noising_time)))
+                    
                     Image.fromarray(latent2image(org_noise_latent, vae, return_type='np')).save(os.path.join(class_base_folder,
                                                                                                       f'{name}_org_vae_noise_latent_{noising_time}{ext}'))
                     Image.fromarray(latent2image(st_noise_latent, vae, return_type='np')).save(os.path.join(class_base_folder,
