@@ -87,8 +87,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/object/inference.txt \
   --max_train_steps 48000 \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato/train/bad \
+  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato/train_normal/bad \
   --class_caption 'good' \
   --contrastive_eps 0.0 \
   --start_epoch 0 \
-  --cross_map_res 32
+  --normal_training

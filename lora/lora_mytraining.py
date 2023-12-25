@@ -700,8 +700,6 @@ class NetworkTrainer:
                         alpha_prod_t_next = noise_scheduler.alphas_cumprod[next_timesteps]
                         alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
                         gamma = (alpha_prod_t / alpha_prod_t_next) ** 0.5
-
-
                         with torch.no_grad():
                             noise_pred_org = self.call_unet(args, accelerator, enc_unet,
                                                         noisy_latents, timesteps,
@@ -725,22 +723,23 @@ class NetworkTrainer:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
                             target = noise
-                        #task_loss = torch.nn.functional.mse_loss(noise_pred.float(),
-                        #                                         target.float(), reduction="none")
-                        #task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
-                        #task_loss = task_loss.mean()
-                        detail_loss = torch.nn.functional.mse_loss(noise_diff_org.float(),
-                                                                   noise_diff_pred.float(), reduction="none")
-                        detail_loss = detail_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
-                        detail_loss = detail_loss.mean()
-                        log_loss["loss/detail_loss"] = detail_loss
-                        #log_loss["loss/task_loss"] = task_loss
+                        if args.normal_training :
+                            task_loss = torch.nn.functional.mse_loss(noise_pred.float(),
+                                                                     target.float(), reduction="none")
+                            task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
+                            task_loss = task_loss.mean()
+                            log_loss["loss/task_loss"] = task_loss
+                        else :
+                            detail_loss = torch.nn.functional.mse_loss(noise_diff_org.float(),
+                                                                       noise_diff_pred.float(), reduction="none")
+                            detail_loss = detail_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
+                            task_loss = detail_loss.mean()
+                            log_loss["loss/detail_loss"] = task_loss
+
                         if len(test_indexs) > 0 :
-                            #loss += task_loss + detail_loss
-                            loss +=  detail_loss
+                            loss +=  task_loss
                         else:
-                            #loss = task_loss + detail_loss
-                            loss = detail_loss
+                            loss = task_loss
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
@@ -899,6 +898,8 @@ if __name__ == "__main__":
     parser.add_argument("--start_epoch", type = int, default = 0)
 
     parser.add_argument("--cross_map_res", type=int, default=16)
+    parser.add_argument("--normal_training", action="store_true", )
+
 
     # class_caption
     args = parser.parse_args()

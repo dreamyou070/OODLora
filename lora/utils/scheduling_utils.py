@@ -130,7 +130,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
         np_img = latent2image(latent, vae, return_type='np')
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
-    pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_start_time_{inference_times[0]}.png'))
+    #pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_start_time_{inference_times[0]}.png'))
     for i, t in enumerate(inference_times[:-1]):
         if latent_dict is not None:
             z_latent = latent_dict[inference_times[i]]
