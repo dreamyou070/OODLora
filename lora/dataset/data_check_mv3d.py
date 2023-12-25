@@ -43,7 +43,7 @@ def main(args):
             os.makedirs(inpaint_img_save_folder, exist_ok=True)
 
             prompt_list = '_'.split(cls)
-            prompt = 'a image of black choco' # + ' '.join(prompt_list)
+            prompt = 'a image of circle complete chocolate cookie' # + ' '.join(prompt_list)
             test_folder = os.path.join(class_dir, 'test')
             categories = os.listdir(test_folder)
             negative_prompt = ', '.join(prompt_list)
