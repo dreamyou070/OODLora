@@ -32,7 +32,7 @@ def main(args):
     data_folder = args.data_folder
     classes = os.listdir(data_folder)
     for cls in classes:
-        if cls != 'cookies' :
+        if cls == 'cookies' :
             print(f'cls : {cls}')
             class_dir = os.path.join(data_folder, cls)
 
@@ -41,84 +41,75 @@ def main(args):
 
             original_img_save_folder = os.path.join(save_class_dir, 'bad')
             os.makedirs(original_img_save_folder, exist_ok=True)
-            model_original_img_save_folder = os.path.join(save_class_dir, 'bad_model')
-            os.makedirs(model_original_img_save_folder, exist_ok=True)
+            original_img_save_folder = os.path.join(save_class_dir, 'bad_model')
+            os.makedirs(original_img_save_folder, exist_ok=True)
             inpaint_img_save_folder = os.path.join(save_class_dir, 'corrected')
             os.makedirs(inpaint_img_save_folder, exist_ok=True)
 
             prompt_list = '_'.split(cls)
-            if cls == 'bagel' :
-                prompt = 'a photo of a circle brown bagel'
-            elif cls == 'cable_gland':
-                prompt = 'a photo of gray cable gland'
-            elif cls == 'carrot':
-                prompt = 'a photo of orange carrot'
+            prompt = 'a circle black chocolate cookie' # + ' '.join(prompt_list)
 
+            test_folder = os.path.join(class_dir, 'test')
 
-            test_folder = os.path.join(class_dir, f'dataset/train/bad')
-            mask_folder = os.path.join(class_dir, f'dataset/train/gt')
             categories = os.listdir(test_folder)
             negative_prompt = ', '.join(prompt_list)
 
             for category in categories:
-                test_cat_folder = os.path.join(test_folder, category)
                 if category != 'good':
-                    if '_' in category:
-                        category = category.split('_')[1:]
-                        category = '_'.join(category)
-                gt_folder = os.path.join(mask_folder, category)
+                    test_cat = os.path.join(test_folder, category)
+                    rgb_folder = os.path.join(test_cat, 'rgb')
+                    gt_folder = os.path.join(test_cat, 'gt')
+                    #ground_truth_cat = os.path.join(ground_truth_folder, category)
 
-                original_categori_dir = os.path.join(original_img_save_folder, category)
-                os.makedirs(original_categori_dir, exist_ok=True)
-                model_original_categori_dir = os.path.join(model_original_img_save_folder, category)
-                os.makedirs(model_original_categori_dir, exist_ok=True)
-                inpaint_categori_dir = os.path.join(inpaint_img_save_folder, category)
-                os.makedirs(inpaint_categori_dir, exist_ok=True)
+                    original_categori_dir = os.path.join(original_img_save_folder, category)
+                    os.makedirs(original_categori_dir, exist_ok=True)
+                    inpaint_categori_dir = os.path.join(inpaint_img_save_folder, category)
+                    os.makedirs(inpaint_categori_dir, exist_ok=True)
 
-                images = os.listdir(test_cat_folder)
-                for name_ in images:
-                    name, ext = os.path.splitext(name_)
-                    image_path = os.path.join(test_cat_folder, name_)
-                    pil = Image.open(image_path)
-                    width, height = pil.size
-                    print(f'original size : {width} , {height}')
-                    mask_path = os.path.join(gt_folder, name_)
-                    """
-                    image = pipe(prompt=prompt,
-                                 #negative_prompt = negative_prompt,
-                                 image=Image.open(image_path).convert('RGB'),
-                                 mask_image=Image.open(mask_path).convert('L'), ).images[0]
-                    """
-                    org_image = load_image(image_path).resize((1024, 1024))
-                    mask_image = load_image(mask_path).resize((1024, 1024))
-                    generator = torch.Generator(device="cuda").manual_seed(0)
+                    images = os.listdir(rgb_folder)
+                    for name_ in images:
+                        name, ext = os.path.splitext(name_)
+                        image_path = os.path.join(rgb_folder, name_)
+                        pil = Image.open(image_path)
+                        width, height = pil.size
+                        print(f'original size : {width} , {height}')
+                        mask_path = os.path.join(gt_folder, name_)
+                        """
+                        image = pipe(prompt=prompt,
+                                     #negative_prompt = negative_prompt,
+                                     image=Image.open(image_path).convert('RGB'),
+                                     mask_image=Image.open(mask_path).convert('L'), ).images[0]
+                        """
+                        org_image = load_image(image_path).resize((1024, 1024))
+                        mask_image = load_image(mask_path).resize((1024, 1024))
+                        generator = torch.Generator(device="cuda").manual_seed(0)
 
-                    image = pipe(
-                        prompt=prompt,
-                        image=org_image,
-                        mask_image=mask_image,
-                        guidance_scale=8.0,
-                        num_inference_steps=20,  # steps between 15 and 30 work well for us
-                        strength=0.99,  # make sure to use `strength` below 1.0
-                        generator=generator,
-                    ).images[0]
-                    image = image.resize((512,512))
-                    image.save(os.path.join(inpaint_categori_dir, name_))
+                        image = pipe(
+                            prompt=prompt,
+                            image=org_image,
+                            mask_image=mask_image,
+                            guidance_scale=8.0,
+                            num_inference_steps=20,  # steps between 15 and 30 work well for us
+                            strength=0.99,  # make sure to use `strength` below 1.0
+                            generator=generator,
+                        ).images[0]
+                        image = image.resize((width, height))
+                        image.save(os.path.join(inpaint_categori_dir, name_))
 
-                    original_image = Image.open(image_path).resize((512,512))
-                    original_image.save(os.path.join(original_categori_dir, name_))
+                        original_image = Image.open(image_path).resize((512,512))
+                        original_image.save(os.path.join(original_categori_dir, name_))
 
-                    new_mask = load_image(base_mask_dir).resize((1024, 1024))
-                    image = pipe(prompt=prompt,
-                                 image=org_image,
-                                 mask_image=new_mask,
-                        guidance_scale=8.0,
-                        num_inference_steps=20,  # steps between 15 and 30 work well for us
-                        strength=0.99,  # make sure to use `strength` below 1.0
-                        generator=generator,
-                    ).images[0]
-                    image = image.resize((512,512))
-                    image.save(os.path.join(model_original_categori_dir, name_))
+                        new_mask = load_image(base_mask_dir).resize((1024, 1024))
+                        image = pipe(prompt=prompt,
+                                     image=org_image,
+                                     mask_image=new_mask,
+                            guidance_scale=8.0,
+                            num_inference_steps=20,  # steps between 15 and 30 work well for us
+                            strength=0.99,  # make sure to use `strength` below 1.0
+                            generator=generator,
+                        ).images[0]
+                        image = image.resize((width, height))
+                        image.save(os.path.join(inpaint_categori_dir, name_))
 
 
 
