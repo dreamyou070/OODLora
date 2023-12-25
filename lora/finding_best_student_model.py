@@ -165,10 +165,12 @@ def main(args):
         for class_ in classes:
 
             class_dir = os.path.join(anormal_folder, class_)
-            class_mask_dir = os.path.join(anormal_mask_folder, class_)
-            if 'good' in class_:
-                class_dir = os.path.join(anormal_folder, f'{class_}/rgb')
+
+            if 'good' not in class_:
+                class_mask_dir = os.path.join(anormal_mask_folder, class_)
+            else :
                 class_mask_dir = None
+
             class_save_dir = os.path.join(save_base_dir, class_)
             os.makedirs(class_save_dir, exist_ok=True)
 
