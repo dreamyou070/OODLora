@@ -32,7 +32,7 @@ def main(args):
     data_folder = args.data_folder
     classes = os.listdir(data_folder)
     for cls in classes:
-        if cls != 'cookies' :
+        if cls != 'cookies' and cls != 'cable_gland' :
             print(f'cls : {cls}')
             class_dir = os.path.join(data_folder, cls)
 
@@ -49,8 +49,6 @@ def main(args):
             prompt_list = '_'.split(cls)
             if cls == 'bagel' :
                 prompt = 'a photo of a circle brown bagel'
-            elif cls == 'cable_gland':
-                prompt = 'a photo of gray cable gland'
             elif cls == 'carrot':
                 prompt = 'a photo of orange carrot'
 
@@ -107,22 +105,6 @@ def main(args):
 
                     original_image = Image.open(image_path).resize((512,512))
                     original_image.save(os.path.join(original_categori_dir, name_))
-
-                    new_mask = load_image(base_mask_dir).resize((1024, 1024))
-                    image = pipe(prompt=prompt,
-                                 image=org_image,
-                                 mask_image=new_mask,
-                        guidance_scale=8.0,
-                        num_inference_steps=20,  # steps between 15 and 30 work well for us
-                        strength=0.99,  # make sure to use `strength` below 1.0
-                        generator=generator,
-                    ).images[0]
-                    image = image.resize((512,512))
-                    image.save(os.path.join(model_original_categori_dir, name_))
-
-
-
-
 
 
             """
