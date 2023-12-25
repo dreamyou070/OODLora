@@ -24,24 +24,22 @@ def main(args):
 
     print(f'\n step 2. dataset')
     parent, child = os.path.split(args.data_folder)
-    save_folder = os.path.join(parent, f'{child}_Experiment_SDXL')
+    save_folder = os.path.join(parent, f'{child}_Experiment_Recheck_SDXL')
     os.makedirs(save_folder, exist_ok=True)
 
     data_folder = args.data_folder
     classes = os.listdir(data_folder)
-    not_cls = ['cable_gland', 'erase','carpet']
     for cls in classes:
         if cls == 'cable_gland' :
             print(f'cls : {cls}')
             class_dir = os.path.join(data_folder, cls)
+
             save_class_dir = os.path.join(save_folder, cls)
             os.makedirs(save_class_dir, exist_ok=True)
-
             original_img_save_folder = os.path.join(save_class_dir, 'bad')
             os.makedirs(original_img_save_folder, exist_ok=True)
             inpaint_img_save_folder = os.path.join(save_class_dir, 'corrected')
             os.makedirs(inpaint_img_save_folder, exist_ok=True)
-
 
             prompt_list = '_'.split(cls)
             prompt = 'a image of ' + ' '.join(prompt_list)
@@ -95,7 +93,7 @@ def main(args):
 
 
 
-
+            """
             train_folder = os.path.join(class_dir, 'train/good/rgb')
             train_images = os.listdir(train_folder)
             original_save_folder = os.path.join(original_img_save_folder, 'good')
@@ -107,11 +105,12 @@ def main(args):
                 image = Image.open(image_path)
                 image.save(os.path.join(original_save_folder, i))
                 image.save(os.path.join(copy_save_folder, i))
+            """
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda')
-    parser.add_argument('--data_folder', type=str, default='../../../../MyData/anomaly_detection/MVTec3D-AD')
+    parser.add_argument('--data_folder', type=str, default='../../../../MyData/anomaly_detection/MVTec3D-AD_Recheck')
     args = parser.parse_args()
     main(args)
