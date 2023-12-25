@@ -11,7 +11,7 @@ def main(args) :
     trg_num = 1000
     for class_name in classes:  # bagel
 
-        if class_name == 'bagel':
+        if class_name == args.trg_class_name:
             class_dir = os.path.join(base_folder, class_name)
 
             train_dir = os.path.join(class_dir, 'train')
@@ -66,5 +66,6 @@ def main(args) :
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default='../../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL')
+    parser.add_argument('--trg_class_name', type=str, default='cable_gland')
     args = parser.parse_args()
     main(args)
