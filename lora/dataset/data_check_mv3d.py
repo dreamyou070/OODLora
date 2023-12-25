@@ -36,6 +36,7 @@ def main(args):
 
             save_class_dir = os.path.join(save_folder, cls)
             os.makedirs(save_class_dir, exist_ok=True)
+
             original_img_save_folder = os.path.join(save_class_dir, 'bad')
             os.makedirs(original_img_save_folder, exist_ok=True)
             inpaint_img_save_folder = os.path.join(save_class_dir, 'corrected')
