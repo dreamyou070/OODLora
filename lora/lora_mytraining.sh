@@ -70,25 +70,18 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --start_epoch 0 \
   --cross_map_res 16
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 50389 lora_mytraining.py \
-  --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 53289 lora_mytraining.py \
+  --logging_dir ../result/logs --process_title parksooyeon --max_token_length 225 --seed 42 \
   --log_with wandb --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
-  --wandb_init_name potato_training \
-  --wandb_run_name 2_3_lora_trining_using_noise_diff_map_res_32 \
-  --seed 42 \
-  --output_dir ../result/MVTec3D-AD_experiment/potato/unet_training/2_3_lora_trining_using_noise_diff_map_res_32 \
+  --wandb_init_name cable_gland_training \
+  --wandb_run_name 2_lora_trining_normal_data_detail_objective \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
-  --network_module networks.lora \
-  --network_dim 64 --network_alpha 4 --train_batch_size 2 \
+  --network_module networks.lora --network_dim 64 --network_alpha 4 --train_batch_size 2 \
   --optimizer_type AdamW --lr_scheduler cosine_with_restarts --lr_warmup_steps 144 \
   --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 \
-  --resolution 512,512 \
-  --save_every_n_epochs 1 \
-  --sample_every_n_epochs 1 \
-  --sample_prompts ../../../MyData/object/inference.txt \
-  --max_train_steps 48000 \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/potato/train_normal/bad \
-  --class_caption 'good' \
-  --contrastive_eps 0.0 \
-  --start_epoch 0 \
+  --resolution 512,512 --save_every_n_epochs 1 --sample_every_n_epochs 1 \
+  --sample_prompts ../../../MyData/object/inference.txt --max_train_steps 48000 \
+  --output_dir ../result/MVTec3D-AD_experiment/cable_gland/unet_training/2_lora_trining_normal_data_detail_objective \
+  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/cable_gland/train_normal/bad \
+  --class_caption 'good' --contrastive_eps 0.0 --start_epoch 0 \
   --normal_training
