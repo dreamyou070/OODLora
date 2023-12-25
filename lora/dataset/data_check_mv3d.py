@@ -86,7 +86,7 @@ def main(args):
                             strength=0.99,  # make sure to use `strength` below 1.0
                             generator=generator,
                         ).images[0]
-
+                        image = image.resize((width, height))
                         image.save(os.path.join(inpaint_categori_dir, name_))
 
                         original_image = Image.open(image_path).resize((512,512))
