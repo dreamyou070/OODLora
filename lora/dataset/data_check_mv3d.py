@@ -85,7 +85,7 @@ def main(args):
                         generator = torch.Generator(device="cuda").manual_seed(0)
 
                         image = pipe(
-                            prompt=prompt,
+                            prompt='black background',
                             image=org_image,
                             mask_image=mask_image,
                             guidance_scale=8.0,
