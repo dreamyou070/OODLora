@@ -15,6 +15,8 @@ def main(args):
                                                      variant = "fp16",
                                                      cache_dir=r'../../../../pretrained_stable_diffusion').to(device)
 
+    base_mask_dir = '../../../../MyData/anomaly_detection/base.png'
+
     """
     pipe.enable_model_cpu_offload() --> 
     """
@@ -30,7 +32,7 @@ def main(args):
     data_folder = args.data_folder
     classes = os.listdir(data_folder)
     for cls in classes:
-        if cls == 'cable_gland' :
+        if cls == 'cookies' :
             print(f'cls : {cls}')
             class_dir = os.path.join(data_folder, cls)
 
@@ -39,12 +41,16 @@ def main(args):
 
             original_img_save_folder = os.path.join(save_class_dir, 'bad')
             os.makedirs(original_img_save_folder, exist_ok=True)
+            model_original_img_save_folder = os.path.join(save_class_dir, 'bad_model')
+            os.makedirs(model_original_img_save_folder, exist_ok=True)
             inpaint_img_save_folder = os.path.join(save_class_dir, 'corrected')
             os.makedirs(inpaint_img_save_folder, exist_ok=True)
 
             prompt_list = '_'.split(cls)
-            prompt = 'a gray color of cable gland' # + ' '.join(prompt_list)
+            prompt = 'a circle black chocolate cookie' # + ' '.join(prompt_list)
+
             test_folder = os.path.join(class_dir, 'test')
+
             categories = os.listdir(test_folder)
             negative_prompt = ', '.join(prompt_list)
 
@@ -57,6 +63,8 @@ def main(args):
 
                     original_categori_dir = os.path.join(original_img_save_folder, category)
                     os.makedirs(original_categori_dir, exist_ok=True)
+                    model_original_categori_dir = os.path.join(model_original_img_save_folder, category)
+                    os.makedirs(model_original_categori_dir, exist_ok=True)
                     inpaint_categori_dir = os.path.join(inpaint_img_save_folder, category)
                     os.makedirs(inpaint_categori_dir, exist_ok=True)
 
@@ -74,13 +82,13 @@ def main(args):
                                      image=Image.open(image_path).convert('RGB'),
                                      mask_image=Image.open(mask_path).convert('L'), ).images[0]
                         """
-                        image = load_image(image_path).resize((1024, 1024))
+                        org_image = load_image(image_path).resize((1024, 1024))
                         mask_image = load_image(mask_path).resize((1024, 1024))
                         generator = torch.Generator(device="cuda").manual_seed(0)
 
                         image = pipe(
                             prompt=prompt,
-                            image=image,
+                            image=org_image,
                             mask_image=mask_image,
                             guidance_scale=8.0,
                             num_inference_steps=20,  # steps between 15 and 30 work well for us
@@ -92,6 +100,19 @@ def main(args):
 
                         original_image = Image.open(image_path).resize((512,512))
                         original_image.save(os.path.join(original_categori_dir, name_))
+
+                        new_mask = load_image(base_mask_dir).resize((1024, 1024))
+                        image = pipe(prompt=prompt,
+                                     image=org_image,
+                                     mask_image=new_mask,
+                            guidance_scale=8.0,
+                            num_inference_steps=20,  # steps between 15 and 30 work well for us
+                            strength=0.99,  # make sure to use `strength` below 1.0
+                            generator=generator,
+                        ).images[0]
+                        image = image.resize((width, height))
+                        image.save(os.path.join(model_original_categori_dir, name_))
+                        
 
 
 
