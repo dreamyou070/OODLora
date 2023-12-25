@@ -30,7 +30,7 @@ def main(args):
     data_folder = args.data_folder
     classes = os.listdir(data_folder)
     for cls in classes:
-        if cls == 'cookie' :
+        if cls == 'cable_gland' :
             print(f'cls : {cls}')
             class_dir = os.path.join(data_folder, cls)
 
@@ -43,7 +43,7 @@ def main(args):
             os.makedirs(inpaint_img_save_folder, exist_ok=True)
 
             prompt_list = '_'.split(cls)
-            prompt = 'a image of circle complete chocolate cookie' # + ' '.join(prompt_list)
+            prompt = 'a gray color of cable gland' # + ' '.join(prompt_list)
             test_folder = os.path.join(class_dir, 'test')
             categories = os.listdir(test_folder)
             negative_prompt = ', '.join(prompt_list)
