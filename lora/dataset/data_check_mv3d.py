@@ -63,6 +63,9 @@ def main(args):
                     for name_ in images:
                         name, ext = os.path.splitext(name_)
                         image_path = os.path.join(rgb_folder, name_)
+                        pil = Image.open(image_path)
+                        width, height = pil.size
+                        print(f'original size : {width} , {height}')
                         mask_path = os.path.join(gt_folder, name_)
                         """
                         image = pipe(prompt=prompt,
