@@ -4,7 +4,7 @@ from PIL import Image
 f_der = 'sample_data'
 classes = os.listdir(f_der)
 for class_name in classes:  # bagel
-    if class_name == 'cookie' :
+    if class_name == 'carrotcookie' :
 
         class_dir = os.path.join(f_der, class_name)
 

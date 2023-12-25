@@ -30,7 +30,7 @@ def main(args):
     data_folder = args.data_folder
     classes = os.listdir(data_folder)
     for cls in classes:
-        if cls == 'cable_gland' :
+        if cls == 'cookie' :
             print(f'cls : {cls}')
             class_dir = os.path.join(data_folder, cls)
 
