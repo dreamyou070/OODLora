@@ -39,17 +39,21 @@ def main(args) :
                 for img in images:
                     background_img_dir = os.path.join(category_dir, img)
                     object_img_dir = os.path.join(category_corrected_dir, img)
-                    mask_img_dir = os.path.join(category_gt_dir, img)
+                    if 'good' not in category:
+                        mask_img_dir = os.path.join(category_gt_dir, img)
+                        back_np = np.array(Image.open(background_img_dir))
+                        obj_np = np.array(Image.open(object_img_dir))
+                        mask_np = np.array(Image.open(mask_img_dir).convert('RGB'))
+                        mask_np = np.where(mask_np > 100, 1, 0)
+                        mask_np = mask_np.astype(np.uint8)
+                        #Image.fromarray(mask_np*255).show()
+                        new_np = back_np * (1 - mask_np) + obj_np * mask_np
+                        new_img = Image.fromarray(new_np, "RGB")
+                        new_img.save(os.path.join(category_cor_2_dir, img))
+                    else :
+                        new_img = Image.open(object_img_dir)
+                        new_img.save(os.path.join(category_cor_2_dir, img))
 
-                    back_np = np.array(Image.open(background_img_dir))
-                    obj_np = np.array(Image.open(object_img_dir))
-                    mask_np = np.array(Image.open(mask_img_dir).convert('RGB'))
-                    mask_np = np.where(mask_np > 100, 1, 0)
-                    mask_np = mask_np.astype(np.uint8)
-                    #Image.fromarray(mask_np*255).show()
-                    new_np = back_np * (1 - mask_np) + obj_np * mask_np
-                    new_img = Image.fromarray(new_np, "RGB")
-                    new_img.save(os.path.join(category_cor_2_dir, img))
 
                 """
                 else :
