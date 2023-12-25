@@ -86,7 +86,7 @@ def main(args):
 
                         image.save(os.path.join(inpaint_categori_dir, name_))
 
-                        original_image = Image.open(image_path)
+                        original_image = Image.open(image_path).resize((512,512))
                         original_image.save(os.path.join(original_categori_dir, name_))
 
 
