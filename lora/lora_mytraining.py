@@ -58,22 +58,25 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if is_cross_attention and mask is not None:
                 # if trg_indexs_list is not None and mask is not None:
                 if trg_indexs_list is not None:
-                    masked_attention_probs, org_attention_probs = attention_probs.chunk(2, dim=0)
-                    batch_num = len(trg_indexs_list)
-                    attention_probs_batch = torch.chunk(org_attention_probs, batch_num, dim=0)
-                    masked_attention_probs_batch = torch.chunk(masked_attention_probs, batch_num, dim=0)
-                    vector_diff_list = []
-                    for batch_idx, (attention_prob, masked_attention_prob) in enumerate(
-                            zip(attention_probs_batch, masked_attention_probs_batch)):
-                        batch_trg_index = trg_indexs_list[batch_idx]  # two times
-                        for word_idx in batch_trg_index:
-                            word_idx = int(word_idx)
-                            masked_attn_vector = masked_attention_prob[:, :, word_idx]
-                            org_attn_vector = attention_prob[:, :, word_idx]
-                            attention_diff = (masked_attn_vector - org_attn_vector).mean() + args.contrastive_eps
-                            standard = torch.zeros_like(attention_diff)
-                            loss = torch.max(attention_diff, standard)
-                            controller.store_loss(loss)
+                    batch, pix_num, _ = query.shape
+                    res = int(pix_num) ** 0.5
+                    if res == args.cross_map_res :
+                        masked_attention_probs, org_attention_probs = attention_probs.chunk(2, dim=0)
+                        batch_num = len(trg_indexs_list)
+                        attention_probs_batch = torch.chunk(org_attention_probs, batch_num, dim=0)
+                        masked_attention_probs_batch = torch.chunk(masked_attention_probs, batch_num, dim=0)
+                        vector_diff_list = []
+                        for batch_idx, (attention_prob, masked_attention_prob) in enumerate(
+                                zip(attention_probs_batch, masked_attention_probs_batch)):
+                            batch_trg_index = trg_indexs_list[batch_idx]  # two times
+                            for word_idx in batch_trg_index:
+                                word_idx = int(word_idx)
+                                masked_attn_vector = masked_attention_prob[:, :, word_idx]
+                                org_attn_vector = attention_prob[:, :, word_idx]
+                                attention_diff = (masked_attn_vector - org_attn_vector).mean() + args.contrastive_eps
+                                standard = torch.zeros_like(attention_diff)
+                                loss = torch.max(attention_diff, standard)
+                                controller.store_loss(loss)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -894,6 +897,9 @@ if __name__ == "__main__":
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
     parser.add_argument("--resume_lora_training", action="store_true",)
     parser.add_argument("--start_epoch", type = int, default = 0)
+
+    parser.add_argument("--cross_map_res", type=int, default=16)
+
     # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
