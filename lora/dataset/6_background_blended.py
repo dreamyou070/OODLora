@@ -66,6 +66,6 @@ def main(args) :
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default='../../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL')
-    parser.add_argument('--trg_class_name', type=str, default='cable_gland')
+    parser.add_argument('--trg_class_name', type=str, default='carrot')
     args = parser.parse_args()
     main(args)
