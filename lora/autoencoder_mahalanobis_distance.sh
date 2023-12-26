@@ -16,3 +16,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --output_dir ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/cable_gland/teacher_normal_embedding \
   --anormal_folder ../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/cable_gland \
   --resolution 512,512
+

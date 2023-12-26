@@ -9,8 +9,7 @@ import torch
 from utils.image_utils import load_image, IMAGE_TRANSFORMS
 import numpy as np
 from scipy.spatial.distance import mahalanobis
-from PIL import Image
-from diffusers import AutoencoderKL
+from utils.model_utils import get_state_dict
 import pickle
 from STTraining import Encoder_Teacher, Encoder_Student, Decoder_Student
 from library.model_util import create_vae_diffusers_config, convert_ldm_vae_checkpoint, load_checkpoint_with_text_encoder_conversion
@@ -39,8 +38,7 @@ def main(args):
     print(f' (3) accelerator')
     accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps,)
 
-    print(f'\n step 2. model')
-    print(f' (1) Teacher VAE')
+    print(f'\n step 2. Teacher VAE')
     weight_dtype, save_dtype = train_util.prepare_dtype(args)
     vae_dtype = torch.float32
     name_or_path = args.pretrained_model_name_or_path
@@ -51,14 +49,6 @@ def main(args):
     info = vae.load_state_dict(converted_vae_checkpoint)
     vae.to(dtype=weight_dtype, device=accelerator.device)
     vae.eval()
-
-    print(f' (2) Student VAE')
-    student_vae = AutoencoderKL.from_config(vae.config)
-    student_vae_encoder = student_vae.encoder
-    student_vae_encoder_quantize = student_vae.quant_conv
-    student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
-    student_encoder.to(dtype=weight_dtype, device=accelerator.device)
-    student_encoder.eval()
 
     print(f'\n step 3. Teacher Model Mean & Covariance')
     os.makedirs(args.output_dir, exist_ok=True)
@@ -99,46 +89,67 @@ def main(args):
         print(f'feature file path : {train_feature_filepath}')
         with open(train_feature_filepath, 'wb') as f:
             pickle.dump(train_outputs, f)
-    else :
+    else:
         print('load train set feature from: %s' % train_feature_filepath)
         with open(train_feature_filepath, 'rb') as f:
             train_outputs = pickle.load(f)
 
-    print(f'\n step 4. Get Test Datas')
-    test_folder = os.path.join(args.anormal_folder, 'test/rgb')
-    cats = os.listdir(test_folder)
-    for cat in cats :
-        cat_dir = os.path.join(test_folder, cat)
-        images = os.listdir(cat_dir)
-        if len(images) > 0 :
-            latents = []
-            for i, image in enumerate(images):
-                image_dir = os.path.join(cat_dir, image)
-                img = load_image(image_dir, int(h.strip()), int(w.strip()))
-                img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
-                with torch.no_grad():
-                    latent = DiagonalGaussianDistribution(student_encoder(img.to(dtype=weight_dtype, device=accelerator.device))).sample() # 1,4,64,64
-                    latents.append(latent)
-            embedding_vectors = torch.cat(latents, dim=0)
-            # calculate distance matrix
-            B, C, H, W = embedding_vectors.size()
-            embedding_vectors = embedding_vectors.view(B, C, H * W).cpu().numpy()  # [N, 550, 3136]
-            img_level_dist = []
-            for i in range(H * W):
-                mean = train_outputs[0][:, i]
-                conv_inv = np.linalg.inv(train_outputs[1][:, :, i])
-                pixel_level_dist = []
-                for sample in embedding_vectors:
-                    m_dist = mahalanobis(sample[:, i], mean, conv_inv)
-                    print(f'each pixel level distance : {type(m_dist)}')
-                    pixel_level_dist.append(m_dist)
-                img_level_dist.append(pixel_level_dist)
-            dist_list = np.array(img_level_dist).transpose(1, 0).reshape(B, H, W)
-            score_map = torch.tensor(dist_list).unsqueeze(1)
-            # Normalization
-            max_score = score_map.max()
-            min_score = score_map.min()
-            scores = (score_map - min_score) / (max_score - min_score)
+    print(f'\n step 4. Student VAE')
+    student_vae = AutoencoderKL.from_config(vae.config)
+    student_vae_encoder = student_vae.encoder
+    student_vae_encoder_quantize = student_vae.quant_conv
+    student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
+    student_pretrained_dir_files = os.listdir(args.student_pretrained_dir)
+
+    parent, folder = os.path.split(args.student_encoder_pretrained_dir)
+    model_score_save_base_dir = os.path.join(parent, f'vae_student_model_score')
+    os.makedirs(model_score_save_base_dir, exist_ok=True)
+
+    for file in student_pretrained_dir_files:
+        txt_file = os.path.join(model_score_save_base_dir, f'{file}.txt')
+
+        file_dir = os.path.join(args.student_pretrained_dir, file)
+        student_encoder.load_state_dict(get_state_dict(file_dir), strict=True)
+        student_encoder.requires_grad_(False)
+        student_encoder.eval()
+        student_encoder.to(accelerator.device, dtype=vae_dtype)
+        name, ext = os.path.splitext(file)
+        student_epoch = int(name.split('_')[-1])
+
+        # ------------------------------------------------------------------------------------ #
+        test_folder = os.path.join(args.anormal_folder, 'test/rgb')
+        cats = os.listdir(test_folder)
+        for cat in cats :
+            cat_dir = os.path.join(test_folder, cat)
+            images = os.listdir(cat_dir)
+            if len(images) > 0 :
+                latents = []
+                for i, image in enumerate(images):
+                    image_dir = os.path.join(cat_dir, image)
+                    img = load_image(image_dir, int(h.strip()), int(w.strip()))
+                    img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
+                    with torch.no_grad():
+                        latent = DiagonalGaussianDistribution(student_encoder(img.to(dtype=weight_dtype, device=accelerator.device))).sample() # 1,4,64,64
+                        latents.append(latent)
+                embedding_vectors = torch.cat(latents, dim=0)
+                # calculate distance matrix
+                B, C, H, W = embedding_vectors.size()
+                embedding_vectors = embedding_vectors.view(B, C, H * W).cpu().numpy()  # [N, 550, 3136]
+                img_level_dist = []
+                for i in range(H * W):
+                    mean = train_outputs[0][:, i]
+                    conv_inv = np.linalg.inv(train_outputs[1][:, :, i])
+                    pixel_level_dist = []
+                    for sample in embedding_vectors: # for B number
+                        m_dist = mahalanobis(sample[:, i], mean, conv_inv)
+                        pixel_level_dist.append(m_dist)
+                    img_level_dist.append(pixel_level_dist)
+                score_map = np.array(img_level_dist).transpose(1, 0).reshape(B, H, W)
+                model_score = np.mean(score_map, axis=0)
+                model_score = np.sum(model_score)
+                with open(txt_file, 'a') as f:
+                    f.write(f'{cat} : {model_score}\n')
+
 
 
 if __name__ == "__main__":
