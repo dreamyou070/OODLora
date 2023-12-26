@@ -57,42 +57,45 @@ def main(args):
     student_vae_encoder_quantize = student_vae.quant_conv
     student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
 
-    print(f'\n step 3. Get Data')
-    h, w = args.resolution.split(',')[0], args.resolution.split(',')[1]
-
-
-    train_folder = os.path.join(args.anormal_folder, 'train_normal/bad')
-    classes = os.listdir(train_folder)
-    training_latents = []
-    for class_ in classes:
-        class_dir = os.path.join(train_folder, class_)
-        images = os.listdir(class_dir)
-        for i, image in enumerate(images):
-            image_dir = os.path.join(class_dir, image)
-            img = load_image(image_dir, int(h.strip()), int(w.strip()))
-            img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
-            with torch.no_grad():
-                latent = vae.encode(img.to(dtype=weight_dtype, device=accelerator.device)).latent_dist.sample()
-            training_latents.append(latent)
-    embedding_vectors = torch.cat(training_latents, dim=0)
-    B, C, H, W = embedding_vectors.size()
-    embedding_vectors = embedding_vectors.view(B, C, H * W).detach().cpu()  # [N, 550, 3136]
-    # (1) mean vector
-    mean = torch.mean(embedding_vectors, dim=0).numpy()
-    print(f'mean vector (4, 64*64) : {mean.shape}')
-    # (2) covariance vector
-    cov = torch.zeros(C, C, H * W).numpy()
-    print(f'covariance vector (4,4,64*64) : {cov.shape}')
-    I = np.identity(C)
-    for i in range(H * W):
-        cov[:, :, i] = np.cov(embedding_vectors[:, :, i].numpy(), rowvar=False) + 0.01 * I
-    train_outputs = [mean, cov]
+    print(f'\n step 3. Teacher Model Mean & Covariance')
     os.makedirs(args.output_dir, exist_ok=True)
     object = os.path.split(args.anormal_folder)[-1]
     train_feature_filepath = os.path.join(args.output_dir, f'vae_teacher_{object}.pkl')
-    print(f'feature file path : {train_feature_filepath}')
-    with open(train_feature_filepath, 'wb') as f:
-        pickle.dump(train_outputs, f)
+
+    h, w = args.resolution.split(',')[0], args.resolution.split(',')[1]
+    if not os.path.exists(train_feature_filepath):
+        train_folder = os.path.join(args.anormal_folder, 'train_normal/bad')
+        classes = os.listdir(train_folder)
+        training_latents = []
+        for class_ in classes:
+            class_dir = os.path.join(train_folder, class_)
+            images = os.listdir(class_dir)
+            for i, image in enumerate(images):
+                image_dir = os.path.join(class_dir, image)
+                img = load_image(image_dir, int(h.strip()), int(w.strip()))
+                img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
+                with torch.no_grad():
+                    latent = vae.encode(img.to(dtype=weight_dtype, device=accelerator.device)).latent_dist.sample()
+                training_latents.append(latent)
+        embedding_vectors = torch.cat(training_latents, dim=0)
+        B, C, H, W = embedding_vectors.size()
+        embedding_vectors = embedding_vectors.view(B, C, H * W).detach().cpu()  # [N, 550, 3136]
+        # (1) mean vector
+        mean = torch.mean(embedding_vectors, dim=0).numpy()
+        print(f'mean vector (4, 64*64) : {mean.shape}')
+        # (2) covariance vector
+        cov = torch.zeros(C, C, H * W).numpy()
+        print(f'covariance vector (4,4,64*64) : {cov.shape}')
+        I = np.identity(C)
+        for i in range(H * W):
+            cov[:, :, i] = np.cov(embedding_vectors[:, :, i].numpy(), rowvar=False) + 0.01 * I
+        train_outputs = [mean, cov]
+        os.makedirs(args.output_dir, exist_ok=True)
+        object = os.path.split(args.anormal_folder)[-1]
+        train_feature_filepath = os.path.join(args.output_dir, f'vae_teacher_{object}.pkl')
+        print(f'feature file path : {train_feature_filepath}')
+        with open(train_feature_filepath, 'wb') as f:
+            pickle.dump(train_outputs, f)
 
 
 
