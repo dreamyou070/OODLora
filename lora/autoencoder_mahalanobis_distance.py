@@ -49,6 +49,7 @@ def main(args):
     vae = AutoencoderKL(**vae_config)
     info = vae.load_state_dict(converted_vae_checkpoint)
     vae.to(dtype=weight_dtype, device=accelerator.device)
+    vae.eval()
 
     print(f' (2) Student VAE')
     student_vae = AutoencoderKL.from_config(vae.config)
@@ -70,9 +71,9 @@ def main(args):
             image_dir = os.path.join(class_dir, image)
             img = load_image(image_dir, int(h.strip()), int(w.strip()))
             img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
-            latent = vae.encode(img.to(dtype=weight_dtype, device=accelerator.device)).latent_dist.sample()
+            with torch.no_grad():
+                latent = vae.encode(img.to(dtype=weight_dtype, device=accelerator.device)).latent_dist.sample()
             training_latents.append(latent)
-
     embedding_vectors = torch.cat(training_latents, dim=0)
     B, C, H, W = embedding_vectors.size()
     embedding_vectors = embedding_vectors.view(B, C, H * W).numpy()  # [N, 550, 3136]
