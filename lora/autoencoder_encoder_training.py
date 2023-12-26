@@ -288,8 +288,9 @@ class NetworkTrainer:
                     normal_recon_diff = normal_recon_diff.mean([1, 2, 3])
                     abnormal_recon_diff = torch.nn.functional.mse_loss(y_recon, y_hat_recon, reduction='none') * (1 - binary_images)
                     abnormal_recon_diff = abnormal_recon_diff.mean([1, 2, 3])
-                    wandb.log({'valid/normal_loss' : normal_recon_diff.mean().item(),
-                               'valid/abnormal_loss' : abnormal_recon_diff.mean().item()})
+                    if is_main_process:
+                        wandb.log({'valid/normal_loss' : normal_recon_diff.mean().item(),
+                                   'valid/abnormal_loss' : abnormal_recon_diff.mean().item()})
                     valid_epoch_normal_loss += normal_recon_diff.mean().item()
                     valid_epoch_abnormal_loss += abnormal_recon_diff.mean().item()
             valid_log = {'epoch' : {epoch + 1},
