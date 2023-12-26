@@ -79,7 +79,9 @@ def main(args):
         test_dataset = mvtec.MVTecDataset(args.data_path, class_name=class_name, is_train=False)
         test_dataloader = DataLoader(test_dataset, batch_size=32, pin_memory=True)
 
-        train_outputs = OrderedDict([('layer1', []), ('layer2', []), ('layer3', [])])
+        train_outputs = OrderedDict([('layer1', []),
+                                     ('layer2', []),
+                                     ('layer3', [])])
         test_outputs = OrderedDict([('layer1', []), ('layer2', []), ('layer3', [])])
 
         # extract train set features
@@ -88,11 +90,12 @@ def main(args):
 
         if not os.path.exists(train_feature_filepath):
             for (x, _, _) in tqdm(train_dataloader, '| feature extraction | train | %s |' % class_name):
-                # model prediction
                 with torch.no_grad():
+                    # wide_resnet50_2 model output
                     _ = model(x.to(device))
                 # get intermediate layer outputs
                 for k, v in zip(train_outputs.keys(), outputs):
+                    print(f'k : {k} | v : {v}')
                     train_outputs[k].append(v.cpu().detach())
                 # initialize hook outputs
                 outputs = []
@@ -103,7 +106,6 @@ def main(args):
             embedding_vectors = train_outputs['layer1']
             for layer_name in ['layer2', 'layer3']:
                 embedding_vectors = embedding_concat(embedding_vectors, train_outputs[layer_name])
-
             # randomly select d dimension
             embedding_vectors = torch.index_select(embedding_vectors, 1, idx)
             # calculate multivariate Gaussian distribution
@@ -113,7 +115,6 @@ def main(args):
             cov = torch.zeros(C, C, H * W).numpy()
             I = np.identity(C)
             for i in range(H * W):
-                # cov[:, :, i] = LedoitWolf().fit(embedding_vectors[:, :, i].numpy()).covariance_
                 cov[:, :, i] = np.cov(embedding_vectors[:, :, i].numpy(), rowvar=False) + 0.01 * I
             # save learned distribution
             train_outputs = [mean, cov]
@@ -123,6 +124,10 @@ def main(args):
             print('load train set feature from: %s' % train_feature_filepath)
             with open(train_feature_filepath, 'rb') as f:
                 train_outputs = pickle.load(f)
+
+        print(f' train_outputs : {train_outputs}')
+        import time
+        time.sleep(100)
 
         gt_list = []
         gt_mask_list = []
