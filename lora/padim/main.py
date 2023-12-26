@@ -125,7 +125,7 @@ def main(args):
             with open(train_feature_filepath, 'rb') as f:
                 train_outputs = pickle.load(f)
 
-        print(f' train_outputs : {train_outputs}')
+        print(f' train_outputs : {len(train_outputs)}')
         import time
         time.sleep(100)
 
