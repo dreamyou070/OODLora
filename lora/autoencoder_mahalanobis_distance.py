@@ -70,7 +70,7 @@ def main(args):
             image_dir = os.path.join(class_dir, image)
             img = load_image(image_dir, int(h.strip()), int(w.strip()))
             img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
-            latent = DiagonalGaussianDistribution(vae.encode(img.to(dtype=weight_dtype, device=accelerator.device))).sample()
+            latent = vae.encode(img.to(dtype=weight_dtype, device=accelerator.device)).latent_dist.sample()
             training_latents.append(latent)
 
     embedding_vectors = torch.cat(training_latents, dim=0)
