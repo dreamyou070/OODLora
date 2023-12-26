@@ -121,7 +121,6 @@ class NetworkTrainer:
 
         print(f'\n step 5. mixed precision and vae model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
-        vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
         name_or_path = args.pretrained_model_name_or_path
         vae_config = create_vae_diffusers_config()
         _, state_dict = load_checkpoint_with_text_encoder_conversion(name_or_path, device='cpu')
@@ -130,6 +129,7 @@ class NetworkTrainer:
         info = vae.load_state_dict(converted_vae_checkpoint)
         teacher = Encoder_Teacher(vae.encoder, vae.quant_conv)
         teacher.to(dtype=weight_dtype, device=accelerator.device)
+        vae.to(dtype=weight_dtype, device=accelerator.device)
 
         print(f' (5.2) student model')
         config_dict = vae.config
@@ -162,10 +162,9 @@ class NetworkTrainer:
 
         student, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student, optimizer, train_dataloader, lr_scheduler,)
 
-
         student.requires_grad_(True)
         student.train()
-        student.to(dtype=vae_dtype)
+        student.to(dtype=weight_dtype)
 
         # epoch数を計算する
         num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
