@@ -325,7 +325,7 @@ class NetworkTrainer:
                     import numpy as np
                     image = (recon_img * 255).astype(np.uint8)
                     wandb.log({"validation recon": [wandb.Image(image, caption="recon")]})
-                    
+
             # --------------------------------------------------------------------------------------------------------- #
             # [3] model save
             if args.save_every_n_epochs is not None:
