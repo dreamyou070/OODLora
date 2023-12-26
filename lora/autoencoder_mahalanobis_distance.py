@@ -57,6 +57,8 @@ def main(args):
     student_vae_encoder = student_vae.encoder
     student_vae_encoder_quantize = student_vae.quant_conv
     student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
+    student_encoder.to(dtype=weight_dtype, device=accelerator.device)
+    student_encoder.eval()
 
     print(f'\n step 3. Teacher Model Mean & Covariance')
     os.makedirs(args.output_dir, exist_ok=True)
