@@ -100,10 +100,10 @@ def main(args):
                 # initialize hook outputs
                 outputs = []
             for k, v in train_outputs.items():
-                print(f' {k} : {len(v)} | first = {v[0].shape}')
-                feature = torch.cat(v, 0)
-                print(f' {k} feature : {feature.shape}')
-                train_outputs[k] = torch.cat(v, 0)
+                #print(f' {k} : {len(v)} | first = {v[0].shape}')
+                #feature = torch.cat(v, 0)
+                #print(f' {k} feature : {feature.shape}')
+                train_outputs[k] = torch.cat(v, 0) # [N, C, H, W]
 
             # Embedding concat
             embedding_vectors = train_outputs['layer1']
@@ -117,12 +117,16 @@ def main(args):
             # calculate multivariate Gaussian distribution
             B, C, H, W = embedding_vectors.size() # 550, 1792, 56, 56
             embedding_vectors = embedding_vectors.view(B, C, H * W)
+
             mean = torch.mean(embedding_vectors, dim=0).numpy()
             cov = torch.zeros(C, C, H * W).numpy()
+
             I = np.identity(C)
             for i in range(H * W):
                 cov[:, :, i] = np.cov(embedding_vectors[:, :, i].numpy(), rowvar=False) + 0.01 * I
             # save learned distribution
+            # mean = 1792, 3136
+            # cov = 1792, 1792, 3136
             train_outputs = [mean, cov]
             with open(train_feature_filepath, 'wb') as f:
                 pickle.dump(train_outputs, f)
@@ -167,7 +171,7 @@ def main(args):
         
         # calculate distance matrix
         B, C, H, W = embedding_vectors.size()
-        embedding_vectors = embedding_vectors.view(B, C, H * W).numpy()
+        embedding_vectors = embedding_vectors.view(B, C, H * W).numpy() #
         dist_list = []
         for i in range(H * W):
             mean = train_outputs[0][:, i]

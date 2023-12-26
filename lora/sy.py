@@ -4,11 +4,12 @@ from PIL import Image
 import torch
 
 
-feat1 = torch.randn((209, 256, 56, 56))
-feat2 = torch.randn((209, 512, 28, 28))
-feat3 = torch.randn((209, 1024, 14, 14))
+embedding_vectors = torch.randn((209, 1792, 56, 56))
+B, C, H, W = embedding_vectors.size()  # 550, 1792, 56, 56
+embedding_vectors = embedding_vectors.view(B, C, H * W)
 
-feat1 = torch.cat([feat1], 0)
-#feat2 = torch.cat((fea2), dim=0)
-#feat3 = torch.cat((fea3), dim=0)
-print(feat1.shape)
+mean = torch.mean(embedding_vectors, dim=0).numpy() # 1792, 3136
+print(f'mean : {mean.shape}')
+
+cov = torch.zeros(C, C, H * W).numpy() # [1792, 1792, 3136]
+print(f'cov : {cov.shape}')
