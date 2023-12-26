@@ -67,7 +67,7 @@ def main(args) :
                         else :
                             Image.open(bad_gt_dir).resize((512, 512)).save(os.path.join(synthetic_cat_gt_dir, f'{bad_cat}_{bad_rgb_name}_{good_name}{ext}'))
                         break
-                    break
+                    
                 break
 
 
