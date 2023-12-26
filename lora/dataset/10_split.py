@@ -17,11 +17,11 @@ def main(args) :
             synthetic_gt_dir = os.path.join(train_dir, 'gt')
             synthetic_corrected_dir = os.path.join(train_dir, 'corrected')
 
-            syn_test_dir = os.path.join(test_dir, 'synthetic_bad')
+            syn_test_dir = os.path.join(test_dir, 'bad')
             os.makedirs(syn_test_dir, exist_ok=True)
-            syn_test_gt_dir = os.path.join(test_dir, 'synthetic_gt')
+            syn_test_gt_dir = os.path.join(test_dir, 'gt')
             os.makedirs(syn_test_gt_dir, exist_ok=True)
-            syn_test_corrected_dir = os.path.join(test_dir, 'synthetic_corrected')
+            syn_test_corrected_dir = os.path.join(test_dir, 'corrected')
             os.makedirs(syn_test_corrected_dir, exist_ok=True)
 
             test_folder = os.path.join(category_folder, f'test')
