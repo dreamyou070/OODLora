@@ -122,7 +122,7 @@ def main(args):
             embedding_vectors = torch.cat(latents, dim=0)
             # calculate distance matrix
             B, C, H, W = embedding_vectors.size()
-            embedding_vectors = embedding_vectors.view(B, C, H * W).numpy()  # [N, 550, 3136]
+            embedding_vectors = embedding_vectors.view(B, C, H * W).cpu().numpy()  # [N, 550, 3136]
             img_level_dist = []
             for i in range(H * W):
                 mean = train_outputs[0][:, i]
