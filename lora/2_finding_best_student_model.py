@@ -56,7 +56,6 @@ def main(args) :
                         else :
                             cat_diff.append(float(background_diff))
                 category_score = np.mean(np.array(cat_diff))
-                print(f'epoch : {epoch_num}, cat : {cat}, category_score : {category_score}')
             epoch_elem.append(category_score)
         total_diff.append(epoch_elem)
 
