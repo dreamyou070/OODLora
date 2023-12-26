@@ -282,7 +282,8 @@ class NetworkTrainer:
                     y_hat_recon = vae.decode(y_hat)['sample']
 
                     binary_images = valid_batch['binary_images'].to(dtype=weight_dtype)
-                    print(binary_images)
+                    print(f'y : {y.shape}')
+                    print(f'binary images : {binary_images.shape}')
 
                     normal_recon_diff = torch.nn.functional.mse_loss(y_recon, y_hat_recon, reduction='none') * binary_images
                     normal_recon_diff = normal_recon_diff.mean([1, 2, 3])
