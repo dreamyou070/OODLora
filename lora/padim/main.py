@@ -102,19 +102,20 @@ def main(args):
                 embedding_vectors = embedding_concat(embedding_vectors, train_outputs[layer_name])
 
             # randomly select d dimension
+            # randomly select d dim
             embedding_vectors = torch.index_select(embedding_vectors, 1, idx)
             # calculate multivariate Gaussian distribution
             B, C, H, W = embedding_vectors.size()
             embedding_vectors = embedding_vectors.view(B, C, H * W)
-            print(f'original training sample embedding vector (209, 1792, 3136) : {embedding_vectors.shape}')
+            print(f'original training sample embedding vector (209, 550, 3136) : {embedding_vectors.shape}')
 
             # (1) get mean vector
             mean = torch.mean(embedding_vectors, dim=0).numpy()
-            print(f'mean vector (1792, 3136) : {mean.shape}')
+            print(f'mean vector (550, 3136) : {mean.shape}')
 
             # (2) covariance vector
             cov = torch.zeros(C, C, H * W).numpy()
-            print(f'covariance vector (1792, 1792, 3136) : {cov.shape}')
+            print(f'covariance vector (550, 550, 3136) : {cov.shape}')
 
             I = np.identity(C)
             for i in range(H * W):
@@ -175,12 +176,20 @@ def main(args):
 
         # calculate distance matrix
         B, C, H, W = embedding_vectors.size()
-        embedding_vectors = embedding_vectors.view(B, C, H * W).numpy()
+        embedding_vectors = embedding_vectors.view(B, C, H * W).numpy() # [N, 550, 3136]
         dist_list = []
         for i in range(H * W):
+
             mean = train_outputs[0][:, i]
             conv_inv = np.linalg.inv(train_outputs[1][:, :, i])
-            dist = [mahalanobis(sample[:, i], mean, conv_inv) for sample in embedding_vectors]
+            dist = []
+            for sample in embedding_vectors :
+                # sample = [550 dim, 3136 pixel num]
+
+                # every pixel with mean pixel, conv_inv
+                m_dist = mahalanobis(sample[:, i], mean, conv_inv)
+                dist.append(m_dist)
+            # dist -> total sample num, every element = distance between pixel and the sample
             dist_list.append(dist)
 
         dist_list = np.array(dist_list).transpose(1, 0).reshape(B, H, W)

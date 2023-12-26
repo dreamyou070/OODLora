@@ -2,7 +2,7 @@ import os
 import numpy as np
 from PIL import Image
 import torch
-
+"""
 idx = torch.tensor([1632,   39,  990, 1740,  797,  661, 1698, 1623, 1782, 1064,  205,  911,
         1050,  749, 1654, 1478, 1652, 1466,  755,  795, 1626,  196, 1457, 1525,
          287, 1633, 1787,  209,  838,  317,  893,  970,  913, 1504, 1075, 1726,
@@ -53,3 +53,10 @@ idx = torch.tensor([1632,   39,  990, 1740,  797,  661, 1698, 1623, 1782, 1064, 
 embedding_vectors = [1000, 7192, 56, 56]
 embedding_vectors = torch.index_select(embedding_vectors, 1, idx)
 print(embedding_vectors)
+"""
+training_latents = []
+latent = torch.randn((1,4,64,64))
+training_latents.append(latent)
+training_latents.append(latent)
+a = torch.cat(training_latents, dim=0)
+print(a.shape)
