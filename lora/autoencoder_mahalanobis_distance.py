@@ -113,6 +113,7 @@ def main(args):
             for i, image in enumerate(images):
                 image_dir = os.path.join(cat_dir, image)
                 img = load_image(image_dir, int(h.strip()), int(w.strip()))
+                img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
                 with torch.no_grad():
                     latent = DiagonalGaussianDistribution(student_encoder(img)).sample() # 1,4,64,64
                     latents.append(latent)
@@ -120,20 +121,22 @@ def main(args):
             # calculate distance matrix
             B, C, H, W = embedding_vectors.size()
             embedding_vectors = embedding_vectors.view(B, C, H * W).numpy()  # [N, 550, 3136]
-            dist_list = []
+            img_level_dist = []
             for i in range(H * W):
-
                 mean = train_outputs[0][:, i]
                 conv_inv = np.linalg.inv(train_outputs[1][:, :, i])
-                dist = []
+                pixel_level_dist = []
                 for sample in embedding_vectors:
-                    # sample = [550 dim, 3136 pixel num]
-                    # every pixel with mean pixel, conv_inv
                     m_dist = mahalanobis(sample[:, i], mean, conv_inv)
-                    dist.append(m_dist)
-                # dist -> total sample num, every element = distance between pixel and the sample
-                dist_list.append(dist)
-            dist_list = np.array(dist_list).transpose(1, 0).reshape(B, H, W)
+                    print(f'each pixel level distance : {m_dist}')
+                    pixel_level_dist.append(m_dist)
+                img_level_dist.append(pixel_level_dist)
+            dist_list = np.array(img_level_dist).transpose(1, 0).reshape(B, H, W)
+            score_map = torch.tensor(dist_list).unsqueeze(1)
+            # Normalization
+            max_score = score_map.max()
+            min_score = score_map.min()
+            scores = (score_map - min_score) / (max_score - min_score)
 
 
 if __name__ == "__main__":
