@@ -1032,6 +1032,7 @@ class BaseDataset(torch.utils.data.Dataset):
         train_class_list = []
         mask_dirs = []
         caption_attention_masks = []
+        binary_images = []
         for J, image_key in enumerate(bucket[image_index : image_index + bucket_batch_size ]):
 
             image_info = self.image_data[image_key]
@@ -1054,9 +1055,11 @@ class BaseDataset(torch.utils.data.Dataset):
             flipped = subset.flip_aug and random.random() < 0.5  # not flipped or flipped with 50% chance
             # image/latentsを処理する
 
-
             img = load_image(absolute_path, self.height, self.width) # ndarray
             masked_img = load_image(mask_dir, self.height, self.width)
+            binary_img = np.where(masked_img > 100, 1, 0)
+            binary_img = torch.Tensor(binary_img)
+
             if self.enable_bucket:
                 img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
                 masked_img, _, _ = trim_and_resize_if_required(subset.random_crop, masked_img, image_info.bucket_reso, image_info.resized_size)
@@ -1122,6 +1125,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 latents = None
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)
+            binary_images.append(binary_img)
             images.append(image)
             mask_imgs.append(masked_image)
             latents_list.append(latents)
@@ -1254,6 +1258,7 @@ class BaseDataset(torch.utils.data.Dataset):
             images = None
             mask_imgs = None
 
+        example["binary_images"] = binary_images
         example["mask_dirs"] = mask_dirs
         example["trg_indexs_list"] = trg_indexs_list  ##########################################################
         example["train_class_list"] = train_class_list

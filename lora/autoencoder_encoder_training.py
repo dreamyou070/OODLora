@@ -270,15 +270,16 @@ class NetworkTrainer:
             valid_epoch_normal_loss = 0
             valid_epoch_abnormal_loss = 0
             for step, valid_batch in enumerate(valid_dataloader):
-                # generator training
-                optimizer.zero_grad(set_to_none=True)
                 with torch.no_grad():
                     org_img = valid_batch['images'].to(dtype=weight_dtype)
-                    masked_img = valid_batch['mask_imgs'].to(dtype=weight_dtype)
                     y = DiagonalGaussianDistribution(teacher(org_img)).sample()
                     y_recon = vae.decode(y)['sample']
+
                     y_hat = DiagonalGaussianDistribution(student(org_img)).sample()
                     y_hat_recon = vae.decode(y_hat)['sample']
+
+                    binary_images = valid_batch['binary_images'].to(dtype=weight_dtype)
+
                     normal_recon_diff = torch.nn.functional.mse_loss(y_recon, y_hat_recon, reduction='none') * masked_img
                     normal_recon_diff = normal_recon_diff.mean([1, 2, 3])
                     abnormal_recon_diff = torch.nn.functional.mse_loss(y_recon, y_hat_recon, reduction='none') * (1 - masked_img)
