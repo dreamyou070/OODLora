@@ -194,6 +194,7 @@ class NetworkTrainer:
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             student.train()
+            """
 
             for step, batch in enumerate(train_dataloader):
                 log_loss = {}
@@ -266,10 +267,12 @@ class NetworkTrainer:
                     image = (recon_img * 255).astype(np.uint8)
                     wandb.log({"recon": [wandb.Image(image, caption="recon")]})
             # --------------------------------------------------------------------------------------------------------- #
+            """
             # validation
             valid_epoch_normal_loss = 0
             valid_epoch_abnormal_loss = 0
             for step, valid_batch in enumerate(valid_dataloader):
+                student.eval()
                 with torch.no_grad():
                     org_img = valid_batch['images'].to(dtype=weight_dtype)
                     y = DiagonalGaussianDistribution(teacher(org_img)).sample()
