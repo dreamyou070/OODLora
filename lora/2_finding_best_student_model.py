@@ -19,17 +19,17 @@ def main(args) :
         if title_list not in total_diff :
             total_diff.append(title_list)
         for cat in cats :
-            train_cat_dir = os.path.join(test_dir, cat)
-            images = os.listdir(train_cat_dir)
+            test_cat_dir = os.path.join(test_dir, cat)
+            images = os.listdir(test_cat_dir)
             cat_diff = []
             for image in images :
                 name, ext = os.path.splitext(image)
                 if 'recon' not in name and 'gt' not in name and 'mask' not in name :
-                    base_img_dir = os.path.join(train_cat_dir, image)
+                    base_img_dir = os.path.join(test_cat_dir, image)
                     recon_img_dir = os.path.join(epoch_dir, f'{name}_recon{ext}')
 
                 if 'good' not in cat :
-                    mask_dir = os.path.join(train_cat_dir, f'{name}_gt{ext}')
+                    mask_dir = os.path.join(test_cat_dir, f'{name}_gt{ext}')
                     mask_pil = Image.open(mask_dir).convert('RGB').resize((512, 512))
                     mask_np = np.array(mask_pil)
                     mask_np = np.where(mask_np > 100, 1, 0)
