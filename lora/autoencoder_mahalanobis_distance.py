@@ -8,6 +8,7 @@ import library.config_util as config_util
 import torch
 from utils.image_utils import load_image, IMAGE_TRANSFORMS
 import numpy as np
+from scipy.spatial.distance import mahalanobis
 from PIL import Image
 from diffusers import AutoencoderKL
 import pickle
@@ -96,8 +97,43 @@ def main(args):
         print(f'feature file path : {train_feature_filepath}')
         with open(train_feature_filepath, 'wb') as f:
             pickle.dump(train_outputs, f)
+    else :
+        print('load train set feature from: %s' % train_feature_filepath)
+        with open(train_feature_filepath, 'rb') as f:
+            train_outputs = pickle.load(f)
 
+    print(f'\n step 4. Get Test Datas')
+    test_folder = os.path.join(args.anormal_folder, 'test/rgb')
+    cats = os.listdir(test_folder)
+    for cat in cats :
+        cat_dir = os.path.join(test_folder, cat)
+        images = os.listdir(cat_dir)
+        if len(images) > 0 :
+            latents = []
+            for i, image in enumerate(images):
+                image_dir = os.path.join(cat_dir, image)
+                img = load_image(image_dir, int(h.strip()), int(w.strip()))
+                with torch.no_grad():
+                    latent = DiagonalGaussianDistribution(student_encoder(img)).sample() # 1,4,64,64
+                    latents.append(latent)
+            embedding_vectors = torch.cat(latents, dim=0)
+            # calculate distance matrix
+            B, C, H, W = embedding_vectors.size()
+            embedding_vectors = embedding_vectors.view(B, C, H * W).numpy()  # [N, 550, 3136]
+            dist_list = []
+            for i in range(H * W):
 
+                mean = train_outputs[0][:, i]
+                conv_inv = np.linalg.inv(train_outputs[1][:, :, i])
+                dist = []
+                for sample in embedding_vectors:
+                    # sample = [550 dim, 3136 pixel num]
+                    # every pixel with mean pixel, conv_inv
+                    m_dist = mahalanobis(sample[:, i], mean, conv_inv)
+                    dist.append(m_dist)
+                # dist -> total sample num, every element = distance between pixel and the sample
+                dist_list.append(dist)
+            dist_list = np.array(dist_list).transpose(1, 0).reshape(B, H, W)
 
 
 if __name__ == "__main__":

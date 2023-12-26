@@ -185,7 +185,6 @@ def main(args):
             dist = []
             for sample in embedding_vectors :
                 # sample = [550 dim, 3136 pixel num]
-
                 # every pixel with mean pixel, conv_inv
                 m_dist = mahalanobis(sample[:, i], mean, conv_inv)
                 dist.append(m_dist)
