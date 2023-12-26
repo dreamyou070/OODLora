@@ -4,5 +4,7 @@ from PIL import Image
 import torch
 
 
+from random import sample
+num_imgs = 100
 
-print(time)
+print(random_idx)
