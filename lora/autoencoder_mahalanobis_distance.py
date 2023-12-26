@@ -117,7 +117,7 @@ def main(args):
                 img = load_image(image_dir, int(h.strip()), int(w.strip()))
                 img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
                 with torch.no_grad():
-                    latent = DiagonalGaussianDistribution(student_encoder(img)).sample() # 1,4,64,64
+                    latent = DiagonalGaussianDistribution(student_encoder(img.to(dtype=weight_dtype, device=accelerator.device))).sample() # 1,4,64,64
                     latents.append(latent)
             embedding_vectors = torch.cat(latents, dim=0)
             # calculate distance matrix
