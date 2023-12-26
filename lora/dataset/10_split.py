@@ -45,7 +45,6 @@ def main(args) :
 
                     images = os.listdir(cat_synthetic_dir)
                     num_imgs = len(images)
-                    print('num_imgs : ', num_imgs)
                     random_idx = sample(range(0, num_imgs), int(num_imgs * 0.2))
                     for idx in random_idx:
                         image = images[idx]
