@@ -28,13 +28,13 @@ def main(args) :
                     base_img_dir = os.path.join(test_cat_dir, image)
                     recon_img_dir = os.path.join(epoch_dir, f'{name}_recon{ext}')
 
-                if 'good' not in cat :
-                    mask_dir = os.path.join(test_cat_dir, f'{name}_gt{ext}')
-                    mask_pil = Image.open(mask_dir).convert('RGB').resize((512, 512))
-                    mask_np = np.array(mask_pil)
-                    mask_np = np.where(mask_np > 100, 1, 0)
-                else :
-                    mask_np = np.zeros((512,512))
+                    if 'good' not in cat :
+                        mask_dir = os.path.join(test_cat_dir, f'{name}_gt{ext}')
+                        mask_pil = Image.open(mask_dir).convert('RGB').resize((512, 512))
+                        mask_np = np.array(mask_pil)
+                        mask_np = np.where(mask_np > 100, 1, 0)
+                    else :
+                        mask_np = np.zeros((512,512))
 
                 base_pil = Image.open(base_img_dir).convert('RGB').resize((512,512))
                 base_np = np.array(base_pil)
