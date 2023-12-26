@@ -62,7 +62,8 @@ def main(args) :
         # using csv.writer method from CSV package
         write = csv.writer(f)
         write.writerows(total_diff)
-    
+    print(f'csv file saved at {csv_file_dir}')
+
 
 
 if __name__ == 'main' :
