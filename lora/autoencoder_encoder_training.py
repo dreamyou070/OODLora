@@ -160,7 +160,7 @@ class NetworkTrainer:
             encoder_state_dict = get_state_dict(args.student_pretrained_dir)
             student.load_state_dict(encoder_state_dict, strict=True)
 
-        student, optimizer, train_dataloader, lr_scheduler= accelerator.prepare(student, optimizer, train_dataloader, lr_scheduler,)
+        student, optimizer, train_dataloader, valid_dataloader, lr_scheduler= accelerator.prepare(student, optimizer, train_dataloader, valid_dataloader, lr_scheduler,)
 
         student.requires_grad_(True)
         student.train()
