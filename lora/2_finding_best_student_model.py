@@ -27,7 +27,7 @@ def main(args) :
 
                 if 'recon' not in name and 'gt' not in name and 'mask' not in name :
                     base_img_dir = os.path.join(test_cat_dir, image)
-                    recon_img_dir = os.path.join(epoch_dir, f'{name}_recon{ext}')
+                    recon_img_dir = os.path.join(test_cat_dir, f'{name}_recon{ext}')
                     base_pil = Image.open(base_img_dir).convert('RGB').resize((512, 512))
                     base_np = np.array(base_pil)
 
