@@ -125,7 +125,7 @@ def main(args):
             with open(train_feature_filepath, 'rb') as f:
                 train_outputs = pickle.load(f)
 
-        print(f' train_outputs : {len(train_outputs)}')
+        print(f' (nd array) mean : {mean.shape} | cov : {cov.shape}')
         import time
         time.sleep(100)
 
@@ -133,16 +133,21 @@ def main(args):
         gt_mask_list = []
         test_imgs = []
 
+
         # extract test set features
+        idx = 0
         for (x, y, mask) in tqdm(test_dataloader, '| feature extraction | test | %s |' % class_name):
+            print(f' idx {idx} : x = {x} y = {y} ')
             test_imgs.extend(x.cpu().detach().numpy())
             gt_list.extend(y.cpu().detach().numpy())
             gt_mask_list.extend(mask.cpu().detach().numpy())
             # model prediction
             with torch.no_grad():
                 _ = model(x.to(device))
+                print(f'model output : {_}')
             # get intermediate layer outputs
             for k, v in zip(test_outputs.keys(), outputs):
+                print(f'k : {k} | v : {v}')
                 test_outputs[k].append(v.cpu().detach())
             # initialize hook outputs
             outputs = []
