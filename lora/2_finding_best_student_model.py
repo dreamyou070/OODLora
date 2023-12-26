@@ -40,7 +40,7 @@ def main(args) :
                         mask_np = np.array(mask_pil)
                         mask_np = np.where(mask_np > 100, 1, 0)
                     else :
-                        mask_np = np.zeros((512,512))
+                        mask_np = np.zeros((512,512,3))
 
                     diff = (base_np - recon_np) **2
 
