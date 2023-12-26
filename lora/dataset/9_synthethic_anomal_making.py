@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 import argparse
 def main(args) :
+
     base_folder = args.base_folder
     categories = os.listdir(base_folder)
     for category in categories:
@@ -70,4 +71,5 @@ if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL')
     parser.add_argument('--trg_category', type=str, default='bagel')
-    main()
+    args = parser.parse_args()
+    main(args)
