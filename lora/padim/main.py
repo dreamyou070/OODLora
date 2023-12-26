@@ -298,7 +298,7 @@ def embedding_concat(x, y):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('PaDiM')
     parser.add_argument('--data_path', type=str, default='../../../../MyData/anomaly_detection/MVTec')
-    parser.add_argument('--save_path', type=str, default='./mvtec_result')
+    parser.add_argument('--save_path', type=str, default='../../../../padim_mvtec_result')
     parser.add_argument('--arch', type=str, choices=['resnet18', 'wide_resnet50_2'],
                         default='wide_resnet50_2')
     args = parser.parse_args()
