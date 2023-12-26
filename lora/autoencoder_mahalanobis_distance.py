@@ -90,6 +90,7 @@ def main(args):
     os.makedirs(args.output_dir, exist_ok=True)
     object = os.path.split(args.anormal_folder)[-1]
     train_feature_filepath = os.path.join(args.output_dir, f'vae_teacher_{object}.pkl')
+    print(f'feature file path : {train_feature_filepath}')
     with open(train_feature_filepath, 'wb') as f:
         pickle.dump(train_outputs, f)
 
