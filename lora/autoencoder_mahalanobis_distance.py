@@ -68,7 +68,7 @@ def main(args):
         images = os.listdir(class_dir)
         for i, image in enumerate(images):
             image_dir = os.path.join(class_dir, image)
-            image = load_image(image_dir, int(h.strip()), int(w.strip()))
+            img = load_image(image_dir, int(h.strip()), int(w.strip()))
             img = IMAGE_TRANSFORMS(img).to(dtype=vae_dtype).unsqueeze(0)
             latent = DiagonalGaussianDistribution(vae.encode(img)).sample()
             training_latents.append(latent)
