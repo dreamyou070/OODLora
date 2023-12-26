@@ -50,8 +50,11 @@ def main(args) :
 
                     object_diff = diff * (1-mask_np)
                     object_pixel_num = np.sum(mask_np)
-                    object_diff = np.sum(object_diff/ object_pixel_num)
-                    cat_diff.append(float(background_diff - object_diff))
+                    if object_pixel_num > 0 :
+                        object_diff = np.sum(object_diff/ object_pixel_num)
+                        cat_diff.append(float(background_diff - object_diff))
+                    else :
+                        cat_diff.append(float(background_diff))
 
                     cat_diff_score = np.mean(np.array(cat_diff))
                     epoch_elem.append(cat_diff_score)
