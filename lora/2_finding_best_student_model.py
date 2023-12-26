@@ -35,7 +35,7 @@ def main(args) :
                     recon_np = np.array(recon_pil)
 
                     if 'good' not in cat :
-                        mask_dir = os.path.join(test_cat_dir, f'{name}_gt{ext}')
+                        mask_dir = os.path.join(test_cat_dir, f'{name}_mask{ext}')
                         mask_pil = Image.open(mask_dir).convert('RGB').resize((512, 512))
                         mask_np = np.array(mask_pil)
                         mask_np = np.where(mask_np > 100, 1, 0)
