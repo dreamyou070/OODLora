@@ -134,6 +134,7 @@ def main(args):
                 # calculate distance matrix
                 B, C, H, W = embedding_vectors.size()
                 embedding_vectors = embedding_vectors.view(B, C, H * W).cpu().numpy()  # [N, 550, 3136]
+
                 img_level_dist = []
                 for i in range(H * W):
                     mean = train_outputs[0][:, i]
@@ -145,7 +146,6 @@ def main(args):
                     img_level_dist.append(pixel_level_dist)
                 score_map = np.array(img_level_dist).transpose(1, 0).reshape(B, H, W)
                 model_score = np.sum(np.mean(score_map, axis=0))
-
                 with open(txt_file, 'a') as f:
                     f.write(f'{cat} : {model_score}\n')
 
