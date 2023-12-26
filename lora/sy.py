@@ -5,6 +5,3 @@ import torch
 
 
 from random import sample
-num_imgs = 100
-
-print(random_idx)

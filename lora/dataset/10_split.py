@@ -54,8 +54,13 @@ def main(args) :
                     re_good_image_dir = os.path.join(cat_syn_test_gt_dir, image)
                     re_corrected_image_dir = os.path.join(cat_syn_test_corrected_dir, image)
                     os.rename(bad_image_dir, re_bad_image_dir)
-                    os.rename(good_image_dir, re_good_image_dir)
                     os.rename(corrected_image_dir, re_corrected_image_dir)
+                    if 'good' in cat :
+                        Image.fromarray(np.zeros((512, 512)).astype(np.uint8)).save(re_corrected_image_dir)
+                    else :
+                        os.rename(good_image_dir, re_good_image_dir)
+
+
 
 
 
