@@ -124,7 +124,7 @@ def main(args):
             print('load train set feature from: %s' % train_feature_filepath)
             with open(train_feature_filepath, 'rb') as f:
                 train_outputs = pickle.load(f)
-
+        mean, cov = train_outputs
         print(f' (nd array) mean : {mean.shape} | cov : {cov.shape}')
         import time
         time.sleep(100)
