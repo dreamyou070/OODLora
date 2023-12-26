@@ -24,9 +24,10 @@ def main(args) :
             cat_diff = []
             for image in images :
                 name, ext = os.path.splitext(image)
-                if '_' not in name :
+                if 'recon' not in name and 'gt' not in name and 'mask' not in name :
                     base_img_dir = os.path.join(train_cat_dir, image)
                     recon_img_dir = os.path.join(epoch_dir, f'{name}_recon{ext}')
+
                 if 'good' not in cat :
                     mask_dir = os.path.join(train_cat_dir, f'{name}_gt{ext}')
                     mask_pil = Image.open(mask_dir).convert('RGB').resize((512, 512))
