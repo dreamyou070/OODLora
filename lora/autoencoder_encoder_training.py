@@ -276,16 +276,13 @@ class NetworkTrainer:
                 with torch.no_grad():
                     org_img = valid_batch['images'].to(dtype=weight_dtype)
                     y = DiagonalGaussianDistribution(teacher(org_img)).sample()
-                    y_recon = vae.decode(y)['sample']
+                    y_recon = vae.decode(y)['sample'].permute(0, 2, 3, 1)
 
                     y_hat = DiagonalGaussianDistribution(student(org_img)).sample()
-                    y_hat_recon = vae.decode(y_hat)['sample']
+                    y_hat_recon = vae.decode(y_hat)['sample'].permute(0, 2, 3, 1)
 
                     binary_images = valid_batch['binary_images'].to(dtype=weight_dtype)
 
-
-
-                    print(f'y : {y.shape}')
                     print(f'y_recon : {y_recon.shape}')
                     print(f'binary images : {binary_images.shape}')
 
