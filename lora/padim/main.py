@@ -93,13 +93,15 @@ def main(args):
                 with torch.no_grad():
                     # wide_resnet50_2 model output
                     _ = model(x.to(device))
-                # get intermediate layer outputs
+
                 for k, v in zip(train_outputs.keys(), outputs):
-                    print(f'k : {k} | v : {v}')
+                    # layer_1, layer_2, layer_3
                     train_outputs[k].append(v.cpu().detach())
                 # initialize hook outputs
                 outputs = []
             for k, v in train_outputs.items():
+                feature = torch.cat(v, 0)
+                print(f' {k} feature : {feature.shape}')
                 train_outputs[k] = torch.cat(v, 0)
 
             # Embedding concat
@@ -107,7 +109,10 @@ def main(args):
             for layer_name in ['layer2', 'layer3']:
                 embedding_vectors = embedding_concat(embedding_vectors, train_outputs[layer_name])
             # randomly select d dimension
+            print(f'total embedding_vectors : {embedding_vectors.shape}')
+
             embedding_vectors = torch.index_select(embedding_vectors, 1, idx)
+
             # calculate multivariate Gaussian distribution
             B, C, H, W = embedding_vectors.size()
             embedding_vectors = embedding_vectors.view(B, C, H * W)
@@ -130,8 +135,6 @@ def main(args):
         gt_list = []
         gt_mask_list = []
         test_imgs = []
-
-
         # extract test set features
         idx = 0
         for (x, y, mask) in tqdm(test_dataloader, '| feature extraction | test | %s |' % class_name):
@@ -145,10 +148,11 @@ def main(args):
                 print(f'model output : {_}')
             # get intermediate layer outputs
             for k, v in zip(test_outputs.keys(), outputs):
-                print(f'k : {k} | v : {v}')
+                # k = layer_1 / layer_2 / layer_3
                 test_outputs[k].append(v.cpu().detach())
             # initialize hook outputs
             outputs = []
+
         for k, v in test_outputs.items():
             test_outputs[k] = torch.cat(v, 0)
         
