@@ -28,6 +28,7 @@ except (ImportError, ModuleNotFoundError):
 class NetworkTrainer:
 
     def __init__(self):
+        pass
 
     def load_target_model(self, args, weight_dtype, accelerator):
         text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
