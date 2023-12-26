@@ -268,6 +268,19 @@ class NetworkTrainer:
                     image = (recon_img * 255).astype(np.uint8)
                     wandb.log({"training recon": [wandb.Image(image, caption="recon")]})
             # --------------------------------------------------------------------------------------------------------- #
+            with torch.no_grad():
+                if is_main_process:
+                    img = batch['images'].to(dtype=weight_dtype)
+                    latent = DiagonalGaussianDistribution(student(img)).sample()
+                    recon = vae.decode(latent)['sample']
+                    batch = recon.shape[0]
+                    if batch != 1:
+                        recon = recon[0]
+                        recon = recon.unsqueeze(0)
+                    recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                    import numpy as np
+                    image = (recon_img * 255).astype(np.uint8)
+                    wandb.log({"training recon": [wandb.Image(image, caption="recon")]})
 
             # validation
             valid_epoch_normal_loss = 0
@@ -299,11 +312,9 @@ class NetworkTrainer:
             if is_main_process:
                 with open(logging_file ,'a') as f :
                     f.write(f'{valid_log}\n')
-
-
             with torch.no_grad():
                 if is_main_process:
-                    img = batch['images'].to(dtype=weight_dtype)
+                    img = valid_batch['images'].to(dtype=weight_dtype)
                     latent = DiagonalGaussianDistribution(student(img)).sample()
                     recon = vae.decode(latent)['sample']
                     batch = recon.shape[0]
@@ -313,8 +324,8 @@ class NetworkTrainer:
                     recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                     import numpy as np
                     image = (recon_img * 255).astype(np.uint8)
-                    wandb.log({"training recon": [wandb.Image(image, caption="recon")]})
-
+                    wandb.log({"validation recon": [wandb.Image(image, caption="recon")]})
+                    
             # --------------------------------------------------------------------------------------------------------- #
             # [3] model save
             if args.save_every_n_epochs is not None:
@@ -328,19 +339,7 @@ class NetworkTrainer:
                     torch.save(state_dict,
                                os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
                     # inference
-            with torch.no_grad():
-                if is_main_process:
-                    img = batch['images'].to(dtype=weight_dtype)
-                    latent = DiagonalGaussianDistribution(student(img)).sample()
-                    recon = vae.decode(latent)['sample']
-                    batch = recon.shape[0]
-                    if batch != 1:
-                        recon = recon[0]
-                        recon = recon.unsqueeze(0)
-                    recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                    import numpy as np
-                    image = (recon_img * 255).astype(np.uint8)
-                    wandb.log({"recon": [wandb.Image(image, caption="recon")]})
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
