@@ -46,11 +46,11 @@ def main(args) :
 
                     background_diff = diff * mask_np
                     background_pixel_num = 512*512 - np.sum(mask_np)
-                    background_diff = background_diff/ background_pixel_num
+                    background_diff = np.sum(background_diff/ background_pixel_num)
 
                     object_diff = diff * (1-mask_np)
                     object_pixel_num = np.sum(mask_np)
-                    object_diff = object_diff/ object_pixel_num
+                    object_diff = np.sum(object_diff/ object_pixel_num)
                     cat_diff.append(float(background_diff - object_diff))
 
                     cat_diff_score = np.mean(np.array(cat_diff))
