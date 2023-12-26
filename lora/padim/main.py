@@ -126,8 +126,6 @@ def main(args):
                 train_outputs = pickle.load(f)
         mean, cov = train_outputs
         print(f' (nd array) mean : {mean.shape} | cov : {cov.shape}')
-        import time
-        time.sleep(100)
 
         gt_list = []
         gt_mask_list = []
