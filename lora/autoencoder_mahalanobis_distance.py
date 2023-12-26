@@ -88,7 +88,7 @@ def main(args):
         cov[:, :, i] = np.cov(embedding_vectors[:, :, i].numpy(), rowvar=False) + 0.01 * I
     train_outputs = [mean, cov]
     os.makedirs(args.output_dir, exist_ok=True)
-    object = os.paty.split(args.anormal_folder)[-1]
+    object = os.path.split(args.anormal_folder)[-1]
     train_feature_filepath = os.path.join(args.output_dir, f'vae_teacher_{object}.pkl')
     with open(train_feature_filepath, 'wb') as f:
         pickle.dump(train_outputs, f)
