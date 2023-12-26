@@ -75,13 +75,17 @@ def main(args):
 
         train_dataset = mvtec.MVTecDataset(args.data_path, class_name=class_name, is_train=True)
         train_dataloader = DataLoader(train_dataset, batch_size=32, pin_memory=True)
+
         test_dataset = mvtec.MVTecDataset(args.data_path, class_name=class_name, is_train=False)
         test_dataloader = DataLoader(test_dataset, batch_size=32, pin_memory=True)
+
         train_outputs = OrderedDict([('layer1', []), ('layer2', []), ('layer3', [])])
         test_outputs = OrderedDict([('layer1', []), ('layer2', []), ('layer3', [])])
 
         # extract train set features
         train_feature_filepath = os.path.join(args.save_path, 'temp_%s' % args.arch, 'train_%s.pkl' % class_name)
+        print(f'train_feature_filepath : {train_feature_filepath}')
+
         if not os.path.exists(train_feature_filepath):
             for (x, _, _) in tqdm(train_dataloader, '| feature extraction | train | %s |' % class_name):
                 # model prediction
@@ -293,7 +297,7 @@ def embedding_concat(x, y):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('PaDiM')
-    parser.add_argument('--data_path', type=str, default='../../../../MyData/anomaly_detection/MVTec3D')
+    parser.add_argument('--data_path', type=str, default='../../../../MyData/anomaly_detection/MVTec')
     parser.add_argument('--save_path', type=str, default='./mvtec_result')
     parser.add_argument('--arch', type=str, choices=['resnet18', 'wide_resnet50_2'],
                         default='wide_resnet50_2')
