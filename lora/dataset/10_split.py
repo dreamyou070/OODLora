@@ -13,9 +13,9 @@ def main(args) :
             train_dir = os.path.join(category_folder, 'train')
             test_dir = os.path.join(category_folder, 'test')
 
-            synthetic_dir = os.path.join(train_dir, 'synthetic_bad')
-            synthetic_gt_dir = os.path.join(train_dir, 'synthetic_gt')
-            synthetic_corrected_dir = os.path.join(train_dir, 'synthetic_corrected')
+            synthetic_dir = os.path.join(train_dir, 'bad')
+            synthetic_gt_dir = os.path.join(train_dir, 'gt')
+            synthetic_corrected_dir = os.path.join(train_dir, 'corrected')
 
             syn_test_dir = os.path.join(test_dir, 'synthetic_bad')
             os.makedirs(syn_test_dir, exist_ok=True)
@@ -28,35 +28,34 @@ def main(args) :
 
             cats = os.listdir(synthetic_dir)
             for cat in cats:
-                if cat != 'good':
 
-                    cat_synthetic_dir = os.path.join(synthetic_dir, cat)
-                    cat_synthetic_gt_dir = os.path.join(synthetic_gt_dir, cat)
-                    cat_synthetic_corrected_dir = os.path.join(synthetic_corrected_dir, cat)
+                cat_synthetic_dir = os.path.join(synthetic_dir, cat)
+                cat_synthetic_gt_dir = os.path.join(synthetic_gt_dir, cat)
+                cat_synthetic_corrected_dir = os.path.join(synthetic_corrected_dir, cat)
 
-                    cat_syn_test_dir = os.path.join(syn_test_dir, cat)
-                    os.makedirs(cat_syn_test_dir, exist_ok=True)
-                    cat_syn_test_gt_dir = os.path.join(syn_test_gt_dir, cat)
-                    os.makedirs(cat_syn_test_gt_dir, exist_ok=True)
-                    cat_syn_test_corrected_dir = os.path.join(syn_test_corrected_dir, cat)
-                    os.makedirs(cat_syn_test_corrected_dir, exist_ok=True)
+                cat_syn_test_dir = os.path.join(syn_test_dir, cat)
+                os.makedirs(cat_syn_test_dir, exist_ok=True)
+                cat_syn_test_gt_dir = os.path.join(syn_test_gt_dir, cat)
+                os.makedirs(cat_syn_test_gt_dir, exist_ok=True)
+                cat_syn_test_corrected_dir = os.path.join(syn_test_corrected_dir, cat)
+                os.makedirs(cat_syn_test_corrected_dir, exist_ok=True)
 
 
-                    images = os.listdir(cat_synthetic_dir)
-                    num_imgs = len(images)
-                    random_idx = sample(range(0, num_imgs), int(num_imgs * 0.2))
-                    for idx in random_idx:
-                        image = images[idx]
-                        bad_image_dir = os.path.join(cat_synthetic_dir, image)
-                        good_image_dir = os.path.join(cat_synthetic_gt_dir, image)
-                        corrected_image_dir = os.path.join(cat_synthetic_corrected_dir, image)
+                images = os.listdir(cat_synthetic_dir)
+                num_imgs = len(images)
+                random_idx = sample(range(0, num_imgs), int(num_imgs * 0.2))
+                for idx in random_idx:
+                    image = images[idx]
+                    bad_image_dir = os.path.join(cat_synthetic_dir, image)
+                    good_image_dir = os.path.join(cat_synthetic_gt_dir, image)
+                    corrected_image_dir = os.path.join(cat_synthetic_corrected_dir, image)
 
-                        re_bad_image_dir = os.path.join(cat_syn_test_dir, image)
-                        re_good_image_dir = os.path.join(cat_syn_test_gt_dir, image)
-                        re_corrected_image_dir = os.path.join(cat_syn_test_corrected_dir, image)
-                        os.rename(bad_image_dir, re_bad_image_dir)
-                        os.rename(good_image_dir, re_good_image_dir)
-                        os.rename(corrected_image_dir, re_corrected_image_dir)
+                    re_bad_image_dir = os.path.join(cat_syn_test_dir, image)
+                    re_good_image_dir = os.path.join(cat_syn_test_gt_dir, image)
+                    re_corrected_image_dir = os.path.join(cat_syn_test_corrected_dir, image)
+                    os.rename(bad_image_dir, re_bad_image_dir)
+                    os.rename(good_image_dir, re_good_image_dir)
+                    os.rename(corrected_image_dir, re_corrected_image_dir)
 
 
 
