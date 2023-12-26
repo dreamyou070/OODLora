@@ -33,7 +33,7 @@ class MVTecDataset(Dataset):
         self.x, self.y, self.mask = self.load_dataset_folder()
 
         # set transforms
-        self.transform_x = T.Compose([T.Resize(resize, Image.ANTIALIAS),
+        self.transform_x = T.Compose([T.Resize(resize, Image.LANCZOS),
                                       T.CenterCrop(cropsize),
                                       T.ToTensor(),
                                       T.Normalize(mean=[0.485, 0.456, 0.406],
