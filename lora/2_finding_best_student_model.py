@@ -73,7 +73,7 @@ def main(args) :
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
     parser.add_argument('--inference_folder', type=str,
-                        default ='../result/MVTec3D-AD_experiment/cable_gland/vae_training/1_TS_encoder_normal_abnormal_aug/inference_finding_best_epoch')
+                        default ='../result/MVTec3D-AD_experiment/cable_gland/vae_training/2_TS_encoder_normal_abnormal_no_aug/inference_finding_best_epoch')
 
     args = parser.parse_args()
     main(args)
