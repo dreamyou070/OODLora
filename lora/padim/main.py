@@ -51,11 +51,9 @@ def main(args):
 
     print(f' step 3. get sample index')
     idx = torch.tensor(sample(range(0, t_d), d))
-    print(f' idx : {idx}')
 
     # set model's intermediate outputs
     outputs = []
-
     def hook(module, input, output):
         outputs.append(output)
 
@@ -84,6 +82,7 @@ def main(args):
         # extract train set features
         train_feature_filepath = os.path.join(args.save_path, 'temp_%s' % args.arch, 'train_%s.pkl' % class_name)
         if not os.path.exists(train_feature_filepath):
+
             for (x, _, _) in tqdm(train_dataloader, '| feature extraction | train | %s |' % class_name):
                 # model prediction
                 with torch.no_grad():
@@ -93,6 +92,7 @@ def main(args):
                     train_outputs[k].append(v.cpu().detach())
                 # initialize hook outputs
                 outputs = []
+
             for k, v in train_outputs.items():
                 train_outputs[k] = torch.cat(v, 0)
 
@@ -106,22 +106,26 @@ def main(args):
             # calculate multivariate Gaussian distribution
             B, C, H, W = embedding_vectors.size()
             embedding_vectors = embedding_vectors.view(B, C, H * W)
+            print(f'original training sample embedding vector (209, 1792, 3136) : {embedding_vectors.shape}')
 
             # (1) get mean vector
             mean = torch.mean(embedding_vectors, dim=0).numpy()
+            print(f'mean vector (1792, 3136) : {mean.shape}')
 
             # (2) covariance vector
             cov = torch.zeros(C, C, H * W).numpy()
+            print(f'covariance vector (1792, 1792, 3136) : {cov.shape}')
+
             I = np.identity(C)
             for i in range(H * W):
                 # cov[:, :, i] = LedoitWolf().fit(embedding_vectors[:, :, i].numpy()).covariance_
                 cov[:, :, i] = np.cov(embedding_vectors[:, :, i].numpy(), rowvar=False) + 0.01 * I
 
             # save learned distribution
-
             train_outputs = [mean, cov]
             with open(train_feature_filepath, 'wb') as f:
                 pickle.dump(train_outputs, f)
+
         else:
             print('load train set feature from: %s' % train_feature_filepath)
             with open(train_feature_filepath, 'rb') as f:
@@ -132,30 +136,42 @@ def main(args):
         test_imgs = []
 
         mean, cov = train_outputs
-        print(f'mean : {mean.shape} | cov : {cov.shape}')
+        # mean : (550, 3136) | cov : (550, 550, 3136) (why not 7192 dim but only 550 dim?)
+
         # extract test set features
         for (x, y, mask) in tqdm(test_dataloader, '| feature extraction | test | %s |' % class_name):
+            # ----------------------------------------------------------------------------------------------------------
+            # (1)
             test_imgs.extend(x.cpu().detach().numpy())
             gt_list.extend(y.cpu().detach().numpy())
             gt_mask_list.extend(mask.cpu().detach().numpy())
-            # model prediction
+            # ----------------------------------------------------------------------------------------------------------
+            # (2.1) model prediction
             with torch.no_grad():
                 _ = model(x.to(device))
-            # get intermediate layer outputs
+            # ----------------------------------------------------------------------------------------------------------
+            # (2.2) get intermediate layer outputs
             for k, v in zip(test_outputs.keys(), outputs):
                 test_outputs[k].append(v.cpu().detach())
+
             # initialize hook outputs
             outputs = []
         for k, v in test_outputs.items():
+            # layer_1 = torch.cat([N, 256, 56,56]
+            # layer_2 = torch.cat([N, 512, 28,28]
+            # layer_3 = torch.cat([N, 1024, 14,14]
             test_outputs[k] = torch.cat(v, 0)
 
         # Embedding concat
         embedding_vectors = test_outputs['layer1']
         for layer_name in ['layer2', 'layer3']:
             embedding_vectors = embedding_concat(embedding_vectors, test_outputs[layer_name])
-
-        # randomly select d dimension
+        # embedding_vectors = [N, 7192, 56, 56]
+        # 0~1792 차원 중에서 550 개만 사용할 것이다.
+        # 사용할 dim 을 random 으로 선택학 된다.
+        print(f' original embedding vector (N, 1792, 56, 56) : {embedding_vectors.shape}')
         embedding_vectors = torch.index_select(embedding_vectors, 1, idx)
+        print(f'random sampled dim embedding vector (N, 550, 56, 56) : {embedding_vectors.shape}')
 
         # calculate distance matrix
         B, C, H, W = embedding_vectors.size()
