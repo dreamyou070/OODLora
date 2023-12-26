@@ -191,14 +191,12 @@ class NetworkTrainer:
         import datetime
         time = str(datetime.datetime.now())
         time = time.replace(' ', '-')
-        logging_file = os.path.join(args.output_dir, f"training_log_{time}.txt")
+        logging_file = os.path.join(args.output_dir, f"validation_log_{time}.txt")
         # training loop
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             student.train()
-            """
-
             for step, batch in enumerate(train_dataloader):
                 log_loss = {}
                 # generator training
@@ -270,7 +268,7 @@ class NetworkTrainer:
                     image = (recon_img * 255).astype(np.uint8)
                     wandb.log({"training recon": [wandb.Image(image, caption="recon")]})
             # --------------------------------------------------------------------------------------------------------- #
-            """
+            
             # validation
             valid_epoch_normal_loss = 0
             valid_epoch_abnormal_loss = 0
