@@ -100,6 +100,7 @@ def main(args):
                 # initialize hook outputs
                 outputs = []
             for k, v in train_outputs.items():
+                print(f' {k} : {len(v)} | first = {v[0].shape}')
                 feature = torch.cat(v, 0)
                 print(f' {k} feature : {feature.shape}')
                 train_outputs[k] = torch.cat(v, 0)
@@ -109,12 +110,12 @@ def main(args):
             for layer_name in ['layer2', 'layer3']:
                 embedding_vectors = embedding_concat(embedding_vectors, train_outputs[layer_name])
             # randomly select d dimension
-            print(f'total embedding_vectors : {embedding_vectors.shape}')
+            print(f'total embedding_vectors : {embedding_vectors.shape}') # 209,(N), 1792(dim), 56, 56
 
             embedding_vectors = torch.index_select(embedding_vectors, 1, idx)
 
             # calculate multivariate Gaussian distribution
-            B, C, H, W = embedding_vectors.size()
+            B, C, H, W = embedding_vectors.size() # 550, 1792, 56, 56
             embedding_vectors = embedding_vectors.view(B, C, H * W)
             mean = torch.mean(embedding_vectors, dim=0).numpy()
             cov = torch.zeros(C, C, H * W).numpy()
