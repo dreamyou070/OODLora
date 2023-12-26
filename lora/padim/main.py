@@ -31,9 +31,7 @@ device = torch.device('cuda' if use_cuda else 'cpu')
 
 def main(args):
 
-
-
-    # load model
+    print(f' step 1. load model')
     if args.arch == 'resnet18':
         model = resnet18(pretrained=True, progress=True)
         t_d = 448
@@ -75,7 +73,6 @@ def main(args):
         train_dataloader = DataLoader(train_dataset, batch_size=32, pin_memory=True)
         test_dataset = mvtec.MVTecDataset(args.data_path, class_name=class_name, is_train=False)
         test_dataloader = DataLoader(test_dataset, batch_size=32, pin_memory=True)
-
         train_outputs = OrderedDict([('layer1', []), ('layer2', []), ('layer3', [])])
         test_outputs = OrderedDict([('layer1', []), ('layer2', []), ('layer3', [])])
 
@@ -292,8 +289,9 @@ def embedding_concat(x, y):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('PaDiM')
-    parser.add_argument('--data_path', type=str, default='D:/dataset/mvtec_anomaly_detection')
+    parser.add_argument('--data_path', type=str, default='../../../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/cable_gland/train_normal/corrected/50_good')
     parser.add_argument('--save_path', type=str, default='./mvtec_result')
-    parser.add_argument('--arch', type=str, choices=['resnet18', 'wide_resnet50_2'], default='wide_resnet50_2')
+    parser.add_argument('--arch', type=str, choices=['resnet18', 'wide_resnet50_2'],
+                        default='wide_resnet50_2')
     args = parser.parse_args()
     main(args)
