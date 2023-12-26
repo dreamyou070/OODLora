@@ -268,7 +268,7 @@ class NetworkTrainer:
                     image = (recon_img * 255).astype(np.uint8)
                     wandb.log({"training recon": [wandb.Image(image, caption="recon")]})
             # --------------------------------------------------------------------------------------------------------- #
-            
+
             # validation
             valid_epoch_normal_loss = 0
             valid_epoch_abnormal_loss = 0
@@ -292,7 +292,8 @@ class NetworkTrainer:
                                'valid/abnormal_loss' : abnormal_recon_diff.mean().item()})
                     valid_epoch_normal_loss += normal_recon_diff.mean().item()
                     valid_epoch_abnormal_loss += abnormal_recon_diff.mean().item()
-            valid_log = {'normal_loss' : valid_epoch_normal_loss,
+            valid_log = {'epoch' : {epoch + 1},
+                         'normal_loss' : valid_epoch_normal_loss,
                          'anormal_loss' : valid_epoch_abnormal_loss,}
             if is_main_process:
                 with open(logging_file ,'a') as f :
