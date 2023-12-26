@@ -11,7 +11,6 @@ def main(args) :
         epoch_num = epoch.split('_')[-1]
         epoch_elem = [epoch_num]
         epoch_dir = os.path.join(inference_folder, epoch)
-        #train_dir = os.path.join(epoch_dir, 'training_dataset')
         test_dir = os.path.join(epoch_dir, 'test_dataset')
         cats = os.listdir(test_dir)
         title_list = ['epoch']
@@ -55,10 +54,11 @@ def main(args) :
                         cat_diff.append(float(background_diff - object_diff))
                     else :
                         cat_diff.append(float(background_diff))
-
                     cat_diff_score = np.mean(np.array(cat_diff))
+                    print(f'cat_diff : {cat_diff_score}')
                     epoch_elem.append(cat_diff_score)
         total_diff.append(epoch_elem)
+
     import csv
     parent, child = os.path.split(inference_folder)
     csv_file_dir = os.path.join(parent, f'{child}_scoring.csv')
