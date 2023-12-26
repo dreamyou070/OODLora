@@ -113,6 +113,7 @@ class NetworkTrainer:
 
         print(f'\n step 4. save directory')
         save_base_dir = args.output_dir
+        os.makedirs(save_base_dir, exist_ok=True)
         _, folder_name = os.path.split(save_base_dir)
         record_save_dir = os.path.join(args.output_dir, "record")
         os.makedirs(record_save_dir, exist_ok=True)
