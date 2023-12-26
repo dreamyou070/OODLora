@@ -24,9 +24,15 @@ def main(args) :
             cat_diff = []
             for image in images :
                 name, ext = os.path.splitext(image)
+
                 if 'recon' not in name and 'gt' not in name and 'mask' not in name :
                     base_img_dir = os.path.join(test_cat_dir, image)
                     recon_img_dir = os.path.join(epoch_dir, f'{name}_recon{ext}')
+                    base_pil = Image.open(base_img_dir).convert('RGB').resize((512, 512))
+                    base_np = np.array(base_pil)
+
+                    recon_pil = Image.open(recon_img_dir).convert('RGB').resize((512, 512))
+                    recon_np = np.array(recon_pil)
 
                     if 'good' not in cat :
                         mask_dir = os.path.join(test_cat_dir, f'{name}_gt{ext}')
@@ -36,26 +42,21 @@ def main(args) :
                     else :
                         mask_np = np.zeros((512,512))
 
-                base_pil = Image.open(base_img_dir).convert('RGB').resize((512,512))
-                base_np = np.array(base_pil)
+                    diff = (base_np - recon_np) **2
 
-                recon_pil = Image.open(recon_img_dir).convert('RGB').resize((512,512))
-                recon_np = np.array(recon_pil)
+                    background_diff = diff * mask_np
+                    background_pixel_num = 512*512 - np.sum(mask_np)
+                    background_diff = background_diff/ background_pixel_num
 
-                diff = (base_np - recon_np) **2
+                    object_diff = diff * (1-mask_np)
+                    object_pixel_num = np.sum(mask_np)
+                    object_diff = object_diff/ object_pixel_num
 
-                background_diff = diff * mask_np
-                background_pixel_num = 512*512 - np.sum(mask_np)
-                background_diff = background_diff/ background_pixel_num
+                    total_diff = background_diff - object_diff
+                    cat_diff.append(total_diff)
 
-                object_diff = diff * (1-mask_np)
-                object_pixel_num = np.sum(mask_np)
-                object_diff = object_diff/ object_pixel_num
-
-                total_diff = background_diff - object_diff
-                cat_diff.append(total_diff)
-            cat_diff_score = np.mean(np.array(cat_diff))
-            epoch_elem.append(cat_diff_score)
+                    cat_diff_score = np.mean(np.array(cat_diff))
+                    epoch_elem.append(cat_diff_score)
         total_diff.append(epoch_elem)
     import csv
     parent, child = os.path.split(inference_folder)
