@@ -106,8 +106,8 @@ def main(args):
 
     student_pretrained_dir_files = os.listdir(args.student_encoder_pretrained_dir)
     for file in student_pretrained_dir_files:
-        txt_file = os.path.join(model_score_save_base_dir, f'{file}.txt')
-
+        name, ext = os.path.splitext(file)
+        txt_file = os.path.join(model_score_save_base_dir, f'{name}.txt')
         file_dir = os.path.join(args.student_encoder_pretrained_dir, file)
         student_encoder.load_state_dict(get_state_dict(file_dir), strict=True)
         student_encoder.requires_grad_(False)
@@ -115,7 +115,6 @@ def main(args):
         student_encoder.to(accelerator.device, dtype=vae_dtype)
         name, ext = os.path.splitext(file)
         student_epoch = int(name.split('_')[-1])
-
         # ------------------------------------------------------------------------------------ #
         test_folder = os.path.join(args.anormal_folder, 'test/rgb')
         cats = os.listdir(test_folder)
@@ -145,12 +144,10 @@ def main(args):
                         pixel_level_dist.append(m_dist)
                     img_level_dist.append(pixel_level_dist)
                 score_map = np.array(img_level_dist).transpose(1, 0).reshape(B, H, W)
-                model_score = np.mean(score_map, axis=0)
-                model_score = np.sum(model_score)
+                model_score = np.sum(np.mean(score_map, axis=0))
+
                 with open(txt_file, 'a') as f:
                     f.write(f'{cat} : {model_score}\n')
-
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
