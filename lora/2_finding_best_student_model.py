@@ -6,6 +6,7 @@ def main(args) :
     inference_folder = args.inference_folder
     epochs = os.listdir(inference_folder)
     total_diff = []
+    print(f'epochs : {epochs}')
     for epoch in epochs :
         epoch_num = epoch.split('_')[-1]
         epoch_elem = [epoch_num]
