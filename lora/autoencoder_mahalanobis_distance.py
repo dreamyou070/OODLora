@@ -108,7 +108,7 @@ def main(args):
     for file in student_pretrained_dir_files:
         txt_file = os.path.join(model_score_save_base_dir, f'{file}.txt')
 
-        file_dir = os.path.join(args.student_pretrained_dir, file)
+        file_dir = os.path.join(args.student_encoder_pretrained_dir, file)
         student_encoder.load_state_dict(get_state_dict(file_dir), strict=True)
         student_encoder.requires_grad_(False)
         student_encoder.eval()
