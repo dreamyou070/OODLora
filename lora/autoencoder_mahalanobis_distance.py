@@ -76,7 +76,7 @@ def main(args):
             training_latents.append(latent)
     embedding_vectors = torch.cat(training_latents, dim=0)
     B, C, H, W = embedding_vectors.size()
-    embedding_vectors = embedding_vectors.view(B, C, H * W).detach().cpu().numpy()  # [N, 550, 3136]
+    embedding_vectors = embedding_vectors.view(B, C, H * W).detach().cpu()  # [N, 550, 3136]
     # (1) mean vector
     mean = torch.mean(embedding_vectors, dim=0).numpy()
     print(f'mean vector (4, 64*64) : {mean.shape}')
