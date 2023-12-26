@@ -130,7 +130,7 @@ def main(args):
                 pixel_level_dist = []
                 for sample in embedding_vectors:
                     m_dist = mahalanobis(sample[:, i], mean, conv_inv)
-                    print(f'each pixel level distance : {m_dist}')
+                    print(f'each pixel level distance : {type(m_dist)}')
                     pixel_level_dist.append(m_dist)
                 img_level_dist.append(pixel_level_dist)
             dist_list = np.array(img_level_dist).transpose(1, 0).reshape(B, H, W)
