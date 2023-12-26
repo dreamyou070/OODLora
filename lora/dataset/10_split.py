@@ -42,9 +42,10 @@ def main(args) :
                     cat_syn_test_corrected_dir = os.path.join(syn_test_corrected_dir, cat)
                     os.makedirs(cat_syn_test_corrected_dir, exist_ok=True)
 
-    
+
                     images = os.listdir(cat_synthetic_dir)
                     num_imgs = len(images)
+                    print('num_imgs : ', num_imgs)
                     random_idx = sample(range(0, num_imgs), int(num_imgs * 0.2))
                     for idx in random_idx:
                         image = images[idx]
