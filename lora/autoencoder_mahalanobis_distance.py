@@ -99,12 +99,12 @@ def main(args):
     student_vae_encoder = student_vae.encoder
     student_vae_encoder_quantize = student_vae.quant_conv
     student_encoder = Encoder_Student(student_vae_encoder, student_vae_encoder_quantize)
-    student_pretrained_dir_files = os.listdir(args.student_pretrained_dir)
 
     parent, folder = os.path.split(args.student_encoder_pretrained_dir)
     model_score_save_base_dir = os.path.join(parent, f'vae_student_model_score')
     os.makedirs(model_score_save_base_dir, exist_ok=True)
 
+    student_pretrained_dir_files = os.listdir(args.student_encoder_pretrained_dir)
     for file in student_pretrained_dir_files:
         txt_file = os.path.join(model_score_save_base_dir, f'{file}.txt')
 
