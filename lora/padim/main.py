@@ -42,12 +42,16 @@ def main(args):
         d = 550
     model.to(device)
     model.eval()
+
+    print(f' step 2. seed')
     random.seed(1024)
     torch.manual_seed(1024)
     if use_cuda:
         torch.cuda.manual_seed_all(1024)
 
+    print(f' step 3. get sample index')
     idx = torch.tensor(sample(range(0, t_d), d))
+    print(f' idx : {idx}')
 
     # set model's intermediate outputs
     outputs = []
@@ -289,7 +293,7 @@ def embedding_concat(x, y):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('PaDiM')
-    parser.add_argument('--data_path', type=str, default='../../../../MyData/anomaly_detection/MVTec3D-AD_Experiment_SDXL/cable_gland/train_normal/corrected/50_good')
+    parser.add_argument('--data_path', type=str, default='../../../../MyData/anomaly_detection/MVTec3D')
     parser.add_argument('--save_path', type=str, default='./mvtec_result')
     parser.add_argument('--arch', type=str, choices=['resnet18', 'wide_resnet50_2'],
                         default='wide_resnet50_2')
