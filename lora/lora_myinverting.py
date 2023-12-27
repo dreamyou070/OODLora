@@ -67,18 +67,27 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     if int(pixel_num ** 0.5) in args.cross_map_res:
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
-                            back_attn_vector = attention_probs_back[:, :, word_idx] # head, pix_num, 1
-                            obj_attn_vector = attention_probs_object[:, :, word_idx]
-                            attention_diff = torch.nn.functional.mse_loss(back_attn_vector,obj_attn_vector,reduction='none')
-                            attention_diff = torch.sum(attention_diff, 0)
+                            back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
+                            back_attn_vector = 255 * back_attn_vector / back_attn_vector.max()
+                            back_np = back_attn_vector.detach().cpu().numpy()
+
+                            obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
+                            obj_attn_vector = 255 * obj_attn_vector / obj_attn_vector.max()
+                            obj_np = obj_attn_vector.detach().cpu().numpy()
+
+                            score_diff_map = obj_np - back_np
+                            mask = np.where(score_diff_map > 0, 1, 0)
+                            mask = torch.tensor(mask)
+                            print(f'mask : {mask.shape}')
+                            #attention_diff = torch.nn.functional.mse_loss(back_attn_vector,obj_attn_vector,reduction='none')
+                            #attention_diff = torch.sum(attention_diff, 0)
                             #attention_diff = attention_diff.sum(dim=0)
-                            mask = torch.where(attention_diff > mask_thredhold, 1, 0)
+                            #mask = torch.where(attention_diff > mask_thredhold, 1, 0)
                             mask = mask.unsqueeze(0)
                             mask = mask.expand(back_attn_vector.shape)
                             mask_sum = mask.sum()
-                            print(f'layer_name: {layer_name}, mask_sum: {mask_sum}')
-                            print(f'obj_attn_vector: {obj_attn_vector.shape} | mask : {mask.shape}')
                             map_list.append(mask)
+
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
                             attention_probs_object_sub[:, :, word_idx] = attn_vector
                         map = torch.cat(map_list, dim=0)

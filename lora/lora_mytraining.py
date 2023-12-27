@@ -73,7 +73,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                 word_idx = int(word_idx)
                                 masked_attn_vector = masked_attention_prob[:, :, word_idx]
                                 org_attn_vector = attention_prob[:, :, word_idx]
+
                                 attention_diff = (masked_attn_vector - org_attn_vector).mean() + args.contrastive_eps
+
                                 standard = torch.zeros_like(attention_diff)
                                 loss = torch.max(attention_diff, standard)
                                 controller.store_loss(loss)
