@@ -28,40 +28,44 @@ def main(args) :
             os.makedirs(synthetic_corrected_dir, exist_ok=True)
 
             bad_cats = os.listdir(test_dir)
+
             for bad_cat in bad_cats :
-                bad_cat_dir = os.path.join(test_dir, bad_cat)
-                bad_cat_rgb_folder = os.path.join(bad_cat_dir, 'rgb')
-                images = os.listdir(bad_cat_rgb_folder)
+                if bad_cat != 'bad' and bad_cat != 'gt' and bad_cat != 'corrected':
 
-                new_long_name_rgb = os.path.join(synthetic_test_dir, f'{bad_cat}')
-                new_long_name_corrected = os.path.join(synthetic_test_corrected_dir, f'{bad_cat}')
-                new_long_name_gt = os.path.join(synthetic_test_gt_dir, f'{bad_cat}')
-                os.makedirs(new_long_name_rgb, exist_ok=True)
-                os.makedirs(new_long_name_corrected, exist_ok=True)
-                os.makedirs(new_long_name_gt, exist_ok=True)
+                    bad_cat_dir = os.path.join(test_dir, bad_cat)
+                    bad_cat_rgb_folder = os.path.join(bad_cat_dir, 'rgb')
+                    images = os.listdir(bad_cat_rgb_folder)
 
-                new_names = []
-                for image in images:
-                    name, ext = os.path.splitext(image)
-                    new_name = f'{bad_cat}_{name}'
-                    new_names.append(new_name)
+                    new_long_name_rgb = os.path.join(synthetic_test_dir, f'{bad_cat}')
+                    new_long_name_corrected = os.path.join(synthetic_test_corrected_dir, f'{bad_cat}')
+                    new_long_name_gt = os.path.join(synthetic_test_gt_dir, f'{bad_cat}')
+                    os.makedirs(new_long_name_rgb, exist_ok=True)
+                    os.makedirs(new_long_name_corrected, exist_ok=True)
+                    os.makedirs(new_long_name_gt, exist_ok=True)
 
-                num_imgs = len(new_names)
-                random_idx = sample(range(0, num_imgs), int(num_imgs * 0.2))
-                for idx in random_idx:
-                    new_name_elem = new_names[idx]
-                    for good_img in good_imges:
-                        long_name = f'{new_name_elem}_{good_img}'
+                    new_names = []
+                    for image in images:
+                        name, ext = os.path.splitext(image)
+                        new_name = f'{bad_cat}_{name}'
+                        new_names.append(new_name)
 
-                        long_name_rgb_dir = os.path.join(synthetic_dir, f'{bad_cat}/{long_name}')
-                        long_name_corrected_dir = os.path.join(synthetic_corrected_dir, f'{bad_cat}/{long_name}')
-                        long_name_gt_dir  = os.path.join(synthetic_gt_dir, f'{bad_cat}/{long_name}')
-                        new_long_name_rgb_dir = os.path.join(synthetic_test_dir, f'{bad_cat}/{long_name}')
-                        new_long_name_corrected_dir = os.path.join(synthetic_test_corrected_dir, f'{bad_cat}/{long_name}')
-                        new_long_name_gt_dir  = os.path.join(synthetic_test_gt_dir, f'{bad_cat}/{long_name}')
-                        os.rename(long_name_rgb_dir, new_long_name_rgb_dir)
-                        os.rename(long_name_corrected_dir, new_long_name_corrected_dir)
-                        os.rename(long_name_gt_dir, new_long_name_gt_dir)
+                    num_imgs = len(new_names)
+                    random_idx = sample(range(0, num_imgs), int(num_imgs * 0.2))
+                    for idx in random_idx:
+                        new_name_elem = new_names[idx]
+                        for good_img in good_imges:
+                            long_name = f'{new_name_elem}_{good_img}'
+
+                            long_name_rgb_dir = os.path.join(synthetic_dir, f'{bad_cat}/{long_name}')
+                            long_name_corrected_dir = os.path.join(synthetic_corrected_dir, f'{bad_cat}/{long_name}')
+                            long_name_gt_dir  = os.path.join(synthetic_gt_dir, f'{bad_cat}/{long_name}')
+
+                            new_long_name_rgb_dir = os.path.join(synthetic_test_dir, f'{bad_cat}/{long_name}')
+                            new_long_name_corrected_dir = os.path.join(synthetic_test_corrected_dir, f'{bad_cat}/{long_name}')
+                            new_long_name_gt_dir  = os.path.join(synthetic_test_gt_dir, f'{bad_cat}/{long_name}')
+
+                            os.rename(long_name_rgb_dir, new_long_name_rgb_dir)
+                            os.rename(long_name_gt_dir, new_long_name_corrected_dir)
 
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
