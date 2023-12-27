@@ -258,6 +258,8 @@ class NetworkTrainer:
             with torch.no_grad():
                 if is_main_process:
                     img = batch['images'].to(dtype=weight_dtype)
+                    captions = batch['captions']
+                    print(f'training captions : {captions}')
                     latent = DiagonalGaussianDistribution(student(img)).sample()
                     recon = vae.decode(latent)['sample']
                     batch = recon.shape[0]
