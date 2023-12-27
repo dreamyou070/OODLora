@@ -77,9 +77,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
                             attention_probs_object_sub[:, :, word_idx] = attn_vector
                         map = torch.cat(map_list, dim=0)
-                        print(f'before mean, map : {map.shape}')
                         map = map.mean(dim=0, dtype=torch.float32)
-                        map = map.reshape((res, res))
+                        map = map.reshape((res, res)).detach().cpu()
                         np_map = np.array(map) * 255
                         aug_map = Image.fromarray(np_map).resize((64, 64))
                         np_aug_map = np.array(aug_map)
