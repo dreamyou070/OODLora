@@ -259,7 +259,6 @@ class NetworkTrainer:
                 if is_main_process:
                     img = batch['images'].to(dtype=weight_dtype)
                     captions = batch['captions']
-                    print(f'training captions : {captions}')
                     latent = DiagonalGaussianDistribution(student(img)).sample()
                     recon = vae.decode(latent)['sample']
                     batch = recon.shape[0]
@@ -269,7 +268,8 @@ class NetworkTrainer:
                     recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                     import numpy as np
                     image = (recon_img * 255).astype(np.uint8)
-                    wandb.log({"training recon": [wandb.Image(image, caption="recon")]})
+                    for caption, img in zip(captions, image):
+                        wandb.log({"training recon": [wandb.Image(img, caption=caption)]})
 
 
             # validation
@@ -305,6 +305,7 @@ class NetworkTrainer:
             with torch.no_grad():
                 if is_main_process:
                     img = valid_batch['images'].to(dtype=weight_dtype)
+                    captions = valid_batch['captions']
                     latent = DiagonalGaussianDistribution(student(img)).sample()
                     recon = vae.decode(latent)['sample']
                     batch = recon.shape[0]
@@ -314,7 +315,8 @@ class NetworkTrainer:
                     recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                     import numpy as np
                     image = (recon_img * 255).astype(np.uint8)
-                    wandb.log({"validation recon": [wandb.Image(image, caption="recon")]})
+                    for caption, img in zip(captions, image):
+                        wandb.log({"validation recon": [wandb.Image(img, caption=caption)]})
 
 
 
