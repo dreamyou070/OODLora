@@ -169,7 +169,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 out = out.sum(0) / out.shape[0]
                 out = 255 * out / out.max()
 
-                image = out
+                image = out.cpu()
                 image = np.array(image.numpy().astype(np.uint8))
                 map = np.array(Image.fromarray(image).resize((64, 64)))
                 np_map = np.where(map > 100, 1, 0)
