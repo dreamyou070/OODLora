@@ -660,8 +660,6 @@ class NetworkTrainer:
                                                                                                        noise_scheduler,
                                                                                                        latents)
                     with accelerator.autocast():
-                        print(f'noisy_latents shape: {noisy_latents.shape}')
-                        print(f'text_encoder_conds shape: {text_encoder_conds.shape}')
                         self.call_unet(args, accelerator, unet,
                                        noisy_latents, timesteps,
                                        text_encoder_conds,
@@ -679,7 +677,7 @@ class NetworkTrainer:
                             res = int(math.sqrt(pix_num))
                             attn_score = attn_score.reshape(b, res, res, -1) # [b, res, res, 1]
 
-                            binary_map = batch['binary_map'].detach().cpu()
+                            binary_map = batch['binary_img'].detach().cpu()
                             maps = []
                             for binary_map_i in binary_map:
                                 binary_map_i = binary_map_i.squeeze()
@@ -691,6 +689,7 @@ class NetworkTrainer:
                             attn_score_pixel = attn_score * maps.to(dtype=weight_dtype)
                             layer_attn_loss = attn_score_pixel.mean([1,2])
                             attn_loss += layer_attn_loss.mean()
+                            log_loss["loss/attn_loss"] = attn_loss.item()
 
                     # (3) natural training
                     if len(train_indexs) > 0:
@@ -743,10 +742,8 @@ class NetworkTrainer:
                             task_loss = denoising_loss.mean()
                             log_loss["loss/denoising_loss"] = task_loss
 
-                        if len(test_indexs) > 0 :
-                            loss +=  task_loss
-                        else:
-                            loss = task_loss
+                        attn_loss +=  task_loss
+                        loss = attn_loss
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
