@@ -29,21 +29,21 @@ def main(args):
 
                 before_cat_dir = os.path.join(synthetic_dir, before_cat)
                 after_repeat_cat_dir = os.path.join(synthetic_dir, after_repeat_cat)
-                print(f'{before_cat_dir} -> {after_repeat_cat_dir}')
+                #print(f'{before_cat_dir} -> {after_repeat_cat_dir}')
 
-                #os.rename(before_cat_dir, after_repeat_cat_dir)
+                os.rename(before_cat_dir, after_repeat_cat_dir)
 
                 if 'good' not in cat :
 
                     before_cat_dir = os.path.join(synthetic_gt_dir, before_cat)
                     after_repeat_cat_dir = os.path.join(synthetic_gt_dir, after_repeat_cat)
-                    print(f'{before_cat_dir} -> {after_repeat_cat_dir}')
-                    #os.rename(before_cat_dir, after_repeat_cat_dir)
+                    #print(f'{before_cat_dir} -> {after_repeat_cat_dir}')
+                    os.rename(before_cat_dir, after_repeat_cat_dir)
 
                 before_cat_dir = os.path.join(synthetic_corrected_dir, before_cat)
                 after_repeat_cat_dir = os.path.join(synthetic_corrected_dir, after_repeat_cat)
-                print(f'{before_cat_dir} -> {after_repeat_cat_dir}')
-                #os.rename(before_cat_dir, after_repeat_cat_dir)
+                #print(f'{before_cat_dir} -> {after_repeat_cat_dir}')
+                os.rename(before_cat_dir, after_repeat_cat_dir)
 
             test_dir = os.path.join(category_folder, 'test')
             synthetic_test_dir = os.path.join(test_dir, 'bad')
@@ -56,13 +56,13 @@ def main(args):
 
                 before_cat_dir = os.path.join(synthetic_test_dir, before_cat)
                 after_repeat_cat_dir = os.path.join(synthetic_test_dir, after_repeat_cat)
-                print(f'{before_cat_dir} -> {after_repeat_cat_dir}')
-                #os.rename(before_cat_dir, after_repeat_cat_dir)
+                #print(f'{before_cat_dir} -> {after_repeat_cat_dir}')
+                os.rename(before_cat_dir, after_repeat_cat_dir)
 
                 before_cat_dir = os.path.join(synthetic_test_corrected_dir, before_cat)
                 after_repeat_cat_dir = os.path.join(synthetic_test_corrected_dir, after_repeat_cat)
-                print(f'{before_cat_dir} -> {after_repeat_cat_dir}')
-                #os.rename(before_cat_dir, after_repeat_cat_dir)
+                #print(f'{before_cat_dir} -> {after_repeat_cat_dir}')
+                os.rename(before_cat_dir, after_repeat_cat_dir)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
