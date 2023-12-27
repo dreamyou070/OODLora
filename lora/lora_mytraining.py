@@ -677,20 +677,12 @@ class NetworkTrainer:
                             b, pix_num, _ = attn_score.shape
                             res = int(math.sqrt(pix_num))
                             attn_score = attn_score.reshape(b, res, res, -1) # [b, res, res, 1]
-                            scores = attn_score.chunk(batch_size, dim=0)
-                            score_list = []
-                            for score in scores:
-                                # 8, res,res,1
-                                score_aug_np = np.array(Image.fromarray(score.cpu().numpy().astype(np.uint8)).resize((64, 64)))
-                                score_aug_tensor = torch.tensor(score_aug_np)[:, :,]
-                                score_list.append(score_aug_tensor)
-                            attn_score = torch.cat(score_list, dim=0).unsqueeze(-1).to(accelerator.device)  # [b, 64, 64, 1]
 
                             binary_map = batch['binary_images'].detach().cpu()
                             maps = []
                             for binary_map_i in binary_map:
                                 binary_map_i = binary_map_i.squeeze()
-                                binary_aug_np = np.array(Image.fromarray(binary_map_i.numpy().astype(np.uint8)).resize((64,64)))
+                                binary_aug_np = np.array(Image.fromarray(binary_map_i.numpy().astype(np.uint8)).resize((res,res)))
                                 binary_aug_np = np.where(binary_aug_np > 100, 1, 0)
                                 binary_aug_tensor = torch.tensor(binary_aug_np)[:,:,0]
                                 binary_aug_tensor = binary_aug_tensor.unsqueeze(0) # [1,64,64]
