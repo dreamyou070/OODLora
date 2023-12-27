@@ -174,9 +174,7 @@ def main(args) :
     assert base_num >= 0, f'base_num should be larger than 0, but {base_num}'
 
     output_dir = os.path.join(output_dir,
-                           f'lora_epoch_{model_epoch}_mask_thred_{args.mask_thredhold}_'
-                           f'from_{base_num}_other_token_preserving_{args.other_token_preserving}_'
-                           f'pixel_mask_thredhold_{args.pixel_mask_thredhold}_self_attn_mask_thredhold_{args.self_attn_mask_thredhold}')
+                           f'lora_epoch_{model_epoch}_mask_thred_{args.mask_thredhold}_from_{base_num}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
