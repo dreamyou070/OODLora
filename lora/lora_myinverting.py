@@ -346,7 +346,8 @@ def main(args) :
                                                                     unet=invers_unet,
                                                                     vae=vae,
                                                                     base_folder_dir=class_base_folder,
-                                                                    is_org=True)
+                                                                    is_org=True,
+                                                                    name=name)
                 latent_dict, time_steps, pil_images = ddim_loop(args,
                                                                 latent=st_latent,
                                                                 context=inv_c,
@@ -355,7 +356,8 @@ def main(args) :
                                                                 unet=invers_unet,
                                                                 vae=vae,
                                                                 base_folder_dir=class_base_folder,
-                                                                is_org=False)
+                                                                is_org=False,
+                                                                name=name)
 
                 noising_time = inference_times[base_num]  # 100
                 recon_1_times = inference_times[:base_num + 1].tolist()
@@ -368,7 +370,9 @@ def main(args) :
                                                      unet=unet,
                                                      vae=vae,
                                                      base_folder_dir=class_base_folder,
-                                                     controller=controller)
+                                                     controller=controller,
+                                                     name=name)
+
 
                 recon_times = inference_times[base_num:].tolist()
                 st_noise_latent = recon_latent_dict[int(noising_time.item())]
@@ -381,7 +385,8 @@ def main(args) :
                            unet=unet,
                            vae=vae,
                            base_folder_dir=class_base_folder,
-                           controller=controller, )
+                           controller=controller,
+                           name=name)
 
 
 if __name__ == "__main__":
