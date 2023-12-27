@@ -18,7 +18,7 @@ def main(args):
             synthetic_dir = os.path.join(train_dir, 'bad')
             synthetic_gt_dir = os.path.join(train_dir, 'gt')
             synthetic_corrected_dir = os.path.join(train_dir, 'corrected')
-            cats = os.listdir(train_dir)
+            cats = os.listdir(synthetic_dir)
             for cat in cats:
                 before_cat = cat
                 if 'good' in cat :
@@ -49,7 +49,7 @@ def main(args):
             synthetic_test_dir = os.path.join(test_dir, 'bad')
             synthetic_test_corrected_dir = os.path.join(test_dir, 'corrected')
 
-            test_cats = os.listdir(test_dir)
+            test_cats = os.listdir(synthetic_test_dir)
             for test_cat in test_cats:
                 before_cat = test_cat
                 after_repeat_cat = f'1_{test_cat}'
