@@ -53,23 +53,27 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                 vector_diff_list = []
                 for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
+
                     batch_trg_index = trg_indexs_list[batch_idx]  # two times
+
                     if args.other_token_preserving :
                         attention_probs_object_sub = attention_probs_back.clone().detach()
                     else :
                         attention_probs_object_sub = attention_probs_object.clone().detach()
-                    for word_idx in batch_trg_index:
-                        word_idx = int(word_idx)
-                        back_attn_vector = attention_probs_back[:, :, word_idx] # head, pix_num, 1
-                        obj_attn_vector = attention_probs_object[:, :, word_idx]
-                        attention_diff = torch.nn.functional.mse_loss(back_attn_vector,
-                                                                      obj_attn_vector,
-                                                                      reduction='none')
-                        pixel_num = attention_diff.shape[1]
-                        if int(pixel_num ** 0.5)  in args.cross_map_res :
+
+                    if int(pixel_num ** 0.5) in args.cross_map_res:
+                        for word_idx in batch_trg_index:
+                            word_idx = int(word_idx)
+                            back_attn_vector = attention_probs_back[:, :, word_idx] # head, pix_num, 1
+                            obj_attn_vector = attention_probs_object[:, :, word_idx]
+                            attention_diff = torch.nn.functional.mse_loss(back_attn_vector,
+                                                                          obj_attn_vector,
+                                                                          reduction='none')
+                            pixel_num = attention_diff.shape[1]
                             mask = torch.where(attention_diff > mask_thredhold, 1, 0)
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
                             attention_probs_object_sub[:, :, word_idx] = attn_vector
+
                     attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
