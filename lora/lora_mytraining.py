@@ -63,11 +63,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                     batch_num = len(trg_indexs_list)
                     attention_probs_batch = torch.chunk(attention_probs, batch_num, dim=0)
                     attn_list = []
-                    for batch_idx, attention_probs in enumerate(attention_probs_batch):
+                    for batch_idx, attn_probs in enumerate(attention_probs_batch):
                         batch_trg_index = trg_indexs_list[batch_idx]  # two times
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
-                            attn_map = attention_probs[:, :, word_idx]
+                            attn_map = attn_probs[:, :, word_idx]
                             attn_list.append(attn_map)
                     batch_attn_map = torch.cat(attn_list, dim=0)
                     controller.store(batch_attn_map, layer_name)
@@ -660,9 +660,12 @@ class NetworkTrainer:
                                                                                                        noise_scheduler,
                                                                                                        latents)
                     with accelerator.autocast():
+                        print(f'noisy_latents shape: {noisy_latents.shape}')
+                        print(f'text_encoder_conds shape: {text_encoder_conds.shape}')
                         self.call_unet(args, accelerator, unet,
                                        noisy_latents, timesteps,
-                                       text_encoder_conds, batch, weight_dtype,
+                                       text_encoder_conds,
+                                       batch, weight_dtype,
                                        trg_indexs,
                                        test_indexs)
                         attn_dict = attention_storer.step_store
