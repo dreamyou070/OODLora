@@ -686,7 +686,7 @@ class NetworkTrainer:
                                 binary_aug_np = np.where(binary_aug_np > 100, 1, 0)
                                 binary_aug_tensor = torch.tensor(binary_aug_np)[:,:,0]
                                 binary_aug_tensor = binary_aug_tensor.unsqueeze(0) # [1,64,64]
-                                binary_aug_tensor = binary_aug_tensor.expand((8,64,64))
+                                binary_aug_tensor = binary_aug_tensor.expand((8,res,res))
                                 maps.append(binary_aug_tensor)
                             maps = torch.cat(maps, dim=0).unsqueeze(-1).to(accelerator.device) # [b, 64, 64, 1]
 
