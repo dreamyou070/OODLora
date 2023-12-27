@@ -681,7 +681,7 @@ class NetworkTrainer:
                             score_list = []
                             for score in scores:
                                 # 8, res,res,1
-                                score_aug_np = np.array(Image.fromarray(score.numpy().astype(np.uint8)).resize((64, 64)))
+                                score_aug_np = np.array(Image.fromarray(score.cpu().numpy().astype(np.uint8)).resize((64, 64)))
                                 score_aug_tensor = torch.tensor(score_aug_np)[:, :,]
                                 score_list.append(score_aug_tensor)
                             attn_score = torch.cat(score_list, dim=0).unsqueeze(-1).to(accelerator.device)  # [b, 64, 64, 1]
