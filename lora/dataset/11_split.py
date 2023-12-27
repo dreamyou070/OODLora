@@ -31,7 +31,7 @@ def main(args) :
             os.makedirs(synthetic_corrected_dir, exist_ok=True)
 
             bad_cats = os.listdir(test_dir)
-
+            """
             for bad_cat in bad_cats :
                 if bad_cat != 'bad' and bad_cat != 'gt' and bad_cat != 'corrected':
 
@@ -69,9 +69,9 @@ def main(args) :
 
                             os.rename(long_name_rgb_dir, new_long_name_rgb_dir)
                             os.rename(long_name_gt_dir, new_long_name_corrected_dir)
-
-            train_good_bad_folder = os.path.join(base_folder, f'{category}/bad/good')
-            train_good_corrected_folder = os.path.join(base_folder, f'{category}/corrected/good')
+            """
+            train_good_bad_folder = os.path.join(base_folder, f'{category}/train/bad/good')
+            train_good_corrected_folder = os.path.join(base_folder, f'{category}/train/corrected/good')
             good_images = os.listdir(train_good_bad_folder)
             good_num_imgs = len(good_images)
             good_random_idx = sample(range(0, good_num_imgs), int(good_num_imgs * 0.2))
