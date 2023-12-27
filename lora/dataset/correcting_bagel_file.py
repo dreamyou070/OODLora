@@ -10,17 +10,30 @@ def main(args) :
     for category in categories:
         if category == 'bagel' :
 
-            train_gt_dir = os.path.join(base_folder, f'bagel/train/gt')
-            folders = os.listdir(train_gt_dir)
-            for folder in folders :
-                if '_' not in folder :
-                    train_folder = os.path.join(train_gt_dir, folder)
-                    test_folder = os.path.join(train_gt_dir, f'test_{folder}')
-                    test_imgs = os.listdir(test_folder)
-                    for test_img in test_imgs :
-                        org_dir = os.path.join(test_folder, test_img)
-                        new_dir = os.path.join(train_folder, test_img)
-                        os.rename(org_dir, new_dir)
+            bad_folder = os.path.join(base_folder, f'bagel/train/bad')
+            corrected_folder = os.path.join(base_folder, f'bagel/train/corrected')
+            cats = os.listdir(bad_folder)
+            for cat in cats:
+
+                bad_cat_folder = os.path.join(bad_folder, cat)
+                corrected_cat_folder = os.path.join(corrected_folder, cat)
+
+                images = os.listdir(corrected_cat_folder)
+
+                for image in images:
+
+                    bad_dir = os.path.join(bad_cat_folder, image)
+
+                    if not os.path.exists(bad_dir):
+
+                        name, ext = os.path.splitext(image)
+                        name_list = name.split('_')
+                        bad_pure_name = f'{name_list[1]}{ext}'
+                        test_dir = os.path.join(base_folder, f'{category}/test/{cat}/rgb')
+                        bad_source_dir = os.path.join(test_dir, bad_pure_name)
+                        os.copy(bad_source_dir, bad_dir)
+
+
 
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
