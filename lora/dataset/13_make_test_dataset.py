@@ -20,8 +20,8 @@ def main(args):
                     folder_dir = os.path.join(test_folder, folder)
                     rgb_dir = os.path.join(folder_dir, 'rgb')
                     gt_dir = os.path.join(folder_dir, 'gt')
-                    new_rgb_dir = os.path.join(test_folder, f'bad/{folder}')
-                    new_gt_dir = os.path.join(test_folder, f'corrected/{folder}')
+                    new_rgb_dir = os.path.join(test_folder, f'bad/1_{folder}')
+                    new_gt_dir = os.path.join(test_folder, f'corrected/1_{folder}')
                     shutil.copytree(rgb_dir, new_rgb_dir)
                     shutil.copytree(gt_dir, new_gt_dir)
 
