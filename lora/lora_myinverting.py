@@ -61,24 +61,20 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         attention_probs_object_sub = attention_probs_back.clone().detach()
                     else :
                         attention_probs_object_sub = attention_probs_object.clone().detach()
-
                     pixel_num = attention_probs_object_sub.shape[1]
                     if int(pixel_num ** 0.5) in args.cross_map_res:
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx] # head, pix_num, 1
                             obj_attn_vector = attention_probs_object[:, :, word_idx]
-                            attention_diff = torch.nn.functional.mse_loss(back_attn_vector,
-                                                                          obj_attn_vector,
-                                                                          reduction='none')
-                            pixel_num = attention_diff.shape[1]
+                            attention_diff = torch.nn.functional.mse_loss(back_attn_vector,obj_attn_vector,reduction='none')
                             mask = torch.where(attention_diff > mask_thredhold, 1, 0)
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
                             attention_probs_object_sub[:, :, word_idx] = attn_vector
                     attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
                     hidden_states = torch.bmm(attention_probs, value)
-
             elif not is_cross_attention and trg_indexs_list is not None :
+                # how can i seg
                 hidden_states = torch.bmm(attention_probs, value)
                 background_hidden_states, object_hidden_states = hidden_states.chunk(2, dim=0)
                 object_hidden_states_sub = background_hidden_states.clone().detach()
@@ -92,13 +88,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 hidden_states = torch.cat([background_hidden_states, object_hidden_states_sub], dim=0)
             else :
                 hidden_states = torch.bmm(attention_probs, value)
-                #hidden_states = torch.bmm(attention_probs, value)
-                #hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
-
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
             return hidden_states
-
         return forward
 
     def register_recr(net_, count, layer_name):
@@ -236,97 +228,7 @@ def main(args) :
 
     print(f' (3.2) train images')
     trg_h, trg_w = args.resolution
-    """
-    train_img_folder = os.path.join(args.concept_image_folder, 'train/bad')
-    train_mask_folder = os.path.join(args.concept_image_folder, 'train/gt')
-    classes = os.listdir(train_img_folder)
-    output_dir = os.path.join(args.output_dir, 'train_dataset')
-    os.makedirs(output_dir, exist_ok=True)
-    for class_name in classes:
-        repeat, c_name = class_name.split('_')
 
-        class_base_folder = os.path.join(output_dir, c_name)
-        os.makedirs(class_base_folder, exist_ok=True)
-
-        image_folder = os.path.join(train_img_folder, class_name)
-        if '_' in class_name:
-            class_name =  '_'.join(class_name.split('_')[1:])
-
-        invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {c_name}')
-        inv_unc, inv_c = invers_context.chunk(2)
-        mask_folder = os.path.join(train_mask_folder, class_name)
-
-        train_images = os.listdir(image_folder)
-        for j, train_img in enumerate(train_images):
-
-            name, ext = os.path.splitext(train_img)
-
-            train_img_dir = os.path.join(image_folder, train_img)
-
-            shutil.copy(train_img_dir,
-                        os.path.join(class_base_folder, train_img))
-            if 'good' not in class_name:
-                mask_img_dir = os.path.join(mask_folder, train_img)
-                shutil.copy(mask_img_dir, os.path.join(class_base_folder, f'{name}_mask{ext}'))
-
-            print(f' (2.3.1) inversion')
-            image_gt_np = load_image(train_img_dir, trg_h = int(trg_h), trg_w =int(trg_w))
-            with torch.no_grad():
-                org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
-                st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
-                recon_img = vae.decode(st_latent/0.18215)['sample']
-                recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                image = (recon_img * 255).astype(np.uint8)
-                image = Image.fromarray(image)
-                print(f'vae recon save')
-                image.save(os.path.join(class_base_folder,'student_vae_recon.png'))
-                inf_time = inference_times.tolist()
-                inf_time.reverse() # [0,20,40,60,80,100 , ... 980]
-                org_latent_dict, time_steps, pil_images = ddim_loop(args,
-                                                                    latent=org_vae_latent,
-                                                                    context=inv_c,
-                                                                    inference_times=inf_time,
-                                                                    scheduler=scheduler,
-                                                                    unet=invers_unet,
-                                                                    vae=vae,
-                                                                    base_folder_dir=class_base_folder,
-                                                                    is_org = True)
-                latent_dict, time_steps, pil_images = ddim_loop(args,
-                                                                latent=st_latent,
-                                                                context=inv_c,
-                                                                inference_times=inf_time,
-                                                                scheduler=scheduler,
-                                                                unet=invers_unet,
-                                                                vae=vae,
-                                                                base_folder_dir=class_base_folder,
-                                                                is_org = False)
-
-                noising_time = inference_times[base_num]  # 100
-                recon_1_times = inference_times[:base_num+1].tolist()
-                recon_latent_dict, _, _ = recon_loop(args,
-                                                     None,
-                                                     start_latent=latent_dict[int(time_steps[-1])],
-                                                     context=context,
-                                                     inference_times=recon_1_times,
-                                                     scheduler=scheduler,
-                                                     unet=unet,
-                                                     vae=vae,
-                                                     base_folder_dir=class_base_folder,
-                                                     controller=controller)
-
-                recon_times = inference_times[base_num:].tolist()
-                st_noise_latent = recon_latent_dict[int(noising_time.item())]
-                recon_loop(args,
-                           org_latent_dict,
-                           start_latent = st_noise_latent,
-                           context = context,
-                           inference_times = recon_times,
-                           scheduler = scheduler,
-                           unet = unet,
-                           vae = vae,
-                           base_folder_dir = class_base_folder,
-                           controller = controller,)
-    """
     print(f' (3.3) test images')
     test_img_folder = os.path.join(args.concept_image_folder, 'test/bad')
     test_mask_folder = os.path.join(args.concept_image_folder, 'test/corrected')

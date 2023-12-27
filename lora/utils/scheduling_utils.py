@@ -155,12 +155,13 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                                    trg_indexs_list, None)
 
             if latent_dict is not None:
-                z_noise_pred, y_noise_pred = noise_pred.chunk(2)
+                #z_noise_pred, y_noise_pred = noise_pred.chunk(2)
                 back_latent = latent_dict[prev_time]
-                obj_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
-                mask_latent = torch.nn.functional.mse_loss(obj_latent, back_latent, reduction='none')
-                mask_latent = torch.where(mask_latent > args.pixel_mask_thredhold, 1, 0)
-                y_latent = obj_latent * mask_latent + back_latent * (1 - mask_latent)
+                #obj_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
+                #mask_latent = torch.nn.functional.mse_loss(obj_latent, back_latent, reduction='none')
+                #mask_latent = torch.where(mask_latent > args.pixel_mask_thredhold, 1, 0)
+                #y_latent = obj_latent * mask_latent + back_latent * (1 - mask_latent)
+                y_latent = back_latent
             else :
                 y_latent = prev_step(noise_pred, t, x_latent, scheduler)
 
