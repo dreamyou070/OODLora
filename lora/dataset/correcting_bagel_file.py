@@ -1,7 +1,7 @@
 import os
 from PIL import Image
 import numpy as np
-import argparse
+import argparse, shutil
 from random import sample
 def main(args) :
 
@@ -31,7 +31,7 @@ def main(args) :
                         bad_pure_name = f'{name_list[1]}{ext}'
                         test_dir = os.path.join(base_folder, f'{category}/test/{cat}/rgb')
                         bad_source_dir = os.path.join(test_dir, bad_pure_name)
-                        os.copy(bad_source_dir, bad_dir)
+                        shutil.copy(bad_source_dir, bad_dir)
 
 
 
