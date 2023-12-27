@@ -49,10 +49,9 @@ def main(args) :
                 num_imgs = len(new_names)
                 random_idx = sample(range(0, num_imgs), int(num_imgs * 0.2))
                 for idx in random_idx:
-                    image = images[idx]
+                    new_name_elem = new_names[idx]
                     for good_img in good_imges:
-                        good_img_pure_name, ext = os.path.splitext(good_img)
-                        long_name = f'{image}_{good_img_pure_name}'
+                        long_name = f'{new_name_elem}_{good_img}'
 
                         long_name_rgb_dir = os.path.join(synthetic_dir, f'{bad_cat}/{long_name}')
                         long_name_corrected_dir = os.path.join(synthetic_corrected_dir, f'{bad_cat}/{long_name}')
