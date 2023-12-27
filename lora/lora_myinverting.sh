@@ -7,7 +7,7 @@ conda activate venv_lora
 ml purge
 ml load cuda/11.0
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 51189 lora_myinverting.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 53189 lora_myinverting.py \
   --process_title parksooyeon \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 \
@@ -23,5 +23,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --mask_thredhold 0.01 \
   --num_ddim_steps 50 \
   --other_token_preserving \
-  --pixel_mask_thredhold 0.3 \
-  --unet_only_inference_times 20
+  --pixel_mask_thredhold 0.01 \
+  --unet_only_inference_times 10

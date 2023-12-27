@@ -153,51 +153,25 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                                    t,
                                    input_cond,
                                    trg_indexs_list, None)
-            """
-            if latent_dict is not None:
-                mask_dict = controller.step_store
-                controller.reset()
-                layer_names = mask_dict.keys()
-                mask_list = []
-                import torchvision
-                totensor = torchvision.transforms.ToTensor()
-                for layer_name in layer_names:
-                    mask_torch = mask_dict[layer_name][0] # head, pix_num, 1
-                    if mask_torch.dim() == 2 :
-                        mask_torch = mask_torch.unsqueeze(-1)
-                    head, pix_num, _ = mask_torch.shape
-                    res = int(pix_num ** 0.5)
-                    cross_maps = mask_torch.reshape(head, res, res, mask_torch.shape[-1]) # head, res, res, 1
-                    cross_maps = cross_maps.mean([-1])  # head, res, res
-                    cross_maps = cross_maps.mean([0]).to('cpu')  # res, res
-                    if res == 64 :
-                        mask_list.append(cross_maps)
-                mask = torch.stack(mask_list, dim=0).mean([0]).unsqueeze(0)
-                mask = torch.where(mask > args.pixel_mask_thredhold, 1, 0)
-                mask_sum = mask.sum()
-                y_latent = z_latent * (1-mask).to(z_latent.device) + x_latent * (mask).to(z_latent.device) # 1,4,64,64
-                y_noise_pred = call_unet(unet, y_latent, t, con, None, None)
-
-            else :
-                y_latent = x_latent
-                y_noise_pred = noise_pred
-            # --------------------- mask --------------------- #
-            """
 
             if latent_dict is not None:
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
+                back_latent = latent_dict[prev_time]
+                obj_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
+                mask_latent = torch.nn.functional.mse_loss(obj_latent, back_latent, reduction='none')
+                mask_latent = torch.where(mask_latent > args.pixel_mask_thredhold, 1, 0)
+                y_latent = obj_latent * mask_latent + back_latent * (1 - mask_latent)
             else :
-                y_noise_pred = noise_pred
-            y_latent = x_latent
+                y_latent = prev_step(noise_pred, t, x_latent, scheduler)
+
+            # --------------------- mask --------------------- #
+            latent = y_latent
             controller.reset()
-            latent = prev_step(y_noise_pred, t, y_latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')
             if prev_time == 0:
-
                 pil_img = Image.fromarray(np_img)
                 pil_images.append(pil_img)
                 pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
-
         all_latent_dict[prev_time] = latent
     time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images
