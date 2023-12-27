@@ -153,6 +153,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                                    t,
                                    input_cond,
                                    trg_indexs_list, None)
+            """
             if latent_dict is not None:
                 mask_dict = controller.step_store
                 controller.reset()
@@ -181,6 +182,9 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 y_latent = x_latent
                 y_noise_pred = noise_pred
             # --------------------- mask --------------------- #
+            """
+            z_noise_pred, y_noise_pred = noise_pred.chunk(2)
+            y_latent = x_latent
             controller.reset()
             latent = prev_step(y_noise_pred, t, y_latent, scheduler)
             np_img = latent2image(latent, vae, return_type='np')

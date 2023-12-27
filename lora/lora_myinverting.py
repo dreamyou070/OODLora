@@ -22,7 +22,7 @@ try:
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
 
-def register_attention_control(unet: nn.Module, controller: AttentionStore,  mask_threshold: float = 1):  # if mask_threshold is 1, use itself
+def register_attention_control(unet: nn.Module, controller: AttentionStore,  mask_thredhold: float = 1):  # if mask_threshold is 1, use itself
 
     def ca_forward(self, layer_name):
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
@@ -63,7 +63,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                                                                       reduction='none')
                         pixel_num = attention_diff.shape[1]
                         if int(pixel_num ** 0.5)  in args.cross_map_res :
-                            mask = torch.where(attention_diff > mask_threshold, 1, 0)
+                            mask = torch.where(attention_diff > mask_thredhold, 1, 0)
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
                             attention_probs_object[:, :, word_idx] = attn_vector
                     attention_probs = torch.cat([attention_probs_back, attention_probs_object], dim=0)

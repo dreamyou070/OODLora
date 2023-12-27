@@ -1,16 +1,11 @@
 #!/bin/bash
-
 echo $CUDA_VISIBLE_DEVICES
 echo $SLURM_NODELIST
 echo $SLURM_NODEID
-
 source ~/.bashrc
 conda activate venv_lora
 ml purge
 ml load cuda/11.0
-
-# if mask_theredhold is big, means more background
-# if mask thredhold is small means more LORA
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 51189 lora_myinverting.py \
   --process_title parksooyeon \
@@ -28,5 +23,3 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --mask_thredhold 0.01 \
   --num_ddim_steps 50 \
   --unet_only_inference_times 50
-
-
