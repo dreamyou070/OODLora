@@ -63,6 +63,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         attention_probs_object_sub = attention_probs_object.clone().detach()
                     pixel_num = attention_probs_object_sub.shape[1]
                     map_list = []
+                    res = int(pixel_num ** 0.5)
+                    print(f'args.cross_map_res : {args.cross_map_res} | res : {res}')
+
                     if int(pixel_num ** 0.5) in args.cross_map_res:
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
