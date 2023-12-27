@@ -83,7 +83,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     back_vector = background_hidden_states[:, pix_idx, :]
                     obj_vector = object_hidden_states[:, pix_idx, :]
                     vector_diff = torch.nn.functional.mse_loss(back_vector, obj_vector, reduction='none').mean()
-                    if vector_diff > args.pixel_mask_thredhold :
+                    if vector_diff > args.self_attn_mask_thredhold :
                         object_hidden_states_sub[:, pix_idx, :] = obj_vector
                 hidden_states = torch.cat([background_hidden_states, object_hidden_states_sub], dim=0)
             else :
@@ -173,7 +173,7 @@ def main(args) :
     output_dir = os.path.join(output_dir,
                            f'lora_epoch_{model_epoch}_mask_thred_{args.mask_thredhold}_'
                            f'from_{base_num}_other_token_preserving_{args.other_token_preserving}_'
-                           f'pixel_mask_thredhold_{args.pixel_mask_thredhold}_')
+                           f'pixel_mask_thredhold_{args.pixel_mask_thredhold}_self_attn_mask_thredhold_{args.self_attn_mask_thredhold}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
@@ -364,6 +364,8 @@ if __name__ == "__main__":
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
     parser.add_argument("--pixel_mask_thredhold", type=float, default=0.1)
+    parser.add_argument("--self_attn_mask_thredhold", type=float, default=0.1)
+
     parser.add_argument("--other_token_preserving", action = 'store_true')
     import ast
     def arg_as_list(arg):
