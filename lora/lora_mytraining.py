@@ -677,7 +677,7 @@ class NetworkTrainer:
                             res = int(math.sqrt(pix_num))
                             attn_score = attn_score.reshape(b, res, res, -1) # [b, res, res, 1]
 
-                            binary_map = batch['binary_img'].detach().cpu()
+                            binary_map = batch['binary_images'].detach().cpu()
                             maps = []
                             for binary_map_i in binary_map:
                                 binary_map_i = binary_map_i.squeeze()
