@@ -674,7 +674,9 @@ class NetworkTrainer:
                         attn_loss = 0
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0] # [b, pix_num, 1]
-                            b, pix_num, _ = attn_score.shape
+                            if attn_score.dim() != 3:
+                                attn_score = attn_score.unsqueeze(-1)
+                            b, pix_num = attn_score.shape
                             res = int(math.sqrt(pix_num))
                             attn_score = attn_score.reshape(b, res, res, -1) # [b, res, res, 1]
 
