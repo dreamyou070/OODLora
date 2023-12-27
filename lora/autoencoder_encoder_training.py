@@ -264,6 +264,15 @@ class NetworkTrainer:
                     latent = DiagonalGaussianDistribution(student(img)).sample()
                     recon = vae.decode(latent)['sample']
                     batch = recon.shape[0]
+                    for b in range(batch):
+                        caption = captions[b]
+                        recon = recon[b, :, :, :]
+                        recon = recon.unsqueeze(0)
+                        recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        image = (recon_img * 255).astype(np.uint8)
+                        wandb.log({"validation recon": [wandb.Image(img, caption=caption)]})
+                    
+                    
                     if batch != 1:
                         recon = recon[0]
                         recon = recon.unsqueeze(0)
@@ -313,7 +322,7 @@ class NetworkTrainer:
                     batch = recon.shape[0]
                     for b in range(batch):
                         caption = captions[b]
-                        recon = recon[b, :, :, :]
+                        recon = recon[b]
                         recon = recon.unsqueeze(0)
                         recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                         image = (recon_img * 255).astype(np.uint8)
