@@ -68,6 +68,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     alpha_prod_t_matrix = torch.ones_like(model_output) * alpha_prod_t
 
     alpha_prod_t_prev = scheduler.alphas_cumprod[prev_timestep]
+
     alpha_prod_t_prev_matrix = torch.ones_like(model_output) * alpha_prod_t_prev
     beta_prod_t = 1 - alpha_prod_t
     beta_prod_t_matrix = torch.ones_like(model_output) * beta_prod_t
