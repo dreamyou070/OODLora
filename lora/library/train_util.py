@@ -1149,7 +1149,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
             if class_caption is None:
                 class_caption = 'good' ## TODO remove
-            print(f'caption : {caption} | class_caption : {class_caption}')
+
             if image_info.text_encoder_outputs1 is not None:
                 text_encoder_outputs1_list.append(image_info.text_encoder_outputs1)
                 text_encoder_outputs2_list.append(image_info.text_encoder_outputs2)

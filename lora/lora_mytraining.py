@@ -318,6 +318,8 @@ class NetworkTrainer:
         with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
 
+        logging_file = os.path.join(args.output_dir, f"validation_log_{time}.txt")
+
         print(f'\n step 5. mixed precision and model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
@@ -607,7 +609,7 @@ class NetworkTrainer:
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             network.on_epoch_start(text_encoder, unet)
-            """
+
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -808,22 +810,65 @@ class NetworkTrainer:
                                    text_encoder, unet)
             if attention_storer is not None:
                 attention_storer.reset()
-            """
+
             # ------------------------------------------------------------------------------------ #
-            # validation
+            # validation (1) loss record
             valid_epoch_normal_loss = 0
-            valid_epoch_abnormal_loss = 0
             for step, valid_batch in enumerate(valid_dataloader):
                 with torch.no_grad():
                     instance_seed = random.randint(0, 2 ** 31)
                     generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
                     latents = vae.encode(valid_batch["images"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
+                    valid_class_list = valid_batch["train_class_list"]
+                    normal_indexs = [i for index, i in enumerate(valid_class_list) if i == 1]
+                    if len(normal_indexs) > 0 :
+                        latents = latents[normal_indexs, :, :, :]
+                        latents = latents * self.vae_scale_factor
+                        if latents.dim() != 4:
+                            latents = latents.unsqueeze(0)
+                        input_latents = latents
+                        # text condition
+                        text_encoder_conds = self.get_text_cond(args, accelerator, valid_batch, tokenizers, text_encoders,weight_dtype)
+                        text_encoder_conds = text_encoder_conds[normal_indexs, :, :]
+                        if text_encoder_conds.dim() != 3:
+                            text_encoder_conds = text_encoder_conds.unsqueeze(0)
+                        input_condition = text_encoder_conds
 
+                        # noise latent
+                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, input_latents)
 
+                        next_timesteps = (timesteps+1).tolist()
+                        next_timesteps = [j if j != len(noise_scheduler.alphas_cumprod.tolist()) else len(noise_scheduler.alphas_cumprod.tolist()) - 1 for j in next_timesteps]
+                        alpha_prod_t_next = noise_scheduler.alphas_cumprod[next_timesteps]
+                        alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
+                        gamma = (alpha_prod_t / alpha_prod_t_next) ** 0.5
 
-
-
-
+                        noise_pred_org = self.call_unet(args, accelerator, enc_unet, noisy_latents, timesteps, input_condition, batch, weight_dtype,
+                                                        None, mask_imgs=None)
+                        noise_diff = noise - noise_pred_org
+                        gamma = gamma.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+                        gamma = gamma.expand(noise_pred_org.shape)
+                        noise_diff_org = noise_diff * gamma.to(noise_diff.device)
+                        noise_pred = self.call_unet(args, accelerator, unet,noisy_latents, timesteps,input_condition, batch, weight_dtype,
+                                                    None,mask_imgs =None)
+                        attention_storer.reset()
+                        noise_diff_pred = noise_pred - noise
+                        if args.normal_training :
+                            task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
+                            task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
+                            task_loss = task_loss.mean()
+                            log_loss["validation_loss/task_loss"] = task_loss
+                        else :
+                            denoising_loss = torch.nn.functional.mse_loss(noise_diff_org.float(), noise_diff_pred.float(), reduction="none")
+                            denoising_loss = denoising_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
+                            task_loss = denoising_loss.mean()
+                            log_loss["calidation_loss/denoising_loss"] = task_loss
+                        valid_epoch_normal_loss += task_loss.item()
+            #
+            valid_log = {'epoch': {epoch + 1}, 'normal_task_loss': valid_epoch_normal_loss,}
+            if is_main_process:
+                with open(logging_file ,'a') as f :
+                    f.write(f'{valid_log}\n')
 
         if is_main_process:
             network = accelerator.unwrap_model(network)
