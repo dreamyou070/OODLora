@@ -5,3 +5,5 @@ import torch
 
 
 from random import sample
+mask_img = Image.fromarray(np.zeros((512,512)).astype(np.uint8))
+mask_img.show()

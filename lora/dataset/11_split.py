@@ -11,9 +11,12 @@ def main(args) :
         if category == args.trg_category:
 
             category_folder = os.path.join(base_folder, category)
+
             train_dir = os.path.join(category_folder, 'train')
+
             good_img_dir = os.path.join(train_dir, 'good/rgb')
             good_imges = os.listdir(good_img_dir)
+
             test_dir = os.path.join(category_folder, 'test')
 
             synthetic_dir = os.path.join(train_dir, 'bad')
@@ -66,6 +69,29 @@ def main(args) :
 
                             os.rename(long_name_rgb_dir, new_long_name_rgb_dir)
                             os.rename(long_name_gt_dir, new_long_name_corrected_dir)
+
+            train_good_bad_folder = os.path.join(base_folder, f'{category}/bad/good')
+            train_good_corrected_folder = os.path.join(base_folder, f'{category}/corrected/good')
+            good_images = os.listdir(train_good_bad_folder)
+            good_num_imgs = len(good_images)
+            good_random_idx = sample(range(0, good_num_imgs), int(good_num_imgs * 0.2))
+            for idx in good_random_idx:
+                good_img = good_images[idx]
+                train_good_bad_img_dir = os.path.join(train_good_bad_folder, good_img)
+                train_good_corrected_img_dir = os.path.join(train_good_corrected_folder, good_img)
+
+                test_good_dir = os.path.join(test_dir, f'bad/good')
+                os.makedirs(test_good_dir, exist_ok=True)
+                test_good_bad_img_dir = os.path.join(test_good_dir, good_img)
+                os.rename(train_good_bad_img_dir, test_good_bad_img_dir)
+
+                test_gt_dir = os.path.join(test_dir, f'corrected/good')
+                os.makedirs(test_gt_dir, exist_ok=True)
+                mask_img = Image.fromarray(np.zeros((512, 512)).astype(np.uint8))
+                mask_img.save(os.path.join(test_gt_dir, good_img))
+
+
+
 
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
