@@ -69,6 +69,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             back_attn_vector = 255 * back_attn_vector / back_attn_vector.max()
+                            minus_score = torch.where(back_attn_vector < 0 , 1, 0)
+                            print(f'minus_score : {minus_score.sum()}')
                             back_np = back_attn_vector.detach().cpu().numpy()
 
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
