@@ -268,20 +268,7 @@ class NetworkTrainer:
                     import numpy as np
                     image = (recon_img * 255).astype(np.uint8)
                     wandb.log({"training recon": [wandb.Image(image, caption="recon")]})
-            # --------------------------------------------------------------------------------------------------------- #
-            with torch.no_grad():
-                if is_main_process:
-                    img = batch['images'].to(dtype=weight_dtype)
-                    latent = DiagonalGaussianDistribution(student(img)).sample()
-                    recon = vae.decode(latent)['sample']
-                    batch = recon.shape[0]
-                    if batch != 1:
-                        recon = recon[0]
-                        recon = recon.unsqueeze(0)
-                    recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                    import numpy as np
-                    image = (recon_img * 255).astype(np.uint8)
-                    wandb.log({"training recon": [wandb.Image(image, caption="recon")]})
+
 
             # validation
             valid_epoch_normal_loss = 0
@@ -327,19 +314,6 @@ class NetworkTrainer:
                     image = (recon_img * 255).astype(np.uint8)
                     wandb.log({"validation recon": [wandb.Image(image, caption="recon")]})
 
-            # --------------------------------------------------------------------------------------------------------- #
-            # [3] model save
-            if args.save_every_n_epochs is not None:
-                print('saving model')
-                accelerator.wait_for_everyone()
-                if accelerator.is_main_process:
-                    trg_epoch = str(epoch + 1).zfill(6)
-                    save_directory = os.path.join(args.output_dir, f'vae_student_model')
-                    os.makedirs(save_directory, exist_ok=True)
-                    state_dict = student.state_dict()
-                    torch.save(state_dict,
-                               os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
-                    # inference
 
 
 if __name__ == "__main__":
