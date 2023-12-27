@@ -80,11 +80,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         map = map.sum(dim=0, dtype=torch.float32)
                         map = torch.where(map > 0, 1, 0)
                         map = map.reshape((res, res)).detach().cpu()
-                        np_map = np.array(map) * 255
+                        np_map = (np.array(map) * 255).astype(np.uint8)
                         aug_map = Image.fromarray(np_map).resize((64, 64))
                         np_aug_map = np.array(aug_map)
                         torch_aug_map = torch.tensor(np_aug_map)
-                        mask = torch.where(torch_aug_map > 100, 1, 0) # [64,64]
+                        mask = torch.where(torch_aug_map > 10, 1, 0) # [64,64]
                         controller.store(mask, layer_name)
                         attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
 
