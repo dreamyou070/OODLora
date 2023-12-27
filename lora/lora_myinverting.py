@@ -90,8 +90,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     vector_diff = torch.nn.functional.mse_loss(back_vector, obj_vector, reduction='none').mean()
                     if vector_diff > args.pixel_mask_thredhold :
                         object_hidden_states_sub[:, pix_idx, :] = obj_vector
-                hidden_states = torch.cat([background_hidden_states,
-                                           object_hidden_states_sub], dim=0)
+                hidden_states = torch.cat([background_hidden_states, object_hidden_states_sub], dim=0)
+            else :
+                hidden_states = torch.bmm(attention_probs, value)
+                #hidden_states = torch.bmm(attention_probs, value)
+                #hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
 
 
 
