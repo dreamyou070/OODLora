@@ -80,7 +80,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
             elif not is_cross_attention and trg_indexs_list is not None :
                 hidden_states = torch.bmm(attention_probs, value)
-                print(f'self attention, hidden_states shape : {hidden_states.shape}')
                 background_hidden_states, object_hidden_states = hidden_states.chunk(2, dim=0)
                 object_hidden_states_sub = background_hidden_states.clone().detach()
                 h, pix_num, dim = background_hidden_states.shape
