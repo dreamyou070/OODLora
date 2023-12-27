@@ -183,7 +183,10 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 y_noise_pred = noise_pred
             # --------------------- mask --------------------- #
             """
-            z_noise_pred, y_noise_pred = noise_pred.chunk(2)
+            if latent_dict is not None:
+                z_noise_pred, y_noise_pred = noise_pred.chunk(2)
+            else :
+                y_noise_pred = noise_pred
             y_latent = x_latent
             controller.reset()
             latent = prev_step(y_noise_pred, t, y_latent, scheduler)
