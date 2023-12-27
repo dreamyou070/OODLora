@@ -301,10 +301,10 @@ def main(args) :
     test_img_folder = os.path.join(args.concept_image_folder, 'test/bad')
     test_mask_folder = os.path.join(args.concept_image_folder, 'test/corrected')
     classes = os.listdir(test_img_folder)
-    output_dir = os.path.join(args.output_dir, 'test')
-    os.makedirs(output_dir, exist_ok=True)
+    test_output_dir = os.path.join(output_dir, 'test')
+    os.makedirs(test_output_dir, exist_ok=True)
     for class_name in classes:
-        class_base_folder = os.path.join(output_dir, class_name)
+        class_base_folder = os.path.join(test_output_dir, class_name)
         os.makedirs(class_base_folder, exist_ok=True)
 
         image_folder = os.path.join(test_img_folder, class_name)
@@ -317,6 +317,8 @@ def main(args) :
         for j, test_image in enumerate(test_images):
 
             name, ext = os.path.splitext(test_image)
+            trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
+            os.makedirs(trg_img_output_dir, exist_ok=True)
 
             test_img_dir = os.path.join(image_folder, test_image)
             shutil.copy(test_img_dir, os.path.join(class_base_folder, test_image))
@@ -345,7 +347,7 @@ def main(args) :
                                                                     scheduler=scheduler,
                                                                     unet=invers_unet,
                                                                     vae=vae,
-                                                                    base_folder_dir=class_base_folder,
+                                                                    base_folder_dir=trg_img_output_dir,
                                                                     is_org=True,
                                                                     name=name)
                 latent_dict, time_steps, pil_images = ddim_loop(args,
@@ -355,7 +357,7 @@ def main(args) :
                                                                 scheduler=scheduler,
                                                                 unet=invers_unet,
                                                                 vae=vae,
-                                                                base_folder_dir=class_base_folder,
+                                                                base_folder_dir=trg_img_output_dir,
                                                                 is_org=False,
                                                                 name=name)
 
@@ -369,7 +371,7 @@ def main(args) :
                                                      scheduler=scheduler,
                                                      unet=unet,
                                                      vae=vae,
-                                                     base_folder_dir=class_base_folder,
+                                                     base_folder_dir=trg_img_output_dir,
                                                      controller=controller,
                                                      name=name)
 
@@ -384,7 +386,7 @@ def main(args) :
                            scheduler=scheduler,
                            unet=unet,
                            vae=vae,
-                           base_folder_dir=class_base_folder,
+                           base_folder_dir=trg_img_output_dir,
                            controller=controller,
                            name=name)
 

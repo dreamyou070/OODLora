@@ -16,7 +16,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/bagel \
   --student_pretrained_dir ../result/MVTec3D-AD_experiment/bagel/vae_training/4_TS_encoder_normal_no_aug/vae_student_model/student_epoch_000150.pth \
   --network_weights ../result/MVTec3D-AD_experiment/bagel/lora_training/8_lora_diff_trining_32_res_attnmap/epoch-000001.safetensors \
-  --output_dir ../result/MVTec3D-AD_experiment/bagel/inference \
+  --output_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/8_lora_diff_trining_32_res_attnmap/inference \
   --resolution 512,512 \
   --seed 42 \
   --cross_map_res [32] \
