@@ -166,7 +166,9 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                     mask = mask.unsqueeze(0)# [64,64]
                     print(f'shape of mask : {mask.shape}')
                     masks.append(mask)
-                mask_latent = torch.cat(masks, dim=0).mean(dim=0)
+                mask_latent = torch.cat(masks, dim=0)
+                mask_latent = mask_latent.mean(dim=0, dtype=torch.float32)
+                #.mean(dim=0)
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
 
                 mask_latent = mask_latent.unsqueeze(0).unsqueeze(0)
