@@ -182,6 +182,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 #back_latent = latent_dict[prev_time]
                 #obj_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
                 #y_latent = obj_latent * mask_latent + back_latent * (1 - mask_latent)
+                y_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
             else :
                 y_latent = prev_step(noise_pred, t, x_latent, scheduler)
 
