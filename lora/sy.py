@@ -4,6 +4,9 @@ from PIL import Image
 import torch
 
 
-from random import sample
-mask_img = Image.fromarray(np.zeros((512,512)).astype(np.uint8))
-mask_img.show()
+res = (512,512)
+res = str(res)
+res = res.replace('(','')
+res = res.replace(')','')
+print(res)
+print(type(res))

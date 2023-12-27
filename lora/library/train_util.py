@@ -3823,13 +3823,15 @@ def prepare_dataset_args(args: argparse.Namespace, support_metadata: bool):
 
     # assert args.resolution is not None, f"resolution is required / resolution（解像度）を指定してください"
     if args.resolution is not None:
-        print(f"resolution : {type(args.resolution)}")
+        if type(args.resolution) != str:
+            args.resolution = str(args.resolution)
+            args.resolution = args.resolution.replace('(', '')
+            args.resolution = args.resolution.replace(')', '')
+
         args.resolution = tuple([int(r) for r in args.resolution.split(",")])
         if len(args.resolution) == 1:
             args.resolution = (args.resolution[0], args.resolution[0])
-        assert (
-            len(args.resolution) == 2
-        ), f"resolution must be 'size' or 'width,height' / resolution（解像度）は'サイズ'または'幅','高さ'で指定してください: {args.resolution}"
+        assert (len(args.resolution) == 2), f"resolution must be 'size' or 'width,height' / resolution（解像度）は'サイズ'または'幅','高さ'で指定してください: {args.resolution}"
 
     if args.face_crop_aug_range is not None:
         args.face_crop_aug_range = tuple([float(r) for r in args.face_crop_aug_range.split(",")])
