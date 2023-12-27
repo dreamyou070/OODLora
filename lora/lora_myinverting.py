@@ -70,7 +70,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             back_attn_vector = attention_probs_back[:, :, word_idx] # head, pix_num, 1
                             obj_attn_vector = attention_probs_object[:, :, word_idx]
                             attention_diff = torch.nn.functional.mse_loss(back_attn_vector,obj_attn_vector,reduction='none')
+                            attention_diff = torch.sum(attention_diff, 0)
+                            #attention_diff = attention_diff.sum(dim=0)
                             mask = torch.where(attention_diff > mask_thredhold, 1, 0)
+                            mask = mask.unsquee(0)
+                            mask = mask.expand(back_attn_vector.shape)
                             mask_sum = mask.sum()
                             print(f'layer_name: {layer_name}, mask_sum: {mask_sum}')
                             print(f'obj_attn_vector: {obj_attn_vector.shape} | mask : {mask.shape}')
