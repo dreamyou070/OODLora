@@ -4560,10 +4560,12 @@ def sample_images_reg(*args, **kwargs):
 
 def sample_images_common_reg(pipe_class,accelerator,
                              args: argparse.Namespace,
-                             epoch,steps,device,
+                             epoch,
+                             steps,device,
                              vae,tokenizer,text_encoder,unet,
                              sub_text_encoder,
-                             prompt_replacement=None,controlnet=None,attention_storer=None,
+                             prompt_replacement=None,
+                             controlnet=None,attention_storer=None,
                              efficient=False, save_folder_name = None):
 
     if args.sample_every_n_steps is None and args.sample_every_n_epochs is None:
@@ -4743,7 +4745,7 @@ def sample_images_common_reg(pipe_class,accelerator,
                 logging_caption_key = re.sub(r"[^a-zA-Z0-9_\-. ]+", "", logging_caption_key)
                 wandb_tracker.log(
                     {
-                        logging_caption_key: wandb.Image(image, caption=f"negative_prompt: {negative_prompt}"),
+                        logging_caption_key: wandb.Image(image, caption=f"prompt: {prompt} (epoch : {epoch})"),
                     }
                 )
             except:  # wandb 無効時
