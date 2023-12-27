@@ -325,7 +325,7 @@ class NetworkTrainer:
                         recon = recon[b]
                         recon = recon.unsqueeze(0)
                         recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                        image = (recon_img * 255).astype(np.uint8)
+                        img = (recon_img * 255).astype(np.uint8)
                         wandb.log({"validation recon": [wandb.Image(img, caption=caption)]})
 
 
