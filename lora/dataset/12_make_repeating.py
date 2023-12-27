@@ -19,6 +19,7 @@ def main(args):
             synthetic_gt_dir = os.path.join(train_dir, 'gt')
             synthetic_corrected_dir = os.path.join(train_dir, 'corrected')
             cats = os.listdir(synthetic_dir)
+            """
             for cat in cats:
                 before_cat = cat
                 if 'good' in cat :
@@ -44,7 +45,7 @@ def main(args):
                 after_repeat_cat_dir = os.path.join(synthetic_corrected_dir, after_repeat_cat)
                 #print(f'{before_cat_dir} -> {after_repeat_cat_dir}')
                 os.rename(before_cat_dir, after_repeat_cat_dir)
-
+            """
             test_dir = os.path.join(category_folder, 'test')
             synthetic_test_dir = os.path.join(test_dir, 'bad')
             synthetic_test_corrected_dir = os.path.join(test_dir, 'corrected')
