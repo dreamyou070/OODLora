@@ -46,24 +46,27 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
-                masked_attention_probs, org_attention_probs = attention_probs.chunk(2, dim=0)
+                background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
                 batch_num = len(trg_indexs_list)
-                attention_probs_batch = torch.chunk(org_attention_probs, batch_num, dim=0)
-                masked_attention_probs_batch = torch.chunk(masked_attention_probs, batch_num, dim=0)
+                attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
+                attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0)
+
                 vector_diff_list = []
-                for batch_idx, (attention_prob, masked_attention_prob) in enumerate(zip(attention_probs_batch, masked_attention_probs_batch)):
+                for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
                     batch_trg_index = trg_indexs_list[batch_idx]  # two times
                     for word_idx in batch_trg_index:
                         word_idx = int(word_idx)
-                        masked_attn_vector = masked_attention_prob[:, :, word_idx] # head, pix_num, 1
-                        org_attn_vector = attention_prob[:, :, word_idx]
-                        attention_diff = torch.nn.functional.mse_loss(masked_attn_vector, org_attn_vector,
-                                                           reduction='none')
+                        back_attn_vector = attention_probs_back[:, :, word_idx] # head, pix_num, 1
+                        obj_attn_vector = attention_probs_object[:, :, word_idx]
+                        attention_diff = torch.nn.functional.mse_loss(back_attn_vector,
+                                                                      obj_attn_vector,
+                                                                      reduction='none')
                         pixel_num = attention_diff.shape[1]
-                        if int(pixel_num ** 0.5) == args.trg_res :
+                        if int(pixel_num ** 0.5)  in args.cross_map_res :
                             mask = torch.where(attention_diff > mask_threshold, 1, 0)
-                            masked_attn_vector = org_attn_vector * (mask) + masked_attn_vector * (1 - mask)
-                        controller.store(attention_diff,layer_name)
+                            attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
+                            attention_probs_object[:, :, word_idx] = attn_vector
+                    attention_probs = torch.cat([attention_probs_back, attention_probs_object], dim=0)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -194,7 +197,7 @@ def main(args) :
         info = network.load_weights(args.network_weights)
     network.to(device)
     controller = AttentionStore()
-    register_attention_control(unet, controller)
+    register_attention_control(unet, controller, mask_thredhold=args.mask_thredhold)
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
@@ -417,5 +420,12 @@ if __name__ == "__main__":
     parser.add_argument("--unet_only_inference_times", type=int, default = 30)
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
+    import ast
+    def arg_as_list(arg):
+        v = ast.literal_eval(arg)
+        if type(v) is not list:
+            raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
+        return v
+    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
     args = parser.parse_args()
     main(args)
