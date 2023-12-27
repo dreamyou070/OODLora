@@ -4,6 +4,7 @@ import library.train_util as train_util
 import library.config_util as config_util
 import library.custom_train_functions as custom_train_functions
 from diffusers.models.vae import DiagonalGaussianDistribution
+import numpy as np
 import math
 import os
 import random
@@ -310,13 +311,12 @@ class NetworkTrainer:
                     latent = DiagonalGaussianDistribution(student(img)).sample()
                     recon = vae.decode(latent)['sample']
                     batch = recon.shape[0]
-                    if batch != 1:
-                        recon = recon[0]
+                    for b in range(batch):
+                        caption = captions[b]
+                        recon = recon[b, :, :, :]
                         recon = recon.unsqueeze(0)
-                    recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                    import numpy as np
-                    image = (recon_img * 255).astype(np.uint8)
-                    for caption, img in zip(captions, image):
+                        recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        image = (recon_img * 255).astype(np.uint8)
                         wandb.log({"validation recon": [wandb.Image(img, caption=caption)]})
 
 
