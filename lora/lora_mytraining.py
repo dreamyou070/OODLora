@@ -70,6 +70,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                             attn_map = attn_probs[:, :, word_idx]
                             attn_list.append(attn_map)
                     batch_attn_map = torch.cat(attn_list, dim=0)
+                    print(f'when storing, batch_attn_map.shape: {batch_attn_map.shape}')
                     controller.store(batch_attn_map, layer_name)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
