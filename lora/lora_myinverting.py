@@ -61,6 +61,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     else :
                         attention_probs_object_sub = attention_probs_object.clone().detach()
 
+                    pixel_num = attention_probs_object_sub.shape[1]
+                    print(f'pixel_num: {pixel_num}')
+
                     if int(pixel_num ** 0.5) in args.cross_map_res:
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
@@ -73,8 +76,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             mask = torch.where(attention_diff > mask_thredhold, 1, 0)
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
                             attention_probs_object_sub[:, :, word_idx] = attn_vector
-
                     attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
+
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
