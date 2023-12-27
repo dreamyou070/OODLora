@@ -628,6 +628,7 @@ class NetworkTrainer:
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                                 #good_latents = torch.where(torch.isnan(good_latents), torch.zeros_like(good_latents),good_latents)
                         latents = latents * self.vae_scale_factor
+                        batch = latents.shape[0]
                         #good_latents = good_latents * self.vae_scale_factor
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_class_list = batch["train_class_list"]
@@ -676,6 +677,14 @@ class NetworkTrainer:
                             b, pix_num, _ = attn_score.shape
                             res = int(math.sqrt(pix_num))
                             attn_score = attn_score.reshape(b, res, res, -1) # [b, res, res, 1]
+                            scores = attn_score.chunk(batch, dim=0)
+                            score_list = []
+                            for score in scores:
+                                # 8, res,res,1
+                                score_aug_np = np.array(Image.fromarray(score.numpy().astype(np.uint8)).resize((64, 64)))
+                                score_aug_tensor = torch.tensor(score_aug_np)[:, :,]
+                                score_list.append(score_aug_tensor)
+                            attn_score = torch.cat(score_list, dim=0).unsqueeze(-1).to(accelerator.device)  # [b, 64, 64, 1]
 
                             binary_map = batch['binary_images'].detach().cpu()
                             maps = []
@@ -688,6 +697,7 @@ class NetworkTrainer:
                                 binary_aug_tensor = binary_aug_tensor.expand((8,64,64))
                                 maps.append(binary_aug_tensor)
                             maps = torch.cat(maps, dim=0).unsqueeze(-1).to(accelerator.device) # [b, 64, 64, 1]
+
                             print(f'maps shape: {maps.shape}')
                             print(f'attn_score shape: {attn_score.shape}')
                             attn_score_pixel = attn_score * maps.to(dtype=weight_dtype)
