@@ -73,7 +73,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             attention_diff = torch.sum(attention_diff, 0)
                             #attention_diff = attention_diff.sum(dim=0)
                             mask = torch.where(attention_diff > mask_thredhold, 1, 0)
-                            mask = mask.unsquee(0)
+                            mask = mask.unsqueeze(0)
                             mask = mask.expand(back_attn_vector.shape)
                             mask_sum = mask.sum()
                             print(f'layer_name: {layer_name}, mask_sum: {mask_sum}')
