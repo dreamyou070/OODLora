@@ -175,13 +175,13 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 map = np.array(Image.fromarray(image).resize((64, 64)))
                 np_map = np.where(map > 100, 1, 0)
                 mask_latent = torch.from_numpy(np_map).unsqueeze(0).unsqueeze(0).float()
-                
+
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
                 #mask_latent = mask_latent.expand(z_noise_pred.shape).to(z_noise_pred.device)
 
                 back_latent = latent_dict[prev_time]
                 obj_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
-                y_latent = obj_latent * mask_latent + back_latent * (1 - mask_latent)
+                y_latent = obj_latent * mask_latent.to(obj_latent.device) + back_latent * (1 - mask_latent.to(obj_latent.device))
                 #y_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
             else :
                 y_latent = prev_step(noise_pred, t, x_latent, scheduler)
