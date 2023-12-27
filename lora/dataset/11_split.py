@@ -51,7 +51,8 @@ def main(args) :
                 for idx in random_idx:
                     image = images[idx]
                     for good_img in good_imges:
-                        long_name = f'{image}_{good_img}'
+                        good_img_pure_name, ext = os.path.splitext(good_img)
+                        long_name = f'{image}_{good_img_pure_name}'
 
                         long_name_rgb_dir = os.path.join(synthetic_dir, f'{bad_cat}/{long_name}')
                         long_name_corrected_dir = os.path.join(synthetic_corrected_dir, f'{bad_cat}/{long_name}')
