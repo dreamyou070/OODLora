@@ -78,14 +78,12 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             score_diff_map = obj_np - back_np
                             mask = np.where(score_diff_map > 0, 1, 0)
                             mask = torch.tensor(mask)
-                            print(f'mask : {mask.shape}')
+                            print(f'mask : {mask.shape} | sum : {mask.sum()}')
                             #attention_diff = torch.nn.functional.mse_loss(back_attn_vector,obj_attn_vector,reduction='none')
                             #attention_diff = torch.sum(attention_diff, 0)
                             #attention_diff = attention_diff.sum(dim=0)
                             #mask = torch.where(attention_diff > mask_thredhold, 1, 0)
-                            mask = mask.unsqueeze(0)
-                            mask = mask.expand(back_attn_vector.shape)
-                            mask_sum = mask.sum()
+
                             map_list.append(mask)
 
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
