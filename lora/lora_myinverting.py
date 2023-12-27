@@ -40,11 +40,12 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             if self.upcast_attention:
                 query = query.float()
                 key = key.float()
-            attention_scores = torch.baddbmm(
-                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
+
             if is_cross_attention and trg_indexs_list is not None:
                 background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
                 batch_num = len(trg_indexs_list)
@@ -62,8 +63,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         attention_probs_object_sub = attention_probs_object.clone().detach()
 
                     pixel_num = attention_probs_object_sub.shape[1]
-                    print(f'pixel_num: {pixel_num}')
-
                     if int(pixel_num ** 0.5) in args.cross_map_res:
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
@@ -77,8 +76,25 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
                             attention_probs_object_sub[:, :, word_idx] = attn_vector
                     attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
+                    hidden_states = torch.bmm(attention_probs, value)
 
-            hidden_states = torch.bmm(attention_probs, value)
+            elif not is_cross_attention :
+                hidden_states = torch.bmm(attention_probs, value)
+                background_hidden_states, object_hidden_states = hidden_states.chunk(2, dim=0)
+                object_hidden_states_sub = background_hidden_states.clone().detach()
+                h, pix_num, dim = background_hidden_states.shape
+                for pix_idx in range(pix_num) :
+                    back_vector = background_hidden_states[:, pix_idx, :]
+                    obj_vector = object_hidden_states[:, pix_idx, :]
+                    vector_diff = torch.nn.functional.mse_loss(back_vector, obj_vector, reduction='none').mean()
+                    if vector_diff > args.pixel_mask_thredhold :
+                        object_hidden_states_sub[:, pix_idx, :] = obj_vector
+                hidden_states = torch.cat([background_hidden_states,
+                                           object_hidden_states_sub], dim=0)
+
+
+
+
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
             return hidden_states
@@ -163,7 +179,9 @@ def main(args) :
     assert base_num >= 0, f'base_num should be larger than 0, but {base_num}'
 
     output_dir = os.path.join(output_dir,
-                           f'lora_epoch_{model_epoch}_student_epoch_{student_epoch}_mask_thred_{args.mask_thredhold}_from_{base_num}_other_token_preserving_{args.other_token_preserving}')
+                           f'lora_epoch_{model_epoch}_mask_thred_{args.mask_thredhold}_'
+                           f'from_{base_num}_other_token_preserving_{args.other_token_preserving}_'
+                           f'pixel_mask_thredhold_{args.pixel_mask_thredhold}_')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
@@ -443,6 +461,7 @@ if __name__ == "__main__":
     parser.add_argument("--unet_only_inference_times", type=int, default = 30)
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
+    parser.add_argument("--pixel_mask_thredhold", type=float, default=0.1)
     parser.add_argument("--other_token_preserving", action = 'store_true')
     import ast
     def arg_as_list(arg):
