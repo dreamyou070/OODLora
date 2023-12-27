@@ -77,17 +77,17 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
                             attention_probs_object_sub[:, :, word_idx] = attn_vector
 
-                    map = torch.cat(map_list, dim=0)
-                    print(f'before mean, map : {map.shape}')
-                    map = map.mean([0])
-                    np_map = np.array(map) * 255
-                    aug_map = Image.fromarray(np_map).resize((64, 64))
-                    np_aug_map = np.array(aug_map)
-                    torch_aug_map = torch.tensor(np_aug_map)
-                    mask = torch.where(torch_aug_map > 100, 1, 0)
-                    controller.store(mask, layer_name)
-                    attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
-                    hidden_states = torch.bmm(attention_probs, value)
+                        map = torch.cat(map_list, dim=0)
+                        print(f'before mean, map : {map.shape}')
+                        map = map.mean([0])
+                        np_map = np.array(map) * 255
+                        aug_map = Image.fromarray(np_map).resize((64, 64))
+                        np_aug_map = np.array(aug_map)
+                        torch_aug_map = torch.tensor(np_aug_map)
+                        mask = torch.where(torch_aug_map > 100, 1, 0)
+                        controller.store(mask, layer_name)
+                        attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
+                        hidden_states = torch.bmm(attention_probs, value)
             else :
                 hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
