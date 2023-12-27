@@ -35,7 +35,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --network_dim 64 --network_alpha 4 --train_batch_size 2 \
   --optimizer_type AdamW --lr_scheduler cosine_with_restarts --lr_warmup_steps 144 \
   --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 \
-  --resolution 512,512 \
+  --resolution '512,512' \
   --save_every_n_epochs 1 --sample_every_n_epochs 1 --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
   --max_train_steps 48000 \
   --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/train/bad \
