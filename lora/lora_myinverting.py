@@ -54,6 +54,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 vector_diff_list = []
                 for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
                     batch_trg_index = trg_indexs_list[batch_idx]  # two times
+                    if args.other_token_preserving :
+                        attention_probs_object_sub = attention_probs_back.clone().detach()
+                    else :
+                        attention_probs_object_sub = attention_probs_object.clone().detach()
                     for word_idx in batch_trg_index:
                         word_idx = int(word_idx)
                         back_attn_vector = attention_probs_back[:, :, word_idx] # head, pix_num, 1
@@ -65,8 +69,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         if int(pixel_num ** 0.5)  in args.cross_map_res :
                             mask = torch.where(attention_diff > mask_thredhold, 1, 0)
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
-                            attention_probs_object[:, :, word_idx] = attn_vector
-                    attention_probs = torch.cat([attention_probs_back, attention_probs_object], dim=0)
+                            attention_probs_object_sub[:, :, word_idx] = attn_vector
+                    attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -150,8 +154,9 @@ def main(args) :
 
     base_num = (args.num_ddim_steps - args.unet_only_inference_times)
     assert base_num >= 0, f'base_num should be larger than 0, but {base_num}'
+
     output_dir = os.path.join(output_dir,
-                           f'lora_epoch_{model_epoch}_student_epoch_{student_epoch}_mask_thred_{args.mask_thredhold}_from_{base_num}')
+                           f'lora_epoch_{model_epoch}_student_epoch_{student_epoch}_mask_thred_{args.mask_thredhold}_from_{base_num}_other_token_preserving_{args.other_token_preserving}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
@@ -321,11 +326,11 @@ def main(args) :
             os.makedirs(trg_img_output_dir, exist_ok=True)
 
             test_img_dir = os.path.join(image_folder, test_image)
-            shutil.copy(test_img_dir, os.path.join(class_base_folder, test_image))
+            shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
 
             if 'good' not in class_name:
                 mask_img_dir = os.path.join(mask_folder, test_image)
-                shutil.copy(mask_img_dir, os.path.join(class_base_folder, f'{name}_mask{ext}'))
+                shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
 
             print(f' (2.3.1) inversion')
             image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
@@ -431,6 +436,7 @@ if __name__ == "__main__":
     parser.add_argument("--unet_only_inference_times", type=int, default = 30)
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
+    parser.add_argument("--other_token_preserving", action = 'store_true')
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)

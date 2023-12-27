@@ -153,7 +153,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                                    t,
                                    input_cond,
                                    trg_indexs_list, None)
-            """
+
             if latent_dict is not None:
                 mask_dict = controller.step_store
                 controller.reset()
@@ -173,7 +173,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                     if res == 64 :
                         mask_list.append(cross_maps)
                 mask = torch.stack(mask_list, dim=0).mean([0]).unsqueeze(0)
-                mask = torch.where(mask > args.mask_thredhold, 1, 0)
+                mask = torch.where(mask > args.pixel_mask_thredhold, 1, 0)
                 mask_sum = mask.sum()
                 y_latent = z_latent * (1-mask).to(z_latent.device) + x_latent * (mask).to(z_latent.device) # 1,4,64,64
                 y_noise_pred = call_unet(unet, y_latent, t, con, None, None)
@@ -182,7 +182,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 y_latent = x_latent
                 y_noise_pred = noise_pred
             # --------------------- mask --------------------- #
-            """
+
             if latent_dict is not None:
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
             else :
