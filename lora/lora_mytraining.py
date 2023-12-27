@@ -60,7 +60,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 if trg_indexs_list is not None:
                     batch, pix_num, _ = query.shape
                     res = int(pix_num) ** 0.5
-                    if res == args.cross_map_res :
+                    if res in args.cross_map_res :
                         masked_attention_probs, org_attention_probs = attention_probs.chunk(2, dim=0)
                         batch_num = len(trg_indexs_list)
                         attention_probs_batch = torch.chunk(org_attention_probs, batch_num, dim=0)
@@ -240,6 +240,11 @@ class NetworkTrainer:
         cache_latents = args.cache_latents
         use_class_caption = args.class_caption is not None
 
+        print(f'\n step 2. dataset')
+        tokenizer = self.load_tokenizer(args)
+        train_util.prepare_dataset_args(args, True)
+        use_class_caption = args.class_caption is not None
+        print(f' (2.1) training dataset')
         if args.dataset_class is None:
             blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
             print("Using DreamBooth method.")
@@ -260,9 +265,23 @@ class NetworkTrainer:
             blueprint.dataset_group
             print(f'blueprint.dataset_group : {blueprint.dataset_group}')
             train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
-
         else:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
+
+        print(f' (2.2) validation dataset')
+        blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
+        user_config = {}
+        user_config['datasets'] = [{"subsets": None}]
+        subsets_dict_list = []
+        for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.valid_data_dir,
+                                                                                      args.reg_data_dir,
+                                                                                      args.class_caption):
+            if use_class_caption: subsets_dict['class_caption'] = args.class_caption
+            subsets_dict_list.append(subsets_dict)
+            user_config['datasets'][0]['subsets'] = subsets_dict_list
+        valid_blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
+        valid_dataset_group = config_util.generate_dataset_group_by_blueprint(valid_blueprint.dataset_group)
+
 
         current_epoch = Value("i", 0)
         current_step = Value("i", 0)
@@ -395,29 +414,24 @@ class NetworkTrainer:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
-        # dataloaderを準備する
-        # DataLoaderのプロセス数：0はメインプロセスになる
-        print(f' step7. dataloader')
-        n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)  # cpu_count-1 ただし最大で指定された数まで
-        train_dataloader = torch.utils.data.DataLoader(train_dataset_group,
-                                                       batch_size=args.train_batch_size,
+        print(f' step 6. dataloader')
+        n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
+        train_dataloader = torch.utils.data.DataLoader(train_dataset_group, batch_size=args.train_batch_size,
                                                        shuffle=True,
-                                                       collate_fn=collater,
-                                                       num_workers=n_workers,
+                                                       collate_fn=collater, num_workers=n_workers,
+                                                       persistent_workers=args.persistent_data_loader_workers, )
+        valid_dataloader = torch.utils.data.DataLoader(valid_dataset_group, batch_size=args.train_batch_size,
+                                                       shuffle=False,
+                                                       collate_fn=collater, num_workers=n_workers,
                                                        persistent_workers=args.persistent_data_loader_workers, )
         if args.max_train_epochs is not None:
             args.max_train_steps = args.max_train_epochs * math.ceil(
                 len(train_dataloader) / accelerator.num_processes / args.gradient_accumulation_steps)
             accelerator.print(
                 f"override steps. steps for {args.max_train_epochs} epochs is / 指定エポックまでのステップ数: {args.max_train_steps}")
-        # データセット側にも学習ステップを送信
-        # train_dataset_group.set_max_train_steps(args.max_train_steps)
 
-        # lr schedulerを用意する
-        lr_scheduler = train_util.get_scheduler_fix(args,
-                                                    optimizer, accelerator.num_processes)
-
-        # 実験的機能：勾配も含めたfp16/bf16学習を行う　モデル全体をfp16/bf16にする
+        print(f'\n step 7. optimizer and lr')
+        lr_scheduler = train_util.get_scheduler_fix(args,optimizer, accelerator.num_processes)
         if args.full_fp16:
             assert (args.mixed_precision == "fp16"
                     ), "full_fp16 requires mixed precision='fp16' / full_fp16を使う場合はmixed_precision='fp16'を指定してください。"
@@ -444,8 +458,8 @@ class NetworkTrainer:
         # TODO めちゃくちゃ冗長なのでコードを整理する
         if train_unet and train_text_encoder:
             if len(text_encoders) > 1:
-                unet, t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler, = accelerator.prepare(
-                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler,)
+                unet, t_enc1, t_enc2, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler, = accelerator.prepare(
+                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, valid_dataloader, lr_scheduler,)
                 text_encoder = text_encoders = [t_enc1, t_enc2]
                 del t_enc1, t_enc2
                 enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1], enc_unet)
@@ -453,29 +467,29 @@ class NetworkTrainer:
                 del enc_t_enc1, enc_t_enc2
 
             else:
-                unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                    unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler)
+                unet, text_encoder, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler = accelerator.prepare(
+                    unet, text_encoder, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler)
                 text_encoders = [text_encoder]
                 enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
                 enc_text_encoders = [enc_text_encoder]
 
         elif train_unet:
-            unet, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                unet, network, optimizer, train_dataloader, lr_scheduler)
+            unet, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler = accelerator.prepare(
+                unet, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler)
             enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
 
         elif train_text_encoder:
             if len(text_encoders) > 1:
-                t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                    text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler)
+                t_enc1, t_enc2, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler = accelerator.prepare(
+                    text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, valid_dataloader, lr_scheduler)
                 text_encoder = text_encoders = [t_enc1, t_enc2]
                 del t_enc1, t_enc2
                 enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1], enc_unet)
                 enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
                 del enc_t_enc1, enc_t_enc2
             else:
-                text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                    text_encoder, network, optimizer, train_dataloader, lr_scheduler)
+                text_encoder, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler = accelerator.prepare(
+                    text_encoder, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler)
                 text_encoders = [text_encoder]
                 enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
                 enc_text_encoders = [enc_text_encoder]
@@ -485,23 +499,17 @@ class NetworkTrainer:
         else:
             network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(network, optimizer, train_dataloader, lr_scheduler)
 
-        # transform DDP after prepare (train_network here only)
         text_encoders = train_util.transform_models_if_DDP(text_encoders)
         unet, network = train_util.transform_models_if_DDP([unet, network])
         enc_text_encoders = train_util.transform_models_if_DDP(enc_text_encoders)
         enc_unet = train_util.transform_models_if_DDP([enc_unet])[0]
 
-
         if args.gradient_checkpointing:
-            # according to TI example in Diffusers, train is required
             unet.train()
             for t_enc in text_encoders:
                 t_enc.train()
-                # set top parameter requires_grad = True for gradient checkpointing works
                 if train_text_encoder:
                     t_enc.text_model.embeddings.requires_grad_(True)
-
-            # set top parameter requires_grad = True for gradient checkpointing works
             if not train_text_encoder:  # train U-Net only
                 unet.parameters().__next__().requires_grad_(True)
         else:
@@ -542,20 +550,14 @@ class NetworkTrainer:
         # TODO: find a way to handle total batch size when there are multiple datasets
         total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
         accelerator.print("running training / 学習開始")
-        # accelerator.print(f"  num train images * repeats / 学習画像の数×繰り返し回数: {train_dataset_group.num_train_images}")
-        # accelerator.print(f"  num reg images / 正則化画像の数: {train_dataset_group.num_reg_images}")
         accelerator.print(f"  num batches per epoch / 1epochのバッチ数: {len(train_dataloader)}")
         accelerator.print(f"  num epochs / epoch数: {num_train_epochs}")
-        # accelerator.print(f"  batch size per device / バッチサイズ: {', '.join([str(d.batch_size) for d in train_dataset_group.datasets])}")
-        # accelerator.print(f"  total train batch size (with parallel & distributed & accumulation) / 総バッチサイズ（並列学習、勾配合計含む）: {total_batch_size}")
         accelerator.print(f"  gradient accumulation steps / 勾配を合計するステップ数 = {args.gradient_accumulation_steps}")
         accelerator.print(f"  total optimization steps / 学習ステップ数: {args.max_train_steps}")
         training_started_at = time.time()
         # TODO refactor metadata creation and move to util
 
-        metadata = {}
-        if args.network_args:
-            metadata["ss_network_args"] = json.dumps(net_kwargs)
+
         progress_bar = tqdm(range(args.max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process,
                             desc="steps")
         global_step = 0
@@ -590,15 +592,7 @@ class NetworkTrainer:
             ckpt_file = os.path.join(args.output_dir, ckpt_name)
 
             accelerator.print(f"\nsaving checkpoint: {ckpt_file}")
-            metadata["ss_training_finished_at"] = str(time.time())
-            metadata["ss_steps"] = str(steps)
-            metadata["ss_epoch"] = str(epoch_no)
-            minimum_metadata = {}
-            metadata_to_save = minimum_metadata if args.no_metadata else metadata
             sai_metadata = train_util.get_sai_model_spec(None, args, self.is_sdxl, True, False)
-            metadata_to_save.update(sai_metadata)
-
-            unwrapped_nw.save_weights(ckpt_file, save_dtype, metadata_to_save)
             if args.huggingface_repo_id is not None:
                 huggingface_util.upload(args, ckpt_file, "/" + ckpt_name, force_sync_upload=force_sync_upload)
 
@@ -612,10 +606,9 @@ class NetworkTrainer:
         for epoch in range(args.start_epoch, args.start_epoch+num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
-            metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
+            """
             for step, batch in enumerate(train_dataloader):
-
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
@@ -626,16 +619,13 @@ class NetworkTrainer:
                         else:
                             instance_seed = random.randint(0, 2 ** 31)
                             generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
-                            latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample(
-                                generator=generator)
+                            latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
                             generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
-                            good_latents = vae.encode(batch["mask_imgs"].to(dtype=vae_dtype)).latent_dist.sample(
-                                generator=generator)
+                            good_latents = vae.encode(batch["mask_imgs"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
-                                good_latents = torch.where(torch.isnan(good_latents), torch.zeros_like(good_latents),
-                                                           good_latents)
+                                good_latents = torch.where(torch.isnan(good_latents), torch.zeros_like(good_latents),good_latents)
                         latents = latents * self.vae_scale_factor
                         good_latents = good_latents * self.vae_scale_factor
                     # ---------------------------------------------------------------------------------------------------------------------
@@ -730,11 +720,11 @@ class NetworkTrainer:
                             task_loss = task_loss.mean()
                             log_loss["loss/task_loss"] = task_loss
                         else :
-                            detail_loss = torch.nn.functional.mse_loss(noise_diff_org.float(),
+                            denoising_loss = torch.nn.functional.mse_loss(noise_diff_org.float(),
                                                                        noise_diff_pred.float(), reduction="none")
-                            detail_loss = detail_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
-                            task_loss = detail_loss.mean()
-                            log_loss["loss/detail_loss"] = task_loss
+                            denoising_loss = denoising_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
+                            task_loss = denoising_loss.mean()
+                            log_loss["loss/denoising_loss"] = task_loss
 
                         if len(test_indexs) > 0 :
                             loss +=  task_loss
@@ -818,9 +808,23 @@ class NetworkTrainer:
                                    text_encoder, unet)
             if attention_storer is not None:
                 attention_storer.reset()
-            # end of epoch
-        # metadata["ss_epoch"] = str(num_train_epochs)
-        metadata["ss_training_finished_at"] = str(time.time())
+            """
+            # ------------------------------------------------------------------------------------ #
+            # validation
+            valid_epoch_normal_loss = 0
+            valid_epoch_abnormal_loss = 0
+            for step, valid_batch in enumerate(valid_dataloader):
+                with torch.no_grad():
+                    instance_seed = random.randint(0, 2 ** 31)
+                    generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
+                    latents = vae.encode(valid_batch["images"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
+
+
+
+
+
+
+
         if is_main_process:
             network = accelerator.unwrap_model(network)
         accelerator.end_training()
@@ -870,7 +874,6 @@ if __name__ == "__main__":
                         help="learning rate for Text Encoder / Text Encoderの学習率")
     # step 5. optimizer
     train_util.add_optimizer_arguments(parser)
-
     config_util.add_config_arguments(parser)
     parser.add_argument("--save_model_as", type=str, default="safetensors",
                         choices=[None, "ckpt", "pt", "safetensors"],
@@ -896,12 +899,15 @@ if __name__ == "__main__":
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
     parser.add_argument("--resume_lora_training", action="store_true",)
     parser.add_argument("--start_epoch", type = int, default = 0)
-
-    parser.add_argument("--cross_map_res", type=int, default=16)
+    parser.add_argument("--valid_data_dir", type=str)
+    import ast
+    def arg_as_list(arg):
+        v = ast.literal_eval(arg)
+        if type(v) is not list:
+            raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
+        return v
+    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
     parser.add_argument("--normal_training", action="store_true", )
-
-
-    # class_caption
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
