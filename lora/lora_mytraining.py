@@ -1,7 +1,8 @@
 import importlib
 import argparse
 import gc
-import re
+import numpy as np
+from PIL import Image
 import math
 import os
 import sys
@@ -55,28 +56,21 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
-            if is_cross_attention and mask is not None:
-                # if trg_indexs_list is not None and mask is not None:
-                if trg_indexs_list is not None:
-                    batch, pix_num, _ = query.shape
-                    res = int(pix_num) ** 0.5
-                    if res in args.cross_map_res :
-                        masked_attention_probs, org_attention_probs = attention_probs.chunk(2, dim=0)
-                        batch_num = len(trg_indexs_list)
-                        attention_probs_batch = torch.chunk(org_attention_probs, batch_num, dim=0)
-                        masked_attention_probs_batch = torch.chunk(masked_attention_probs, batch_num, dim=0)
-                        vector_diff_list = []
-                        for batch_idx, (attention_prob, masked_attention_prob) in enumerate(
-                                zip(attention_probs_batch, masked_attention_probs_batch)):
-                            batch_trg_index = trg_indexs_list[batch_idx]  # two times
-                            for word_idx in batch_trg_index:
-                                word_idx = int(word_idx)
-                                masked_attn_vector = masked_attention_prob[:, :, word_idx]
-                                org_attn_vector = attention_prob[:, :, word_idx]
-                                attention_diff = (masked_attn_vector - org_attn_vector).mean() + args.contrastive_eps
-                                standard = torch.zeros_like(attention_diff)
-                                loss = torch.max(attention_diff, standard)
-                                controller.store_loss(loss)
+            if is_cross_attention and trg_indexs_list is not None:
+                batch, pix_num, _ = query.shape
+                res = int(pix_num) ** 0.5
+                if res in args.cross_map_res :
+                    batch_num = len(trg_indexs_list)
+                    attention_probs_batch = torch.chunk(attention_probs, batch_num, dim=0)
+                    attn_list = []
+                    for batch_idx, attention_probs in enumerate(attention_probs_batch):
+                        batch_trg_index = trg_indexs_list[batch_idx]  # two times
+                        for word_idx in batch_trg_index:
+                            word_idx = int(word_idx)
+                            attn_map = attention_probs[:, :, word_idx]
+                            attn_list.append(attn_map)
+                    batch_attn_map = torch.cat(attn_list, dim=0)
+                    controller.store(batch_attn_map, layer_name)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -627,14 +621,14 @@ class NetworkTrainer:
                             instance_seed = random.randint(0, 2 ** 31)
                             generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
                             latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
-                            generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
-                            good_latents = vae.encode(batch["mask_imgs"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
+                            #generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
+                            #good_latents = vae.encode(batch["mask_imgs"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
-                                good_latents = torch.where(torch.isnan(good_latents), torch.zeros_like(good_latents),good_latents)
+                                #good_latents = torch.where(torch.isnan(good_latents), torch.zeros_like(good_latents),good_latents)
                         latents = latents * self.vae_scale_factor
-                        good_latents = good_latents * self.vae_scale_factor
+                        #good_latents = good_latents * self.vae_scale_factor
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_class_list = batch["train_class_list"]
                     train_indexs, test_indexs = [], []
@@ -644,45 +638,56 @@ class NetworkTrainer:
                         else:
                             test_indexs.append(index)
                     train_latents = latents[train_indexs, :, :, :]
-                    train_good_latents = good_latents[train_indexs, :, :, :]
+                    #train_good_latents = good_latents[train_indexs, :, :, :]
 
-                    test_latents = latents[test_indexs, :, :, :]
-                    test_good_latents = good_latents[test_indexs, :, :, :]
+                    #test_latents = latents[test_indexs, :, :, :]
+                    #test_good_latents = good_latents[test_indexs, :, :, :]
 
                     trg_indexs = batch["trg_indexs_list"]
-                    index_list = []
-                    b_size = len(trg_indexs)
-                    for i in range(b_size):
-                        if i in test_indexs:
-                            a = trg_indexs[i]
-                            index_list.append(a)
+                    #index_list = []
+                    #b_size = len(trg_indexs)
+                    #for i in range(b_size):
+                    #    if i in test_indexs:
+                    #        a = trg_indexs[i]
+                    #        index_list.append(a)
                     # (2) text condition checking
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
                                                                 weight_dtype)
-                    # (3.1) contrastive learning
+                    # (3.1) attention score loss
                     log_loss = {}
-                    if len(test_indexs) > 0 :
-                        if test_latents.dim() != 4:
-                            test_latents = test_latents.unsqueeze(0)
-                            test_good_latents = test_good_latents.unsqueeze(0)
-                        input_latents = torch.cat([test_latents, test_good_latents], dim=0)
-                        input_condition = text_encoder_conds[test_indexs, :, :]
-                        input_condition = torch.cat([input_condition] * 2, dim=0)
-                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler,input_latents)
-                        # Predict the noise residual
-                        with accelerator.autocast():
-                            self.call_unet(args, accelerator, unet,
-                                           noisy_latents, timesteps,
-                                           input_condition, batch, weight_dtype,
-                                           index_list,
-                                           test_indexs)
-                        losss = attention_storer.loss_list
+                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                       noise_scheduler,
+                                                                                                       latents)
+                    with accelerator.autocast():
+                        self.call_unet(args, accelerator, unet,
+                                       noisy_latents, timesteps,
+                                       text_encoder_conds, batch, weight_dtype,
+                                       trg_indexs,
+                                       test_indexs)
+                        attn_dict = attention_storer.step_store
                         attention_storer.reset()
-                        contrastive_loss = torch.stack(losss, dim=0).mean(dim=0).mean()
-                        log_loss["loss/contrastive_loss"] = contrastive_loss
-                        loss = contrastive_loss
+                        attn_loss = 0
+                        for layer in attn_dict.keys():
+                            attn_score = attn_dict[layer][0] # [b, pix_num, 1]
+                            b, pix_num, _ = attn_score.shape
+                            res = int(math.sqrt(pix_num))
+                            attn_score = attn_score.reshape(b, res, res, -1) # [b, res, res, 1]
 
+                            binary_map = batch['binary_map'].detach().cpu()
+                            maps = []
+                            for binary_map_i in binary_map:
+                                binary_map_i = binary_map_i.squeeze()
+                                binary_aug_np = np.array(Image.fromarray(binary_map_i.numpy()).resize((64,64)))
+                                binary_aug_np = np.where(binary_aug_np > 100, 1, 0)
+                                binary_aug_tensor = torch.tensor(binary_aug_np)
+                                maps.append(binary_aug_tensor)
+                            maps = torch.cat(maps, dim=0).unsqueeze(-1).to(accelerator.device) # [b, 64, 64, 1]
+                            attn_score_pixel = attn_score * maps.to(dtype=weight_dtype)
+                            layer_attn_loss = attn_score_pixel.mean([1,2])
+                            attn_loss += layer_attn_loss.mean()
+
+                    # (3) natural training
                     if len(train_indexs) > 0:
                         if train_latents.dim() != 4:
                             train_latents = train_latents.unsqueeze(0)
