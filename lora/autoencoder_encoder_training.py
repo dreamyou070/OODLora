@@ -309,6 +309,7 @@ class NetworkTrainer:
                     captions = valid_batch['captions']
                     latent = DiagonalGaussianDistribution(student(img)).sample()
                     recon = vae.decode(latent)['sample']
+                    print(f'recon : {recon.shape} | type(recon) : {type(recon)}')
                     print(f'captions : {captions}')
                     batch = len(captions)
                     for b in range(batch):
