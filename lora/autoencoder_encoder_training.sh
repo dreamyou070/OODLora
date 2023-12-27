@@ -18,14 +18,14 @@ ml load cuda/11.0
 # conda activate venv_lora
 # cd ./Lora/OODLora/lora
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port 50389 autoencoder_encoder_training.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port 50189 autoencoder_encoder_training.py \
   --process_title parksooyeon --max_token_length 225 --log_with wandb --seed 42 --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --resolution 512,512 --save_every_n_epochs 1 --sample_every_n_epochs 1 --train_batch_size 2 --max_train_steps 100000 --start_epoch 0 \
   --wandb_init_name bagel_training --log_with wandb \
-  --wandb_run_name 3_TS_encoder_normal_aug --color_aug \
-  --logging_dir ../result/MVTec3D-AD_experiment/bagel/vae_training/3_TS_encoder_normal_aug \
-  --output_dir ../result/MVTec3D-AD_experiment/bagel/vae_training/3_TS_encoder_normal_aug \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/train_normal/bad \
+  --wandb_run_name 1_TS_encoder_normal_anormal_aug --color_aug \
+  --logging_dir ../result/MVTec3D-AD_experiment/bagel/vae_training/1_TS_encoder_normal_anormal_aug \
+  --output_dir ../result/MVTec3D-AD_experiment/bagel/vae_training/1_TS_encoder_normal_anormal_aug \
+  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/train/bad \
   --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/test/bad
 
 # dreamyou070
@@ -33,12 +33,12 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
 # srun -p suma_a6000 -q big_qos --gres=gpu:4 --job-name=bagel_4 --time=48:00:00 --pty bash -i
 # conda activate venv_lora
 # cd ./Lora/OODLora/lora
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port 50489 autoencoder_encoder_training.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port 50289 autoencoder_encoder_training.py \
   --process_title parksooyeon --max_token_length 225 --log_with wandb --seed 42 --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --resolution 512,512 --save_every_n_epochs 1 --sample_every_n_epochs 1 --train_batch_size 2 --max_train_steps 100000 --start_epoch 0 \
   --wandb_init_name bagel_training --log_with wandb \
-  --wandb_run_name 4_TS_encoder_normal_no_aug \
-  --logging_dir ../result/MVTec3D-AD_experiment/bagel/vae_training/4_TS_encoder_normal_no_aug \
-  --output_dir ../result/MVTec3D-AD_experiment/bagel/vae_training/4_TS_encoder_normal_no_aug \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/train_normal/bad \
+  --wandb_run_name 2_TS_encoder_normal_anormal_no_aug \
+  --logging_dir ../result/MVTec3D-AD_experiment/bagel/vae_training/2_TS_encoder_normal_anormal_no_aug \
+  --output_dir ../result/MVTec3D-AD_experiment/bagel/vae_training/2_TS_encoder_normal_anormal_no_aug \
+  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/train/bad \
   --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/test/bad

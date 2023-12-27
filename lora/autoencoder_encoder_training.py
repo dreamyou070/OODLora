@@ -271,7 +271,7 @@ class NetworkTrainer:
                         recon_ = recon_.unsqueeze(0)
                         recon_img = (recon_ / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                         img = (recon_img * 255).astype(np.uint8)
-                        wandb.log({"training recon": [wandb.Image(img, caption=caption)]})
+                        wandb.log({"training recon": [wandb.Image(img, caption=f'{caption} (epoch {epoch + 1})')]})
 
             # validation
             valid_epoch_normal_loss = 0
@@ -316,7 +316,7 @@ class NetworkTrainer:
                         recon_ = recon_.unsqueeze(0)
                         recon_img = (recon_ / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                         img = (recon_img * 255).astype(np.uint8)
-                        wandb.log({"validation recon": [wandb.Image(img, caption=caption)]})
+                        wandb.log({"validation recon": [wandb.Image(img, caption=f'{caption} (epoch {epoch + 1})')]})
 
 
 
