@@ -70,7 +70,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             back_attn_vector = 255 * back_attn_vector / back_attn_vector.max()
                             minus_score = torch.where(back_attn_vector < 0 , 1, 0)
-                            print(f'minus_score : {minus_score.sum()}')
                             back_np = back_attn_vector.detach().cpu().numpy()
 
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
@@ -78,8 +77,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             obj_np = obj_attn_vector.detach().cpu().numpy()
 
                             score_diff_map = obj_np - back_np
+
                             mask = np.where(score_diff_map > 0, 1, 0)
                             mask = torch.tensor(mask).to(back_attn_vector.device)
+                            print(f'mask sum : {mask.sum()}')
                             #print(f'mask : {mask.shape} | sum : {mask.sum()}')
                             map_list.append(mask)
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
