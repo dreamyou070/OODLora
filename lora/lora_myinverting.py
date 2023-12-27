@@ -73,6 +73,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             mask = torch.where(attention_diff > mask_thredhold, 1, 0)
                             mask_sum = mask.sum()
                             print(f'layer_name: {layer_name}, mask_sum: {mask_sum}')
+                            print(f'obj_attn_vector: {obj_attn_vector.shape} | mask : {mask.shape}')
                             map_list.append(mask)
                             attn_vector = back_attn_vector * (1-mask) + obj_attn_vector * (mask)
                             attention_probs_object_sub[:, :, word_idx] = attn_vector
@@ -85,6 +86,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         np_aug_map = np.array(aug_map)
                         torch_aug_map = torch.tensor(np_aug_map)
                         mask = torch.where(torch_aug_map > 10, 1, 0) # [64,64]
+                        final_mask = mask.sum()
+                        print(f'final mask : {final_mask}')
                         controller.store(mask, layer_name)
                         attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
 
