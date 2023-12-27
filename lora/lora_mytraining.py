@@ -628,7 +628,7 @@ class NetworkTrainer:
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                                 #good_latents = torch.where(torch.isnan(good_latents), torch.zeros_like(good_latents),good_latents)
                         latents = latents * self.vae_scale_factor
-                        batch = latents.shape[0]
+                        batch_size = latents.shape[0]
                         #good_latents = good_latents * self.vae_scale_factor
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_class_list = batch["train_class_list"]
@@ -677,7 +677,7 @@ class NetworkTrainer:
                             b, pix_num, _ = attn_score.shape
                             res = int(math.sqrt(pix_num))
                             attn_score = attn_score.reshape(b, res, res, -1) # [b, res, res, 1]
-                            scores = attn_score.chunk(batch, dim=0)
+                            scores = attn_score.chunk(batch_size, dim=0)
                             score_list = []
                             for score in scores:
                                 # 8, res,res,1
