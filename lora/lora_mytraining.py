@@ -681,7 +681,7 @@ class NetworkTrainer:
                             maps = []
                             for binary_map_i in binary_map:
                                 binary_map_i = binary_map_i.squeeze()
-                                binary_aug_np = np.array(Image.fromarray(binary_map_i.numpy()).resize((64,64)))
+                                binary_aug_np = np.array(Image.fromarray(binary_map_i.numpy().astype(np.uint8)).resize((64,64)))
                                 binary_aug_np = np.where(binary_aug_np > 100, 1, 0)
                                 binary_aug_tensor = torch.tensor(binary_aug_np)
                                 maps.append(binary_aug_tensor)
