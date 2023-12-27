@@ -198,6 +198,7 @@ class NetworkTrainer:
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             student.train()
+            """
             for step, batch in enumerate(train_dataloader):
                 log_loss = {}
                 # generator training
@@ -270,7 +271,7 @@ class NetworkTrainer:
                     image = (recon_img * 255).astype(np.uint8)
                     for caption, img in zip(captions, image):
                         wandb.log({"training recon": [wandb.Image(img, caption=caption)]})
-
+            """
 
             # validation
             valid_epoch_normal_loss = 0
