@@ -161,14 +161,26 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 masks = []
                 for layer in layers:
                     mask = mask_dict[layer]
-                    mask = mask[0]
-                    mask = mask.unsqueeze(0)# [64,64]
+                    mask = mask[0] # [8,1024]
+                    head, pix_num = mask.shape
+                    mask = torch.reshape(mask, (head, int(pix_num ** 0.5), int(pix_num ** 0.5)))
                     masks.append(mask)
-                mask_latent = torch.cat(masks, dim=0)
-                mask_latent = mask_latent.mean(dim=0, dtype=torch.float32)
+                out = torch.cat(masks, dim=0)
+                out = out.sum(0) / out.shape[0]
+                out = 255 * out / out.max()
+
+                image = out.unsqueeze(0)
+                image = image.numpy().astype(np.uint8)
+                map = Image.fromarray(image).resize((64, 64))
+                map = np.array(map)
+                np_map = np.where(map > 100, 1,0)
+                mask_latent = torch.from_numpy(np_map).unsqueeze(0).unsqueeze(0).float()
+
+
+
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
-                mask_latent = mask_latent.unsqueeze(0).unsqueeze(0)
                 mask_latent = mask_latent.expand(z_noise_pred.shape).to(z_noise_pred.device)
+
                 back_latent = latent_dict[prev_time]
                 obj_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
                 y_latent = obj_latent * mask_latent + back_latent * (1 - mask_latent)
