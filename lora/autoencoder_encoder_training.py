@@ -199,7 +199,7 @@ class NetworkTrainer:
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             student.train()
-            """
+
             for step, batch in enumerate(train_dataloader):
                 log_loss = {}
                 # generator training
@@ -257,6 +257,7 @@ class NetworkTrainer:
                     torch.save(state_dict,
                                os.path.join(save_directory, f'student_epoch_{trg_epoch}.pth'))
                     # inference
+
             with torch.no_grad():
                 if is_main_process:
                     img = batch['images'].to(dtype=weight_dtype)
@@ -266,12 +267,11 @@ class NetworkTrainer:
                     batch = len(captions)
                     for b in range(batch):
                         caption = captions[b]
-                        recon = recon[b]
-                        recon = recon.unsqueeze(0)
-                        recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        recon_ = recon[b]
+                        recon_ = recon_.unsqueeze(0)
+                        recon_img = (recon_ / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                         img = (recon_img * 255).astype(np.uint8)
-                        wandb.log({"validation recon": [wandb.Image(img, caption=caption)]})
-            """
+                        wandb.log({"training recon": [wandb.Image(img, caption=caption)]})
 
             # validation
             valid_epoch_normal_loss = 0
@@ -309,14 +309,12 @@ class NetworkTrainer:
                     captions = valid_batch['captions']
                     latent = DiagonalGaussianDistribution(student(img)).sample()
                     recon = vae.decode(latent)['sample']
-                    print(f'recon : {recon.shape} | type(recon) : {type(recon)}')
-                    print(f'captions : {captions}')
                     batch = len(captions)
                     for b in range(batch):
                         caption = captions[b]
-                        recon = recon[b]
-                        recon = recon.unsqueeze(0)
-                        recon_img = (recon / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
+                        recon_ = recon[b]
+                        recon_ = recon_.unsqueeze(0)
+                        recon_img = (recon_ / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
                         img = (recon_img * 255).astype(np.uint8)
                         wandb.log({"validation recon": [wandb.Image(img, caption=caption)]})
 
