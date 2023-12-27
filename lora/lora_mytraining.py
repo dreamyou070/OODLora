@@ -692,6 +692,7 @@ class NetworkTrainer:
                             attn_score_pixel = attn_score * maps.to(dtype=weight_dtype)
                             layer_attn_loss = attn_score_pixel.mean([1,2])
                             attn_loss += layer_attn_loss.mean()
+                            loss = attn_loss
                             log_loss["loss/attn_loss"] = attn_loss.item()
 
                     # (3) natural training
@@ -745,8 +746,8 @@ class NetworkTrainer:
                             task_loss = denoising_loss.mean()
                             log_loss["loss/denoising_loss"] = task_loss
 
-                        attn_loss +=  task_loss
-                        loss = attn_loss
+                        #attn_loss +=  task_loss
+                        loss += task_loss
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
