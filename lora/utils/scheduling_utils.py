@@ -155,11 +155,22 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                                    trg_indexs_list, None)
 
             if latent_dict is not None:
+                mask_dict = controller.step_store
+                controller.reset()
+                layers = mask_dict.keys()
+                masks = []
+                for layer in layers:
+                    mask = mask_dict[layer]
+                    print(f'len of mask : {len(mask)}')
+                    mask = mask[0]
+                    print(f'shape of mask : {mask.shape}')
+                    masks.append(mask)
+                mask_latent = torch.cat(masks, dim=0).mean(dim=0)
+
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
                 back_latent = latent_dict[prev_time]
                 obj_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
-                mask_latent = torch.nn.functional.mse_loss(obj_latent, back_latent, reduction='none')
-                mask_latent = torch.where(mask_latent > args.pixel_mask_thredhold, 1, 0)
+
                 y_latent = obj_latent * mask_latent + back_latent * (1 - mask_latent)
             else :
                 y_latent = prev_step(noise_pred, t, x_latent, scheduler)
