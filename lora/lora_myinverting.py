@@ -87,11 +87,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         mask = torch.where(torch_aug_map > 100, 1, 0)
                         controller.store(mask, layer_name)
                         attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
-                        hidden_states = torch.bmm(attention_probs, value)
-            else :
-                hidden_states = torch.bmm(attention_probs, value)
+            hidden_states = torch.bmm(attention_probs, value)
+
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
+
             return hidden_states
         return forward
 
