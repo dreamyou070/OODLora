@@ -41,7 +41,6 @@ def main(args):
                 new_gt_folder = os.path.join(train_ex_gt_folder, f'10_{cat}')
                 os.rename(org_gt_folder, new_gt_folder)
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
