@@ -481,7 +481,6 @@ class GaussianDiffusion:
         """
         Generate samples from the model and yield intermediate samples from
         each timestep of diffusion.
-
         Arguments are the same as p_sample_loop().
         Returns a generator over dicts, where each dict is the return value of
         p_sample().
@@ -502,11 +501,9 @@ class GaussianDiffusion:
         batch_size = shape[0]
         init_image_batch = th.tile(init_image, dims=(batch_size, 1, 1, 1))
         
-        img = self.q_sample(
-                x_start=init_image_batch,
-                t=th.tensor(indices[0], dtype=th.long, device=device),
-                noise=img,
-            )
+        img = self.q_sample(x_start=init_image_batch,
+                            t=th.tensor(indices[0], dtype=th.long, device=device),
+                            noise=img,       )
         if progress:
             # Lazy import so that we don't depend on tqdm.
             from tqdm.auto import tqdm
@@ -521,11 +518,9 @@ class GaussianDiffusion:
             for i in indices:
                 if flag:
                     img = th.randn(*shape, device=device)
-                    img = self.q_sample(
-                            x_start=init_image_batch,
-                            t=th.tensor([i] * shape[0], device=device),
-                            noise=img,
-                        )
+                    img = self.q_sample(x_start=init_image_batch,
+                                        t=th.tensor([i] * shape[0], device=device),
+                                        noise=img,        )
                     image_after_step = img
                 if i == self.num_timesteps-skip_timesteps-1:
                     for r in range(10):

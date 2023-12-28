@@ -234,50 +234,37 @@ class ImageEditor:
         save_image_interval = self.diffusion.num_timesteps // 5
         for iteration_number in range(self.args.iterations_num):
             print(f"Start iterations {iteration_number} with p_sample_loop_progressive")
-            sample_func = (self.diffusion.ddim_sample_loop_progressive  if self.args.ddim
-                           else self.diffusion.p_sample_loop_progressive)
-            samples = sample_func(
-                self.model,
-                (
-                    self.args.batch_size,
-                    3,
-                    self.model_config["image_size"],
-                    self.model_config["image_size"],
-                ),
-                clip_denoised=False,
-                model_kwargs={}
-                if self.args.model_output_size == 256
-                else {
-                    "y": torch.zeros([self.args.batch_size], device=self.device, dtype=torch.long)
-                },
-                cond_fn=cond_fn,
-                progress=True,
-                skip_timesteps=self.args.skip_timesteps,
-                init_image=self.init_image,
-                postprocess_fn=None,
-                randomize_class=True,
-            )
+            sample_func = (self.diffusion.ddim_sample_loop_progressive  if self.args.ddim else self.diffusion.p_sample_loop_progressive)
+            samples = sample_func(self.model,
+                                  (self.args.batch_size,3,self.model_config["image_size"],self.model_config["image_size"],),
+                                  clip_denoised=False,
+                                  model_kwargs={}
+                                  if self.args.model_output_size == 256
+                                  else {"y": torch.zeros([self.args.batch_size], device=self.device, dtype=torch.long)},
+                                  cond_fn=cond_fn,
+                                  progress=True,
+                                  skip_timesteps=self.args.skip_timesteps,
+                                  init_image=self.init_image,
+                                  postprocess_fn=None,
+                                  randomize_class=True,)
+            """
             if self.flag_resample:
                 continue
-
+            """
+            """
             intermediate_samples = [[] for i in range(self.args.batch_size)]
             total_steps = self.diffusion.num_timesteps - self.args.skip_timesteps - 1
-            total_steps_with_resample = self.diffusion.num_timesteps - self.args.skip_timesteps - 1 + (
-                        self.args.resample_num - 1)
+            total_steps_with_resample = self.diffusion.num_timesteps - self.args.skip_timesteps - 1 + (self.args.resample_num - 1)
             for j, sample in enumerate(samples):
                 should_save_image = j % save_image_interval == 0 or j == total_steps_with_resample
-                # self.metrics_accumulator.print_average_metric()
                 for b in range(self.args.batch_size):
                     pred_image = sample["pred_xstart"][b]
                     visualization_path = Path(os.path.join(self.args.output_path, self.args.output_file) )
                     visualization_path = visualization_path.with_name(
-                        f"{visualization_path.stem}_i_{iteration_number}_b_{b}{visualization_path.suffix}"
-                    )
-
+                        f"{visualization_path.stem}_i_{iteration_number}_b_{b}{visualization_path.suffix}")
                     pred_image = pred_image.add(1).div(2).clamp(0, 1)
                     pred_image_pil = TF.to_pil_image(pred_image)
             ranked_pred_path = self.ranked_results_path / (visualization_path.name)
-
             if self.args.target_image is not None:
                 if self.args.use_colormatch:
                     src_image = Normalizer(np.asarray(pred_image_pil)).type_norm()
@@ -287,6 +274,7 @@ class ImageEditor:
                     save_img_file(img_res, str(ranked_pred_path))
             else:
                 pred_image_pil.save(ranked_pred_path)
+            """
 
 
 def main(args) :
