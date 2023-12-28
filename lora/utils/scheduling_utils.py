@@ -121,6 +121,9 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
     # inference_times = [100,80, ... 0]
     latent = start_latent
     all_latent_dict = {}
+
+    print(f'inference_times : {inference_times}')
+    
     all_latent_dict[inference_times[0]] = latent
     time_steps = []
     pil_images = []
