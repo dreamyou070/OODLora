@@ -8,18 +8,15 @@ masks = []
 pix_num = 32*32
 head = 8
 mask = torch.zeros((8, pix_num))
-mask[0, 0:pix_num//2] = 1
-mask = torch.reshape(mask, (head, int(pix_num ** 0.5), int(pix_num ** 0.5)))[0]# [8, 32,32
-print(mask.shape)
-image = np.array(mask.cpu().numpy().astype(np.uint8))
-np_map = np.array(Image.fromarray(image.astype(np.uint8)).resize((64, 64))) / 255
-np_map = np.where(np_map > 0, 1, 0)
-mask = torch.from_numpy(np_map)#.unsqueeze(0).unsqueeze(0).float()
-print(mask.shape)
-masks.append(mask.unsqueeze(0))
-masks.append(mask.unsqueeze(0))
-out = torch.cat(masks, dim=0)
-print(out.shape)
-out = out.sum(0) / out.shape[0]
-out = 255 * out / out.max()
-print(out.shape)
+
+inf = torch.tensor([980, 960, 940, 920, 900, 880, 860, 840, 820, 800, 780, 760, 740, 720,
+        700, 680, 660, 640, 620, 600, 580, 560, 540, 520, 500, 480, 460, 440,
+        420, 400, 380, 360, 340, 320, 300, 280, 260, 240, 220, 200, 180, 160,
+        140, 120, 100,  80,  60,  40,  20,   0])
+inf = [999] + inf.tolist()
+inference_times = torch.tensor(inf)
+recon_1_times = inference_times[:1].tolist()
+
+for i, t in enumerate(recon_1_times[:-1]):
+        print(t)
+

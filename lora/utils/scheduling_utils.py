@@ -124,14 +124,13 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
     latent = start_latent
     all_latent_dict = {}
     all_latent_dict[inference_times[0]] = latent
-
     time_steps = []
     pil_images = []
     with torch.no_grad():
         np_img = latent2image(latent, vae, return_type='np')
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
-    #pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_start_time_{inference_times[0]}.png'))
+    #pil_img.save(os.path.join(base_folder_dir, f'{name}_only_infer_recon_start_time_{inference_times[0]}.png'))
     for i, t in enumerate(inference_times[:-1]):
         if latent_dict is not None:
             z_latent = latent_dict[inference_times[i]]
@@ -195,5 +194,4 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 pil_images.append(pil_img)
                 pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
         all_latent_dict[prev_time] = latent
-    time_steps.append(prev_time)
     return all_latent_dict, time_steps, pil_images

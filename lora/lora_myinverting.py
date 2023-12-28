@@ -178,6 +178,7 @@ def main(args) :
                               beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
+    inference_times = torch.tensor([999] + inference_times.tolist())
     #inference_times[]
 
     print(f' (2.4.+) model to accelerator device')
@@ -292,13 +293,13 @@ def main(args) :
                 print(f'inference_times : {inference_times}')
                 print(f'base_num : {base_num}')
 
-                noising_time = inference_times[base_num]  # base_num = 50
-                recon_1_times = inference_times[:base_num + 1].tolist()
+                noising_time = inference_times[args.unet_only_inference_times]                # noising_time = 999
+                recon_1_times = inference_times[:args.unet_only_inference_times + 1].tolist() # [999]
                 recon_latent_dict, _, _ = recon_loop(args,
                                                      None,
                                                      start_latent=latent_dict[int(time_steps[-1])],
                                                      context=context,
-                                                     inference_times=recon_1_times,
+                                                     inference_times=recon_1_times, # [999]
                                                      scheduler=scheduler,
                                                      unet=unet,
                                                      vae=vae,
@@ -307,7 +308,7 @@ def main(args) :
                                                      name=name)
 
 
-                recon_times = inference_times[base_num:].tolist()
+                recon_times = inference_times[args.unet_only_inference_times:].tolist()
                 st_noise_latent = recon_latent_dict[int(noising_time.item())]
                 recon_loop(args,
                            org_latent_dict,
