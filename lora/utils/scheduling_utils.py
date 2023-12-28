@@ -92,6 +92,7 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
     latent_dict[0] = latent
     pil_images = []
     flip_times = inference_times
+    print(f'flip_times : {flip_times}')
     for i, t in enumerate(flip_times[:-1]):
         next_time = flip_times[i + 1]
         if next_time <= final_time :

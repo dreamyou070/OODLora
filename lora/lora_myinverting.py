@@ -279,6 +279,7 @@ def main(args) :
                 inf_time = inference_times.tolist()
                 inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
                 inf_time.append(999)
+                print(f'inf_time : {inf_time}')
 
                 org_latent_dict, time_steps, pil_images = ddim_loop(args,
                                                                     latent=org_vae_latent,
