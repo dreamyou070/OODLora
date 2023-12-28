@@ -477,6 +477,7 @@ class NullInversion:
         bar = tqdm(total=num_inner_steps * NUM_DDIM_STEPS)
         for i in range(NUM_DDIM_STEPS):
             uncond_embeddings = uncond_embeddings.clone().detach()
+            """
             uncond_embeddings.requires_grad = True
             optimizer = Adam([uncond_embeddings], lr=1e-2 * (1. - i / 100.))
             latent_prev = latents[len(latents) - i - 2]
@@ -497,6 +498,7 @@ class NullInversion:
                     break
             for j in range(j + 1, num_inner_steps):
                 bar.update()
+            """
             uncond_embeddings_list.append(uncond_embeddings[:1].detach())
             with torch.no_grad():
                 context = torch.cat([uncond_embeddings, cond_embeddings])
@@ -512,12 +514,12 @@ class NullInversion:
 
         if verbose:
             print("DDIM inversion...")
-
         image_rec, ddim_latents = self.ddim_inversion(image_gt)
 
         if verbose:
             print("Null-text optimization...")
         uncond_embeddings = self.null_optimization(ddim_latents, num_inner_steps, early_stop_epsilon)
+        #uncond_embeddings = None
 
         return (image_gt, image_rec), ddim_latents[-1], uncond_embeddings
 
@@ -557,8 +559,8 @@ def main(args) :
         # registering controller
         print("registering controller")
         ptp_utils.register_attention_control(model, controller)
-        height = width = 512
 
+        height = width = 512
         text_input = model.tokenizer(
             prompt,
             padding="max_length",
@@ -583,7 +585,8 @@ def main(args) :
             else:
                 context = torch.cat([uncond_embeddings_, text_embeddings])
             print(f'generating step, with controller, controller : {controller.__class__.__name__}')
-            latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale,
+            latents = ptp_utils.diffusion_step(model,
+                                               controller, latents, context, t, guidance_scale,
                                                low_resource=False)
 
         if return_type == 'image':

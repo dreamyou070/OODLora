@@ -171,6 +171,8 @@ def text2image_ldm_stable(
 
 
 def register_attention_control(model, controller):
+    print(f'registering controller !! ')
+
     def ca_forward(self, place_in_unet):
         to_out = self.to_out
         if type(to_out) is torch.nn.modules.container.ModuleList:
