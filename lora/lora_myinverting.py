@@ -76,6 +76,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                                 print(f'[make new] layer_name : {layer_name} | res = {res} | object_position : {object_position.sum()}')
                                 mask.append({res:object_position})
                                 map_list.append(object_position)
+                            controller.store(torch.cat(map_list, dim=0), layer_name)
                         else :
                             for elem in mask :
                                 if res == elem.keys() :
@@ -87,7 +88,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                                         obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
                                         attention_probs_object_sub[:, :, word_idx] = torch.where(object_position == 1,obj_attn_vector, back_attn_vector)
                         attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
-                        controller.store(torch.cat(map_list, dim=0), layer_name)
+
 
             hidden_states = torch.bmm(attention_probs, value)
 
