@@ -73,21 +73,13 @@ def main(args):
             if 'good' in category:
 
                 category_folder = os.path.join(test_folder, category)
-
-                train_cat_bad_folder = os.path.join(train_bad_folder, category)
-                os.makedirs(train_cat_bad_folder, exist_ok=True)
-                train_cat_gt_folder = os.path.join(train_gt_folder, category)
-                os.makedirs(train_cat_gt_folder, exist_ok=True)
+                rgb_folder = os.path.join(category_folder, 'rgb')
+                gt_folder = os.path.join(category_folder, 'gt')
 
                 test_cat_bad_folder = os.path.join(test_bad_folder, category)
                 os.makedirs(test_cat_bad_folder, exist_ok=True)
                 test_cat_gt_folder = os.path.join(test_gt_folder, category)
                 os.makedirs(test_cat_gt_folder, exist_ok=True)
-
-                rgb_folder = os.path.join(category_folder, 'rgb')
-                os.makedirs(rgb_folder, exist_ok=True)
-                gt_folder = os.path.join(category_folder, 'gt')
-                os.makedirs(gt_folder, exist_ok=True)
 
                 shutil.copytree(rgb_folder, test_cat_bad_folder)
                 shutil.copytree(gt_folder, test_cat_gt_folder)
@@ -98,6 +90,7 @@ def main(args):
 
         new_train_gt_folder = os.path.join(train_gt_folder, 'good')
         os.makedirs(new_train_gt_folder, exist_ok=True)
+
         train_images = os.listdir(train_good_rgb_folder)
         for image in train_images:
             save_dir = os.path.join(new_train_gt_folder, image)
