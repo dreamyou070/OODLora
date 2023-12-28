@@ -279,18 +279,7 @@ Tuple[float, ...]]):
     return equalizer
 
 
-def aggregate_attention(attention_store: AttentionStore, res: int, from_where: List[str], is_cross: bool, select: int):
-    out = []
-    attention_maps = attention_store.get_average_attention()
-    num_pixels = res ** 2
-    for location in from_where:
-        for item in attention_maps[f"{location}_{'cross' if is_cross else 'self'}"]:
-            if item.shape[1] == num_pixels:
-                cross_maps = item.reshape(len(prompts), -1, res, res, item.shape[-1])[select]
-                out.append(cross_maps)
-    out = torch.cat(out, dim=0)
-    out = out.sum(0) / out.shape[0]
-    return out.cpu()
+
 
 
 def make_controller(prompts: List[str], is_replace_controller: bool, cross_replace_steps: Dict[str, float],
@@ -313,20 +302,7 @@ def make_controller(prompts: List[str], is_replace_controller: bool, cross_repla
     return controller
 
 
-def show_cross_attention(attention_store: AttentionStore, res: int, from_where: List[str], select: int = 0):
-    tokens = tokenizer.encode(prompts[select])
-    decoder = tokenizer.decode
-    attention_maps = aggregate_attention(attention_store, res, from_where, True, select)
-    images = []
-    for i in range(len(tokens)):
-        image = attention_maps[:, :, i]
-        image = 255 * image / image.max()
-        image = image.unsqueeze(-1).expand(*image.shape, 3)
-        image = image.numpy().astype(np.uint8)
-        image = np.array(Image.fromarray(image).resize((256, 256)))
-        image = ptp_utils.text_under_image(image, decoder(int(tokens[i])))
-        images.append(image)
-    ptp_utils.view_images(np.stack(images, axis=0))
+
 
 
 def show_self_attention_comp(attention_store: AttentionStore, res: int, from_where: List[str],
@@ -634,6 +610,38 @@ def main(args) :
     print(
         "showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
     ptp_utils.view_images([image_gt, image_enc, image_inv[0]])
+
+    def aggregate_attention(attention_store: AttentionStore, res: int, from_where: List[str], is_cross: bool,
+                            select: int):
+        out = []
+        attention_maps = attention_store.get_average_attention()
+        num_pixels = res ** 2
+        for location in from_where:
+            for item in attention_maps[f"{location}_{'cross' if is_cross else 'self'}"]:
+                if item.shape[1] == num_pixels:
+                    print(f'cross attn map : {item.shape}')
+                    cross_maps = item.reshape(len(prompts), -1, res, res, item.shape[-1])[select]
+                    out.append(cross_maps)
+        out = torch.cat(out, dim=0)
+        out = out.sum(0) / out.shape[0]
+        return out.cpu()
+
+    def show_cross_attention(attention_store: AttentionStore, res: int, from_where: List[str], select: int = 0):
+        tokens = tokenizer.encode(prompts[select])
+        decoder = tokenizer.decode
+        attention_maps = aggregate_attention(attention_store, res, from_where, True, select)
+        print(f'attention_maps : {attention_maps.shape}')
+        images = []
+        for i in range(len(tokens)):
+            image = attention_maps[:, :, i]
+            image = 255 * image / image.max()
+            image = image.unsqueeze(-1).expand(*image.shape, 3)
+            image = image.numpy().astype(np.uint8)
+            image = np.array(Image.fromarray(image).resize((256, 256)))
+            image = ptp_utils.text_under_image(image, decoder(int(tokens[i])))
+            images.append(image)
+        ptp_utils.view_images(np.stack(images, axis=0))
+
     show_cross_attention(controller, 16, ["up", "down"])
 
 
