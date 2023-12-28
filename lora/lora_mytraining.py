@@ -829,6 +829,7 @@ class NetworkTrainer:
                 attention_storer.reset()
 
             # ------------------------------------------------------------------------------------ #
+            """
             # validation (1) loss record
             valid_epoch_normal_loss = 0
             for step, valid_batch in enumerate(valid_dataloader):
@@ -886,6 +887,7 @@ class NetworkTrainer:
             if is_main_process:
                 with open(logging_file ,'a') as f :
                     f.write(f'{valid_log}\n')
+            """
 
         if is_main_process:
             network = accelerator.unwrap_model(network)
