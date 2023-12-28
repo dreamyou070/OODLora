@@ -10,9 +10,9 @@ import seq_aligner
 from torch.optim.adam import Adam
 from PIL import Image
 import argparse
-present_dir = os.path.dirname(__file__)
-sys.path.append(present_dir)
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),"..")))
+#present_dir = os.path.dirname(__file__)
+#sys.path.append(present_dir)
+#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),"..")))
 from diffusers import DDIMScheduler, StableDiffusionPipeline
 
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
