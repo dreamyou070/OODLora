@@ -1,7 +1,6 @@
 import argparse
 from accelerate.utils import set_seed
 from diffusers import AutoencoderKL
-from STTraining import Encoder_Student
 import os
 import random
 import library.train_util as train_util
@@ -147,16 +146,6 @@ def main(args) :
     text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
     vae.to(accelerator.device, dtype=vae_dtype)
 
-    print(f' (2.3) vae student model')
-    student_vae = AutoencoderKL.from_config(vae.config)
-    student = Encoder_Student(student_vae.encoder, student_vae.quant_conv)
-    student.load_state_dict(get_state_dict(args.student_pretrained_dir), strict=True)
-    student.requires_grad_(False)
-    student.eval()
-    student.to(accelerator.device, dtype=vae_dtype)
-    student_epoch = os.path.split(args.student_pretrained_dir)[-1]
-    student_epoch = os.path.splitext(student_epoch)[0]
-    student_epoch = int(student_epoch.split('_')[-1])
 
     trg_resolutions = args.cross_map_res
     title = ''
@@ -257,7 +246,7 @@ def main(args) :
             image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
             with torch.no_grad():
                 org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
-                st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
+                st_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
                 inf_time = inference_times.tolist()
                 inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
                 org_latent_dict, time_steps, pil_images = ddim_loop(args,
@@ -323,7 +312,6 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_timesteps", type=int, default=1000)
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
     parser.add_argument("--final_noising_time", type=int, default = 250)
-    parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
     parser.add_argument("--pixel_mask_res", type=float, default=0.1)
     parser.add_argument("--pixel_thred", type=float, default=0.1)
