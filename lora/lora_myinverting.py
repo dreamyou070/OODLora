@@ -64,6 +64,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     res = int(pixel_num ** 0.5)
                     if int(pixel_num ** 0.5) in args.cross_map_res:
                         resolutions = [elem.keys() for elem in mask]
+                        print(f'resolutions : {resolutions}')
                         if res not in resolutions :
                             for word_idx in batch_trg_index:
                                 word_idx = int(word_idx)
@@ -71,7 +72,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                                 obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
                                 attention_probs_object_sub[:, :, word_idx] = torch.where(obj_attn_vector>back_attn_vector, obj_attn_vector, back_attn_vector)
                                 object_position = torch.where(obj_attn_vector>back_attn_vector, 1, 0)
-                                print(f'layer_name : {layer_name} | res = {res} | object_position : {object_position.sum()}')
+                                print(f'[make new] layer_name : {layer_name} | res = {res} | object_position : {object_position.sum()}')
                                 mask.append({res:object_position})
                                 map_list.append(object_position)
                         else :
