@@ -147,6 +147,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 input_latent = x_latent
                 input_cond = con
                 trg_indexs_list = None
+                pixel_set = None
 
             noise_pred = call_unet(unet,
                                    input_latent,
