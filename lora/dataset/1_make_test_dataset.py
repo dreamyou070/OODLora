@@ -8,20 +8,20 @@ from random import sample
 def main(args):
 
     base_folder = args.base_folder
-    categories = os.listdir(base_folder)
-    for category in categories:
-        category_folder = os.path.join(base_folder, category)
+    cats = os.listdir(base_folder)
+    for cat in cats:
+        cat_folder = os.path.join(base_folder, cat)
 
-        train_folder = os.path.join(category_folder, 'train')
-        test_ex_folder = os.path.join(category_folder, 'test_ex')
+        train_folder = os.path.join(cat_folder, 'train')
+        test_ex_folder = os.path.join(cat_folder, 'test_ex')
         os.makedirs(test_ex_folder, exist_ok=True)
         test_bad_folder = os.path.join(test_ex_folder, 'bad')
         os.makedirs(test_bad_folder, exist_ok=True)
         test_gt_folder = os.path.join(test_ex_folder, 'corrected')
         os.makedirs(test_gt_folder, exist_ok=True)
 
-        test_folder = os.path.join(category_folder, 'test')
-        train_ex_folder = os.path.join(category_folder, 'train_ex')
+        test_folder = os.path.join(cat_folder, 'test')
+        train_ex_folder = os.path.join(cat_folder, 'train_ex')
         os.makedirs(train_ex_folder, exist_ok=True)
         train_bad_folder = os.path.join(train_ex_folder, 'bad')
         os.makedirs(train_bad_folder, exist_ok=True)
@@ -78,7 +78,7 @@ def main(args):
 
                 test_cat_bad_folder = os.path.join(test_bad_folder, category)
                 test_cat_gt_folder = os.path.join(test_gt_folder, category)
-                
+
 
                 shutil.copytree(rgb_folder, test_cat_bad_folder)
                 shutil.copytree(gt_folder, test_cat_gt_folder)
@@ -96,7 +96,7 @@ def main(args):
             pil = Image.fromarray(np.zeros((512, 512), dtype=np.uint8))
             pil.save(save_dir)
 
-        validation_folder = os.path.join(category_folder, 'validation/good/rgb')
+        validation_folder = os.path.join(cat_folder, 'validation/good/rgb')
         val_images = os.listdir(validation_folder)
         for image in val_images:
             val_pil = Image.open(os.path.join(validation_folder, image))
