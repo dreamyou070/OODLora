@@ -71,12 +71,14 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                                 obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
                                 attention_probs_object_sub[:, :, word_idx] = torch.where(obj_attn_vector>back_attn_vector, obj_attn_vector, back_attn_vector)
                                 object_position = torch.where(obj_attn_vector>back_attn_vector, 1, 0)
+                                print(f'layer_name : {layer_name} | res = {res} | object_position : {object_position.sum()}')
                                 mask.append({res:object_position})
                                 map_list.append(object_position)
                         else :
                             for elem in mask :
                                 if res == elem.keys() :
                                     object_position = elem[res]
+                                    print( f'layer_name : {layer_name} | res = {res} | object_position : {object_position.sum()}')
                                     for word_idx in batch_trg_index:
                                         word_idx = int(word_idx)
                                         back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
