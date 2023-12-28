@@ -160,8 +160,6 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 print(f'cross map checking denoising, time : {t}', )
                 mask_dict = controller.step_store
                 controller.reset()
-
-
                 layers = mask_dict.keys()
                 masks = []
                 for layer in layers:
@@ -170,18 +168,18 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                     head, pix_num = mask.shape
                     mask = torch.sum(mask, dim=0)
                     mask = torch.where(mask > 0, 1, 0) # [1024]
-                    #mask = torch.reshape(mask, (head, int(pix_num ** 0.5), int(pix_num ** 0.5)))[0]
-                    mask = torch.reshape(mask, (int(pix_num ** 0.5), int(pix_num ** 0.5)))
-                    image = np.array(mask.cpu().numpy().astype(np.uint8)) *255
-                    np_map = np.array(Image.fromarray(image.astype(np.uint8)).resize((64, 64))) / 255
-                    np_map = np.where(np_map > 0, 1, 0)
-                    mask = torch.from_numpy(np_map)#.unsqueeze(0).unsqueeze(0).float()
-                    masks.append(mask.unsqueeze(0))
+                    if pix_num == 64 * 64 :
+                        mask = torch.reshape(mask, (int(pix_num ** 0.5), int(pix_num ** 0.5)))
+                        image = np.array(mask.cpu().numpy().astype(np.uint8)) *255
+                        np_map = np.array(Image.fromarray(image.astype(np.uint8)).resize((64, 64))) / 255
+                        np_map = np.where(np_map > 0, 1, 0)
+                        mask = torch.from_numpy(np_map)#.unsqueeze(0).unsqueeze(0).float()
+                        masks.append(mask.unsqueeze(0))
                 out = torch.cat(masks, dim=0) # [num, 64,64]
                 out = out.sum(0) / out.shape[0]
                 out = (255 * out / out.max()).unsqueeze(0).unsqueeze(0).float()
                 mask_latent = out/255
-                mask_latent = torch.where(mask_latent>0, 1, 0)
+                mask_latent = torch.where(mask_latent> 0, 1, 0) # this means all mask_lants is bigger than 0
 
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
                 #mask_latent = mask_latent.expand(z_noise_pred.shape).to(z_noise_pred.device)
