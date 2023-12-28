@@ -158,9 +158,14 @@ def main(args) :
     student_epoch = os.path.splitext(student_epoch)[0]
     student_epoch = int(student_epoch.split('_')[-1])
 
+    trg_resolutions = args.cross_map_res
+    title = ''
+    for res in trg_resolutions:
+        title += f'_{res}'
+
 
     output_dir = os.path.join(output_dir,
-                           f'lora_epoch_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask_pixel_thred_{args.pixel_thred}')
+                           f'lora_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask_pixel_thred_{args.pixel_thred}_cross_res{title}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
