@@ -203,20 +203,29 @@ class NetworkTrainer:
         use_class_caption = args.class_caption is not None
 
         print(f' (2.1) training dataset')
-        blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
-        user_config = {}
-        user_config['datasets'] = [{"subsets": None}]
-        subsets_dict_list = []
-        for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir, args.reg_data_dir, args.class_caption):
-            if use_class_caption:
-                subsets_dict['class_caption'] = args.class_caption
-            subsets_dict_list.append(subsets_dict)
-            user_config['datasets'][0]['subsets'] = subsets_dict_list
-        blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
-        train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
-        if len(train_dataset_group) == 0:
-            print("No data found. Please verify arguments (train_data_dir must be the parent of folders with images) ")
-            return
+        if args.dataset_class is None:
+            blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
+            print("Using DreamBooth method.")
+            user_config = {}
+            user_config['datasets'] = [{"subsets": None}]
+            subsets_dict_list = []
+            for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
+                                                                                          args.reg_data_dir, args.class_caption):
+                if use_class_caption:
+                    subsets_dict['class_caption'] = args.class_caption
+                subsets_dict_list.append(subsets_dict)
+                user_config['datasets'][0]['subsets'] = subsets_dict_list
+            print(f'User config: {user_config}')
+            # blueprint_generator = BlueprintGenerator
+            print('start of generate function ...')
+            blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
+            blueprint.dataset_group
+            print(f'blueprint.dataset_group : {blueprint.dataset_group}')
+            train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
+
+        else:
+            train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
+            
 
         print(f' (2.2) validation dataset')
         blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
