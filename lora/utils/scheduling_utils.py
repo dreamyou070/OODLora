@@ -191,7 +191,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 #mask_latent = torch.where(mask_latent> 0, 1, 0) # this means all mask_lants is bigger than 0
                 mask_latent = torch.tensor(image).to(z_latent.device, dtype = z_latent.dtype)
                 mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)/255
-                mask_latent = torch.where(mask_latent > 0.2, 1, 0)
+                mask_latent = torch.where(mask_latent > args.pixel_thred, 1, 0)
                 z_noise_pred, x_noise_pred = noise_pred.chunk(2)
                 x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
                 y_latent = latent_dict[prev_time] * (1-mask_latent) + x_latent * (mask_latent)
