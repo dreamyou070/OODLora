@@ -292,6 +292,7 @@ def main(args) :
                                                                     name=name)
                 index = inference_times.tolist().index(args.final_noising_time)
                 recon_times = inference_times[index:] # 300, ,,, , 20, 0
+                print(f'org_latent_dict.keys() : {org_latent_dict.keys()}')
                 st_noise_latent = org_latent_dict[args.final_noising_time]
                 recon_loop(args,
                            org_latent_dict,
