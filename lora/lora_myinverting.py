@@ -348,7 +348,7 @@ if __name__ == "__main__":
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
     parser.add_argument("--pixel_mask_res", type=float, default=0.1)
-    parser.add_argument("--self_attn_mask_thredhold", type=float, default=0.1)
+    parser.add_argument("--pixel_thred", type=float, default=0.1)
 
     parser.add_argument("--other_token_preserving", action = 'store_true')
     import ast
