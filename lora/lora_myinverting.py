@@ -162,7 +162,7 @@ def main(args) :
     title = ''
     for res in trg_resolutions:
         title += f'_{res}'
-
+    print(f'title : {title}')
 
     output_dir = os.path.join(output_dir,
                            f'lora_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask_pixel_thred_{args.pixel_thred}_cross_res{title}')
