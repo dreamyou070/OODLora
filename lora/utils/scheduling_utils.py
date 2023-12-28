@@ -92,7 +92,6 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
     latent_dict[0] = latent
     pil_images = []
     flip_times = inference_times
-    print(f'flip_times : {flip_times}')
     for i, t in enumerate(flip_times[:-1]):
         next_time = flip_times[i + 1]
         if next_time <= final_time :
@@ -106,8 +105,8 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
             pil_images.append(pil_img)
             if next_time == final_time :
                 pil_img.save(os.path.join(base_folder_dir, f'{name}_noising_{next_time}.png'))
-    time_steps.append(next_time)
-    latent_dict[int(next_time)] = latent
+    time_steps.append(final_time)
+    latent_dict[int(final_time)] = latent
     return latent_dict, time_steps, pil_images
 
 
