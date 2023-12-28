@@ -624,8 +624,8 @@ def main(args):
         for location in from_where:
             for item in attention_maps[f"{location}_{'cross' if is_cross else 'self'}"]:
                 if item.shape[1] == num_pixels:
-                    print(f'cross attn map : {item.shape}')
                     cross_maps = item.reshape(len(prompts), -1, res, res, item.shape[-1])[select]
+                    print(f'cross attn map (head, res,res,77 sentence len): {item.shape}')
                     out.append(cross_maps)
         out = torch.cat(out, dim=0)
         out = out.sum(0) / out.shape[0]

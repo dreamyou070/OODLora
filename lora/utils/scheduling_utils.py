@@ -158,37 +158,42 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                                    pixel_set)
 
             if latent_dict is not None:
+
                 mask_dict = controller.step_store
                 controller.reset()
                 layers = mask_dict.keys()
-                masks = []
+                mask_dict = {}
                 for layer in layers:
                     mask = mask_dict[layer]
                     mask = mask[0] # [8,1024]
                     head, pix_num = mask.shape
-                    mask = torch.sum(mask, dim=0)
-                    mask = torch.where(mask > 0, 1, 0) # [1024]
-                    if pix_num == 64 * 64 :
-                        mask = torch.reshape(mask, (int(pix_num ** 0.5), int(pix_num ** 0.5)))
-                        image = np.array(mask.cpu().numpy().astype(np.uint8)) *255
-                        np_map = np.array(Image.fromarray(image.astype(np.uint8)).resize((64, 64))) / 255
-                        np_map = np.where(np_map > 0, 1, 0)
-                        mask = torch.from_numpy(np_map)#.unsqueeze(0).unsqueeze(0).float()
-                        masks.append(mask.unsqueeze(0))
-                out = torch.cat(masks, dim=0) # [num, 64,64]
-                out = out.sum(0) / out.shape[0]
-                out = (255 * out / out.max()).unsqueeze(0).unsqueeze(0).float()
-                mask_latent = out/255
-                mask_latent = torch.where(mask_latent> 0, 1, 0) # this means all mask_lants is bigger than 0
+                    res = int(pix_num ** 0.5)
+                    if res not in mask_dict.keys() :
+                        mask_dict[res] = []
+                    cross_maps = mask.reshape(head, res,res)
+                    mask_dict[res].append(cross_maps)
+                mask_res_dict = {}
+                for resolution in mask_dict.keys():
+                    if resolution == 64 :
+                        map_list = mask_dict[resolution]
+                        out = torch.cat(map_list, dim=0)  # [num, 64,64]
+                        avg_attn = out.sum(0) / out.shape[0]
+                        mask_res_dict[resolution] = avg_attn
+
+                images = []
+                for res in mask_res_dict.keys() :
+                    image = mask_res_dict[res]
+                    image = 255 * image / image.max()
+                    image = image.unsqueeze(-1).expand(*image.shape, 4)  # res,res,3
+                    image = image.numpy().astype(np.uint8)
+                    image = np.array(Image.fromarray(image).resize((64,64)))
+
+                print(f'resolution 64, mask : {image.shape}')
+                #mask_latent = torch.where(mask_latent> 0, 1, 0) # this means all mask_lants is bigger than 0
+                mask_latent = image
+
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
-                #mask_latent = mask_latent.expand(z_noise_pred.shape).to(z_noise_pred.device)
-                #back_latent = latent_dict[prev_time]
-                #obj_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
-                #back_position = (1 - mask_latent.to(obj_latent.device)).sum()
-                #print(f'back_position : {back_position}')
-                #back_position = 1 - mask_latent
-                #print(f'back_position : {back_position.sum()}')
-                #y_latent = obj_latent * mask_latent.to(obj_latent.device) + back_latent * (1 - mask_latent.to(obj_latent.device))
+
                 y_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
             else :
                 y_latent = prev_step(noise_pred, t, x_latent, scheduler)
