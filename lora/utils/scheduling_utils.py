@@ -140,13 +140,11 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
         latent = prev_step(noise_pred, int(t), latent, scheduler)
         prev_time = int(inference_times[i + 1])
         x_latent_dict[prev_time] = latent
-        print(f'prev_time : {prev_time}')
         break
 
     inference_times = inference_times[1:]
     for i, t in enumerate(inference_times[:-1]):
-        print(f'current time : {t}')
-
+        prev_time = int(inference_times[i + 1])
         with torch.no_grad():
             if latent_dict is not None:
                 z_latent = latent_dict[t]
@@ -155,13 +153,11 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 input_cond = torch.cat([con, con], dim=0)
                 trg_indexs_list = [[1]]
                 pixel_set = []
-
             else :
                 input_latent = x_latent
                 input_cond = con
                 trg_indexs_list = None
                 pixel_set = None
-
             noise_pred = call_unet(unet,
                                    input_latent,
                                    t,
@@ -204,6 +200,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
                 y_latent = z_latent * (1-mask_latent) + x_latent * (mask_latent)
                 x_latent_dict[prev_time] = y_latent
+
                 y_noise_pred = call_unet(unet,y_latent,t,con, None, None)
                 y_latent = prev_step(y_noise_pred, t, x_latent, scheduler)
             else :
