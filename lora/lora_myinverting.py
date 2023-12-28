@@ -183,7 +183,7 @@ def main(args) :
 
 
     output_dir = os.path.join(output_dir,
-                           f'lora_epoch_{model_epoch}_final_noising_{args.final_noising_time}')
+                           f'lora_epoch_{model_epoch}_final_noising_{args.final_noising_time}_res_64_pixel_mask')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 

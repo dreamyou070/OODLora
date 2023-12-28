@@ -191,10 +191,10 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 print(f'resolution 64, mask : {image.shape}')
                 #mask_latent = torch.where(mask_latent> 0, 1, 0) # this means all mask_lants is bigger than 0
                 mask_latent = image
-
-                z_noise_pred, y_noise_pred = noise_pred.chunk(2)
-
-                y_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
+                #z_noise_pred, y_noise_pred = noise_pred.chunk(2)
+                y_latent = z_latent + (1-mask_latent) + x_latent * (mask_latent)
+                y_noise_pred = call_unet(unet,y_latent,t,con, None, None)
+                y_latent = prev_step(y_noise_pred, int(t), y_latent, scheduler)
             else :
                 y_latent = prev_step(noise_pred, t, x_latent, scheduler)
 
