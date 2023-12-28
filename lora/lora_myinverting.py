@@ -288,15 +288,16 @@ def main(args) :
                                                                     final_time=args.final_noising_time,
                                                                     base_folder_dir=trg_img_output_dir,
                                                                     name=name)
-                index = inference_times.tolist().index(args.final_noising_time)
-                recon_times = inference_times[index:] # 300, ,,, , 20, 0
-                print(f'org_latent_dict.keys() : {org_latent_dict.keys()}')
+                #index = inference_times.tolist().index(args.final_noising_time)
+                #recon_times = inference_times[index:] # 300, ,,, , 20, 0
+                # [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300]
+                # print(f'org_latent_dict.keys() : {org_latent_dict.keys()}')
                 st_noise_latent = org_latent_dict[args.final_noising_time]
                 recon_loop(args,
                            org_latent_dict,
                            start_latent=st_noise_latent,
                            context=context,
-                           inference_times=recon_times,
+                           inference_times= time_steps.reverse(), # [300, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300]
                            scheduler=scheduler,
                            unet=unet,
                            vae=vae,
