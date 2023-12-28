@@ -608,7 +608,8 @@ def main(args) :
     print("Modify or remove offsets according to your image!")
     prompts = [prompt]
     controller = AttentionStore()
-    image_inv, x_t = run_and_display(prompts, controller, run_baseline=False, latent=x_t,
+    image_inv, x_t = run_and_display(prompts,
+                                     controller, run_baseline=False, latent=x_t,
                                      uncond_embeddings=uncond_embeddings, verbose=False)
     print(
         "showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")

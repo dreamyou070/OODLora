@@ -200,6 +200,7 @@ def register_attention_control(model, controller):
 
             # attention, what we cannot get enough of
             attn = sim.softmax(dim=-1)
+            print(f'storing attn : {attn.shape}')
             attn = controller(attn, is_cross, place_in_unet)
             out = torch.einsum("b i j, b j d -> b i d", attn, v)
             out = self.reshape_batch_dim_to_heads(out)
