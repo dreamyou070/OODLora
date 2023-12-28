@@ -668,7 +668,6 @@ def main(args) :
 
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pretrained_model', type=str,
-                        default=r'/home/dreamyou070/pretrained_stable_diffusion/stable-diffusion-v1-5', help='prompt')
+    parser.add_argument('--pretrained_model', type=str,default='/home/dreamyou070/pretrained_stable_diffusion/stable-diffusion-v1-5',)
     args = parser.parse_args()
     main(args)
