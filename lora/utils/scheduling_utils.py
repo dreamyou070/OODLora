@@ -80,7 +80,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
 
 
 @torch.no_grad()
-def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, base_folder_dir, is_org, name,):
+def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, final_time, base_folder_dir, name,):
     if context.shape[0] == 1:
         cond_embeddings = context
     else :
@@ -94,19 +94,17 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, base
     flip_times = inference_times
     for i, t in enumerate(flip_times[:-1]):
         next_time = flip_times[i + 1]
-        latent_dict[int(t)] = latent
-        time_steps.append(t)
-        noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
-        noise_pred_dict[int(t)] = noise_pred
-        latent = next_step(noise_pred, int(t), latent, scheduler)
-        np_img = latent2image(latent, vae, return_type='np')
-        pil_img = Image.fromarray(np_img)
-        pil_images.append(pil_img)
-        if next_time >= 980:
-            if is_org:
+        if next_time <= final_time :
+            latent_dict[int(t)] = latent
+            time_steps.append(t)
+            noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
+            noise_pred_dict[int(t)] = noise_pred
+            latent = next_step(noise_pred, int(t), latent, scheduler)
+            np_img = latent2image(latent, vae, return_type='np')
+            pil_img = Image.fromarray(np_img)
+            pil_images.append(pil_img)
+            if next_time == final_time :
                 pil_img.save(os.path.join(base_folder_dir, f'{name}_noising_{next_time}.png'))
-            else :
-                pil_img.save(os.path.join(base_folder_dir, f'{name}_student_noising_{next_time}.png'))
     time_steps.append(next_time)
     latent_dict[int(next_time)] = latent
     return latent_dict, time_steps, pil_images
@@ -157,7 +155,6 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                                    pixel_set)
 
             if latent_dict is not None:
-                print(f'cross map checking denoising, time : {t}', )
                 mask_dict = controller.step_store
                 controller.reset()
                 layers = mask_dict.keys()
@@ -180,10 +177,8 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 out = (255 * out / out.max()).unsqueeze(0).unsqueeze(0).float()
                 mask_latent = out/255
                 mask_latent = torch.where(mask_latent> 0, 1, 0) # this means all mask_lants is bigger than 0
-
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
                 #mask_latent = mask_latent.expand(z_noise_pred.shape).to(z_noise_pred.device)
-
                 #back_latent = latent_dict[prev_time]
                 #obj_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
                 #back_position = (1 - mask_latent.to(obj_latent.device)).sum()
@@ -199,9 +194,8 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
             latent = y_latent
             controller.reset()
             np_img = latent2image(latent, vae, return_type='np')
-            if prev_time == 0:
-                pil_img = Image.fromarray(np_img)
-                pil_images.append(pil_img)
-                pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
+            pil_img = Image.fromarray(np_img)
+            pil_images.append(pil_img)
+            pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
         all_latent_dict[prev_time] = latent
     return all_latent_dict, time_steps, pil_images

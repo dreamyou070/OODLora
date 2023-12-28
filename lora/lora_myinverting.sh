@@ -22,5 +22,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --cross_map_res [64,32,16,8] \
   --mask_thredhold 0 \
   --num_ddim_steps 50 \
-  --other_token_preserving \
-  --unet_only_inference_times 0
+  --final_noising_time  300 \
+  --other_token_preserving

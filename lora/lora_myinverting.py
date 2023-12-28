@@ -181,11 +181,9 @@ def main(args) :
     student_epoch = os.path.splitext(student_epoch)[0]
     student_epoch = int(student_epoch.split('_')[-1])
 
-    base_num = (args.num_ddim_steps - args.unet_only_inference_times)
-    assert base_num >= 0, f'base_num should be larger than 0, but {base_num}'
 
     output_dir = os.path.join(output_dir,
-                           f'lora_epoch_{model_epoch}_mask_thred_{args.mask_thredhold}_from_{base_num}')
+                           f'lora_epoch_{model_epoch}_final_noising_{args.final_noising_time}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
@@ -278,15 +276,10 @@ def main(args) :
             with torch.no_grad():
                 org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
                 st_latent = customizing_image2latent(image_gt_np, student, device=device, weight_dtype=weight_dtype)
-                #recon_img = vae.decode(st_latent / 0.18215)['sample']
-                #recon_img = (recon_img / 2 + 0.5).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()[0]
-                #image = (recon_img * 255).astype(np.uint8)
-                #image = Image.fromarray(image)
-                #print(f'vae recon save')
-                #image.save(os.path.join(trg_img_output_dir, 'student_vae_recon.png'))
                 inf_time = inference_times.tolist()
                 inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
                 inf_time.append(999)
+                final_time = args.final_time
                 org_latent_dict, time_steps, pil_images = ddim_loop(args,
                                                                     latent=org_vae_latent,
                                                                     context=inv_c,
@@ -294,50 +287,12 @@ def main(args) :
                                                                     scheduler=scheduler,
                                                                     unet=invers_unet,
                                                                     vae=vae,
+                                                                    final_time=final_time,
                                                                     base_folder_dir=trg_img_output_dir,
-                                                                    is_org=True,
-                                                                    name=name) # also to 999
-                """
-                latent_dict, time_steps, pil_images = ddim_loop(args,
-                                                                latent=st_latent,
-                                                                context=inv_c,
-                                                                inference_times=inf_time,
-                                                                scheduler=scheduler,
-                                                                unet=invers_unet,
-                                                                vae=vae,
-                                                                base_folder_dir=trg_img_output_dir,
-                                                                is_org=False,
-                                                                name=name)
-
-                print(f'inference_times : {inference_times}')
-                print(f'base_num : {base_num}')
-                """
-                """
-                noising_time = inference_times[args.unet_only_inference_times]                # noising_time = 999
-                recon_1_times = inference_times[:args.unet_only_inference_times + 1].tolist() # [999]
-                recon_latent_dict, _, _ = recon_loop(args,
-                                                     None,
-                                                     start_latent=latent_dict[int(time_steps[-1])],
-                                                     context=context,
-                                                     inference_times=recon_1_times, # [999]
-                                                     scheduler=scheduler,
-                                                     unet=unet,
-                                                     vae=vae,
-                                                     base_folder_dir=trg_img_output_dir,
-                                                     controller=controller,
-                                                     name=name)
-                """
-
-
-                #recon_times = inference_times[args.unet_only_inference_times:].tolist()
-                #st_noise_latent = recon_latent_dict[int(noising_time.item())]
-                st_noise_latent = org_latent_dict[300]
-                org_latent_dict, time_steps
-                recon_times = []
-                for times in org_latent_dict.keys():
-                    if times < 300 :
-                        recon_times.append(times)
-                recon_times.reverse()
+                                                                    name=name)
+                index = inference_times.tolist().index(args.final_noising_time)
+                recon_times = inference_times[index:] # 300, ,,, , 20, 0
+                st_noise_latent = org_latent_dict[args.final_noising_time]
                 recon_loop(args,
                            org_latent_dict,
                            start_latent=st_noise_latent,
@@ -388,7 +343,7 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
     parser.add_argument("--scheduler_timesteps", type=int, default=1000)
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
-    parser.add_argument("--unet_only_inference_times", type=int, default = 30)
+    parser.add_argument("--final_noising_time", type=int, default = 250)
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
     parser.add_argument("--pixel_mask_thredhold", type=float, default=0.1)

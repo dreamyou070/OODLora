@@ -4,40 +4,12 @@ from PIL import Image
 import torch, torchvision
 import torch.nn.functional as nnf
 import math
-masks = []
-pix_num = 32*32
-head = 8
-mask = torch.zeros((8, pix_num))
 
-
-masks = []
-
-mask = torch.randn((8,1024*4))
-head, pix_num = mask.shape
-mask = torch.sum(mask, dim=0)
-mask = torch.where(mask > 0, 1, 0) # [1024]
-mask = torch.reshape(mask, (int(pix_num ** 0.5), int(pix_num ** 0.5)))
-print(mask)
-image = np.array(mask.cpu().numpy().astype(np.uint8)) * 255
-pil_img = Image.fromarray(image.astype(np.uint8)).resize((64, 64))
-np_map = np.array(pil_img) / 255
-np_map = np.where(np_map > 0, 1, 0)
-print(np_map)
-mask = torch.from_numpy(np_map)#.unsqueeze(0).unsqueeze(0).float()
-print(mask)
-masks.append(mask.unsqueeze(0))
-
-"""
-#
-
-
-
-
-
-
-out = torch.cat(masks, dim=0) # [num, 64,64]
-out = out.sum(0) / out.shape[0]
-out = (255 * out / out.max()).unsqueeze(0).unsqueeze(0).float()
-mask_latent = out/255
-mask_latent = torch.where(mask_latent>0, 1, 0)
-"""
+inference_times = torch.tensor([999, 980, 960, 940, 920, 900, 880, 860, 840, 820, 800, 780, 760, 740,
+        720, 700, 680, 660, 640, 620, 600, 580, 560, 540, 520, 500, 480, 460,
+        440, 420, 400, 380, 360, 340, 320, 300, 280, 260, 240, 220, 200, 180,
+        160, 140, 120, 100,  80,  60,  40,  20,   0]).tolist()
+index = inference_times.index(300)
+recon_times = inference_times[index:]
+print(index)
+print(recon_times)
