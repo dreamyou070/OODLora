@@ -183,7 +183,7 @@ def main(args) :
 
 
     output_dir = os.path.join(output_dir,
-                           f'lora_epoch_{model_epoch}_final_noising_{args.final_noising_time}_res_64_pixel_mask')
+                           f'lora_epoch_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
@@ -347,7 +347,7 @@ if __name__ == "__main__":
     parser.add_argument("--final_noising_time", type=int, default = 250)
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
-    parser.add_argument("--pixel_mask_thredhold", type=float, default=0.1)
+    parser.add_argument("--pixel_mask_res", type=float, default=0.1)
     parser.add_argument("--self_attn_mask_thredhold", type=float, default=0.1)
 
     parser.add_argument("--other_token_preserving", action = 'store_true')
