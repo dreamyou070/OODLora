@@ -155,6 +155,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                                    trg_indexs_list, None)
 
             if latent_dict is not None:
+                print(f'cross map checking denoising, time : {t}', )
                 mask_dict = controller.step_store
                 controller.reset()
 

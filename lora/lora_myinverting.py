@@ -69,10 +69,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-
-
                             attention_probs_object_sub[:, :, word_idx] = torch.where(obj_attn_vector>back_attn_vector, obj_attn_vector, back_attn_vector)
                             object_position = torch.where(obj_attn_vector>back_attn_vector, 1, 0)
+                            print(f'layer : {layer_name} : object_position_num : {object_position.sum()}')
+                            import time
+                            time.sleep(10)
                             map_list.append(object_position)
                         attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
                         controller.store(torch.cat(map_list, dim=0), layer_name)
