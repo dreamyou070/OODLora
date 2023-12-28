@@ -10,12 +10,13 @@ import seq_aligner
 from torch.optim.adam import Adam
 from PIL import Image
 import argparse
-#present_dir = os.path.dirname(__file__)
-#sys.path.append(present_dir)
-#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),"..")))
+# present_dir = os.path.dirname(__file__)
+# sys.path.append(present_dir)
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),"..")))
 from diffusers import DDIMScheduler, StableDiffusionPipeline
 
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+
 
 class LocalBlend:
 
@@ -176,7 +177,7 @@ class AttentionStore(AttentionControl):
                 e = item / self.cur_step
                 e_list.append(e)
             average_attention[key] = e_list
-        #average_attention = {key: [item / self.cur_step for item in self.attention_store[key]] for key in
+        # average_attention = {key: [item / self.cur_step for item in self.attention_store[key]] for key in
         #                     self.attention_store}
         return average_attention
 
@@ -184,8 +185,6 @@ class AttentionStore(AttentionControl):
         super(AttentionStore, self).reset()
         self.step_store = self.get_empty_store()
         self.attention_store = {}
-
-
 
 
 class AttentionControlEdit(AttentionStore, abc.ABC):
@@ -215,7 +214,7 @@ class AttentionControlEdit(AttentionStore, abc.ABC):
             if is_cross:
                 alpha_words = self.cross_replace_alpha[self.cur_step]
                 attn_repalce_new = self.replace_cross_attention(attn_base, attn_repalce) * alpha_words + (
-                            1 - alpha_words) * attn_repalce
+                        1 - alpha_words) * attn_repalce
                 attn[1:] = attn_repalce_new
             else:
                 attn[1:] = self.replace_self_attention(attn_base, attn_repalce, place_in_unet)
@@ -292,9 +291,6 @@ Tuple[float, ...]]):
     return equalizer
 
 
-
-
-
 def make_controller(prompts: List[str], is_replace_controller: bool, cross_replace_steps: Dict[str, float],
                     self_replace_steps: float, blend_words=None, equilizer_params=None) -> AttentionControlEdit:
     if blend_words is None:
@@ -313,12 +309,6 @@ def make_controller(prompts: List[str], is_replace_controller: bool, cross_repla
                                        self_replace_steps=self_replace_steps, equalizer=eq, local_blend=lb,
                                        controller=controller)
     return controller
-
-
-
-
-
-
 
 
 def load_512(image_path, left=0, right=0, top=0, bottom=0):
@@ -343,11 +333,12 @@ def load_512(image_path, left=0, right=0, top=0, bottom=0):
     return image
 
 
-
 LOW_RESOURCE = False
 NUM_DDIM_STEPS = 50
 GUIDANCE_SCALE = 7.5
 MAX_NUM_WORDS = 77
+
+
 class NullInversion:
 
     def __init__(self, model, ):
@@ -478,7 +469,7 @@ class NullInversion:
             uncond_embeddings.requires_grad = True
             optimizer = Adam([uncond_embeddings], lr=1e-2 * (1. - i / 100.))
             latent_prev = latents[len(latents) - i - 2]
-            
+
             with torch.no_grad():
                 noise_pred_cond = self.get_noise_pred_single(latent_cur, t, cond_embeddings)
             for j in range(num_inner_steps):
@@ -516,19 +507,16 @@ class NullInversion:
         if verbose:
             print("Null-text optimization...")
         uncond_embeddings = self.null_optimization(ddim_latents, num_inner_steps, early_stop_epsilon)
-        #uncond_embeddings = None
+        # uncond_embeddings = None
 
         return (image_gt, image_rec), ddim_latents[-1], uncond_embeddings
 
 
+def main(args):
+    scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False,
+                              set_alpha_to_one=False)
 
-
-
-def main(args) :
-
-    scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False, set_alpha_to_one=False)
-
-    ldm_stable = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4",
+    ldm_stable = StableDiffusionPipeline.from_pretrained('/home/dreamyou070/pretrained_stable_diffusion/stable-diffusion-v1-5',
                                                          scheduler=scheduler).to(device)
     try:
         ldm_stable.disable_xformers_memory_efficient_attention()
@@ -563,7 +551,7 @@ def main(args) :
             padding="max_length",
             max_length=model.tokenizer.model_max_length,
             truncation=True,
-            return_tensors="pt",)
+            return_tensors="pt", )
         text_embeddings = model.text_encoder(text_input.input_ids.to(model.device))[0]
         max_length = text_input.input_ids.shape[-1]
         if uncond_embeddings is None:
@@ -662,13 +650,14 @@ def main(args) :
     def show_cross_attention(attention_store: AttentionStore, res: int, from_where: List[str], select: int = 0):
         tokens = tokenizer.encode(prompts[select])
         decoder = tokenizer.decode
-        attention_maps = aggregate_attention(attention_store, res, from_where, True, select) # head, res, res, text_len=3
+        attention_maps = aggregate_attention(attention_store, res, from_where, True,
+                                             select)  # head, res, res, text_len=3
         print(f'attention_maps : {attention_maps.shape}')
         images = []
         for i in range(len(tokens)):
-            image = attention_maps[:, :, i]                     # res,res, 1
+            image = attention_maps[:, :, i]  # res,res, 1
             image = 255 * image / image.max()
-            image = image.unsqueeze(-1).expand(*image.shape, 3) # res,res,3
+            image = image.unsqueeze(-1).expand(*image.shape, 3)  # res,res,3
             image = image.numpy().astype(np.uint8)
             image = np.array(Image.fromarray(image).resize((256, 256)))
             image = ptp_utils.text_under_image(image, decoder(int(tokens[i])))
@@ -678,8 +667,9 @@ def main(args) :
     show_cross_attention(controller, 16, ["up", "down"])
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pretrained_model', type=str,default='/home/dreamyou070/pretrained_stable_diffusion/stable-diffusion-v1-5',)
+    parser.add_argument('--pretrained_model', type=str,
+                        default='/home/dreamyou070/pretrained_stable_diffusion/stable-diffusion-v1-5', )
     args = parser.parse_args()
     main(args)
