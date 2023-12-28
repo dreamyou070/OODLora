@@ -1,30 +1,19 @@
-import importlib
-import argparse
-import gc
+import importlib, argparse, gc, math, os, sys, random, time, json, toml, shutil
 import numpy as np
 from PIL import Image
-import math
-import os
-import sys
-import random
-import time
-import json
 from multiprocessing import Value
 from tqdm import tqdm
-import toml
 from accelerate.utils import set_seed
 from diffusers import DDPMScheduler
 from library import model_util
 import library.train_util as train_util
-from library.train_util import (DreamBoothDataset, )
 import library.config_util as config_util
 from library.config_util import (ConfigSanitizer, BlueprintGenerator, )
-import library.huggingface_util as huggingface_util
 import library.custom_train_functions as custom_train_functions
 from library.custom_train_functions import prepare_scheduler_for_custom_training
 import torch
 from torch import nn
-from functools import lru_cache
+import wandb
 from attention_store import AttentionStore
 try:
     from setproctitle import setproctitle
@@ -105,7 +94,6 @@ class NetworkTrainer:
         self.vae_scale_factor = 0.18215
         self.is_sdxl = False
 
-    # TODO 他のスクリプトと共通化する
     def generate_step_logs(self, loss_dict, lr_scheduler, keys_scaled=None, mean_norm=None, maximum_norm=None,
                            **kwargs):
         logs = {}
@@ -152,24 +140,11 @@ class NetworkTrainer:
 
         return logs
 
-    def assert_extra_args(self, args, train_dataset_group):
-        pass
 
     def load_target_model(self, args, weight_dtype, accelerator):
         text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
         return model_util.get_model_version_str_for_sd1_sd2(args.v2, args.v_parameterization), text_encoder, vae, unet
 
-    def load_tokenizer(self, args):
-        tokenizer = train_util.load_tokenizer(args)
-        return tokenizer
-
-    def is_text_encoder_outputs_cached(self, args):
-        return False
-
-    def cache_text_encoder_outputs_if_needed(
-            self, args, accelerator, unet, vae, tokenizers, text_encoders, data_loader, weight_dtype):
-        for t_enc in text_encoders:
-            t_enc.to(accelerator.device)
 
     def extract_triggerword_index(self, input_ids):
         cls_token = 49406
@@ -215,93 +190,57 @@ class NetworkTrainer:
 
         print(f'\n step 1. setting')
         print(f' (1) session')
-        if args.process_title:
-            setproctitle(args.process_title)
-        else:
-            setproctitle('parksooyeon')
-        session_id = random.randint(0, 2 ** 32)
-
+        if args.process_title: setproctitle(args.process_title)
+        else: setproctitle('parksooyeon')
         print(f' (2) seed')
-        if args.seed is None:
-            args.seed = random.randint(0, 2 ** 32)
+        if args.seed is None: args.seed = random.randint(0, 2 ** 32)
         set_seed(args.seed)
 
         print(f'\n step 2. dataset')
-        tokenizer = self.load_tokenizer(args)
+        tokenizer = train_util.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
-
-        train_util.prepare_dataset_args(args, True)
-        cache_latents = args.cache_latents
-        use_class_caption = args.class_caption is not None
-
-        print(f'\n step 2. dataset')
-        tokenizer = self.load_tokenizer(args)
         train_util.prepare_dataset_args(args, True)
         use_class_caption = args.class_caption is not None
+
         print(f' (2.1) training dataset')
-        if args.dataset_class is None:
-            blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
-            print("Using DreamBooth method.")
-            user_config = {}
-            user_config['datasets'] = [{"subsets": None}]
-            subsets_dict_list = []
-            for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
-                                                                                          args.reg_data_dir,
-                                                                                          args.class_caption):
-                if use_class_caption:
-                    subsets_dict['class_caption'] = args.class_caption
-                subsets_dict_list.append(subsets_dict)
-                user_config['datasets'][0]['subsets'] = subsets_dict_list
-            print(f'User config: {user_config}')
-            # blueprint_generator = BlueprintGenerator
-            print('start of generate function ...')
-            blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
-            blueprint.dataset_group
-            print(f'blueprint.dataset_group : {blueprint.dataset_group}')
-            train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
-        else:
-            train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
+        blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
+        user_config = {}
+        user_config['datasets'] = [{"subsets": None}]
+        subsets_dict_list = []
+        for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir, args.reg_data_dir, args.class_caption):
+            if use_class_caption:
+                subsets_dict['class_caption'] = args.class_caption
+            subsets_dict_list.append(subsets_dict)
+            user_config['datasets'][0]['subsets'] = subsets_dict_list
+        blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
+        train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
+        if len(train_dataset_group) == 0:
+            print("No data found. Please verify arguments (train_data_dir must be the parent of folders with images) ")
+            return
 
         print(f' (2.2) validation dataset')
         blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
         user_config = {}
         user_config['datasets'] = [{"subsets": None}]
         subsets_dict_list = []
-        for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.valid_data_dir,
-                                                                                      args.reg_data_dir,
-                                                                                      args.class_caption):
+        for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.valid_data_dir, args.reg_data_dir, args.class_caption):
             if use_class_caption: subsets_dict['class_caption'] = args.class_caption
             subsets_dict_list.append(subsets_dict)
             user_config['datasets'][0]['subsets'] = subsets_dict_list
         valid_blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
         valid_dataset_group = config_util.generate_dataset_group_by_blueprint(valid_blueprint.dataset_group)
 
-
+        print(f' (2.3) collater')
         current_epoch = Value("i", 0)
         current_step = Value("i", 0)
-
         ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
         collater = train_util.collater_class(current_epoch, current_step, ds_for_collater)
 
-        if args.debug_dataset:
-            train_util.debug_dataset(train_dataset_group)
-            return
-        if len(train_dataset_group) == 0:
-            print(
-                "No data found. Please verify arguments (train_data_dir must be the parent of folders with images) ")
-            return
-
-        if cache_latents:
-            assert (train_dataset_group.is_latent_cacheable()
-                    ), "when caching latents, either color_aug or random_crop cannot be used / latentをキャッシュするときはcolor_augとrandom_cropは使えません"
-
-        self.assert_extra_args(args, train_dataset_group)
 
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
         is_main_process = accelerator.is_main_process
         if args.log_with == 'wandb' and is_main_process:
-            import wandb
             wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
 
         print(f'\n step 4. save directory')
@@ -309,16 +248,15 @@ class NetworkTrainer:
         _, folder_name = os.path.split(save_base_dir)
         record_save_dir = os.path.join(args.output_dir, "record")
         os.makedirs(record_save_dir, exist_ok=True)
+        print(f' (4.1) config saving')
         with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
-
         logging_file = os.path.join(args.output_dir, f"validation_log_{time}.txt")
 
-        print(f'\n step 5. mixed precision and model')
+        print(f'\n step 5. model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
         model_version, enc_text_encoder, enc_vae, enc_unet = self.load_target_model(args, weight_dtype, accelerator)
-
         model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
         enc_text_encoders = enc_text_encoder if isinstance(enc_text_encoder, list) else [enc_text_encoder]
@@ -342,22 +280,6 @@ class NetworkTrainer:
                 module.merge_to(text_encoder, unet, weights_sd, weight_dtype,
                                 accelerator.device if args.lowram else "cpu")
             accelerator.print(f"all weights merged: {', '.join(args.base_weights)}")
-
-        # 学習を準備する
-        if cache_latents:
-            vae.to(accelerator.device, dtype=vae_dtype)
-            vae.requires_grad_(False)
-            vae.eval()
-            with torch.no_grad():
-                train_dataset_group.cache_latents(vae, args.vae_batch_size, args.cache_latents_to_disk,accelerator.is_main_process)
-            vae.to("cpu")
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            gc.collect()
-            accelerator.wait_for_everyone()
-        # 必要ならテキストエンコーダーの出力をキャッシュする: Text Encoderはcpuまたはgpuへ移される
-        self.cache_text_encoder_outputs_if_needed(args, accelerator, unet, vae, tokenizers, text_encoders,
-                                                  train_dataset_group, weight_dtype)
 
         # prepare network
         net_kwargs = {}
@@ -387,7 +309,7 @@ class NetworkTrainer:
                 "warning: scale_weight_norms is specified but the network does not support it / scale_weight_normsが指定されていますが、ネットワークが対応していません")
             args.scale_weight_norms = False
         train_unet = not args.network_train_text_encoder_only
-        train_text_encoder = not args.network_train_unet_only and not self.is_text_encoder_outputs_cached(args)
+        train_text_encoder = not args.network_train_unet_only
         # 学習に必要なクラスを準備する
         network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
         if args.network_weights is not None:
@@ -520,7 +442,6 @@ class NetworkTrainer:
 
         network.prepare_grad_etc(text_encoder, unet)
 
-        # if not cache_latents:  # キャッシュしない場合はVAEを使うのでVAEを準備する
         vae.requires_grad_(False)
         vae.eval()
         vae.to(accelerator.device, dtype=vae_dtype)
@@ -586,16 +507,12 @@ class NetworkTrainer:
         def save_model(ckpt_name, unwrapped_nw, steps, epoch_no, force_sync_upload=False):
             os.makedirs(args.output_dir, exist_ok=True)
             ckpt_file = os.path.join(args.output_dir, ckpt_name)
-
             accelerator.print(f"\nsaving checkpoint: {ckpt_file}")
-
             metadata_to_save = {}
             sai_metadata = train_util.get_sai_model_spec(None, args, self.is_sdxl, True, False)
             metadata_to_save.update(sai_metadata)
-
             unwrapped_nw.save_weights(ckpt_file, save_dtype, metadata_to_save)
-            if args.huggingface_repo_id is not None:
-                huggingface_util.upload(args, ckpt_file, "/" + ckpt_name, force_sync_upload=force_sync_upload)
+
 
         def remove_model(old_ckpt_name):
             old_ckpt_file = os.path.join(args.output_dir, old_ckpt_name)
@@ -621,15 +538,11 @@ class NetworkTrainer:
                             instance_seed = random.randint(0, 2 ** 31)
                             generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
                             latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
-                            #generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
-                            #good_latents = vae.encode(batch["mask_imgs"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
                             if torch.any(torch.isnan(latents)):
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
-                                #good_latents = torch.where(torch.isnan(good_latents), torch.zeros_like(good_latents),good_latents)
                         latents = latents * self.vae_scale_factor
                         batch_size = latents.shape[0]
-                        #good_latents = good_latents * self.vae_scale_factor
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_class_list = batch["train_class_list"]
                     train_indexs, test_indexs = [], []
@@ -639,19 +552,7 @@ class NetworkTrainer:
                         else:
                             test_indexs.append(index)
                     train_latents = latents[train_indexs, :, :, :]
-                    #train_good_latents = good_latents[train_indexs, :, :, :]
-
-                    #test_latents = latents[test_indexs, :, :, :]
-                    #test_good_latents = good_latents[test_indexs, :, :, :]
-
                     trg_indexs = batch["trg_indexs_list"]
-                    #index_list = []
-                    #b_size = len(trg_indexs)
-                    #for i in range(b_size):
-                    #    if i in test_indexs:
-                    #        a = trg_indexs[i]
-                    #        index_list.append(a)
-                    # (2) text condition checking
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
                                                                 weight_dtype)
@@ -804,7 +705,6 @@ class NetworkTrainer:
                 if global_step >= args.max_train_steps:
                     break
 
-
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_total / len(loss_list)}
                 accelerator.log(logs, step=epoch + 1)
@@ -828,67 +728,6 @@ class NetworkTrainer:
             if attention_storer is not None:
                 attention_storer.reset()
 
-            # ------------------------------------------------------------------------------------ #
-            """
-            # validation (1) loss record
-            valid_epoch_normal_loss = 0
-            for step, valid_batch in enumerate(valid_dataloader):
-                with torch.no_grad():
-                    instance_seed = random.randint(0, 2 ** 31)
-                    generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
-                    latents = vae.encode(valid_batch["images"].to(dtype=vae_dtype)).latent_dist.sample(generator=generator)
-                    valid_class_list = valid_batch["train_class_list"]
-                    normal_indexs = [i for index, i in enumerate(valid_class_list) if i == 1]
-                    if len(normal_indexs) > 0 :
-                        latents = latents[normal_indexs, :, :, :]
-                        latents = latents * self.vae_scale_factor
-                        if latents.dim() != 4:
-                            latents = latents.unsqueeze(0)
-                        input_latents = latents
-                        # text condition
-                        text_encoder_conds = self.get_text_cond(args, accelerator, valid_batch, tokenizers, text_encoders,weight_dtype)
-                        text_encoder_conds = text_encoder_conds[normal_indexs, :, :]
-                        if text_encoder_conds.dim() != 3:
-                            text_encoder_conds = text_encoder_conds.unsqueeze(0)
-                        input_condition = text_encoder_conds
-
-                        # noise latent
-                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, input_latents)
-
-                        next_timesteps = (timesteps+1).tolist()
-                        next_timesteps = [j if j != len(noise_scheduler.alphas_cumprod.tolist()) else len(noise_scheduler.alphas_cumprod.tolist()) - 1 for j in next_timesteps]
-                        alpha_prod_t_next = noise_scheduler.alphas_cumprod[next_timesteps]
-                        alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
-                        gamma = (alpha_prod_t / alpha_prod_t_next) ** 0.5
-
-                        noise_pred_org = self.call_unet(args, accelerator, enc_unet, noisy_latents, timesteps, input_condition, batch, weight_dtype,
-                                                        None, mask_imgs=None)
-                        noise_diff = noise - noise_pred_org
-                        gamma = gamma.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-                        gamma = gamma.expand(noise_pred_org.shape)
-                        noise_diff_org = noise_diff * gamma.to(noise_diff.device)
-                        noise_pred = self.call_unet(args, accelerator, unet,noisy_latents, timesteps,input_condition, batch, weight_dtype,
-                                                    None,mask_imgs =None)
-                        attention_storer.reset()
-                        noise_diff_pred = noise_pred - noise
-                        if args.normal_training :
-                            task_loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
-                            task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
-                            task_loss = task_loss.mean()
-                            log_loss["validation_loss/task_loss"] = task_loss
-                        else :
-                            denoising_loss = torch.nn.functional.mse_loss(noise_diff_org.float(), noise_diff_pred.float(), reduction="none")
-                            denoising_loss = denoising_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
-                            task_loss = denoising_loss.mean()
-                            log_loss["calidation_loss/denoising_loss"] = task_loss
-                        valid_epoch_normal_loss += task_loss.item()
-            #
-            valid_log = {'epoch': {epoch + 1}, 'normal_task_loss': valid_epoch_normal_loss,}
-            if is_main_process:
-                with open(logging_file ,'a') as f :
-                    f.write(f'{valid_log}\n')
-            """
-
         if is_main_process:
             network = accelerator.unwrap_model(network)
         accelerator.end_training()
@@ -903,8 +742,12 @@ class NetworkTrainer:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+
     # step 1. setting
     parser.add_argument("--process_title", type=str, default='parksooyeon')
+    parser.add_argument("--seed", type=int, default=None, help="random seed for training")
+
+    #
     # parser.add_argument("--wandb_init_name", type=str)
     parser.add_argument("--wandb_log_template_path", type=str)
     parser.add_argument("--wandb_key", type=str)
