@@ -1,6 +1,10 @@
 from typing import Optional, Union, Tuple, List, Dict
 from tqdm.notebook import tqdm
 import torch
+import sys, os
+a = os.path.dirname(__file__)
+print(a)
+sys.path.append(os.path.dirname(__file__))
 from diffusers import StableDiffusionPipeline, DDIMScheduler
 import torch.nn.functional as nnf
 import numpy as np
