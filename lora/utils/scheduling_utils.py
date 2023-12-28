@@ -174,7 +174,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 out = out.sum(0) / out.shape[0]
                 out = (255 * out / out.max()).unsqueeze(0).unsqueeze(0).float()
                 mask_latent = out/255
-                mask_latent = torch.where(mask_latent>0.5, 1, 0)
+                mask_latent = torch.where(mask_latent<1, 0, 1)
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
                 #mask_latent = mask_latent.expand(z_noise_pred.shape).to(z_noise_pred.device)
 
