@@ -139,6 +139,12 @@ class SpatialReplace(EmptyControl):
 
 class AttentionStore(AttentionControl):
 
+    def __init__(self):
+        print(f'start of attentionStore')
+        super(AttentionStore, self).__init__()
+        self.step_store = self.get_empty_store()
+        self.attention_store = {}
+
     @staticmethod
     def get_empty_store():
         return {"down_cross": [], "mid_cross": [], "up_cross": [],
@@ -169,10 +175,7 @@ class AttentionStore(AttentionControl):
         self.step_store = self.get_empty_store()
         self.attention_store = {}
 
-    def __init__(self):
-        super(AttentionStore, self).__init__()
-        self.step_store = self.get_empty_store()
-        self.attention_store = {}
+
 
 
 class AttentionControlEdit(AttentionStore, abc.ABC):
