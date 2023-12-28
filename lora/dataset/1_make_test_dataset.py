@@ -13,16 +13,6 @@ def main(args):
         category_folder = os.path.join(base_folder, category)
 
         train_folder = os.path.join(category_folder, 'train')
-        test_folder = os.path.join(category_folder, 'test')
-
-        train_ex_folder = os.path.join(category_folder, 'train_ex')
-        os.makedirs(train_ex_folder, exist_ok=True)
-
-        train_bad_folder = os.path.join(train_ex_folder, 'bad')
-        os.makedirs(train_bad_folder, exist_ok=True)
-        train_gt_folder = os.path.join(train_ex_folder, 'corrected')
-        os.makedirs(train_gt_folder, exist_ok=True)
-
         test_ex_folder = os.path.join(category_folder, 'test_ex')
         os.makedirs(test_ex_folder, exist_ok=True)
         test_bad_folder = os.path.join(test_ex_folder, 'bad')
@@ -30,10 +20,19 @@ def main(args):
         test_gt_folder = os.path.join(test_ex_folder, 'corrected')
         os.makedirs(test_gt_folder, exist_ok=True)
 
+        test_folder = os.path.join(category_folder, 'test')
+        train_ex_folder = os.path.join(category_folder, 'train_ex')
+        os.makedirs(train_ex_folder, exist_ok=True)
+        train_bad_folder = os.path.join(train_ex_folder, 'bad')
+        os.makedirs(train_bad_folder, exist_ok=True)
+        train_gt_folder = os.path.join(train_ex_folder, 'corrected')
+        os.makedirs(train_gt_folder, exist_ok=True)
+
         categories = os.listdir(test_folder)
+
         for category in categories:
 
-            if 'good' in category:
+            if 'good' not in category:
                 category_folder = os.path.join(test_folder, category)
                 train_cat_bad_folder = os.path.join(train_bad_folder, category)
                 os.makedirs(train_cat_bad_folder, exist_ok=True)
