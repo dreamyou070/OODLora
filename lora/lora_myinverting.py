@@ -178,6 +178,7 @@ def main(args) :
                               beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
+    #inference_times[]
 
     print(f' (2.4.+) model to accelerator device')
     if len(invers_text_encoders) > 1:
@@ -266,6 +267,7 @@ def main(args) :
                 #image.save(os.path.join(trg_img_output_dir, 'student_vae_recon.png'))
                 inf_time = inference_times.tolist()
                 inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                inf_time.append(999)
                 org_latent_dict, time_steps, pil_images = ddim_loop(args,
                                                                     latent=org_vae_latent,
                                                                     context=inv_c,
@@ -275,7 +277,7 @@ def main(args) :
                                                                     vae=vae,
                                                                     base_folder_dir=trg_img_output_dir,
                                                                     is_org=True,
-                                                                    name=name)
+                                                                    name=name) # also to 999
                 latent_dict, time_steps, pil_images = ddim_loop(args,
                                                                 latent=st_latent,
                                                                 context=inv_c,
@@ -287,7 +289,10 @@ def main(args) :
                                                                 is_org=False,
                                                                 name=name)
 
-                noising_time = inference_times[base_num]  # 100
+                print(f'inference_times : {inference_times}')
+                print(f'base_num : {base_num}')
+
+                noising_time = inference_times[base_num]  # base_num = 50
                 recon_1_times = inference_times[:base_num + 1].tolist()
                 recon_latent_dict, _, _ = recon_loop(args,
                                                      None,
