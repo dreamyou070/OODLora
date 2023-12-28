@@ -279,7 +279,7 @@ def main(args) :
                 inf_time = inference_times.tolist()
                 inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
                 inf_time.append(999)
-                final_time = args.final_time
+
                 org_latent_dict, time_steps, pil_images = ddim_loop(args,
                                                                     latent=org_vae_latent,
                                                                     context=inv_c,
@@ -287,7 +287,7 @@ def main(args) :
                                                                     scheduler=scheduler,
                                                                     unet=invers_unet,
                                                                     vae=vae,
-                                                                    final_time=final_time,
+                                                                    final_time=args.final_noising_time,
                                                                     base_folder_dir=trg_img_output_dir,
                                                                     name=name)
                 index = inference_times.tolist().index(args.final_noising_time)
