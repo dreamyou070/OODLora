@@ -553,6 +553,9 @@ def main(args) :
             return_type='image'
     ):
         batch_size = len(prompt)
+        # --------------------------------------------------------------------------------------------------------
+        # registering controller
+        print("registering controller")
         ptp_utils.register_attention_control(model, controller)
         height = width = 512
 
@@ -596,7 +599,7 @@ def main(args) :
             images, latent = run_and_display(prompts, EmptyControl(), latent=latent, run_baseline=False,
                                              generator=generator)
             print("with prompt-to-prompt")
-        print(f'Let collect map ... ')
+        print(f'Let collect map ... , controller : {controller.__class__.__name__}')
         images, x_t = text2image_ldm_stable(ldm_stable, prompts, controller,
                                             latent=latent,
                                             num_inference_steps=NUM_DDIM_STEPS,
@@ -617,7 +620,8 @@ def main(args) :
     prompts = [prompt]
     controller = AttentionStore()
     image_inv, x_t = run_and_display(prompts,
-                                     controller, run_baseline=False, latent=x_t,
+                                     controller,
+                                     run_baseline=False, latent=x_t,
                                      uncond_embeddings=uncond_embeddings, verbose=False)
     print(
         "showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
