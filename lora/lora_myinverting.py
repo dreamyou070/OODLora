@@ -69,7 +69,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
                             attention_probs_object_sub[:, :, word_idx] = torch.where(obj_attn_vector > back_attn_vector,
                                                                                      obj_attn_vector, back_attn_vector)
-                            object_position = torch.where(obj_attn_vector > back_attn_vector, 1, 0)
+                            object_position = torch.where(obj_attn_vector > back_attn_vector , 1, 0)
                             mask.append({res: object_position})
                             map_list.append(object_position)
                         controller.store(torch.cat(map_list, dim=0), layer_name)
@@ -297,6 +297,7 @@ def main(args) :
                                                                     base_folder_dir=trg_img_output_dir,
                                                                     is_org=True,
                                                                     name=name) # also to 999
+                """
                 latent_dict, time_steps, pil_images = ddim_loop(args,
                                                                 latent=st_latent,
                                                                 context=inv_c,
@@ -310,7 +311,8 @@ def main(args) :
 
                 print(f'inference_times : {inference_times}')
                 print(f'base_num : {base_num}')
-
+                """
+                """
                 noising_time = inference_times[args.unet_only_inference_times]                # noising_time = 999
                 recon_1_times = inference_times[:args.unet_only_inference_times + 1].tolist() # [999]
                 recon_latent_dict, _, _ = recon_loop(args,
@@ -324,10 +326,17 @@ def main(args) :
                                                      base_folder_dir=trg_img_output_dir,
                                                      controller=controller,
                                                      name=name)
+                """
 
 
-                recon_times = inference_times[args.unet_only_inference_times:].tolist()
-                st_noise_latent = recon_latent_dict[int(noising_time.item())]
+                #recon_times = inference_times[args.unet_only_inference_times:].tolist()
+                #st_noise_latent = recon_latent_dict[int(noising_time.item())]
+                st_noise_latent = org_latent_dict[300]
+                org_latent_dict, time_steps
+                recon_times = []
+                for times in org_latent_dict.keys():
+                    if times < 300 :
+                        recon_times.append(times)
                 recon_loop(args,
                            org_latent_dict,
                            start_latent=st_noise_latent,
