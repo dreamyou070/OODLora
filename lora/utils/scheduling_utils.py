@@ -164,22 +164,17 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                     mask = mask_dict[layer]
                     mask = mask[0] # [8,1024]
                     head, pix_num = mask.shape
-                    mask = torch.reshape(mask, (head, int(pix_num ** 0.5), int(pix_num ** 0.5)))
-                    image = np.array(mask.cpu().numpy().astype(np.uint8))
-                    map = np.array(Image.fromarray(image.astype(np.uint8)).resize((64, 64)))
-                    np_map = np.where(map > 20, 1, 0)
+                    mask = torch.reshape(mask, (head, int(pix_num ** 0.5), int(pix_num ** 0.5)))[0]
+                    image = np.array(mask.cpu().numpy().astype(np.uint8)) *255
+                    np_map = np.array(Image.fromarray(image.astype(np.uint8)).resize((64, 64))) / 255
+                    np_map = np.where(np_map > 0, 1, 0)
                     mask = torch.from_numpy(np_map)#.unsqueeze(0).unsqueeze(0).float()
-                    masks.append(mask)
+                    masks.append(mask.unsqueeze(0))
                 out = torch.cat(masks, dim=0)
                 out = out.sum(0) / out.shape[0]
-                out = 255 * out / out.max()
-
-                image = out.cpu()
-                image = np.array(image.numpy().astype(np.uint8))
-                map = np.array(Image.fromarray(image).resize((64, 64)))
-                np_map = np.where(map > 20, 1, 0)
-                mask_latent = torch.from_numpy(np_map).unsqueeze(0).unsqueeze(0).float()
-
+                out = (255 * out / out.max()).unsqueeze(0).unsqueeze(0).float()
+                mask_latent = out/255
+                mask_latent = torch.where(mask_latent>0.5, 1, 0)
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
                 #mask_latent = mask_latent.expand(z_noise_pred.shape).to(z_noise_pred.device)
 
