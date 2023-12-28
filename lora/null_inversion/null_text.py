@@ -473,7 +473,7 @@ class NullInversion:
         uncond_embeddings, cond_embeddings = self.context.chunk(2)
         all_latent = [latent]
         latent = latent.clone().detach()
-        for i in range(self.NUM_DDIM_STEPS):
+        for i in range(NUM_DDIM_STEPS):
             t = self.model.scheduler.timesteps[len(self.model.scheduler.timesteps) - i - 1]
             noise_pred = self.get_noise_pred_single(latent, t, cond_embeddings)
             latent = self.next_step(noise_pred, t, latent)
