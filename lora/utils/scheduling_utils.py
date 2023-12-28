@@ -142,6 +142,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 input_latent = torch.cat([z_latent, x_latent], dim=0)
                 input_cond = torch.cat([con, con], dim=0)
                 trg_indexs_list = [[1]]
+                pixel_set = []
             else :
                 input_latent = x_latent
                 input_cond = con
@@ -151,7 +152,8 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                                    input_latent,
                                    t,
                                    input_cond,
-                                   trg_indexs_list, None)
+                                   trg_indexs_list,
+                                   pixel_set)
 
             if latent_dict is not None:
                 print(f'cross map checking denoising, time : {t}', )
