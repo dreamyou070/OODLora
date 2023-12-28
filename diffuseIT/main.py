@@ -66,40 +66,36 @@ class ImageEditor:
                                       "resblock_updown": True,
                                       "use_fp16": True,
                                       "use_scale_shift_norm": True,})
-        # Load models
+        print(f' loading model (model and ddpm diffusino model)')
         self.device = torch.device( f"cuda:{self.args.gpu_id}" if torch.cuda.is_available() else "cpu")
-        print("Using device:", self.device)
-
+        print(f' (1) ddpm model')
+        print(f' (2) model')
         self.model, self.diffusion = create_model_and_diffusion(**self.model_config)
-
         if self.args.use_ffhq:
-            self.model.load_state_dict(torch.load("../../checkpoints/ffhq_10m.pt",
-                                                  map_location="cpu", ))
+            self.model.load_state_dict(torch.load("../../checkpoints/ffhq_10m.pt", map_location="cpu", ))
             self.idloss = IDLoss().to(self.device)
         else:
-            self.model.load_state_dict(
-                torch.load(
-                    "./checkpoints/256x256_diffusion_uncond.pt"
-                    if self.args.model_output_size == 256
-                    else "checkpoints/512x512_diffusion.pt",
-                    map_location="cpu",
-                )
-            )
+            self.model.load_state_dict(torch.load("../../checkpoints/256x256_diffusion_uncond.pt" if self.args.model_output_size == 256
+                                                  else "checkpoints/512x512_diffusion.pt",map_location="cpu",))
         self.model.requires_grad_(False).eval().to(self.device)
         for name, param in self.model.named_parameters():
             if "qkv" in name or "norm" in name or "proj" in name:
                 param.requires_grad_()
         if self.model_config["use_fp16"]:
             self.model.convert_to_fp16()
+        print(f' (3) vit model')
         with open("model_vit/config.yaml", "r") as ff:
             config = yaml.safe_load(ff)
-
         cfg = config
-
-        self.VIT_LOSS = Loss_vit(cfg, lambda_ssim=self.args.lambda_ssim, lambda_dir_cls=self.args.lambda_dir_cls,
-                                 lambda_contra_ssim=self.args.lambda_contra_ssim,
+        # -------------------------------------------------------- VIT -------------------------------------------------------- #
+        self.VIT_LOSS = Loss_vit(cfg,
+                                 lambda_ssim=self.args.lambda_ssim,               # (2)
+                                 lambda_dir_cls=self.args.lambda_dir_cls,
+                                 lambda_contra_ssim=self.args.lambda_contra_ssim, # (1)
                                  lambda_trg=args.lambda_trg).eval()  # .requires_grad_(False)
 
+        # ---------------------------------------------------------------------------------------------------------------- #
+        # clip model
         names = self.args.clip_models
         # init networks
         if self.args.target_image is None:
@@ -107,9 +103,7 @@ class ImageEditor:
 
         self.cm = ColorMatcher()
         self.clip_size = 224
-        self.clip_normalize = transforms.Normalize(
-            mean=[0.48145466, 0.4578275, 0.40821073], std=[0.26862954, 0.26130258, 0.27577711]
-        )
+        self.clip_normalize = transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073], std=[0.26862954, 0.26130258, 0.27577711])
         #         self.lpips_model = lpips.LPIPS(net="vgg").to(self.device)
 
         self.image_augmentations = ImageAugmentations(self.clip_size, self.args.aug_num)
@@ -127,21 +121,21 @@ class ImageEditor:
 
     def edit_image_by_prompt(self):
 
+        print(f' (1) init src image ...')
         self.image_size = (self.model_config["image_size"], self.model_config["image_size"])
         self.init_image_pil = Image.open(self.args.init_image).convert("RGB")
         self.init_image_pil = self.init_image_pil.resize(self.image_size, Image.LANCZOS)  # type: ignore
-        self.init_image = (
-            TF.to_tensor(self.init_image_pil).to(self.device).unsqueeze(0).mul(2).sub(1)
-        )
+        self.init_image = (TF.to_tensor(self.init_image_pil).to(self.device).unsqueeze(0).mul(2).sub(1))
 
+        print(f' (2) check trg image')
         self.target_image = None
         if self.args.target_image is not None:
+            print(f'There is Trg Image')
             self.target_image_pil = Image.open(self.args.target_image).convert("RGB")
             self.target_image_pil = self.target_image_pil.resize(self.image_size, Image.LANCZOS)  # type: ignore
-            self.target_image = (
-                TF.to_tensor(self.target_image_pil).to(self.device).unsqueeze(0).mul(2).sub(1)
-            )
-
+            self.target_image = (TF.to_tensor(self.target_image_pil).to(self.device).unsqueeze(0).mul(2).sub(1))
+        else :
+            print('No Trg Image')
         self.prev = self.init_image.detach()
         if self.target_image is None:
             txt2 = self.args.prompt
@@ -150,10 +144,8 @@ class ImageEditor:
                 self.E_I0 = E_I0 = self.clip_net.encode_image(0.5 * self.init_image + 0.5, ncuts=0)
                 self.E_S, self.E_T = E_S, E_T = self.clip_net.encode_text([txt1, txt2])
                 self.tgt = (1 * E_T - 0.4 * E_S + 0.2 * E_I0).normalize()
-
             pred = self.clip_net.encode_image(0.5 * self.prev + 0.5, ncuts=0)
             clip_loss = - (pred @ self.tgt.T).flatten().reduce(mean_sig)
-
             self.loss_prev = clip_loss.detach().clone()
         self.flag_resample = False
         total_steps = self.diffusion.num_timesteps - self.args.skip_timesteps - 1
@@ -226,15 +218,12 @@ class ImageEditor:
 
             return -torch.autograd.grad(loss, x)[0], self.flag_resample
 
+        print(f' (3) Iteratively denoising (image translatino through text)')
         save_image_interval = self.diffusion.num_timesteps // 5
         for iteration_number in range(self.args.iterations_num):
-            print(f"Start iterations {iteration_number}")
-
-            sample_func = (
-                self.diffusion.ddim_sample_loop_progressive
-                if self.args.ddim
-                else self.diffusion.p_sample_loop_progressive
-            )
+            print(f"Start iterations {iteration_number} with p_sample_loop_progressive")
+            sample_func = (self.diffusion.ddim_sample_loop_progressive  if self.args.ddim
+                           else self.diffusion.p_sample_loop_progressive)
             samples = sample_func(
                 self.model,
                 (
@@ -265,14 +254,10 @@ class ImageEditor:
                         self.args.resample_num - 1)
             for j, sample in enumerate(samples):
                 should_save_image = j % save_image_interval == 0 or j == total_steps_with_resample
-
                 # self.metrics_accumulator.print_average_metric()
-
                 for b in range(self.args.batch_size):
                     pred_image = sample["pred_xstart"][b]
-                    visualization_path = Path(
-                        os.path.join(self.args.output_path, self.args.output_file)
-                    )
+                    visualization_path = Path(os.path.join(self.args.output_path, self.args.output_file) )
                     visualization_path = visualization_path.with_name(
                         f"{visualization_path.stem}_i_{iteration_number}_b_{b}{visualization_path.suffix}"
                     )
