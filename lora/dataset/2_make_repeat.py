@@ -10,7 +10,7 @@ def main(args):
     base_folder = args.base_folder
     cats = os.listdir(base_folder)
     for cat in cats:
-        if cat == 'cable_gland' :
+        if cat != 'cable_gland' and cat != 'bagel' :
             cat_folder = os.path.join(base_folder, cat)
 
             test_ex_folder = os.path.join(cat_folder, 'test_ex')
