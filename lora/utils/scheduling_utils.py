@@ -162,6 +162,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 mask_dict = controller.step_store
                 controller.reset()
                 layers = mask_dict.keys()
+                print(f'step_store layers : {layers}')
                 mask_dict = {}
                 for layer in layers:
                     mask = mask_dict[layer]
