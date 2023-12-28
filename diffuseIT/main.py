@@ -19,8 +19,20 @@ from id_loss import IDLoss
 from color_matcher import ColorMatcher
 from color_matcher.io_handler import load_img_file, save_img_file, FILE_EXTS
 from color_matcher.normalizer import Normalizer
+from utils_flexit.torch_utils import TensorDict
 
 mean_sig = lambda x: sum(x) / len(x)
+
+class CLIPS:
+    def __init__(self, names=['RN50x4', 'ViT-B/32'], device='cpu', **kwargs):
+        self.networks = {n: CLIP(n, device=device, **kwargs) for n in names}
+
+    def encode_image(self, x, ncuts=0):
+        return TensorDict({name: model.encode_image(x, ncuts=ncuts) for name, model in self.networks.items()})
+
+    def encode_text(self, x):
+        return TensorDict({name: model.encode_text(x) for name, model in self.networks.items()})
+
 
 class ImageEditor:
     def __init__(self, args) -> None:
@@ -95,17 +107,17 @@ class ImageEditor:
                                  lambda_trg=args.lambda_trg).eval()  # .requires_grad_(False)
 
         # ---------------------------------------------------------------------------------------------------------------- #
-        # clip model
-        names = self.args.clip_models
+        print(f' (4) clip model')
         # init networks
         if self.args.target_image is None:
-            self.clip_net = CLIPS(names=names, device=self.device, erasing=False)  # .requires_grad_(False)
-
+            self.clip_net = CLIPS(names=self.args.clip_models,
+                                  device=self.device,
+                                  erasing=False)  # .requires_grad_(False)
         self.cm = ColorMatcher()
         self.clip_size = 224
         self.clip_normalize = transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073], std=[0.26862954, 0.26130258, 0.27577711])
         #         self.lpips_model = lpips.LPIPS(net="vgg").to(self.device)
-
+        print(f' (5) image preprocessing')
         self.image_augmentations = ImageAugmentations(self.clip_size, self.args.aug_num)
         self.metrics_accumulator = MetricsAccumulator()
 

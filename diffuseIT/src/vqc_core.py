@@ -26,39 +26,6 @@ def soft_clamp(x, beta=5):
     x = x.relu().pow(1/beta) - (-x).relu().pow(1/beta)
     return (x+1)/2
 
-# class VQGAN(VQModel):
-#     def __init__(self, device='cpu', load_loss=False, root='./vq_model'):
-#         with open(f'{root}/model.yaml') as f:
-#             cfg = yaml.safe_load(f)['model']['params']
-#         super().__init__(**cfg)
-#         self.load_state_dict(torch.load(f'{root}/last.ckpt', map_location=device)['state_dict'], strict=False)
-#         if not load_loss:
-#             self.loss = None
-        
-    
-#     def forward(self, x):
-#         x = 2*x - 1
-#         z, _, [_, _, indices] = super().encode(x)
-#         grid = int(math.sqrt(indices.shape[0]/x.shape[0]))
-#         return z, indices.flatten().reshape(x.shape[0], grid, grid)
-    
-#     def encode(self, x):
-#         # avoid saturation
-#         if len(x.shape) < 4:
-#             x = x[None, :]
-#         x = 2*x - 1
-#         x = x.to(self.quant_conv.weight.device)
-#         x = self.encoder(x)
-#         x = self.quant_conv(x)
-#         return x
-    
-#     def decode(self, x, clamp=True):
-#         x = x.to(self.quant_conv.weight.device)
-#         x = VQModel.decode(self, x)
-#         x = (x+1)/2
-#         if clamp:
-#             x = soft_clamp(x)
-#         return x
 
 class CLIP:
     norm = T.Normalize(mean=(0.48145466, 0.4578275, 0.40821073), 
