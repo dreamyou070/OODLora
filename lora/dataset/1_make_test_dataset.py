@@ -94,6 +94,15 @@ def main(args):
             pil = Image.fromarray(np.zeros((512, 512), dtype=np.uint8))
             pil.save(save_dir)
 
+        validation_folder = os.path.join(category_folder, 'validation/good/rgb')
+        val_images = os.listdir(validation_folder)
+        for image in val_images:
+            val_pil = Image.open(os.path.join(validation_folder, image))
+            val_pil.save(os.path.join(new_train_good_folder, f'val_{image}'))
+            msk_pil = Image.fromarray(np.zeros((512, 512), dtype=np.uint8))
+            msk_pil.save(os.path.join(new_train_gt_folder, f'val_{image}'))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
