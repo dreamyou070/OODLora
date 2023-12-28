@@ -165,6 +165,10 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                     mask = mask[0] # [8,1024]
                     head, pix_num = mask.shape
                     mask = torch.reshape(mask, (head, int(pix_num ** 0.5), int(pix_num ** 0.5)))
+                    image = np.array(image.numpy().astype(np.uint8))
+                    map = np.array(Image.fromarray(image).resize((64, 64)))
+                    np_map = np.where(map > 20, 1, 0)
+                    mask = torch.from_numpy(np_map)#.unsqueeze(0).unsqueeze(0).float()
                     masks.append(mask)
                 out = torch.cat(masks, dim=0)
                 out = out.sum(0) / out.shape[0]
