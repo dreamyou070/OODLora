@@ -185,14 +185,14 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 for res in mask_res_dict.keys() :
                     image = mask_res_dict[res]
                     image = 255 * image / image.max()
-                    image = image.unsqueeze(-1).expand(*image.shape, 4)  # res,res,3
+                    image = image.unsqueeze(-1).expand(*image.shape, 4).cpu()  # res,res,3
                     image = image.numpy().astype(np.uint8)
                     image = np.array(Image.fromarray(image).resize((64,64)))
                 print(f'resolution {args.pixel_mask_res}, mask : {image.shape}')
                 #mask_latent = torch.where(mask_latent> 0, 1, 0) # this means all mask_lants is bigger than 0
                 mask_latent = image
                 #z_noise_pred, y_noise_pred = noise_pred.chunk(2)
-                y_latent = z_latent + (1-mask_latent) + x_latent * (mask_latent)
+                y_latent = z_latent + (1-mask_latent.to(z_latent.device)) + x_latent * (mask_latent.to(z_latent.device))
                 y_noise_pred = call_unet(unet,y_latent,t,con, None, None)
                 y_latent = prev_step(y_noise_pred, int(t), y_latent, scheduler)
             else :
