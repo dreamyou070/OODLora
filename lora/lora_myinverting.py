@@ -337,6 +337,7 @@ def main(args) :
                 for times in org_latent_dict.keys():
                     if times < 300 :
                         recon_times.append(times)
+                recon_times.reverse()
                 recon_loop(args,
                            org_latent_dict,
                            start_latent=st_noise_latent,
