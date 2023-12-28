@@ -73,29 +73,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             mask.append({res: object_position})
                             map_list.append(object_position)
                         controller.store(torch.cat(map_list, dim=0), layer_name)
-                        """
-                        resolutions = [[*elem][0] for elem in mask]
-                        if res not in resolutions :
-                            for word_idx in batch_trg_index:
-                                word_idx = int(word_idx)
-                                back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
-                                obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-                                attention_probs_object_sub[:, :, word_idx] = torch.where(obj_attn_vector>back_attn_vector, obj_attn_vector, back_attn_vector)
-                                object_position = torch.where(obj_attn_vector>back_attn_vector, 1, 0)
-                                mask.append({res:object_position})
-                                map_list.append(object_position)
-                            controller.store(torch.cat(map_list, dim=0), layer_name)
-                        else :
-                            for elem in mask :
-                                if res == elem.keys() :
-                                    object_position = elem[res]
-                                    print( f'layer_name : {layer_name} | res = {res} | object_position : {object_position.sum()}')
-                                    for word_idx in batch_trg_index:
-                                        word_idx = int(word_idx)
-                                        back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
-                                        obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-                                        attention_probs_object_sub[:, :, word_idx] = torch.where(object_position == 1,obj_attn_vector, back_attn_vector)
-                        """
                         attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
 
 
