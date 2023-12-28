@@ -233,6 +233,7 @@ def register_attention_control(model, controller):
     cross_att_count = 0
     sub_nets = model.unet.named_children()
     for net in sub_nets:
+        print(f'net : {net[0]}')
         if "down" in net[0]:
             cross_att_count += register_recr(net[1], 0, "down")
         elif "up" in net[0]:
