@@ -194,7 +194,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 mask_latent = torch.where(mask_latent > 0.5, 1, 0)
                 z_noise_pred, x_noise_pred = noise_pred.chunk(2)
                 x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
-                y_latent = latent_dict[prev_time] + (1-mask_latent) + x_latent * (mask_latent)
+                y_latent = latent_dict[prev_time] * (1-mask_latent) + x_latent * (mask_latent)
                 #y_noise_pred = call_unet(unet,y_latent,t,con, None, None)
 
             else :
