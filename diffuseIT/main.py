@@ -1,7 +1,7 @@
 from optimization.image_editor import ImageEditor
 from optimization.arguments import get_arguments
 import argparse
-# 
+#
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
