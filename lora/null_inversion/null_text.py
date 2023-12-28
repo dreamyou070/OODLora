@@ -10,13 +10,10 @@ import seq_aligner
 from torch.optim.adam import Adam
 from PIL import Image
 import argparse
-
 present_dir = os.path.dirname(__file__)
 sys.path.append(present_dir)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),"..")))
-print(f'sys.path: {sys.path}')
-
-
+from diffusers import DDIMScheduler, StableDiffusionPipeline
 
 class LocalBlend:
 
