@@ -95,12 +95,8 @@ class ImageEditor:
         self.model, self.diffusion = create_model_and_diffusion(**self.model_config)
         
         if self.args.use_ffhq:
-            self.model.load_state_dict(
-                torch.load(
-                    "./checkpoints/ffhq_10m.pt",
-                    map_location="cpu",
-                )
-            )
+            self.model.load_state_dict(torch.load("../../checkpoints/ffhq_10m.pt",
+                                                  map_location="cpu",))
             self.idloss = IDLoss().to(self.device)
         else:
             self.model.load_state_dict(

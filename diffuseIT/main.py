@@ -1,7 +1,7 @@
 from optimization.image_editor import ImageEditor
 from optimization.arguments import get_arguments
 import argparse
-#
+# python main.py --use_range_restart --use_noise_aug_all --regularize_content --init_image input_example/lion1.jpg
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -74,7 +74,6 @@ if __name__ == "__main__":
         "--regularize_content",
         action="store_true",
     )
-
     args = parser.parse_args()
     image_editor = ImageEditor(args)
     image_editor.edit_image_by_prompt()
