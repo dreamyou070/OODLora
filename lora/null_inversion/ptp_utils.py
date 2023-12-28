@@ -222,6 +222,7 @@ def register_attention_control(model, controller):
         controller = DummyController()
 
     def register_recr(net_, count, place_in_unet):
+        print(f'net_.__class__.__name__ : {net_.__class__.__name__}')
         if net_.__class__.__name__ == 'CrossAttention':
             net_.forward = ca_forward(net_, place_in_unet)
             return count + 1
