@@ -121,9 +121,6 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
     # inference_times = [100,80, ... 0]
     latent = start_latent
     all_latent_dict = {}
-
-    print(f'inference_times : {inference_times}')
-
     all_latent_dict[inference_times[0]] = latent
     time_steps = []
     pil_images = []
@@ -132,18 +129,31 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
     pil_img = Image.fromarray(np_img)
     pil_images.append(pil_img)
     #pil_img.save(os.path.join(base_folder_dir, f'{name}_only_infer_recon_start_time_{inference_times[0]}.png'))
+    x_latent_dict = {}
     for i, t in enumerate(inference_times[:-1]):
-        if latent_dict is not None:
-            z_latent = latent_dict[inference_times[i]]
         x_latent = latent
+        x_latent_dict[int(t)] = x_latent
+        noise_pred = call_unet(unet,
+                               x_latent,
+                               t,
+                               con,None, None)
+        latent = prev_step(noise_pred, int(t), latent, scheduler)
         prev_time = int(inference_times[i + 1])
-        time_steps.append(int(t))
+        x_latent_dict[prev_time] = latent
+        break
+
+    inference_times = inference_times[1:]
+    for i, t in enumerate(inference_times[:-1]):
+
         with torch.no_grad():
             if latent_dict is not None:
+                z_latent = latent_dict[t]
+                x_latent = x_latent_dict[t]
                 input_latent = torch.cat([z_latent, x_latent], dim=0)
                 input_cond = torch.cat([con, con], dim=0)
                 trg_indexs_list = [[1]]
                 pixel_set = []
+
             else :
                 input_latent = x_latent
                 input_cond = con
@@ -156,9 +166,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                                    input_cond,
                                    trg_indexs_list,
                                    pixel_set)
-
             if latent_dict is not None:
-
                 mask_dict = controller.step_store
                 controller.reset()
                 layers = mask_dict.keys()
@@ -175,11 +183,9 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 mask_res_dict = {}
                 for resolution in mask_dict_by_res.keys():
                     if resolution == args.pixel_mask_res :
-                        print('making mask ... ')
                         map_list = mask_dict_by_res[resolution]
                         out = torch.cat(map_list, dim=0)  # [num, 64,64]
                         avg_attn = out.sum(0) / out.shape[0]
-                        print(f'avg_attn : {avg_attn.sum()}', )
                         mask_res_dict[resolution] = avg_attn
 
                 images = []
@@ -189,18 +195,15 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                     image = image.unsqueeze(-1).expand(*image.shape, 4).cpu()  # res,res,3
                     image = image.numpy().astype(np.uint8)
                     image = np.array(Image.fromarray(image).resize((64,64)))
-                    print(f'mask image : {image}')
-                #print(f'resolution {args.pixel_mask_res}, mask : {image.shape}')
-                #mask_latent = torch.where(mask_latent> 0, 1, 0) # this means all mask_lants is bigger than 0
                 mask_latent = torch.tensor(image).to(z_latent.device, dtype = z_latent.dtype)
                 mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
                 mask_latent = torch.where(mask_latent > args.pixel_thred, 1, 0)
-                print(f'pixel mask : {mask_latent.sum()}')
                 z_noise_pred, x_noise_pred = noise_pred.chunk(2)
                 x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
-                y_latent = latent_dict[prev_time] * (1-mask_latent) + x_latent * (mask_latent)
-                #y_noise_pred = call_unet(unet,y_latent,t,con, None, None)
-
+                y_latent = z_latent * (1-mask_latent) + x_latent * (mask_latent)
+                x_latent_dict[prev_time] = y_latent
+                y_noise_pred = call_unet(unet,y_latent,t,con, None, None)
+                y_latent = prev_step(y_noise_pred, t, x_latent, scheduler)
             else :
                 y_latent = prev_step(noise_pred, t, x_latent, scheduler)
 
