@@ -33,11 +33,14 @@ def main(args):
         for category in categories:
 
             if 'good' not in category:
+
                 category_folder = os.path.join(test_folder, category)
+
                 train_cat_bad_folder = os.path.join(train_bad_folder, category)
                 os.makedirs(train_cat_bad_folder, exist_ok=True)
                 train_cat_gt_folder = os.path.join(train_gt_folder, category)
                 os.makedirs(train_cat_gt_folder, exist_ok=True)
+
                 test_cat_bad_folder = os.path.join(test_bad_folder, category)
                 os.makedirs(test_cat_bad_folder, exist_ok=True)
                 test_cat_gt_folder = os.path.join(test_gt_folder, category)
@@ -45,6 +48,7 @@ def main(args):
 
                 rgb_folder = os.path.join(category_folder, 'rgb')
                 gt_folder = os.path.join(category_folder, 'gt')
+
                 images = os.listdir(rgb_folder)
                 num_images = len(images)
                 train_num = int(num_images * 0.8)
@@ -52,23 +56,29 @@ def main(args):
                     image = images[i]
                     rgb_path = os.path.join(rgb_folder, image)
                     gt_path = os.path.join(gt_folder, image)
+
                     if i < train_num :
+
                         new_rgb_path = os.path.join(train_cat_bad_folder, image)
                         new_gt_path = os.path.join(train_cat_gt_folder, image)
                         shutil.copy(rgb_path, new_rgb_path)
                         shutil.copy(gt_path, new_gt_path)
+
                     else :
                         new_rgb_path = os.path.join(test_cat_bad_folder, image)
                         new_gt_path = os.path.join(test_cat_gt_folder, image)
                         shutil.copy(rgb_path, new_rgb_path)
                         shutil.copy(gt_path, new_gt_path)
+
             if 'good' in category:
+
                 category_folder = os.path.join(test_folder, category)
 
                 train_cat_bad_folder = os.path.join(train_bad_folder, category)
                 os.makedirs(train_cat_bad_folder, exist_ok=True)
                 train_cat_gt_folder = os.path.join(train_gt_folder, category)
                 os.makedirs(train_cat_gt_folder, exist_ok=True)
+
                 test_cat_bad_folder = os.path.join(test_bad_folder, category)
                 os.makedirs(test_cat_bad_folder, exist_ok=True)
                 test_cat_gt_folder = os.path.join(test_gt_folder, category)
@@ -78,6 +88,7 @@ def main(args):
                 os.makedirs(rgb_folder, exist_ok=True)
                 gt_folder = os.path.join(category_folder, 'gt')
                 os.makedirs(gt_folder, exist_ok=True)
+
                 shutil.copytree(rgb_folder, test_cat_bad_folder)
                 shutil.copytree(gt_folder, test_cat_gt_folder)
 
