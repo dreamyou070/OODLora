@@ -81,6 +81,9 @@ def main(args):
                 test_cat_gt_folder = os.path.join(test_gt_folder, category)
                 os.makedirs(test_cat_gt_folder, exist_ok=True)
 
+                print(f'rgb_folder: {rgb_folder}')
+                print(f'test_cat_bad_folder: {test_cat_bad_folder}')
+
                 shutil.copytree(rgb_folder, test_cat_bad_folder)
                 shutil.copytree(gt_folder, test_cat_gt_folder)
 
