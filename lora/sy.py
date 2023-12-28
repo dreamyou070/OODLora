@@ -14,7 +14,5 @@ pixel_set = []
 pixel_set.append({64:100})
 pixel_set.append({16:32})
 
-for elem in pixel_set :
-    if 16 in elem.keys():
-        print('yes')
-set(pixel_set)
+ress = [[*elem][0] for elem in pixel_set]
+print(ress)

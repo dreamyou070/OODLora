@@ -63,7 +63,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     map_list = []
                     res = int(pixel_num ** 0.5)
                     if int(pixel_num ** 0.5) in args.cross_map_res:
-                        resolutions = [elem.keys() for elem in mask]
+                        resolutions = [[*elem][0] for elem in mask]
+
                         print(f'resolutions : {resolutions}')
                         if res not in resolutions :
                             for word_idx in batch_trg_index:
