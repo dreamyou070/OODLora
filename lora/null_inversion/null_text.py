@@ -14,7 +14,7 @@ import argparse
 present_dir = os.path.dirname(__file__)
 parent, _ = os.path.split(present_dir)
 sys.path.append(present_dir)
-sys.path.append(parent)
+sys.path.append(os.path.split(present_dir)[0])
 print(f'sys.path: {sys.path}')
 
 
