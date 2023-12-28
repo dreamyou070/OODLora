@@ -175,6 +175,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 mask_res_dict = {}
                 for resolution in mask_dict_by_res.keys():
                     if resolution == args.pixel_mask_res :
+                        print('making mask ... ')
                         map_list = mask_dict_by_res[resolution]
                         out = torch.cat(map_list, dim=0)  # [num, 64,64]
                         avg_attn = out.sum(0) / out.shape[0]
@@ -187,6 +188,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                     image = image.unsqueeze(-1).expand(*image.shape, 4).cpu()  # res,res,3
                     image = image.numpy().astype(np.uint8)
                     image = np.array(Image.fromarray(image).resize((64,64)))
+                    print(f'mask image : {image}')
                 #print(f'resolution {args.pixel_mask_res}, mask : {image.shape}')
                 #mask_latent = torch.where(mask_latent> 0, 1, 0) # this means all mask_lants is bigger than 0
                 mask_latent = torch.tensor(image).to(z_latent.device, dtype = z_latent.dtype)
