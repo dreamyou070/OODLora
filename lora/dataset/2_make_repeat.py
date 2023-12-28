@@ -23,8 +23,8 @@ def main(args):
 
             cats = os.listdir(test_ex_bad_folder)
             for cat in cats:
-                org_cat_folder = os.path.join(cat_folder, cat)
-                new_cat_folder = os.path.join(cat_folder, f'1_{cat}')
+                org_cat_folder = os.path.join(test_ex_bad_folder, cat)
+                new_cat_folder = os.path.join(test_ex_bad_folder, f'1_{cat}')
                 os.rename(org_cat_folder, new_cat_folder)
 
                 org_gt_folder = os.path.join(test_ex_gt_folder, cat)
