@@ -179,6 +179,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                         map_list = mask_dict_by_res[resolution]
                         out = torch.cat(map_list, dim=0)  # [num, 64,64]
                         avg_attn = out.sum(0) / out.shape[0]
+                        print(f'avg_attn : {avg_attn.sum()}', )
                         mask_res_dict[resolution] = avg_attn
 
                 images = []
