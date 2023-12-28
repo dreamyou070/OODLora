@@ -160,6 +160,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 print(f'cross map checking denoising, time : {t}', )
                 mask_dict = controller.step_store
                 controller.reset()
+                """
 
                 layers = mask_dict.keys()
                 masks = []
@@ -178,15 +179,16 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 out = (255 * out / out.max()).unsqueeze(0).unsqueeze(0).float()
                 mask_latent = out/255
                 mask_latent = torch.where(mask_latent<1, 0, 1)
+                """
                 z_noise_pred, y_noise_pred = noise_pred.chunk(2)
                 #mask_latent = mask_latent.expand(z_noise_pred.shape).to(z_noise_pred.device)
 
                 back_latent = latent_dict[prev_time]
                 obj_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
-                back_position = (1 - mask_latent.to(obj_latent.device)).sum()
-                print(f'back_position : {back_position}')
-                y_latent = obj_latent * mask_latent.to(obj_latent.device) + back_latent * (1 - mask_latent.to(obj_latent.device))
-                #y_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
+                #back_position = (1 - mask_latent.to(obj_latent.device)).sum()
+                #print(f'back_position : {back_position}')
+                #y_latent = obj_latent * mask_latent.to(obj_latent.device) + back_latent * (1 - mask_latent.to(obj_latent.device))
+                y_latent = prev_step(y_noise_pred, int(t), x_latent, scheduler)
             else :
                 y_latent = prev_step(noise_pred, t, x_latent, scheduler)
 
