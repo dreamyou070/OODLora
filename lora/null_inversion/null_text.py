@@ -615,6 +615,7 @@ def main(args) :
                             select: int):
         out = []
         attention_maps = attention_store.get_average_attention()
+        print(f'attention_maps : {attention_maps}')
         num_pixels = res ** 2
         for location in from_where:
             for item in attention_maps[f"{location}_{'cross' if is_cross else 'self'}"]:
