@@ -163,18 +163,18 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 controller.reset()
                 layers = mask_dict.keys()
                 print(f'step_store layers : {layers}')
-                mask_dict = {}
+                mask_dict_by_res = {}
                 for layer in layers:
                     mask = mask_dict[layer]
                     mask = mask[0] # [8,1024]
                     head, pix_num = mask.shape
                     res = int(pix_num ** 0.5)
-                    if res not in mask_dict.keys() :
-                        mask_dict[res] = []
+                    if res not in mask_dict_by_res.keys() :
+                        mask_dict_by_res[res] = []
                     cross_maps = mask.reshape(head, res,res)
-                    mask_dict[res].append(cross_maps)
+                    mask_dict_by_res[res].append(cross_maps)
                 mask_res_dict = {}
-                for resolution in mask_dict.keys():
+                for resolution in mask_dict_by_res.keys():
                     if resolution == args.pixel_mask_res :
                         map_list = mask_dict[resolution]
                         out = torch.cat(map_list, dim=0)  # [num, 64,64]
