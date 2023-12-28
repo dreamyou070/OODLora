@@ -9,7 +9,7 @@ from PIL import Image
 from torchvision import transforms
 from torchvision.transforms import functional as TF
 from torch.nn.functional import mse_loss
-from optimization.losses import range_loss,
+from optimization.losses import range_loss
 import numpy as np
 from src.vqc_core import *
 from model_vit.loss_vit import Loss_vit
