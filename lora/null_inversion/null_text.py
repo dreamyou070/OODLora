@@ -15,6 +15,8 @@ sys.path.append(present_dir)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),"..")))
 from diffusers import DDIMScheduler, StableDiffusionPipeline
 
+device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+
 class LocalBlend:
 
     def get_mask(self, maps, alpha, use_pool):
@@ -543,13 +545,14 @@ class NullInversion:
 def main(args) :
 
     scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False, set_alpha_to_one=False)
-    device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+
     ldm_stable = StableDiffusionPipeline.from_pretrained(args.pretrained_model,
                                                          scheduler=scheduler).to(device)
     try:
         ldm_stable.disable_xformers_memory_efficient_attention()
     except AttributeError:
         print("Attribute disable_xformers_memory_efficient_attention() is missing")
+
     tokenizer = ldm_stable.tokenizer
     null_inversion = NullInversion(ldm_stable)
 
@@ -619,7 +622,8 @@ def main(args) :
 
     image_path = "example_images/gnochi_mirror.jpeg"
     prompt = "a cat sitting next to a mirror"
-    (image_gt, image_enc), x_t, uncond_embeddings = null_inversion.invert(image_path, prompt, offsets=(0, 0, 200, 0),
+    (image_gt, image_enc), x_t, uncond_embeddings = null_inversion.invert(image_path, prompt,
+                                                                          offsets=(0, 0, 200, 0),
                                                                           verbose=True)
 
     print("Modify or remove offsets according to your image!")
