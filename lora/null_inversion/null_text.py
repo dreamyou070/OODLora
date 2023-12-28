@@ -579,7 +579,7 @@ def main(args) :
                 context = torch.cat([uncond_embeddings[i].expand(*text_embeddings.shape), text_embeddings])
             else:
                 context = torch.cat([uncond_embeddings_, text_embeddings])
-            print(f'generating step, with controller')
+            print(f'generating step, with controller, controller : {controller.__class__.__name__}')
             latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale,
                                                low_resource=False)
 
