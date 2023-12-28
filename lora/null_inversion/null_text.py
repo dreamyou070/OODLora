@@ -2,11 +2,6 @@ from typing import Optional, Union, Tuple, List, Dict
 from tqdm.notebook import tqdm
 import torch
 import sys, os
-present_dir = os.path.dirname(__file__)
-parent, _ = os.path.split(present_dir)
-sys.path.append(os.path.dirname(__file__))
-sys.path.append(parent)
-from diffusers import StableDiffusionPipeline, DDIMScheduler
 import torch.nn.functional as nnf
 import numpy as np
 import abc
@@ -15,6 +10,13 @@ import seq_aligner
 from torch.optim.adam import Adam
 from PIL import Image
 import argparse
+
+present_dir = os.path.dirname(__file__)
+parent, _ = os.path.split(present_dir)
+sys.path.append(present_dir)
+sys.path.append(parent)
+print(f'sys.path: {sys.path}')
+
 
 
 class LocalBlend:
