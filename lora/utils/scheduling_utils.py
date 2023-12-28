@@ -112,23 +112,15 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
 
 
 @torch.no_grad()
-def recon_loop(args, latent_dict, start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir,
-               controller, name):
+def recon_loop(args, z_latent_dict, start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir, controller, name):
     if context.shape[0] == 2:
         uncon, con = context.chunk(2)
     else:
         con = context
     # inference_times = [100,80, ... 0]
     latent = start_latent
-    all_latent_dict = {}
-    all_latent_dict[inference_times[0]] = latent
     time_steps = []
     pil_images = []
-    with torch.no_grad():
-        np_img = latent2image(latent, vae, return_type='np')
-    pil_img = Image.fromarray(np_img)
-    pil_images.append(pil_img)
-    #pil_img.save(os.path.join(base_folder_dir, f'{name}_only_infer_recon_start_time_{inference_times[0]}.png'))
     x_latent_dict = {}
     for i, t in enumerate(inference_times[:-1]):
         x_latent = latent
@@ -137,17 +129,17 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                                x_latent,
                                t,
                                con,None, None)
-        latent = prev_step(noise_pred, int(t), latent, scheduler)
+        x_latent = prev_step(noise_pred, int(t), latent, scheduler)
         prev_time = int(inference_times[i + 1])
-        x_latent_dict[prev_time] = latent
+        x_latent_dict[prev_time] = x_latent
         break
 
     inference_times = inference_times[1:]
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
         with torch.no_grad():
-            if latent_dict is not None:
-                z_latent = latent_dict[t]
+            if z_latent_dict is not None:
+                z_latent = z_latent_dict[t]
                 x_latent = x_latent_dict[t]
                 input_latent = torch.cat([z_latent, x_latent], dim=0)
                 input_cond = torch.cat([con, con], dim=0)
@@ -158,24 +150,17 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 input_cond = con
                 trg_indexs_list = None
                 pixel_set = None
-            noise_pred = call_unet(unet,
-                                   input_latent,
-                                   t,
-                                   input_cond,
-                                   trg_indexs_list,
-                                   pixel_set)
-            if latent_dict is not None:
+            noise_pred = call_unet(unet,input_latent,t,input_cond,trg_indexs_list, pixel_set)
+            if z_latent_dict is not None:
                 mask_dict = controller.step_store
                 controller.reset()
                 layers = mask_dict.keys()
                 mask_dict_by_res = {}
                 for layer in layers:
-                    mask = mask_dict[layer] # object positioned mask
-                    mask = mask[0] # [8,1024]
+                    mask = mask_dict[layer][0] # [8,1024]
                     head, pix_num = mask.shape
                     res = int(pix_num ** 0.5)
-                    if res not in mask_dict_by_res.keys() :
-                        mask_dict_by_res[res] = []
+                    if res not in mask_dict_by_res.keys() : mask_dict_by_res[res] = []
                     cross_maps = mask.reshape(head, res, res) # 8, 32,32
                     mask_dict_by_res[res].append(cross_maps)
                 mask_res_dict = {}
@@ -185,8 +170,6 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                         out = torch.cat(map_list, dim=0)  # [num, 64,64]
                         avg_attn = out.sum(0) / out.shape[0]
                         mask_res_dict[resolution] = avg_attn
-
-                images = []
                 for res in mask_res_dict.keys() :
                     image = mask_res_dict[res]
                     image = 255 * image / image.max()
@@ -196,22 +179,15 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
                 mask_latent = torch.tensor(image).to(z_latent.device, dtype = z_latent.dtype)
                 mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
                 mask_latent = torch.where(mask_latent > args.pixel_thred, 1, 0)
-                z_noise_pred, x_noise_pred = noise_pred.chunk(2)
-                x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
-                y_latent = z_latent * (1-mask_latent) + x_latent * (mask_latent)
-                x_latent_dict[prev_time] = y_latent
 
-                y_noise_pred = call_unet(unet,y_latent,t,con, None, None)
-                y_latent = prev_step(y_noise_pred, t, x_latent, scheduler)
+                # --------------------- make y_latent --------------------- #
+                x_latent = z_latent * (1-mask_latent) + x_latent * (mask_latent)
             else :
-                y_latent = prev_step(noise_pred, t, x_latent, scheduler)
-
-            # --------------------- mask --------------------- #
-            latent = y_latent
+                x_latent = prev_step(noise_pred, t, x_latent, scheduler)
+            x_latent_dict[prev_time] = x_latent
             controller.reset()
-            np_img = latent2image(latent, vae, return_type='np')
+            np_img = latent2image(x_latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
-        all_latent_dict[prev_time] = latent
-    return all_latent_dict, time_steps, pil_images
+    return x_latent, time_steps, pil_images
