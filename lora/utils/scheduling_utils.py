@@ -140,10 +140,12 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
         latent = prev_step(noise_pred, int(t), latent, scheduler)
         prev_time = int(inference_times[i + 1])
         x_latent_dict[prev_time] = latent
+        print(f'prev_time : {prev_time}')
         break
 
     inference_times = inference_times[1:]
     for i, t in enumerate(inference_times[:-1]):
+        print(f'current time : {t}')
 
         with torch.no_grad():
             if latent_dict is not None:
