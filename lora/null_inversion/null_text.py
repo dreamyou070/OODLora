@@ -509,12 +509,16 @@ class NullInversion:
         self.init_prompt(prompt)
         ptp_utils.register_attention_control(self.model, None)
         image_gt = load_512(image_path, *offsets)
+
         if verbose:
             print("DDIM inversion...")
+
         image_rec, ddim_latents = self.ddim_inversion(image_gt)
+
         if verbose:
             print("Null-text optimization...")
         uncond_embeddings = self.null_optimization(ddim_latents, num_inner_steps, early_stop_epsilon)
+
         return (image_gt, image_rec), ddim_latents[-1], uncond_embeddings
 
 
@@ -557,8 +561,7 @@ def main(args) :
             padding="max_length",
             max_length=model.tokenizer.model_max_length,
             truncation=True,
-            return_tensors="pt",
-        )
+            return_tensors="pt",)
         text_embeddings = model.text_encoder(text_input.input_ids.to(model.device))[0]
         max_length = text_input.input_ids.shape[-1]
         if uncond_embeddings is None:
@@ -576,6 +579,7 @@ def main(args) :
                 context = torch.cat([uncond_embeddings[i].expand(*text_embeddings.shape), text_embeddings])
             else:
                 context = torch.cat([uncond_embeddings_, text_embeddings])
+            print(f'generating step, with controller')
             latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale,
                                                low_resource=False)
 
@@ -592,9 +596,13 @@ def main(args) :
             images, latent = run_and_display(prompts, EmptyControl(), latent=latent, run_baseline=False,
                                              generator=generator)
             print("with prompt-to-prompt")
-        images, x_t = text2image_ldm_stable(ldm_stable, prompts, controller, latent=latent,
-                                            num_inference_steps=NUM_DDIM_STEPS, guidance_scale=GUIDANCE_SCALE,
-                                            generator=generator, uncond_embeddings=uncond_embeddings)
+        print(f'Let collect map ... ')
+        images, x_t = text2image_ldm_stable(ldm_stable, prompts, controller,
+                                            latent=latent,
+                                            num_inference_steps=NUM_DDIM_STEPS,
+                                            guidance_scale=GUIDANCE_SCALE,
+                                            generator=generator,
+                                            uncond_embeddings=uncond_embeddings)
         if verbose:
             ptp_utils.view_images(images)
         return images, x_t
