@@ -123,7 +123,7 @@ def recon_loop(args, latent_dict, start_latent, context, inference_times, schedu
     all_latent_dict = {}
 
     print(f'inference_times : {inference_times}')
-    
+
     all_latent_dict[inference_times[0]] = latent
     time_steps = []
     pil_images = []

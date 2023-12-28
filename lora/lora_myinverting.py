@@ -293,11 +293,12 @@ def main(args) :
                 # [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300]
                 # print(f'org_latent_dict.keys() : {org_latent_dict.keys()}')
                 st_noise_latent = org_latent_dict[args.final_noising_time]
+                time_steps.reverse()
                 recon_loop(args,
                            org_latent_dict,
                            start_latent=st_noise_latent,
                            context=context,
-                           inference_times= time_steps.reverse(), # [300, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300]
+                           inference_times= time_steps,
                            scheduler=scheduler,
                            unet=unet,
                            vae=vae,

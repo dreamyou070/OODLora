@@ -11,5 +11,7 @@ inference_times = torch.tensor([999, 980, 960, 940, 920, 900, 880, 860, 840, 820
         160, 140, 120, 100,  80,  60,  40,  20,   0]).tolist()
 index = inference_times.index(300)
 recon_times = inference_times[index:]
-print(index)
-print(recon_times)
+
+time_steps = [1,2,3]
+time_steps.reverse()
+print(time_steps)
