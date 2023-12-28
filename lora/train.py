@@ -225,7 +225,7 @@ class NetworkTrainer:
 
         else:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
-            
+
 
         print(f' (2.2) validation dataset')
         blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
