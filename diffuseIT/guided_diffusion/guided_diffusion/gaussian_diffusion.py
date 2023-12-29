@@ -210,6 +210,7 @@ class GaussianDiffusion:
     
     def p_mean_variance(self, model, x, t, clip_denoised=True, denoised_fn=None,
                         model_kwargs=None):
+        print(f'p_mean_variance, denoised_fn : {denoised_fn}')
         if model_kwargs is None:
             model_kwargs = {}
 
