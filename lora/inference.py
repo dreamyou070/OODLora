@@ -257,7 +257,6 @@ def main(args) :
                     mask_vae_latent = image2latent(mask_np,     vae, device=device, weight_dtype=weight_dtype)
 
                 with torch.no_grad():
-                #with torch.enable_grad():
                     inf_time = inference_times.tolist()
                     inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
                     org_latent_dict, time_steps, pil_images = ddim_loop(args,
