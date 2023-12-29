@@ -195,5 +195,5 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
             masked_pil = Image.blend(pil_img, pixel_mask_pil, 0.5)
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
-            masked_pil.save(os.path.join(base_folder_dir, f'{name}_recon_masked_{prev_time}.png'))
+            pixel_mask_pil.save(os.path.join(base_folder_dir, f'{name}_recon_masked_{prev_time}.png'))
     return x_latent, time_steps, pil_images
