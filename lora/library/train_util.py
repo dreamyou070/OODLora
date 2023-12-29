@@ -1258,7 +1258,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
         if images[0] is not None:
             images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
-            mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
+            #mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
             binary_images = torch.stack(binary_images).to(memory_format=torch.contiguous_format).float()
         else:
             images = None
