@@ -549,7 +549,7 @@ class NetworkTrainer:
                             #maps = maps.to(dtype=weight_dtype)
                             print(f'binary_map : {binary_map.shape}')
                             print(f'attn_score : {attn_score.shape}')
-                            
+
                             attn_score_pixel = attn_score #* maps.to(dtype=weight_dtype)
                             layer_attn_loss = attn_score_pixel.mean([1,2])
                             attn_loss += layer_attn_loss.mean()
