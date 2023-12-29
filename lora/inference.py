@@ -65,7 +65,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             ones_attn_vector = torch.ones_like(back_attn_vector)
-                            print(f'vector size : {ones_attn_vector.sum()}')
+                            print(f'vector size : {ones_attn_vector.sum()} | {ones_attn_vector.shape}')
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
                             attention_probs_object_sub[:, :, word_idx] = torch.where(obj_attn_vector > back_attn_vector,
                                                                                      obj_attn_vector, back_attn_vector)
