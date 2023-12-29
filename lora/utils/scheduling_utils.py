@@ -156,15 +156,13 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
 
             out = torch.cat(map_list, dim=0)   # [64,64]
             avg_attn = out.sum(0) / out.shape[0] # [64,64]
-            mast = torch.where(avg_attn != 0 , 1, 0)
-            image = 255 * mast
+            mask = torch.where(avg_attn != 0 , 1, 0)
             image = image.unsqueeze(-1).expand(*image.shape, 4).cpu()  # res,res,3
-            image = image.numpy().astype(np.uint8)
-            image = np.array(Image.fromarray(image).resize((64, 64)))
+            image = image.numpy().astype(np.uint8) * 255
+            image = np.array(Image.fromarray(image).resize((64, 64))) / 255
             #pixel_mask = np.array(Image.fromarray(image).resize((512, 512)))
             mask_latent = torch.tensor(image).to(z_latent.device, dtype=z_latent.dtype)
             mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
-            print(f'mask_latent.shape : {mask_latent.shape}')
             x_latent = x_latent * mask_latent + z_latent * (1 - mask_latent)
             x_latent_dict[prev_time] = x_latent
 
