@@ -53,14 +53,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0)
 
                 for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
-
                     # attention_probs_object = [head, pixel_num, sentence_len]
-                    max_txt_idx = torch.max(object_attention_probs, dim=-1).indices
-
-                    position_map = torch.where(max_txt_idx == 1, 1, 0) # [head, pixel_num]
-
+                    max_txt_idx = torch.max(object_attention_probs[:,:,1:], dim=-1).indices # remove cls token
+                    position_map = torch.where(max_txt_idx == 0, 1, 0) # [head, pixel_num]
                     batch_trg_index = trg_indexs_list[batch_idx]  # two times
-
                     if args.other_token_preserving :
                         attention_probs_object_sub = attention_probs_back.clone().detach()
                     else :
