@@ -94,6 +94,7 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
     flip_times = inference_times
     for i, t in enumerate(flip_times[:-1]):
         next_time = flip_times[i + 1]
+        print(f'noising, t : {t} | next_time : {next_time}')
         if next_time <= final_time :
             latent_dict[int(t)] = latent
             time_steps.append(t)
@@ -103,8 +104,7 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
             np_img = latent2image(latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
             pil_images.append(pil_img)
-            if next_time == final_time :
-                pil_img.save(os.path.join(base_folder_dir, f'{name}_noising_{next_time}.png'))
+            pil_img.save(os.path.join(base_folder_dir, f'{name}_noising_{next_time}.png'))
     time_steps.append(final_time)
     latent_dict[int(final_time)] = latent
     return latent_dict, time_steps, pil_images
@@ -139,10 +139,13 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
     inference_times = inference_times[1:]
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
+
         with torch.no_grad():
+
             if z_latent_dict is not None:
                 z_latent = z_latent_dict[t]
                 x_latent = x_latent_dict[t]
+                print(f'making input latent, t : {t} | prev_time : {prev_time}')
                 input_latent = torch.cat([z_latent, x_latent], dim=0)
                 input_cond = torch.cat([con, con], dim=0)
                 trg_indexs_list = [[1]]
@@ -152,7 +155,9 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
                 input_cond = con
                 trg_indexs_list = None
                 pixel_set = None
+
             noise_pred = call_unet(unet,input_latent,t,input_cond,trg_indexs_list, pixel_set)
+
             if z_latent_dict is not None:
                 mask_dict = controller.step_store
                 controller.reset()
