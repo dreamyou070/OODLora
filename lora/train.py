@@ -533,7 +533,9 @@ class NetworkTrainer:
                             res = int(math.sqrt(pix_num))
                             attn_score = attn_score.reshape(b, res, res, -1) # [b, res, res, 1]
 
-                            binary_map = batch['binary_images'].detach().cpu()
+                            binary_map = batch['binary_images'].unsqueeze(-1)
+                            binary_map.expand(attn_score.shape)
+                            binary_map = binary_map.expand(attn_score.shape)
                             """
                             #maps = []
                             for binary_map_i in binary_map:
@@ -547,10 +549,11 @@ class NetworkTrainer:
                             """
                             #maps = torch.cat(maps, dim=0).unsqueeze(-1).to(accelerator.device) # [b, 64, 64, 1]
                             #maps = maps.to(dtype=weight_dtype)
-                            print(f'binary_map : {binary_map.shape}')
-                            print(f'attn_score : {attn_score.shape}')
+                            #print(f'binary_map : {binary_map.shape}')
+                            #print(f'attn_score : {attn_score.shape}')
+                            print(f'binary_map : {binary_map.sum()}')
 
-                            attn_score_pixel = attn_score #* maps.to(dtype=weight_dtype)
+                            attn_score_pixel = attn_score * binary_map.to(dtype=weight_dtype)
                             layer_attn_loss = attn_score_pixel.mean([1,2])
                             attn_loss += layer_attn_loss.mean()
                             loss = attn_loss
