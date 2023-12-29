@@ -70,8 +70,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             head = attn_diff_vector.shape[0]
                             object_position = torch.where(attn_diff_vector > 0, 1, 0)
                             back_big_position = torch.where(attn_diff_vector < 0 , 1, 0)
+                            same_position = torch.where(attn_diff_vector == 0, 1, 0)
                             print(f'where lora big pixel num : {object_position.sum()}')
                             print(f'where lora small pixel num : {back_big_position.sum()}')
+                            print(f'where lora same pixel num : {same_position.sum()}')
+                            print(f'max big : {attn_diff_vector.max()}')
 
                             #object_position = object_position.sum(dim=0)/head
                             #print(f'possible object_position : {object_position.sum()}')
