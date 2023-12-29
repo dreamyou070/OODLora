@@ -190,7 +190,7 @@ class ImageEditor:
                         x_clip = self.noisy_aug(t[0].item(), x, out["pred_xstart"])
                         pred = self.clip_net.encode_image(0.5 * x_clip + 0.5, ncuts=self.args.aug_num)
                         clip_loss = - (pred @ self.tgt.T).flatten()
-                        print(f'clip_loss : {clip_loss.shape}')
+                        print(f'clip_loss : {clip_loss}')
 
                         clip_loss = - clip_loss.reduce(mean_sig)
                         loss = loss + clip_loss * self.args.clip_guidance_lambda
