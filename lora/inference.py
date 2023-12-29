@@ -64,13 +64,12 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     pixel_num = attention_probs_object_sub.shape[1]
                     map_list = []
                     res = int(pixel_num ** 0.5)
-                    if int(pixel_num ** 0.5) in args.cross_map_res:
-                        print(f'bad pixel num : {position_map.sum()}')
+                    if int(pixel_num ** 0.5) in args.cross_map_res :
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (position_map) + back_attn_vector * (1 - position_map)
+                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (1 - position_map) + back_attn_vector * (position_map)
                             map_list.append(position_map)
                         controller.store(torch.cat(map_list, dim=0), layer_name)
                         attention_probs = torch.cat([attention_probs_back,attention_probs_object_sub], dim=0)
@@ -254,7 +253,7 @@ def main(args) :
 
 
                 with torch.no_grad():
-                    """
+
                     inf_time = inference_times.tolist()
                     inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
                     org_latent_dict, time_steps, pil_images = ddim_loop(args,
@@ -267,7 +266,6 @@ def main(args) :
                                                                         final_time=args.final_noising_time,
                                                                         base_folder_dir=trg_img_output_dir,
                                                                         name=name)
-                    
                     noising_times = org_latent_dict.keys()
                     st_noise_latent = org_latent_dict[args.final_noising_time]
                     time_steps.reverse()
