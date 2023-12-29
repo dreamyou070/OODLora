@@ -67,7 +67,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
 
                             attn_diff_vector = obj_attn_vector - back_attn_vector
+                            head = attn_diff_vector.shape[0]
                             object_position = torch.where(attn_diff_vector > 0.1, 1, 0)
+                            object_position = object_position.sum(dim=0)
+                            object_position = torch.where(object_position > head/2, 1, 0).unsqueeze(0)
+                            object_position = object_position.expand(head, pixe_num)
 
                             attention_probs_object_sub[:, :, word_idx] = back_attn_vector * (1 - object_position) + obj_attn_vector * object_position
 
