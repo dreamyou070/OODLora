@@ -458,53 +458,140 @@ class GaussianDiffusion:
             th.sqrt(beta) * th.randn_like(img_out)
 
         return img_in_est
-    def p_sample_loop_progressive(
-        self,
-        model,
-        shape,
-        noise=None,
-        clip_denoised=True,
-        denoised_fn=None,
-        cond_fn=None,
-        model_kwargs=None,
-        device=None,
-        progress=False,
-        skip_timesteps=0,
-        init_image=None,
-        postprocess_fn=None,
-        randomize_class=False,
-        find_init = False
-    ):
-        """
-        Generate samples from the model and yield intermediate samples from
-        each timestep of diffusion.
-        Arguments are the same as p_sample_loop().
-        Returns a generator over dicts, where each dict is the return value of
-        p_sample().
-        """
+    """
+            def cond_fn(x, t, y=None):
+            if self.args.prompt == "":
+                return torch.zeros_like(x)
+            self.flag_resample = False
+            with torch.enable_grad():
+                frac_cont = 1.0
+                if self.target_image is None:
+                    if self.args.use_prog_contrast:
+                        if self.loss_prev > -0.5:
+                            frac_cont = 0.5
+                        elif self.loss_prev > -0.4:
+                            frac_cont = 0.25
+                    if self.args.regularize_content:
+                        if self.loss_prev < -0.5:
+                            frac_cont = 2
+                x = x.detach().requires_grad_()
+                t = self.unscale_timestep(t)
+
+                out = self.diffusion.p_mean_variance( self.model, x, t, clip_denoised=False, model_kwargs={"y": y})
+
+                loss = torch.tensor(0)
+                if self.target_image is None:
+                    if self.args.clip_guidance_lambda != 0:
+                        x_clip = self.noisy_aug(t[0].item(), x, out["pred_xstart"])
+                        pred = self.clip_net.encode_image(0.5 * x_clip + 0.5, ncuts=self.args.aug_num)
+                        clip_loss = - (pred @ self.tgt.T).flatten().reduce(mean_sig)
+                        loss = loss + clip_loss * self.args.clip_guidance_lambda
+                        self.metrics_accumulator.update_metric("clip_loss", clip_loss.item())
+                        self.loss_prev = clip_loss.detach().clone()
+                if self.args.use_noise_aug_all:
+                    x_in = self.noisy_aug(t[0].item(), x, out["pred_xstart"])
+                else:
+                    x_in = out["pred_xstart"]
+
+                if self.args.vit_lambda != 0:
+
+                    if t[0] > self.args.diff_iter:
+                        vit_loss, vit_loss_val = self.VIT_LOSS(x_in, self.init_image, self.prev, use_dir=True,
+                                                               frac_cont=frac_cont, target=self.target_image)
+                    else:
+                        vit_loss, vit_loss_val = self.VIT_LOSS(x_in, self.init_image, self.prev, use_dir=False,
+                                                               frac_cont=frac_cont, target=self.target_image)
+                    loss = loss + vit_loss
+
+                if self.args.range_lambda != 0:
+                    r_loss = range_loss(out["pred_xstart"]).sum() * self.args.range_lambda
+                    loss = loss + r_loss
+                    self.metrics_accumulator.update_metric("range_loss", r_loss.item())
+                if self.target_image is not None:
+                    loss = loss + mse_loss(x_in, self.target_image) * self.args.l2_trg_lambda
+
+                if self.args.use_ffhq:
+                    loss = loss + self.idloss(x_in, self.init_image) * self.args.id_lambda
+                self.prev = x_in.detach().clone()
+
+                if self.args.use_range_restart:
+                    if t[0].item() < total_steps:
+                        if self.args.use_ffhq:
+                            if r_loss > 0.1:
+                                self.flag_resample = True
+                        else:
+                            if r_loss > 0.01:
+                                self.flag_resample = True
+
+            return -torch.autograd.grad(loss, x)[0], self.flag_resample
+            
+    samples = sample_func(self.model,
+                                  (self.args.batch_size,3,self.model_config["image_size"],self.model_config["image_size"],),
+                                  clip_denoised=False,
+                                  model_kwargs={} if self.args.model_output_size == 256 else {"y": torch.zeros([self.args.batch_size], device=self.device, dtype=torch.long)},
+                                  cond_fn=cond_fn,
+                                  progress=True,
+                                  skip_timesteps=self.args.skip_timesteps,
+                                  init_image=self.init_image,
+                                  postprocess_fn=None,
+                                  randomize_class=True,)
+    """
+    def p_sample_loop_progressive(self,
+                                  model, # self.model
+                                  shape, # [batch, 3, 256,256]
+                                  noise=None,
+                                  clip_denoised=True, # False
+                                  denoised_fn=None,
+                                  cond_fn=None, ##################################
+                                  model_kwargs=None, # {}
+                                  device=None,
+                                  progress=False,
+                                  skip_timesteps=0,
+                                  init_image=None,        # init_image
+                                  postprocess_fn=None,    # None
+                                  randomize_class=False,  # True
+                                  find_init = False):
+        print(f' (1) device')
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
+
+        print(f' (2) random noise')
         if noise is not None:
             img = noise
         else:
             img = th.randn(*shape, device=device)
 
+        print(f' (3) initial image')
         if skip_timesteps and init_image is None:
             init_image = th.zeros_like(img)
 
+        print(f' (4) other orguments')
         indices = list(range(self.num_timesteps - skip_timesteps))[::-1]
-
         batch_size = shape[0]
         init_image_batch = th.tile(init_image, dims=(batch_size, 1, 1, 1))
-        print(f' ** q sampling ** (img translation) ')
+        print(f' - indices: {indices}')
+        print(f' - batch_size: {batch_size}')
+        print(f' - init_image_batch: {init_image_batch.shape}')
+
+        print(f' (5) noising (make x_t)')
+        print(f' - masking x_{indices[0]}')
         img = self.q_sample(x_start=init_image_batch,
                             t=th.tensor(indices[0], dtype=th.long, device=device),
                             noise=img,)
-        if progress:
-            # Lazy import so that we don't depend on tqdm.
-            from tqdm.auto import tqdm
 
+
+
+
+
+
+
+
+
+
+
+        if progress:
+            from tqdm.auto import tqdm
             indices = tqdm(indices)
         flag = False
         while True:
@@ -529,25 +616,23 @@ class GaussianDiffusion:
                                 size=model_kwargs["y"].shape,
                                 device=model_kwargs["y"].device,)
                         with th.no_grad():
+                            print(f' (6.1) denoising (p sampling)')
                             out = self.p_sample(model,
-                                image_after_step,
-                                t,
-                                clip_denoised=clip_denoised,
-                                denoised_fn=denoised_fn,
-                                cond_fn=cond_fn,
-                                model_kwargs=model_kwargs,)
+                                                image_after_step,
+                                                t,
+                                                clip_denoised=clip_denoised,
+                                                denoised_fn=denoised_fn,
+                                                cond_fn=cond_fn,
+                                                model_kwargs=model_kwargs,)
                             if postprocess_fn is not None:
                                 out = postprocess_fn(out, t)
                             yield out
                             flag = out["flag"] 
                             image_after_step  = out["sample"]
-                            
                         image_before_step = image_after_step.clone()
                         if r!= 9:
-                        
-                            image_after_step = self.undo(
-                            image_before_step, image_after_step,
-                            est_x_0=out['pred_xstart'], t=t-1, debug=False)
+                            image_after_step = self.undo(image_before_step, image_after_step,
+                                                         est_x_0=out['pred_xstart'], t=t-1, debug=False)
                         if flag:
                             break
                     if flag:
@@ -556,22 +641,19 @@ class GaussianDiffusion:
                 else:
                     t = th.tensor([i] * shape[0], device=device)
                     if randomize_class and "y" in model_kwargs:
-                        model_kwargs["y"] = th.randint(
-                            low=0,
-                            high=model.num_classes,
-                            size=model_kwargs["y"].shape,
-                            device=model_kwargs["y"].device,
-                        )
+                        model_kwargs["y"] = th.randint(low=0,
+                                                       high=model.num_classes,
+                                                       size=model_kwargs["y"].shape,
+                                                       device=model_kwargs["y"].device,)
                     with th.no_grad():
-                        out = self.p_sample(
-                            model,
-                            img,
-                            t,
-                            clip_denoised=clip_denoised,
-                            denoised_fn=denoised_fn,
-                            cond_fn=cond_fn,
-                            model_kwargs=model_kwargs,
-                        )
+                        print(f' (6.2) denoising (p sampling)')
+                        out = self.p_sample(model,
+                                            img,
+                                            t,
+                                            clip_denoised=clip_denoised,
+                                            denoised_fn=denoised_fn,
+                                            cond_fn=cond_fn,
+                                            model_kwargs=model_kwargs,)
                         if postprocess_fn is not None:
                             out = postprocess_fn(out, t)
 

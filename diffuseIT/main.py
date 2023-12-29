@@ -180,9 +180,7 @@ class ImageEditor:
                 x = x.detach().requires_grad_()
                 t = self.unscale_timestep(t)
 
-                out = self.diffusion.p_mean_variance(
-                    self.model, x, t, clip_denoised=False, model_kwargs={"y": y}
-                )
+                out = self.diffusion.p_mean_variance( self.model, x, t, clip_denoised=False, model_kwargs={"y": y})
 
                 loss = torch.tensor(0)
                 if self.target_image is None:
@@ -236,9 +234,7 @@ class ImageEditor:
             print(f"Start iterations {iteration_number} with p_sample_loop_progressive")
             sample_func = (self.diffusion.ddim_sample_loop_progressive  if self.args.ddim else self.diffusion.p_sample_loop_progressive)
             samples = sample_func(self.model,
-                                  (self.args.batch_size,3,
-                                   self.model_config["image_size"],
-                                   self.model_config["image_size"],),
+                                  (self.args.batch_size,3,self.model_config["image_size"],self.model_config["image_size"],),
                                   clip_denoised=False,
                                   model_kwargs={} if self.args.model_output_size == 256 else {"y": torch.zeros([self.args.batch_size], device=self.device, dtype=torch.long)},
                                   cond_fn=cond_fn,
