@@ -73,6 +73,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             #next_obj_attn_vector = attention_next[:, :, word_idx].squeeze(-1)
                             #obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
                             print(f'layer_name : {layer_name}, attn_vector : {attn_vector.shape}')
+                            print(f'attn_vector : {attn_vector}')
                             import time
                             time.sleep(100)
 
