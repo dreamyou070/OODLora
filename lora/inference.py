@@ -218,7 +218,7 @@ def main(args) :
     test_output_dir = os.path.join(output_dir, 'test')
     os.makedirs(test_output_dir, exist_ok=True)
     for class_name in classes:
-        if 'good' in class_name:
+        if 'good' not in class_name:
             class_base_folder = os.path.join(test_output_dir, class_name)
             os.makedirs(class_base_folder, exist_ok=True)
 
