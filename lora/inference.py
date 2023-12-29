@@ -51,7 +51,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
                 attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0)
 
-                vector_diff_list = []
                 for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
                     batch_trg_index = trg_indexs_list[batch_idx]  # two times
                     if args.other_token_preserving :
@@ -69,6 +68,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             attention_probs_object_sub[:, :, word_idx] = torch.where(obj_attn_vector > back_attn_vector,
                                                                                      obj_attn_vector, back_attn_vector)
                             object_position = torch.where(obj_attn_vector > back_attn_vector , 1, 0)
+                            print(f'number of object_position : {object_position.sum()}')
                             mask.append({res: object_position})
                             map_list.append(object_position)
                         controller.store(torch.cat(map_list, dim=0), layer_name)
@@ -168,7 +168,8 @@ def main(args) :
                               beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
-    inference_times = torch.tensor([999] + inference_times.tolist())
+    inference_times = inference_times.tolist()
+    #inference_times = torch.tensor([999] + inference_times.tolist())
     #inference_times[]
 
     print(f' (2.4.+) model to accelerator device')
@@ -262,6 +263,8 @@ def main(args) :
                                                                     final_time=args.final_noising_time,
                                                                     base_folder_dir=trg_img_output_dir,
                                                                     name=name)
+                noising_times = org_latent_dict.keys()
+                print(f'noising_times : {noising_times}')
                 st_noise_latent = org_latent_dict[args.final_noising_time]
                 time_steps.reverse()
                 recon_loop(args,

@@ -179,6 +179,7 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
                 mask_latent = torch.tensor(image).to(z_latent.device, dtype = z_latent.dtype)
                 mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
                 mask_latent = torch.where(mask_latent > args.pixel_thred, 1, 0)
+                print(f'pixel object position : {mask_latent.sum()}')
 
                 # --------------------- make y_latent --------------------- #
                 x_latent = z_latent * (1-mask_latent) + x_latent * (mask_latent)
