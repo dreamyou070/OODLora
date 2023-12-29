@@ -162,7 +162,6 @@ class ImageEditor:
         total_steps = self.diffusion.num_timesteps - self.args.skip_timesteps - 1
 
         def cond_fn(x, t, y=None):
-            print(f' clip condition function')
             if self.args.prompt == "":
                 return torch.zeros_like(x)
 
@@ -190,7 +189,10 @@ class ImageEditor:
                         print(f'clip guidance lanbda = {self.args.clip_guidance_lambda}')
                         x_clip = self.noisy_aug(t[0].item(), x, out["pred_xstart"])
                         pred = self.clip_net.encode_image(0.5 * x_clip + 0.5, ncuts=self.args.aug_num)
-                        clip_loss = - (pred @ self.tgt.T).flatten().reduce(mean_sig)
+                        clip_loss = - (pred @ self.tgt.T).flatten()
+                        print(f'clip_loss : {clip_loss.shape}')
+
+                        clip_loss = - clip_loss.reduce(mean_sig)
                         loss = loss + clip_loss * self.args.clip_guidance_lambda
                         print(f' [1] after CLIP loss, loss : {loss}')
                         self.metrics_accumulator.update_metric("clip_loss", clip_loss.item())
@@ -233,16 +235,14 @@ class ImageEditor:
                                 self.flag_resample = True
             #print(f' after all calculating loss, loss : {loss.shape}')
             #print(f' loss to x, x = {x.sa}')
-            return -torch.autograd.grad(loss, x)[0], self.flag_resample
+            return -torch.autograd.grad(outputs=loss,
+                                        inputs=x)[0], self.flag_resample
 
         print(f' (3) Iteratively denoising (image translatino through text)')
         save_image_interval = self.diffusion.num_timesteps // 5
         for iteration_number in range(self.args.iterations_num):
             print(f"Start iterations {iteration_number} with p_sample_loop_progressive")
             sample_func = (self.diffusion.ddim_sample_loop_progressive  if self.args.ddim else self.diffusion.p_sample_loop_progressive)
-            print(f'sample_func: {sample_func}')
-            print(f'self.diffusion : {self.diffusion.__class__.__name__}')
-
             samples = sample_func(self.model,
                                   (self.args.batch_size,3,self.model_config["image_size"],self.model_config["image_size"],),
                                   clip_denoised=False,

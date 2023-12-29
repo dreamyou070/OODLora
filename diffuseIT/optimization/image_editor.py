@@ -309,4 +309,3 @@ class ImageEditor:
             else:
                 pred_image_pil.save(ranked_pred_path)
 """
-            
