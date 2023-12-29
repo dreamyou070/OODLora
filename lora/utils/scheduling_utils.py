@@ -136,7 +136,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             trg_indexs_list = [[1]]
             pixel_set = []
             noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, pixel_set)
-            """
+
             mask_dict = controller.step_store
             controller.reset()
             # ------------------- 1. get mask ------------------- #
@@ -154,17 +154,22 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             map = map.reshape(res,res)
             mask_img = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8)
             mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
-            mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(z_latent.device, dtype=z_latent.dtype)
-            x_latent = x_latent * (1 -mask_latent) + z_latent * (mask_latent)
-            x_latent_dict[t] = x_latent
-            if prev_time == 0:
-                pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-                pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
-            """
+
+            #mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(z_latent.device, dtype=z_latent.dtype)
+            #x_latent = x_latent * (1 -mask_latent) + z_latent * (mask_latent)
+            #x_latent_dict[t] = x_latent
+
             #x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
             z_noise_pred, x_noise_pred = noise_pred.chunk(2)
             x_latent = prev_step(x_noise_pred, t, x_latent, scheduler)
             x_latent_dict[prev_time] = x_latent
+
+            pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
+
+            pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
+            aug_mask_img = Image.fromarray(mask_img * 255).resize((512, 512))
+            aug_mask_img.save(os.path.join(base_folder_dir, f'{name}_mask_{t}.png'))
+
     pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
     pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
     return x_latent, time_steps, pil_images

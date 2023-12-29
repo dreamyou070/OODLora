@@ -67,12 +67,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     if res in args.cross_map_res :
                         # attention_probs_object = [head, pixel_num, sentence_len]
                         index_info = attention_probs_back[:, :, 1:].max(dim=-1).indices
-                        back_map = torch.where(index_info == 0, 1, 0)
+                        back_map = torch.where(index_info == 0, 1, 0) # [head, pixel_num]
 
                         map_dict[common_name] = []
                         map_dict[common_name].append(back_map)
 
-                        batch_back_map.append(back_map) # head, pixel_num
                         batch_trg_index = trg_indexs_list[batch_idx]  # two times
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
@@ -80,8 +79,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
                             attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (1 - back_map) + back_attn_vector * back_map
                             map_list.append(back_map)
-                    #if len(map_list) > 0 :
-                        #controller.store(torch.cat(batch_back_map, dim=0), layer_name)
+                    if len(map_list) > 0 :
+                        controller.store(torch.cat(map_list, dim=0), layer_name)
                     new_attns.append(attention_probs_object_sub)
                 object_attention_probs = torch.cat(new_attns, dim=0)
                 attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
