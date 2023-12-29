@@ -48,6 +48,7 @@ class ImageEditor:
             random.seed(self.args.seed)
 
         self.model_config = model_and_diffusion_defaults()
+
         if self.args.use_ffhq:
             self.model_config.update({"attention_resolutions": "16",
                                       "class_cond": self.args.model_output_size == 512,
@@ -232,7 +233,9 @@ class ImageEditor:
         save_image_interval = self.diffusion.num_timesteps // 5
         for iteration_number in range(self.args.iterations_num):
             print(f"Start iterations {iteration_number} with p_sample_loop_progressive")
+            print(f'args.ddim : {self.args.ddim}')
             sample_func = (self.diffusion.ddim_sample_loop_progressive  if self.args.ddim else self.diffusion.p_sample_loop_progressive)
+            
             samples = sample_func(self.model,
                                   (self.args.batch_size,3,self.model_config["image_size"],self.model_config["image_size"],),
                                   clip_denoised=False,
