@@ -1080,7 +1080,7 @@ class BaseDataset(torch.utils.data.Dataset):
                         img = img[:, p : p + self.width]
                         masked_img = masked_img[:, p : p + self.width]
                 im_h, im_w = img.shape[0:2]
-                masked_img_h, masked_img_w = masked_img.shape[0:2]
+                #masked_img_h, masked_img_w = masked_img.shape[0:2]
                 assert (im_h == self.height and im_w == self.width), f"image size is small / 画像サイズが小さいようです: {image_info.absolute_path}"
                 original_size = [im_w, im_h]
                 crop_ltrb = (0, 0, 0, 0)
@@ -1125,7 +1125,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
                 if flipped:
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
-                    masked_img = masked_img[:, ::-1, :].copy()
+                    #masked_img = masked_img[:, ::-1, :].copy()
                 latents = None
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 masked_image = self.image_transforms(masked_img)
