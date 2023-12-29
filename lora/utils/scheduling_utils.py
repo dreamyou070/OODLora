@@ -77,7 +77,11 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     prev_sample = alpha_prod_t_prev_matrix ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
 
-
+def pred_x0 (model_output, timestep, sample, scheduler) :
+    alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
+    a = sample / ((alpha_prod_t)**0.5)
+    b = (((1-alpha_prod_t)/alpha_prod_t)**0.5) * model_output
+    return a - b
 
 @torch.no_grad()
 def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, final_time, base_folder_dir, name,):
@@ -137,11 +141,10 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
 
         prev_time = int(inference_times[i + 1])
 
-        with torch.no_grad():
-
+        #with torch.no_grad():
+        with torch.enable_grad():
             z_latent = z_latent_dict[t]
             x_latent = x_latent_dict[t]
-
             input_latent = torch.cat([z_latent, x_latent], dim=0)
             input_cond = torch.cat([con, con], dim=0)
             trg_indexs_list = [[1]]
@@ -151,6 +154,11 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
 
             mask_dict = controller.step_store
             controller.reset()
+
+            z_noise_pred, x_noise_pred = noise_pred.chunk(2)
+            x_0_pred = pred_x0(x_noise_pred, t, x_latent, scheduler)
+
+
 
             # ------------------- 1. get mask ------------------- #
             layers = mask_dict.keys()
@@ -168,36 +176,10 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                 if resolution == args.pixel_mask_res :
                     map_list = mask_dict_by_res[resolution]
                     out = torch.cat(map_list, dim=0)  # [num, 64,64]
-                    avg_attn = out.sum(0) / out.shape[0]
-                    mask_res_dict[resolution] = avg_attn
-            for res in mask_res_dict.keys() :
-                image = mask_res_dict[res]
-                image = 255 * image / image.max()
-                image = image.unsqueeze(-1).expand(*image.shape, 4).cpu()  # res,res,3
-                image = image.numpy().astype(np.uint8)
-                image = np.array(Image.fromarray(image).resize((64,64))) # [1,4,64,64]
-                pixel_mask = np.array(Image.fromarray(image).resize((512,512)))
-
-
-            mask_latent = torch.tensor(image).to(z_latent.device, dtype = z_latent.dtype)
-            mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
-            mask_latent = torch.where(mask_latent > args.pixel_thred, 1, 0)
-            pixel_mask = np.where(pixel_mask > args.pixel_thred, 1, 0).astype(np.uint8) * 255
-
-            pixel_mask_pil = Image.fromarray(pixel_mask).convert('RGB')
-
-            experiment_mask_latent = image2latent(np.array(pixel_mask_pil), vae, device=mask_latent.device, weight_dtype=weight_dtype)
-            gt_mask_latent = image2latent(np.array(gt_pil), vae, device=mask_latent.device, weight_dtype=weight_dtype)
-            latent_diff = torch.abs(experiment_mask_latent - gt_mask_latent)
-            latent_diff = latent_diff.sum()
-            print(f'{t} : latent_diff = {latent_diff}')
-
-
-            pixel_mask_pil.save(os.path.join(base_folder_dir, f'{name}_pred_mask_{t}.png'))
-
-            # --------------------- 2. make y_latent --------------------- #
-            x_latent = z_latent * (1-mask_latent) + x_latent * (mask_latent)
+            loss = out.mean()
+            x_latent = x_latent - torch.autograd.grad(outputs=loss, inputs=x_0_pred)[0]
             x_latent_dict[t] = x_latent
+
             pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
             pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
 

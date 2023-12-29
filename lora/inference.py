@@ -67,24 +67,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
                             attn_diff_vector = obj_attn_vector - back_attn_vector
 
-                            head = attn_diff_vector.shape[0]
-                            object_position = torch.where(attn_diff_vector > 0, 1, 0)
-                            back_big_position = torch.where(attn_diff_vector < 0 , 1, 0)
-                            same_position = torch.where(attn_diff_vector == 0, 1, 0)
-                            print(f'where lora big pixel num : {object_position.sum()}')
-                            print(f'where lora small pixel num : {back_big_position.sum()}')
-                            print(f'where lora same pixel num : {same_position.sum()}')
-                            print(f'max big : {attn_diff_vector.max()}')
-
-                            #object_position = object_position.sum(dim=0)/head
-                            #print(f'possible object_position : {object_position.sum()}')
-                            object_position = torch.where(object_position > head/2, 1, 0).unsqueeze(0)
-                            object_position = object_position.expand(head, pixel_num)
-
-                            attention_probs_object_sub[:, :, word_idx] = back_attn_vector * (1 - object_position) + obj_attn_vector * object_position
-
-                            mask.append({res: object_position})
-                            map_list.append(object_position)
+                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector
+                            map_list.append(back_attn_vector)
                         controller.store(torch.cat(map_list, dim=0), layer_name)
                         attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
             hidden_states = torch.bmm(attention_probs, value)
