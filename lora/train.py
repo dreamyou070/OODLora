@@ -544,6 +544,7 @@ class NetworkTrainer:
                                 binary_aug_tensor = binary_aug_tensor.expand((8,res,res))
                                 maps.append(binary_aug_tensor)
                             maps = torch.cat(maps, dim=0).unsqueeze(-1).to(accelerator.device) # [b, 64, 64, 1]
+                            print(f'binary maps : {maps.sum()}')
                             attn_score_pixel = attn_score * maps.to(dtype=weight_dtype)
                             layer_attn_loss = attn_score_pixel.mean([1,2])
                             attn_loss += layer_attn_loss.mean()
