@@ -163,9 +163,12 @@ class ImageEditor:
 
         def cond_fn(x, t, y=None):
             print(f' clip condition function')
+
             if self.args.prompt == "":
                 return torch.zeros_like(x)
+
             self.flag_resample = False
+
             with torch.enable_grad():
                 frac_cont = 1.0
                 if self.target_image is None:
@@ -180,39 +183,43 @@ class ImageEditor:
                 x = x.detach().requires_grad_()
                 t = self.unscale_timestep(t)
 
-                out = self.diffusion.p_mean_variance( self.model, x, t, clip_denoised=False, model_kwargs={"y": y})
-
+                out = self.diffusion.p_mean_variance(self.model, x, t, clip_denoised=False, model_kwargs={"y": y})
                 loss = torch.tensor(0)
+                print(f' start of loss = {loss}')
                 if self.target_image is None:
                     if self.args.clip_guidance_lambda != 0:
+                        print(f'clip guidance lanbda = {self.args.clip_guidance_lambda}')
                         x_clip = self.noisy_aug(t[0].item(), x, out["pred_xstart"])
                         pred = self.clip_net.encode_image(0.5 * x_clip + 0.5, ncuts=self.args.aug_num)
                         clip_loss = - (pred @ self.tgt.T).flatten().reduce(mean_sig)
                         loss = loss + clip_loss * self.args.clip_guidance_lambda
+                        print(f' [1] after CLIP loss, loss : {loss}')
                         self.metrics_accumulator.update_metric("clip_loss", clip_loss.item())
                         self.loss_prev = clip_loss.detach().clone()
-                if self.args.use_noise_aug_all:
-                    x_in = self.noisy_aug(t[0].item(), x, out["pred_xstart"])
-                else:
-                    x_in = out["pred_xstart"]
-
+                # ------------------------------------------------------------------------------------------------ #
+                if self.args.use_noise_aug_all: x_in = self.noisy_aug(t[0].item(), x, out["pred_xstart"])
+                else: x_in = out["pred_xstart"]
+                # ------------------------------------------------------------------------------------------------ #
                 if self.args.vit_lambda != 0:
-
                     if t[0] > self.args.diff_iter:
-                        vit_loss, vit_loss_val = self.VIT_LOSS(x_in, self.init_image, self.prev, use_dir=True,
-                                                               frac_cont=frac_cont, target=self.target_image)
+                        vit_loss, vit_loss_val = self.VIT_LOSS(x_in, self.init_image, self.prev, use_dir=True,frac_cont=frac_cont, target=self.target_image)
                     else:
-                        vit_loss, vit_loss_val = self.VIT_LOSS(x_in, self.init_image, self.prev, use_dir=False,
-                                                               frac_cont=frac_cont, target=self.target_image)
+                        vit_loss, vit_loss_val = self.VIT_LOSS(x_in, self.init_image, self.prev, use_dir=False, frac_cont=frac_cont, target=self.target_image)
                     loss = loss + vit_loss
-
+                    print(f' [2] after DINO VIT, loss : {loss}')
+                # ------------------------------------------------------------------------------------------------ #
                 if self.args.range_lambda != 0:
                     r_loss = range_loss(out["pred_xstart"]).sum() * self.args.range_lambda
                     loss = loss + r_loss
+                    print(f' [4] regularization loss, loss : {loss}')
                     self.metrics_accumulator.update_metric("range_loss", r_loss.item())
-                if self.target_image is not None:
-                    loss = loss + mse_loss(x_in, self.target_image) * self.args.l2_trg_lambda
 
+                if self.target_image is not None:
+                    """ target image and x_in should same in style """
+                    loss = loss + mse_loss(x_in, self.target_image) * self.args.l2_trg_lambda
+                    print(f' [5] trg style mse loss : {loss}')
+
+                # ------------------------------------------------------------------------------------------------ #
                 if self.args.use_ffhq:
                     loss = loss + self.idloss(x_in, self.init_image) * self.args.id_lambda
                 self.prev = x_in.detach().clone()
@@ -225,7 +232,9 @@ class ImageEditor:
                         else:
                             if r_loss > 0.01:
                                 self.flag_resample = True
-
+            print(f' after all calculating loss, loss : {loss.shape}')
+            print(f' loss to x, x = {x.shape}')
+            print(f' self.flag_resample = {self.flag_resample}')
             return -torch.autograd.grad(loss, x)[0], self.flag_resample
 
         print(f' (3) Iteratively denoising (image translatino through text)')
@@ -308,8 +317,7 @@ if __name__ == "__main__":
     # Augmentations
     parser.add_argument("--aug_num", type=int, help="The number of augmentation", default=8)
     parser.add_argument("--diff_iter", type=int, help="The number of augmentation", default=50)
-    parser.add_argument( "--clip_guidance_lambda",        type=float,        help="Controls how much the image should look like the prompt",
-        default=2000,)
+    parser.add_argument( "--clip_guidance_lambda", type=float, help="Controls how much the image should look like the prompt", default=2000,)
     parser.add_argument("--lambda_trg",        type=float,        help="style loss for target style image",        default=2000,    )
     parser.add_argument("--l2_trg_lambda",        type=float,        help="l2 loss for target style image",        default=3000,    )
     parser.add_argument(
@@ -341,18 +349,9 @@ if __name__ == "__main__":
         "--use_prog_contrast",
         action="store_true",
     )
-    parser.add_argument(
-        "--use_range_restart",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--use_colormatch",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--use_noise_aug_all",
-        action="store_true",
-    )
+    parser.add_argument("--use_range_restart",action="store_true",)
+    parser.add_argument("--use_colormatch",action="store_true",)
+    parser.add_argument("--use_noise_aug_all",action="store_true",)
     parser.add_argument(
         "--regularize_content",
         action="store_true",    )
