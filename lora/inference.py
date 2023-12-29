@@ -50,40 +50,34 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0)
                 batch_back_map = []
                 for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
-
                     if args.other_token_preserving :
                         attention_probs_object_sub = attention_probs_back.clone().detach()
                     else :
                         attention_probs_object_sub = attention_probs_object.clone().detach()
                     pixel_num = attention_probs_object_sub.shape[1]
-
                     map_list = []
-
                     res = int(pixel_num ** 0.5)
-
                     if res in args.cross_map_res :
-
                         # attention_probs_object = [head, pixel_num, sentence_len]
                         index_info = attention_probs_back[:, :, 1:].max(dim=-1).indices
                         position_map = torch.where(index_info == 0, 1, 0)
                         back_map = torch.where(position_map == 1, 0, 1)
                         batch_back_map.append(back_map)
-
                         batch_trg_index = trg_indexs_list[batch_idx]  # two times
-
                         for word_idx in batch_trg_index:
-
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
                             attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (1 - back_map) + back_attn_vector * back_map
                             map_list.append(position_map)
-
                     if len(map_list) > 0 :
-
                         controller.store(torch.cat(batch_back_map, dim=0), layer_name)
+                    object_attention_probs[batch_idx] = attention_probs_object_sub
+                attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
+            #elif not is_cross_attention and trg_indexs_list is not None:
+            #    background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
+            #    attention_probs = torch.cat([background_attention_probs,background_attention_probs], dim=0)
 
-                    attention_probs = torch.cat([attention_probs_back,attention_probs_object_sub], dim=0)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
