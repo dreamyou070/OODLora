@@ -88,6 +88,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             elif not is_cross_attention and trg_indexs_list is not None:
                 print(f'[self] layer_name : {layer_name}')
                 self_common_name = layer_name.split('_')[:-1]
+                self_common_name = '_'.join(self_common_name)
                 if self_common_name in map_dict.keys() :
 
                     back_map = map_dict[self_common_name][0]
