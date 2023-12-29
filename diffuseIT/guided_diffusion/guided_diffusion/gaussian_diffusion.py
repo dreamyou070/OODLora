@@ -551,8 +551,6 @@ class GaussianDiffusion:
                                   postprocess_fn=None,    # None
                                   randomize_class=False,  # True
                                   find_init = False):
-        print('Why not here?')
-
         print(f' (1) device')
         if device is None:
             device = next(model.parameters()).device
@@ -581,41 +579,47 @@ class GaussianDiffusion:
         img = self.q_sample(x_start=init_image_batch,
                             t=th.tensor(indices[0], dtype=th.long, device=device),
                             noise=img,)
-
-
         if progress:
             from tqdm.auto import tqdm
             indices = tqdm(indices)
         flag = False
+
+        print(f' self.num_timesteps-skip_timesteps-1 : {self.num_timesteps-skip_timesteps-1}')
+
         while True:
+
             if flag:
                 indices = list(range(self.num_timesteps - skip_timesteps))[::-1]
                 indices = tqdm(indices)
+
             image_after_step = img
+
             for i in indices:
+
                 if flag:
                     img = th.randn(*shape, device=device)
                     img = self.q_sample(x_start=init_image_batch,
                                         t=th.tensor([i] * shape[0], device=device),
                                         noise=img,        )
                     image_after_step = img
+
                 if i == self.num_timesteps-skip_timesteps-1:
+
                     for r in range(10):
                         t = th.tensor([i] * shape[0], device=device)
                         if randomize_class and "y" in model_kwargs:
-                            model_kwargs["y"] = th.randint(
-                                low=0,
-                                high=model.num_classes,
-                                size=model_kwargs["y"].shape,
-                                device=model_kwargs["y"].device,)
+                            model_kwargs["y"] = th.randint(low=0,
+                                                           high=model.num_classes,
+                                                           size=model_kwargs["y"].shape,
+                                                           device=model_kwargs["y"].device,)
                         with th.no_grad():
-                            print(f' (6.1) denoising (p sampling)')
+                            print(f' (6.1) step 1 denoising |  clip_denoised: {clip_denoised} | denoised_fn: {denoised_fn} | cond_fn: {cond_fn} ')
                             out = self.p_sample(model,
                                                 image_after_step,
                                                 t,
-                                                clip_denoised=clip_denoised,
-                                                denoised_fn=denoised_fn,
-                                                cond_fn=cond_fn,
+                                                clip_denoised=clip_denoised, # False
+                                                denoised_fn=denoised_fn,     # False
+                                                cond_fn=cond_fn,             # cond_fn
                                                 model_kwargs=model_kwargs,)
                             if postprocess_fn is not None:
                                 out = postprocess_fn(out, t)
@@ -630,8 +634,24 @@ class GaussianDiffusion:
                             break
                     if flag:
                         break
+
                     img = image_after_step#.clone()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 else:
+
                     t = th.tensor([i] * shape[0], device=device)
                     if randomize_class and "y" in model_kwargs:
                         model_kwargs["y"] = th.randint(low=0,
