@@ -156,7 +156,18 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, pixel_set)
             noise_pred = noise_pred.chunk(3)[-1]
             x_latent = prev_step(noise_pred, int(t), next_latent, scheduler)
+            x_latent_dict[t] = x_latent
+            pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
+            pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
+            noise_pred = call_unet(unet,
+                                   x_latent,
+                                   prev_time,
+                                   con, None, None)
+            x_latent = prev_step(noise_pred, int(inference_times[0]), x_latent, scheduler)
             x_latent_dict[prev_time] = x_latent
+
+
+
             """
             mask_dict = controller.step_store
             controller.reset()
@@ -182,9 +193,10 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             loss = out.mean()
             x_latent = x_latent - torch.autograd.grad(outputs=-loss, inputs=x_0_pred)[0]
             x_latent_dict[t] = x_latent
+            """
 
-            pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-            pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
+
+            """
 
             x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
