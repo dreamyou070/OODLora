@@ -232,11 +232,9 @@ class ImageEditor:
                         else:
                             if r_loss > 0.01:
                                 self.flag_resample = True
-            # self.flag_resample = False
-            # loss = [1]
-            # x = [1,3,256,256]
-            after_grad = -torch.autograd.grad(loss, x)[0]
-            print(f' after_grad = {after_grad}')
+            #print(f' after all calculating loss, loss : {loss.shape}')
+            #print(f' loss to x, x = {x.sa}')
+
             return -torch.autograd.grad(loss, x)[0], self.flag_resample
 
         print(f' (3) Iteratively denoising (image translatino through text)')
