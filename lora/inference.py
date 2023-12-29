@@ -286,7 +286,7 @@ def main(args) :
                            vae=vae,
                            base_folder_dir=trg_img_output_dir,
                            controller=controller,
-                           name=name)
+                           name=name,weight_dtype=weight_dtype)
 
 
 if __name__ == "__main__":
