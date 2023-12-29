@@ -168,7 +168,7 @@ def main(args) :
                               beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
-    inference_times = inference_times.tolist()
+    #inference_times = inference_times.tolist()
     #inference_times = torch.tensor([999] + inference_times.tolist())
     #inference_times[]
 
