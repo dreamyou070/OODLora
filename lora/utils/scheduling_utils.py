@@ -144,8 +144,8 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
         else :
             next_time = next_time
         prev_time = int(inference_times[i + 1])
-        #with torch.no_grad():
-        with torch.enable_grad():
+        with torch.no_grad():
+        #with torch.enable_grad():
             z_latent = z_latent_dict[next_time]
             next_latent = x_latent_dict[next_time]
             x_latent = x_latent_dict[t]
