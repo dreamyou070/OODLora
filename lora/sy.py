@@ -1,7 +1,9 @@
 import torch
 
-
-attention_probs = torch.randn((8, 32*32,76))
-index_info = attention_probs.max(dim=-1).indices
-position_map = torch.where(index_info==0, 1, 0)
-print(position_map.shape)
+a = torch.randn(8,64*64)
+map_list = [a,a,a,a,a]
+aa = torch.cat(map_list, dim=0).mean(dim=0)
+pix_num = aa.shape
+res = 64
+map = aa.reshape(res,res)
+print(map.shape)

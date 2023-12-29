@@ -138,12 +138,9 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             pixel_set = []
             noise_pred = call_unet(unet, input_latent, t,
                                    input_cond, trg_indexs_list, pixel_set)
-
-
             mask_dict = controller.step_store
             controller.reset()
             # ------------------- 1. get mask ------------------- #
-            """
             layers = mask_dict.keys()
             mask_dict_by_res = {}
             map_list = []
@@ -152,24 +149,20 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                 head, pix_num = mask.shape
                 res = int(pix_num ** 0.5)
                 if res == args.pixel_mask_res:
-                    cross_maps = mask.reshape(head, res, res) # 8, 32,32
-                    map_list.append(cross_maps)
-
-            out = torch.cat(map_list, dim=0)   # [64,64]
-            avg_attn = out.sum(0) / out.shape[0] # [64,64]
-            mask = torch.where(avg_attn != 0 , 1, 0)
-            image = mask.unsqueeze(-1).expand(*mask.shape, 4).cpu()  # res,res,3
-            image = image.numpy().astype(np.uint8) * 255
-            image = np.array(Image.fromarray(image).resize((64, 64))) / 255
+                    map_list.append(mask)
+            map = torch.cat(map_list, dim=0).mean(dim=0)
+            map = map.reshape(res,res)
+            mask_img = torch.where(map > 0.5, 1, 0).cpu().numpy().astype(np.uint8)
+            mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
+            mask_latent = torch.tensor(mask_img).unsqueze(0).unsqueze(0).to(z_latent.device, dtype=z_latent.dtype)
             #pixel_mask = np.array(Image.fromarray(image).resize((512, 512)))
-            mask_latent = torch.tensor(image).to(z_latent.device, dtype=z_latent.dtype)
-            mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
-            x_latent = x_latent * (1 -mask_latent) + z_latent * ( mask_latent)
+            x_latent = x_latent * (1 -mask_latent) + z_latent * (mask_latent)
+            x_latent_dict[prev_time] = x_latent
+            if prev_time == 0:
+                pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
+                pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
             """
             z_noise_pred, x_noise_pred = noise_pred.chunk(2)
             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
-            x_latent_dict[prev_time] = x_latent
-            if prev_time == 0 :
-                pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-                pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
+            """
     return x_latent, time_steps, pil_images

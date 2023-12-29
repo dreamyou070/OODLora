@@ -48,6 +48,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 batch_num = len(trg_indexs_list)
                 attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
                 attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0)
+                batch_back_map = []
                 for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
 
                     if args.other_token_preserving :
@@ -66,6 +67,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         index_info = attention_probs_back[:, :, 1:].max(dim=-1).indices
                         position_map = torch.where(index_info == 0, 1, 0)
                         back_map = torch.where(position_map == 1, 0, 1)
+                        batch_back_map.append(back_map)
 
                         batch_trg_index = trg_indexs_list[batch_idx]  # two times
 
@@ -77,7 +79,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (1 - back_map) + back_attn_vector * back_map
                             map_list.append(position_map)
 
-                        #controller.store(torch.cat(map_list, dim=0), layer_name)
+                    if len(map_list) > 0 :
+
+                        controller.store(torch.cat(batch_back_map, dim=0), layer_name)
+
                     attention_probs = torch.cat([attention_probs_back,attention_probs_object_sub], dim=0)
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -160,7 +165,7 @@ def main(args) :
     print(f'title : {title}')
 
     output_dir = os.path.join(output_dir,
-                           f'without_pixel_copy_lora_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask_pixel_thred_{args.pixel_thred}_cross_res{title}')
+                           f'pixel_copy_lora_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask_pixel_thred_{args.pixel_thred}_cross_res{title}_num_ddim_steps_{args.num_ddim_steps}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
