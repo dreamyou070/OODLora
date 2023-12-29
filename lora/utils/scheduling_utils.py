@@ -187,8 +187,8 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             pixel_mask_pil = Image.fromarray(pixel_mask).convert('RGB')
 
             experiment_mask_latent = image2latent(np.array(pixel_mask_pil), vae, device=mask_latent.device, weight_dtype=weight_dtype)
-            gt__mask_latent = image2latent(np.array(gt_pil), vae, device=mask_latent.device, weight_dtype=weight_dtype)
-            latent_diff = torch.abs(experiment_mask_latent - gt__mask_latent)
+            gt_mask_latent = image2latent(np.array(gt_pil), vae, device=mask_latent.device, weight_dtype=weight_dtype)
+            latent_diff = torch.abs(experiment_mask_latent - gt_mask_latent)
             latent_diff = latent_diff.sum()
             print(f'{t} : latent_diff = {latent_diff}')
 
