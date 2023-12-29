@@ -48,6 +48,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             if is_cross_attention and trg_indexs_list is not None:
                 common_name = layer_name.split('_')[:-1]
                 common_name = '_'.join(common_name)
+
                 background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
                 batch_num = len(trg_indexs_list)
                 attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
@@ -66,8 +67,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     if res in args.cross_map_res :
                         # attention_probs_object = [head, pixel_num, sentence_len]
                         index_info = attention_probs_back[:, :, 1:].max(dim=-1).indices
-                        position_map = torch.where(index_info == 0, 1, 0)
-                        back_map = torch.where(position_map == 1, 0, 1)
+                        back_map = torch.where(index_info == 0, 1, 0)
+
+                        map_dict[common_name] = []
+                        map_dict[common_name].append(back_map)
+
                         batch_back_map.append(back_map) # head, pixel_num
                         batch_trg_index = trg_indexs_list[batch_idx]  # two times
                         for word_idx in batch_trg_index:
@@ -75,17 +79,29 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
                             attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (1 - back_map) + back_attn_vector * back_map
-                            map_list.append(position_map)
-                    if len(map_list) > 0 :
-                        controller.store(torch.cat(batch_back_map, dim=0), layer_name)
+                            map_list.append(back_map)
+                    #if len(map_list) > 0 :
+                        #controller.store(torch.cat(batch_back_map, dim=0), layer_name)
                     new_attns.append(attention_probs_object_sub)
                 object_attention_probs = torch.cat(new_attns, dim=0)
                 attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
-
             elif not is_cross_attention and trg_indexs_list is not None:
                 print(f'[self] layer_name : {layer_name}')
-                #background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
-                #attention_probs = torch.cat([background_attention_probs,background_attention_probs], dim=0)
+                self_common_name = layer_name.split('_')[:-1]
+                if self_common_name in map_dict.keys() :
+
+                    back_map = map_dict[self_common_name][0]
+
+                    #map_dict = {}
+
+                    background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0) # [head, pix_num, dim]
+                    dim = background_attention_probs.shape[-1]
+                    back_map = back_map.unsqueeze(-1)
+                    back_map = back_map.repeat(1, 1, dim)
+                    batch_num = len(trg_indexs_list)
+                    object_attention_probs = object_attention_probs * (1 - back_map) + background_attention_probs * back_map
+                    attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
+                    del map_dict[self_common_name]
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -168,7 +184,7 @@ def main(args) :
     print(f'title : {title}')
 
     output_dir = os.path.join(output_dir,
-                           f'pixel_copy_lora_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask_pixel_thred_{args.pixel_thred}_cross_res{title}_num_ddim_steps_{args.num_ddim_steps}')
+                           f'not_pixel_copy_self_attn_lora_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask_pixel_thred_{args.pixel_thred}_cross_res{title}_num_ddim_steps_{args.num_ddim_steps}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
