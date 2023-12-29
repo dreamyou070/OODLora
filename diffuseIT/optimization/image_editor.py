@@ -33,7 +33,7 @@ from color_matcher.io_handler import load_img_file, save_img_file, FILE_EXTS
 from color_matcher.normalizer import Normalizer
 
 mean_sig = lambda x:sum(x)/len(x)
-
+"""
 class ImageEditor:
     def __init__(self, args) -> None:
         self.args = args
@@ -308,5 +308,5 @@ class ImageEditor:
                     save_img_file(img_res, str(ranked_pred_path))
             else:
                 pred_image_pil.save(ranked_pred_path)
-                
+"""
             
