@@ -15,10 +15,10 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --output_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/8_lora_diff_trining_32_res_attnmap_attn_loss/inference \
   --resolution 512,512 \
   --seed 42 \
-  --cross_map_res [64] \
+  --cross_map_res [32] \
   --mask_thredhold 0 \
   --num_ddim_steps 1000 \
-  --final_noising_time  50 \
-  --pixel_mask_res 64 \
+  --final_noising_time  100 \
+  --pixel_mask_res 32 \
   --pixel_thred 0 \
   --other_token_preserving

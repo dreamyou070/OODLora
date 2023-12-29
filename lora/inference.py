@@ -54,8 +54,13 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                 for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
                     # attention_probs_object = [head, pixel_num, sentence_len]
-                    max_txt_idx = torch.max(attention_probs_back[:,:,1:], dim=-1).indices # remove cls token
+                    cls_erase_key = key[:, 1:, :]
+                    atten_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], cls_erase_key.shape[1], dtype=query.dtype,
+                                                                 device=query.device), query, cls_erase_key.transpose(-1, -2), beta=0, alpha=self.scale, )
+                    max_txt_idx = torch.max(atten_scores.softmax(dim=-1), dim=-1).indices # remove cls token
                     position_map = torch.where(max_txt_idx == 0, 1, 0) # only 0 with lora
+                    bad_position_map = 1-position_map
+                    print(f'good position : {position_map.sum()} | bad position : {bad_position_map.sum()}')
                     batch_trg_index = trg_indexs_list[batch_idx]  # two times
                     if args.other_token_preserving :
                         attention_probs_object_sub = attention_probs_back.clone().detach()
