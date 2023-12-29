@@ -123,7 +123,7 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
     pil_images = []
     x_latent_dict = {}
     for i, t in enumerate(inference_times[:-1]):
-        x_latent = x_latent_dict[int(t)]
+        x_latent = z_latent_dict[int(t)]
         x_latent_dict[int(t)] = z_latent_dict[int(t)]
         noise_pred = call_unet(unet,
                                x_latent,
