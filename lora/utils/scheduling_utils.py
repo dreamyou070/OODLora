@@ -176,9 +176,12 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
                     image = image.unsqueeze(-1).expand(*image.shape, 4).cpu()  # res,res,3
                     image = image.numpy().astype(np.uint8)
                     image = np.array(Image.fromarray(image).resize((64,64)))
+                    pixel_mask = np.array(Image.fromarray(image).resize((512,512)))
                 mask_latent = torch.tensor(image).to(z_latent.device, dtype = z_latent.dtype)
                 mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
                 mask_latent = torch.where(mask_latent > args.pixel_thred, 1, 0)
+                pixel_mask = np.where(pixel_mask > args.pixel_thred, 1, 0).astype(np.uint8) * 255
+                pixel_mask_pil = Image.fromarray(pixel_mask).convert('RGB')
                 print(f'pixel object position : {mask_latent.sum()}')
 
                 # --------------------- make y_latent --------------------- #
@@ -189,6 +192,8 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
             controller.reset()
             np_img = latent2image(x_latent, vae, return_type='np')
             pil_img = Image.fromarray(np_img)
+            masked_pil = Image.blend(pil_img, pixel_mask_pil, 0.5)
             pil_images.append(pil_img)
             pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
+            masked_pil.save(os.path.join(base_folder_dir, f'{name}_recon_masked_{prev_time}.png'))
     return x_latent, time_steps, pil_images
