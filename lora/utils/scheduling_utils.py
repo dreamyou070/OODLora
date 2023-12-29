@@ -159,7 +159,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             if prev_time == 0:
                 pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
                 pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
-            x_noise_pred = call_unet(unet, x_latent, t, input_cond, None, None)
+            x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
             x_latent = prev_step(x_noise_pred, t, x_latent, scheduler)
             x_latent_dict[prev_time] = x_latent
     pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
