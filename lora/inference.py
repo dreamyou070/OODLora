@@ -46,7 +46,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
 
-                background_attention_probs, object_attention_probs = attention_probs.chunk(3, dim=0)
+                background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
                 batch_num = len(trg_indexs_list)
 
                 attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
