@@ -245,14 +245,17 @@ class ImageEditor:
                                   init_image=self.init_image,
                                   postprocess_fn=None,
                                   randomize_class=True,)
-            """
+
             if self.flag_resample:
                 continue
-            """
-            """
+
             intermediate_samples = [[] for i in range(self.args.batch_size)]
             total_steps = self.diffusion.num_timesteps - self.args.skip_timesteps - 1
+
+            print(f'total_steps : {total_steps}')
             total_steps_with_resample = self.diffusion.num_timesteps - self.args.skip_timesteps - 1 + (self.args.resample_num - 1)
+            print(f'total_steps_with_resample : {total_steps_with_resample}')
+
             for j, sample in enumerate(samples):
                 should_save_image = j % save_image_interval == 0 or j == total_steps_with_resample
                 for b in range(self.args.batch_size):
@@ -262,6 +265,7 @@ class ImageEditor:
                         f"{visualization_path.stem}_i_{iteration_number}_b_{b}{visualization_path.suffix}")
                     pred_image = pred_image.add(1).div(2).clamp(0, 1)
                     pred_image_pil = TF.to_pil_image(pred_image)
+
             ranked_pred_path = self.ranked_results_path / (visualization_path.name)
             if self.args.target_image is not None:
                 if self.args.use_colormatch:
@@ -272,7 +276,7 @@ class ImageEditor:
                     save_img_file(img_res, str(ranked_pred_path))
             else:
                 pred_image_pil.save(ranked_pred_path)
-            """
+
 
 
 def main(args) :
