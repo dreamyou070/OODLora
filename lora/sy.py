@@ -1,7 +1,7 @@
 import torch
 
 
-max_txt_idx = torch.tensor([[1,1],
-                          [3,2]])
-position_map = torch.where(max_txt_idx == 1, 1, 0) # [head, pixel_num]
-print(f'position_map.shape : {position_map}')
+attention_probs = torch.randn((8, 32*32,76))
+index_info = attention_probs.max(dim=-1).indices
+position_map = torch.where(index_info==0, 1, 0)
+print(position_map.shape)

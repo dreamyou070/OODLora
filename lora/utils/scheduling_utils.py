@@ -139,10 +139,11 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             noise_pred = call_unet(unet, input_latent, t,
                                    input_cond, trg_indexs_list, pixel_set)
 
-        with torch.no_grad():
+
             mask_dict = controller.step_store
             controller.reset()
             # ------------------- 1. get mask ------------------- #
+            """
             layers = mask_dict.keys()
             mask_dict_by_res = {}
             map_list = []
@@ -164,8 +165,10 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             mask_latent = torch.tensor(image).to(z_latent.device, dtype=z_latent.dtype)
             mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
             x_latent = x_latent * (1 -mask_latent) + z_latent * ( mask_latent)
+            """
+            z_noise_pred, x_noise_pred = noise_pred.chunk(2)
+            x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
             x_latent_dict[prev_time] = x_latent
-
             if prev_time == 0 :
                 pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
                 pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
