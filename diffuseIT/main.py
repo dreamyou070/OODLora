@@ -163,7 +163,6 @@ class ImageEditor:
 
         def cond_fn(x, t, y=None):
             print(f' clip condition function')
-
             if self.args.prompt == "":
                 return torch.zeros_like(x)
 
@@ -234,7 +233,6 @@ class ImageEditor:
                                 self.flag_resample = True
             #print(f' after all calculating loss, loss : {loss.shape}')
             #print(f' loss to x, x = {x.sa}')
-
             return -torch.autograd.grad(loss, x)[0], self.flag_resample
 
         print(f' (3) Iteratively denoising (image translatino through text)')

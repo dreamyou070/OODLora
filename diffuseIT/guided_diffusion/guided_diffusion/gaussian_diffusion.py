@@ -241,6 +241,7 @@ class GaussianDiffusion:
             print(f'clip text guided')
             if denoised_fn is not None:
                 x = denoised_fn(x)
+                print(f'after denoising, x : {type(x)}')
             if clip_denoised:
                 return x.clamp(-1, 1)
             return x
