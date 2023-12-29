@@ -65,12 +65,16 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-
                             attn_diff_vector = obj_attn_vector - back_attn_vector
+
                             head = attn_diff_vector.shape[0]
-                            #object_position = torch.where(attn_diff_vector > 0.1, 1, 0)
                             object_position = torch.where(attn_diff_vector > 0, 1, 0)
-                            object_position = object_position.sum(dim=0)
+                            back_big_position = torch.where(attn_diff_vector < 0 , 1, 0)
+                            print(f'where lora big pixel num : {object_position.sum()}')
+                            print(f'where lora small pixel num : {back_big_position.sum()}')
+
+                            #object_position = object_position.sum(dim=0)/head
+                            #print(f'possible object_position : {object_position.sum()}')
                             object_position = torch.where(object_position > head/2, 1, 0).unsqueeze(0)
                             object_position = object_position.expand(head, pixel_num)
 
@@ -228,66 +232,66 @@ def main(args) :
     test_output_dir = os.path.join(output_dir, 'test')
     os.makedirs(test_output_dir, exist_ok=True)
     for class_name in classes:
-        class_base_folder = os.path.join(test_output_dir, class_name)
-        os.makedirs(class_base_folder, exist_ok=True)
+        if 'good' in class_name:
+            class_base_folder = os.path.join(test_output_dir, class_name)
+            os.makedirs(class_base_folder, exist_ok=True)
 
-        image_folder = os.path.join(test_img_folder, class_name)
-        mask_folder = os.path.join(test_mask_folder, class_name)
+            image_folder = os.path.join(test_img_folder, class_name)
+            mask_folder = os.path.join(test_mask_folder, class_name)
 
-        invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
-        inv_unc, inv_c = invers_context.chunk(2)
-        test_images = os.listdir(image_folder)
+            invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
+            inv_unc, inv_c = invers_context.chunk(2)
+            test_images = os.listdir(image_folder)
 
-        for j, test_image in enumerate(test_images):
+            for j, test_image in enumerate(test_images):
 
-            name, ext = os.path.splitext(test_image)
-            trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
-            os.makedirs(trg_img_output_dir, exist_ok=True)
+                name, ext = os.path.splitext(test_image)
+                trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
+                os.makedirs(trg_img_output_dir, exist_ok=True)
 
-            test_img_dir = os.path.join(image_folder, test_image)
-            shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
+                test_img_dir = os.path.join(image_folder, test_image)
+                shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
 
-            if 'good' not in class_name:
-                mask_img_dir = os.path.join(mask_folder, test_image)
-                shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
-                mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
-                mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
-                gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
+                if 'good' not in class_name:
+                    mask_img_dir = os.path.join(mask_folder, test_image)
+                    shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+                    mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+                    mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
+                    gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
 
-            print(f' (2.3.1) inversion')
-            image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+                print(f' (2.3.1) inversion')
+                image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
 
-            with torch.no_grad():
-                org_vae_latent  = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
-                mask_vae_latent = image2latent(mask_np,     vae, device=device, weight_dtype=weight_dtype)
-                inf_time = inference_times.tolist()
-                inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
-                org_latent_dict, time_steps, pil_images = ddim_loop(args,
-                                                                    latent=org_vae_latent,
-                                                                    context=inv_c,
-                                                                    inference_times=inf_time,
-                                                                    scheduler=scheduler,
-                                                                    unet=invers_unet,
-                                                                    vae=vae,
-                                                                    final_time=args.final_noising_time,
-                                                                    base_folder_dir=trg_img_output_dir,
-                                                                    name=name)
-                noising_times = org_latent_dict.keys()
-                print(f'noising_times : {noising_times}')
-                st_noise_latent = org_latent_dict[args.final_noising_time]
-                time_steps.reverse()
-                recon_loop(args,
-                           org_latent_dict,
-                           start_latent=st_noise_latent,
-                           gt_pil = gt_pil,
-                           context=context,
-                           inference_times= time_steps,
-                           scheduler=scheduler,
-                           unet=unet,
-                           vae=vae,
-                           base_folder_dir=trg_img_output_dir,
-                           controller=controller,
-                           name=name,weight_dtype=weight_dtype)
+                with torch.no_grad():
+                    org_vae_latent  = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
+                    mask_vae_latent = image2latent(mask_np,     vae, device=device, weight_dtype=weight_dtype)
+                    inf_time = inference_times.tolist()
+                    inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                    org_latent_dict, time_steps, pil_images = ddim_loop(args,
+                                                                        latent=org_vae_latent,
+                                                                        context=inv_c,
+                                                                        inference_times=inf_time,
+                                                                        scheduler=scheduler,
+                                                                        unet=invers_unet,
+                                                                        vae=vae,
+                                                                        final_time=args.final_noising_time,
+                                                                        base_folder_dir=trg_img_output_dir,
+                                                                        name=name)
+                    noising_times = org_latent_dict.keys()
+                    st_noise_latent = org_latent_dict[args.final_noising_time]
+                    time_steps.reverse()
+                    recon_loop(args,
+                               org_latent_dict,
+                               start_latent=st_noise_latent,
+                               gt_pil = gt_pil,
+                               context=context,
+                               inference_times= time_steps,
+                               scheduler=scheduler,
+                               unet=unet,
+                               vae=vae,
+                               base_folder_dir=trg_img_output_dir,
+                               controller=controller,
+                               name=name,weight_dtype=weight_dtype)
 
 
 if __name__ == "__main__":
