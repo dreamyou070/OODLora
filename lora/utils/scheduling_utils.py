@@ -145,31 +145,23 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             # ------------------- 1. get mask ------------------- #
             layers = mask_dict.keys()
             mask_dict_by_res = {}
+            map_list = []
             for layer in layers:
                 mask = mask_dict[layer][0] # [8,1024]
                 head, pix_num = mask.shape
                 res = int(pix_num ** 0.5)
-                if res not in mask_dict_by_res.keys() :
-                    mask_dict_by_res[res] = []
-                cross_maps = mask.reshape(head, res, res) # 8, 32,32
-                mask_dict_by_res[res].append(cross_maps)
+                if res == args.pixel_mask_res:
+                    cross_maps = mask.reshape(head, res, res) # 8, 32,32
+                    map_list.append(cross_maps)
 
-            mask_res_dict = {}
-            for resolution in mask_dict_by_res.keys():
-                if resolution == args.pixel_mask_res:
-                    map_list = mask_dict_by_res[resolution]
-                    out = torch.cat(map_list, dim=0)  # [num, 64,64]
-                    avg_attn = out.sum(0) / out.shape[0]
-                    mask_res_dict[resolution] = avg_attn
-            for res in mask_res_dict.keys():
-                image = mask_res_dict[res]
-                image = 255 * image / image.max()
-                image = image.unsqueeze(-1).expand(*image.shape, 4).cpu()  # res,res,3
-                image = image.numpy().astype(np.uint8)
-                image = np.array(Image.fromarray(image).resize((64, 64)))
-                pixel_mask = np.array(Image.fromarray(image).resize((512, 512)))
-
-
+            out = torch.cat(map_list, dim=0)   # [64,64]
+            avg_attn = out.sum(0) / out.shape[0] # [64,64]
+            mast = torch.where(avg_attn != 0 , 1, 0)
+            image = 255 * mast
+            image = image.unsqueeze(-1).expand(*image.shape, 4).cpu()  # res,res,3
+            image = image.numpy().astype(np.uint8)
+            image = np.array(Image.fromarray(image).resize((64, 64)))
+            #pixel_mask = np.array(Image.fromarray(image).resize((512, 512)))
             mask_latent = torch.tensor(image).to(z_latent.device, dtype=z_latent.dtype)
             mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
             print(f'mask_latent.shape : {mask_latent.shape}')
