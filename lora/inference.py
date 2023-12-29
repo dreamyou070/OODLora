@@ -252,12 +252,12 @@ def main(args) :
                 test_img_dir = os.path.join(image_folder, test_image)
                 shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
 
-                if 'good' not in class_name:
-                    mask_img_dir = os.path.join(mask_folder, test_image)
-                    shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
-                    mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
-                    mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
-                    gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
+                #if 'good' not in class_name:
+                mask_img_dir = os.path.join(mask_folder, test_image)
+                shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+                mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+                mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
+                gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
 
                 print(f' (2.3.1) inversion')
                 image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
