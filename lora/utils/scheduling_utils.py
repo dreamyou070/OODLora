@@ -168,9 +168,15 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                 image = image.numpy().astype(np.uint8)
                 image = np.array(Image.fromarray(image).resize((64, 64)))
                 pixel_mask = np.array(Image.fromarray(image).resize((512, 512)))
+
+
             mask_latent = torch.tensor(image).to(z_latent.device, dtype=z_latent.dtype)
+            mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
+            print(f'mask_latent.shape : {mask_latent.shape}')
             x_latent = x_latent * mask_latent + z_latent * (1 - mask_latent)
+
             x_latent_dict[prev_time] = x_latent
+
             if prev_time == 0 :
                 pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
                 pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
