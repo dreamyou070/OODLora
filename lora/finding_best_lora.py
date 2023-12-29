@@ -111,7 +111,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
 def main(args):
     parent = os.path.split(args.network_weights)[0]
-    args.output_dir = os.path.join(parent, 'inference')
+    args.output_dir = os.path.join(parent, 'anormality_score')
 
     print(f' \n step 1. setting')
     if args.process_title:
@@ -228,7 +228,7 @@ def main(args):
     os.makedirs(test_output_dir, exist_ok=True)
     lines = []
     for class_name in classes:
-        if 'good' in class_name:
+        if 'good' not in class_name:
             class_base_folder = os.path.join(test_output_dir, class_name)
             os.makedirs(class_base_folder, exist_ok=True)
 
@@ -267,10 +267,10 @@ def main(args):
                     score_list = controller.normal_score_list
                     controller.reset()
                     score = sum(score_list)/len(score_list)
-                    line = f'{test_image} : {score}'
+                    line = f'{class_name} : {test_image} : {score}'
                     lines.append(line)
 
-    output_text = os.path.join(output_dir, 'normality_score.txt')
+    output_text = os.path.join(output_dir, 'anormality_score.txt')
     with open(output_text, 'w') as f:
         for line in lines:
             f.write(line + '\n')
