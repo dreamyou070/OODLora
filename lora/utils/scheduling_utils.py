@@ -177,7 +177,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                     map_list = mask_dict_by_res[resolution]
                     out = torch.cat(map_list, dim=0)  # [num, 64,64]
             loss = out.mean()
-            x_latent = x_latent - torch.autograd.grad(outputs=loss, inputs=x_0_pred)[0]
+            x_latent = x_latent - torch.autograd.grad(outputs=-loss, inputs=x_0_pred)[0]
             x_latent_dict[t] = x_latent
 
             pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
