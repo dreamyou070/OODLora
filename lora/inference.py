@@ -65,15 +65,12 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     if int(pixel_num ** 0.5) in args.cross_map_res:
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
-
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             next_obj_attn_vector = attention_next[:, :, word_idx].squeeze(-1)
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-                            attention_probs_object_sub[:, :, word_idx] = torch.where(obj_attn_vector > next_obj_attn_vector, obj_attn_vector, back_attn_vector)
-                            object_position = torch.where(obj_attn_vector > next_obj_attn_vector, 1,0)
-                            print(f'object_position : {object_position.sum()}')
-                            #map_list.append(back_attn_vector)
-                        #controller.store(torch.cat(map_list, dim=0), layer_name)
+                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector
+                            map_list.append(back_attn_vector)
+                        controller.store(torch.cat(map_list, dim=0), layer_name)
                         attention_probs = torch.cat([attention_probs_back,attention_next, attention_probs_object_sub], dim=0)
             hidden_states = torch.bmm(attention_probs, value)
 
