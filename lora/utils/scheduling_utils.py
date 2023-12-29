@@ -127,32 +127,22 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
     x_latent_dict = {}
     next_time = inference_times[0]
 
-    x_latent = z_latent_dict[inference_times[0]]
-    x_latent_dict[inference_times[0]] = x_latent
-    noise_pred = call_unet(unet,
-                           x_latent,
-                           inference_times[0],
-                           con,None, None)
-    x_latent = prev_step(noise_pred, int(inference_times[0]), x_latent, scheduler)
-    prev_time = int(inference_times[1])
-    x_latent_dict[prev_time] = x_latent
+    z_latent = z_latent_dict[inference_times[0]]
 
     inference_times = inference_times[1:]
     for i, t in enumerate(inference_times[:-1]):
-        if i != 0 :
-            next_time = inference_times[i - 1]
-        else :
-            next_time = next_time
+
         prev_time = int(inference_times[i + 1])
+
         with torch.no_grad():
-            z_latent = z_latent_dict[next_time]
-            next_latent = x_latent_dict[next_time]
-            x_latent = x_latent_dict[t]
-            input_latent = torch.cat([z_latent, next_latent, x_latent], dim=0)
-            input_cond = torch.cat([con, con, con], dim=0)
+            #z_latent = z_latent_dict[next_time]
+            input_latent = torch.cat([z_latent], dim=0)
+            input_cond = torch.cat([con], dim=0)
             trg_indexs_list = [[1]]
             pixel_set = []
             noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, pixel_set)
+        break
+        """
 
         with torch.enable_grad():
             mask_dict = controller.step_store
@@ -164,7 +154,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             gradient = -torch.autograd.grad(outputs=loss, inputs=x_latent)[0]
 
             x_latent = x_latent - gradient * 0.01
-            """
+            
             noise_pred = noise_pred.chunk(3)[-1]
             x_latent = prev_step(noise_pred, int(t), next_latent, scheduler)
             x_latent_dict[t] = x_latent
@@ -202,11 +192,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             loss = out.mean()
             x_latent = x_latent - torch.autograd.grad(outputs=-loss, inputs=x_0_pred)[0]
             x_latent_dict[t] = x_latent
-            """
-
-
-            """
-
+            
             x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
             x_latent_dict[prev_time] = x_latent
@@ -215,6 +201,6 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                 pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
             #masked_pil = Image.blend(pil_img, pixel_mask_pil, 0.5)
             #pixel_mask_pil.save(os.path.join(base_folder_dir, f'{name}_recon_masked_{prev_time}.png'))
-            """
+        """
 
-    return x_latent, time_steps, pil_images
+    #return x_latent, time_steps, pil_images
