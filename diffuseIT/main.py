@@ -162,6 +162,7 @@ class ImageEditor:
         total_steps = self.diffusion.num_timesteps - self.args.skip_timesteps - 1
 
         def cond_fn(x, t, y=None):
+            print(f' clip condition function')
             if self.args.prompt == "":
                 return torch.zeros_like(x)
             self.flag_resample = False
