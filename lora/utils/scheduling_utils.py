@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from model_utils import call_unet
 from image_utils import latent2image
 from PIL import Image
-
+from image_utils import image2latent
 from diffusers import (DDPMScheduler,EulerAncestralDiscreteScheduler,DPMSolverMultistepScheduler,DPMSolverSinglestepScheduler,
                        LMSDiscreteScheduler,PNDMScheduler,EulerDiscreteScheduler,HeunDiscreteScheduler,
                        KDPM2DiscreteScheduler,KDPM2AncestralDiscreteScheduler, DDIMScheduler)
@@ -111,7 +111,7 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
 
 
 @torch.no_grad()
-def recon_loop(args, z_latent_dict, start_latent, context, inference_times, scheduler, unet, vae, base_folder_dir, controller, name):
+def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_times, scheduler, unet, vae, base_folder_dir, controller, name):
     if context.shape[0] == 2:
         uncon, con = context.chunk(2)
     else:
@@ -175,13 +175,24 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
                 image = 255 * image / image.max()
                 image = image.unsqueeze(-1).expand(*image.shape, 4).cpu()  # res,res,3
                 image = image.numpy().astype(np.uint8)
-                image = np.array(Image.fromarray(image).resize((64,64)))
+                image = np.array(Image.fromarray(image).resize((64,64))) # [1,4,64,64]
                 pixel_mask = np.array(Image.fromarray(image).resize((512,512)))
+
+
             mask_latent = torch.tensor(image).to(z_latent.device, dtype = z_latent.dtype)
             mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
             mask_latent = torch.where(mask_latent > args.pixel_thred, 1, 0)
             pixel_mask = np.where(pixel_mask > args.pixel_thred, 1, 0).astype(np.uint8) * 255
+
             pixel_mask_pil = Image.fromarray(pixel_mask).convert('RGB')
+
+            experiment_mask_latent = image2latent(np.array(pixel_mask_pil), vae, device=mask_latent.device, weight_dtype=mask_latent.weight_dtype)
+            gt__mask_latent = image2latent(np.array(gt_pil), vae, device=mask_latent.device, weight_dtype=mask_latent.weight_dtype)
+            latent_diff = torch.abs(experiment_mask_latent - gt__mask_latent)
+            latent_diff = latent_diff.sum()
+            print(f'{t} : latent_diff = {latent_diff}')
+
+
             pixel_mask_pil.save(os.path.join(base_folder_dir, f'{name}_pred_mask_{t}.png'))
 
             # --------------------- 2. make y_latent --------------------- #

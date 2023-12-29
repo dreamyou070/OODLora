@@ -64,16 +64,13 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
-                            #ones_attn_vector = torch.ones_like(back_attn_vector)
-                            #print(f'vector size : {ones_attn_vector.sum()} | {ones_attn_vector.shape}')
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-                            object_position = torch.where(obj_attn_vector > back_attn_vector, 1, 0)
-                            head = object_position.shape[0]
-                            object_position = object_position.sum(dim=0)
-                            object_position = torch.where(object_position > head/4, 1, 0).unsqueeze(0)
-                            print(f'number of object_position : {object_position.sum()}')
-                            object_position = object_position.expand((head, pixel_num))
+
+                            attn_diff_vector = obj_attn_vector - back_attn_vector
+                            object_position = torch.where(attn_diff_vector > 0.1, 1, 0)
+
                             attention_probs_object_sub[:, :, word_idx] = back_attn_vector * (1 - object_position) + obj_attn_vector * object_position
+
                             mask.append({res: object_position})
                             map_list.append(object_position)
                         controller.store(torch.cat(map_list, dim=0), layer_name)
@@ -248,12 +245,16 @@ def main(args) :
             if 'good' not in class_name:
                 mask_img_dir = os.path.join(mask_folder, test_image)
                 shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+                mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+                mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
+                gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
 
             print(f' (2.3.1) inversion')
             image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+
             with torch.no_grad():
-                org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
-                st_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
+                org_vae_latent  = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
+                mask_vae_latent = image2latent(mask_np,     vae, device=device, weight_dtype=weight_dtype)
                 inf_time = inference_times.tolist()
                 inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
                 org_latent_dict, time_steps, pil_images = ddim_loop(args,
@@ -273,6 +274,7 @@ def main(args) :
                 recon_loop(args,
                            org_latent_dict,
                            start_latent=st_noise_latent,
+                           gt_pil = gt_pil,
                            context=context,
                            inference_times= time_steps,
                            scheduler=scheduler,
