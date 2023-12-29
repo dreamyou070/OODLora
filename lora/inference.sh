@@ -20,5 +20,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --num_ddim_steps 100 \
   --final_noising_time  700 \
   --pixel_mask_res 32 \
-  --pixel_thred 0.05 \
+  --pixel_thred 0.5 \
   --other_token_preserving
