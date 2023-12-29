@@ -142,7 +142,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
         if i != 0 :
             next_time = inference_times[i - 1]
         else :
-            next_imte = next_time
+            next_time = next_time
         prev_time = int(inference_times[i + 1])
         #with torch.no_grad():
         with torch.enable_grad():
