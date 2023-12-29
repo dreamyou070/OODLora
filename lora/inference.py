@@ -54,8 +54,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                 for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
                     # attention_probs_object = [head, pixel_num, sentence_len]
-                    max_txt_idx = torch.max(object_attention_probs[:,:,1:], dim=-1).indices # remove cls token
-                    position_map = torch.where(max_txt_idx == 0, 1, 0) # [head, pixel_num]
+                    max_txt_idx = torch.max(attention_probs_back[:,:,1:], dim=-1).indices # remove cls token
+                    position_map = torch.where(max_txt_idx == 0, 0, 1) # good = 0, bad = 1[head, pixel_num]
                     batch_trg_index = trg_indexs_list[batch_idx]  # two times
                     if args.other_token_preserving :
                         attention_probs_object_sub = attention_probs_back.clone().detach()
@@ -65,14 +65,12 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     map_list = []
                     res = int(pixel_num ** 0.5)
                     if int(pixel_num ** 0.5) in args.cross_map_res:
-                        print(f'position_map (head, pixel_num) : {position_map.shape} | position_num : {position_map.sum()}')
-                        print(f'max_txt_idx = {max_txt_idx}')
+                        print(f'bad pixel num : {position_map.sum()}')
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-
-                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * position_map + back_attn_vector * (1 - position_map)
+                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (1 - position_map) + back_attn_vector * (position_map)
                             map_list.append(position_map)
                         controller.store(torch.cat(map_list, dim=0), layer_name)
                         attention_probs = torch.cat([attention_probs_back,attention_probs_object_sub], dim=0)
