@@ -182,6 +182,7 @@ class ImageEditor:
                 loss = torch.tensor(0)
                 print(f' start of loss = {loss}')
                 if self.target_image is None:
+
                     if self.args.clip_guidance_lambda != 0:
                         print(f'clip guidance lanbda = {self.args.clip_guidance_lambda}')
                         x_clip = self.noisy_aug(t[0].item(), x, out["pred_xstart"])

@@ -303,15 +303,9 @@ class GaussianDiffusion:
         return t
 
     def condition_mean(self, cond_fn, p_mean_var, x, t, model_kwargs=None):
-        """
-        Compute the mean for the previous step, given a function cond_fn that
-        computes the gradient of a conditional log probability with respect to
-        x. In particular, cond_fn computes grad(log(p(y|x))), and we want to
-        condition on y.
 
-        This uses the conditioning strategy from Sohl-Dickstein et al. (2015).
-        """
-        gradient,flag = cond_fn(x, self._scale_timesteps(t), **model_kwargs)
+        gradient, flag = cond_fn(x, self._scale_timesteps(t), **model_kwargs)
+
         new_mean = p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float()
         return new_mean,flag
 
@@ -345,9 +339,10 @@ class GaussianDiffusion:
         nonzero_mask = ((t != 0).float().view(-1, *([1] * (len(x.shape) - 1))))  # no noise when t == 0
         if cond_fn is not None:
             print(f'loss guided denosing (img translation) ')
-            # ------------------------------------------ loss guided ------------------------------------------ #
             out["mean"], flag = self.condition_mean(cond_fn, out, x, t, model_kwargs=model_kwargs)
+
         sample = out["mean"] + nonzero_mask * th.exp(0.5 * out["log_variance"]) * noise
+
         return {"sample": sample,
                 "pred_xstart": out["pred_xstart"],
                 "flag":flag}

@@ -46,12 +46,13 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             attention_probs = attention_probs.to(value.dtype)
 
             if is_cross_attention and trg_indexs_list is not None:
-                background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
+                background_attention_probs, next_obj, object_attention_probs = attention_probs.chunk(3, dim=0)
                 batch_num = len(trg_indexs_list)
                 attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
+                attention_next_batch = torch.chunk(next_obj, batch_num, dim=0)
                 attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0)
 
-                for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
+                for batch_idx, (attention_probs_back, attention_next, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_next_batch, attention_probs_object_batch)):
                     batch_trg_index = trg_indexs_list[batch_idx]  # two times
                     if args.other_token_preserving :
                         attention_probs_object_sub = attention_probs_back.clone().detach()
@@ -63,12 +64,14 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     if int(pixel_num ** 0.5) in args.cross_map_res:
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
-                            back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
-                            obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-                            attn_diff_vector = obj_attn_vector - back_attn_vector
 
-                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector
-                            map_list.append(back_attn_vector)
+                            back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
+                            next_obj_attn_vector = attention_next[:, :, word_idx].squeeze(-1)
+                            obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
+                            attention_probs_object_sub[:, :, word_idx] = torch.where(obj_attn_vector > next_obj_attn_vector, obj_attn_vector, back_attn_vector)
+                            object_position = torch.where(obj_attn_vector > next_obj_attn_vector, 1,0)
+                            print(f'object_position : {object_position.sum()}')
+                            #map_list.append(back_attn_vector)
                         controller.store(torch.cat(map_list, dim=0), layer_name)
                         attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
             hidden_states = torch.bmm(attention_probs, value)
