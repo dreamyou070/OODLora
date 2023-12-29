@@ -551,6 +551,7 @@ class GaussianDiffusion:
                                   postprocess_fn=None,    # None
                                   randomize_class=False,  # True
                                   find_init = False):
+
         print(f' (1) device')
         if device is None:
             device = next(model.parameters()).device

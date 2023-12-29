@@ -231,7 +231,6 @@ class ImageEditor:
         save_image_interval = self.diffusion.num_timesteps // 5
         for iteration_number in range(self.args.iterations_num):
             print(f"Start iterations {iteration_number} with p_sample_loop_progressive")
-            print(f'args.ddim : {self.args.ddim}')
             sample_func = (self.diffusion.ddim_sample_loop_progressive  if self.args.ddim else self.diffusion.p_sample_loop_progressive)
 
             samples = sample_func(self.model,
