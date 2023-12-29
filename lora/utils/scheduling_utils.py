@@ -88,7 +88,6 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
     time_steps = []
     latent = latent.clone().detach()
     latent_dict = {}
-    noise_pred_dict = {}
     latent_dict[0] = latent
     pil_images = []
     flip_times = inference_times
@@ -98,14 +97,15 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
             latent_dict[int(t)] = latent
             time_steps.append(t)
             noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
-            noise_pred_dict[int(t)] = noise_pred
             latent = next_step(noise_pred, int(t), latent, scheduler)
             #np_img = latent2image(latent, vae, return_type='np')
             #pil_img = Image.fromarray(np_img)
             #pil_images.append(pil_img)
             #pil_img.save(os.path.join(base_folder_dir, f'{name}_noising_{next_time}.png'))
-    time_steps.append(final_time)
-    latent_dict[int(final_time)] = latent
+        else :
+            time_steps.append(final_time)
+            latent_dict[int(final_time)] = latent
+            break
     return latent_dict, time_steps, pil_images
 
 
@@ -121,24 +121,21 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
     time_steps = []
     pil_images = []
     x_latent_dict = {}
-    for i, t in enumerate(inference_times[:-1]):
-        x_latent = z_latent_dict[int(t)]
-        x_latent_dict[int(t)] = z_latent_dict[int(t)]
-        noise_pred = call_unet(unet,
-                               x_latent,
-                               t,
-                               con,None, None)
-        x_latent = prev_step(noise_pred, int(t), latent, scheduler)
-        prev_time = int(inference_times[i + 1])
-        noise_pred = call_unet(unet,x_latent,prev_time,con,None,None)
-        x_latent = next_step(noise_pred, prev_time, x_latent, scheduler)
-        x_latent_dict[prev_time] = x_latent
-        break
+
+    x_latent = z_latent_dict[inference_times[0]]
+    x_latent_dict[inference_times[0]] = x_latent
+    noise_pred = call_unet(unet,
+                           x_latent,
+                           inference_times[0],
+                           con,None, None)
+    x_latent = prev_step(noise_pred, int(inference_times[0]), x_latent, scheduler)
+    prev_time = int(inference_times[1])
+    x_latent_dict[prev_time] = x_latent
 
     inference_times = inference_times[1:]
-    for i, t in enumerate(inference_times[:-1]):
+    for i, t in enumerate(inference_times):
 
-        prev_time = int(inference_times[i + 1])
+        #prev_time = int(inference_times[i + 1])
 
         with torch.no_grad():
 
@@ -188,11 +185,13 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
 
             # --------------------- 2. make y_latent --------------------- #
             x_latent = z_latent * (1-mask_latent) + x_latent * (mask_latent)
-            x_latent_dict[prev_time] = x_latent
+            x_latent_dict[t] = x_latent
+
+            x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
+            x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
 
             pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-            pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
-
+            pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
             #masked_pil = Image.blend(pil_img, pixel_mask_pil, 0.5)
             #pixel_mask_pil.save(os.path.join(base_folder_dir, f'{name}_recon_masked_{prev_time}.png'))
 
