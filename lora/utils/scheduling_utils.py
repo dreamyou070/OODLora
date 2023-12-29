@@ -135,7 +135,7 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
     inference_times = inference_times[1:]
     for i, t in enumerate(inference_times):
 
-        #prev_time = int(inference_times[i + 1])
+        prev_time = int(inference_times[i + 1])
 
         with torch.no_grad():
 
@@ -186,12 +186,15 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
             # --------------------- 2. make y_latent --------------------- #
             x_latent = z_latent * (1-mask_latent) + x_latent * (mask_latent)
             x_latent_dict[t] = x_latent
+            pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
+            pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
 
             x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
-
-            pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-            pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
+            x_latent_dict[prev_time] = x_latent
+            if prev_time == 0 :
+                pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
+                pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
             #masked_pil = Image.blend(pil_img, pixel_mask_pil, 0.5)
             #pixel_mask_pil.save(os.path.join(base_folder_dir, f'{name}_recon_masked_{prev_time}.png'))
 
