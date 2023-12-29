@@ -64,23 +64,20 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
-                            ones_attn_vector = torch.ones_like(back_attn_vector)
-                            print(f'vector size : {ones_attn_vector.sum()} | {ones_attn_vector.shape}')
+                            #ones_attn_vector = torch.ones_like(back_attn_vector)
+                            #print(f'vector size : {ones_attn_vector.sum()} | {ones_attn_vector.shape}')
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-                            attention_probs_object_sub[:, :, word_idx] = torch.where(obj_attn_vector > back_attn_vector,
-                                                                                     obj_attn_vector, back_attn_vector)
-                            object_position = torch.where(obj_attn_vector > back_attn_vector , 1, 0)
-                            same_position = torch.where(obj_attn_vector == back_attn_vector, 1, 0)
-                            bad_position = torch.where(obj_attn_vector < back_attn_vector, 1, 0)
+                            object_position = torch.where(obj_attn_vector > back_attn_vector, 1, 0)
+                            head = object_position.shape[0]
+                            object_position = object_position.sum(dim=0)
+                            object_position = torch.where(object_position > head, 1, 0).unqueeze(0)
                             print(f'number of object_position : {object_position.sum()}')
-                            print(f'number of same_position : {same_position.sum()}')
-                            print(f'number of bad_position : {bad_position.sum()}')
+                            object_position = object_position.expand((head, pixel_num))
+                            attention_probs_object_sub[:, :, word_idx] = back_attn_vector * (1 - object_position) + obj_attn_vector * object_position
                             mask.append({res: object_position})
                             map_list.append(object_position)
                         controller.store(torch.cat(map_list, dim=0), layer_name)
                         attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
-
-
             hidden_states = torch.bmm(attention_probs, value)
 
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
