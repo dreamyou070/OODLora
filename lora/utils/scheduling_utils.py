@@ -138,7 +138,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
     x_latent_dict[prev_time] = x_latent
 
     inference_times = inference_times[1:]
-    for i, t in enumerate(inference_times):
+    for i, t in enumerate(inference_times[:-1]):
         if i != 0 :
             next_time = inference_times[i - 1]
         else :
