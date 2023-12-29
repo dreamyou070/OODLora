@@ -170,10 +170,9 @@ class GaussianDiffusion:
 
     def q_sample(self, x_start, t, noise=None):
         """
+        *** predicting the x_0 image ***
         Diffuse the data for a given number of diffusion steps.
-
         In other words, sample from q(x_t | x_0).
-
         :param x_start: the initial data batch.
         :param t: the number of diffusion steps (minus 1). Here, 0 means one step.
         :param noise: if specified, the split-out normal noise.
@@ -182,10 +181,8 @@ class GaussianDiffusion:
         if noise is None:
             noise = th.randn_like(x_start)
         assert noise.shape == x_start.shape
-        return (
-            _extract_into_tensor(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
-            + _extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
-        )
+        return (_extract_into_tensor(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
+                + _extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise)
 
     def q_posterior_mean_variance(self, x_start, x_t, t):
         """
@@ -500,10 +497,10 @@ class GaussianDiffusion:
 
         batch_size = shape[0]
         init_image_batch = th.tile(init_image, dims=(batch_size, 1, 1, 1))
-        
+        print(f' ** q sampling ** (img translation) ')
         img = self.q_sample(x_start=init_image_batch,
                             t=th.tensor(indices[0], dtype=th.long, device=device),
-                            noise=img,       )
+                            noise=img,)
         if progress:
             # Lazy import so that we don't depend on tqdm.
             from tqdm.auto import tqdm
@@ -530,22 +527,17 @@ class GaussianDiffusion:
                                 low=0,
                                 high=model.num_classes,
                                 size=model_kwargs["y"].shape,
-                                device=model_kwargs["y"].device,
-                            )
+                                device=model_kwargs["y"].device,)
                         with th.no_grad():
-
-                            out = self.p_sample(
-                                model,
+                            out = self.p_sample(model,
                                 image_after_step,
                                 t,
                                 clip_denoised=clip_denoised,
                                 denoised_fn=denoised_fn,
                                 cond_fn=cond_fn,
-                                model_kwargs=model_kwargs,
-                            )
+                                model_kwargs=model_kwargs,)
                             if postprocess_fn is not None:
                                 out = postprocess_fn(out, t)
-                            
                             yield out
                             flag = out["flag"] 
                             image_after_step  = out["sample"]

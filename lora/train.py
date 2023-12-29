@@ -188,6 +188,10 @@ class NetworkTrainer:
 
     def train(self, args):
 
+        args.logging_dir = os.path.join(args.output_dir, 'logs')
+        parent, name = os.path.split(args.output_dir)
+        args.wandb_run_name = name
+
         print(f'\n step 1. setting')
         print(f' (1) session')
         if args.process_title: setproctitle(args.process_title)
