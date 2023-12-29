@@ -48,6 +48,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             if is_cross_attention and trg_indexs_list is not None:
                 background_attention_probs, next_obj, object_attention_probs = attention_probs.chunk(3, dim=0)
                 batch_num = len(trg_indexs_list)
+
                 attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
                 attention_next_batch = torch.chunk(next_obj, batch_num, dim=0)
                 attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0)
@@ -72,8 +73,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             object_position = torch.where(obj_attn_vector > next_obj_attn_vector, 1,0)
                             print(f'object_position : {object_position.sum()}')
                             #map_list.append(back_attn_vector)
-                        controller.store(torch.cat(map_list, dim=0), layer_name)
-                        attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
+                        #controller.store(torch.cat(map_list, dim=0), layer_name)
+                        attention_probs = torch.cat([attention_probs_back,attention_next, attention_probs_object_sub], dim=0)
             hidden_states = torch.bmm(attention_probs, value)
 
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
