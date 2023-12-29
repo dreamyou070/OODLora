@@ -166,7 +166,6 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             mask_latent = mask_latent.permute(2,0,1).unsqueeze(0)
             print(f'mask_latent.shape : {mask_latent.shape}')
             x_latent = x_latent * mask_latent + z_latent * (1 - mask_latent)
-
             x_latent_dict[prev_time] = x_latent
 
             if prev_time == 0 :
