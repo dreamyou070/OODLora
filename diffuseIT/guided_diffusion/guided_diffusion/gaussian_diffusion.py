@@ -581,15 +581,6 @@ class GaussianDiffusion:
                             noise=img,)
 
 
-
-
-
-
-
-
-
-
-
         if progress:
             from tqdm.auto import tqdm
             indices = tqdm(indices)
@@ -830,7 +821,6 @@ class GaussianDiffusion:
             img = self.q_sample(init_image_batch, my_t, img)
 
         if progress:
-            # Lazy import so that we don't depend on tqdm.
             from tqdm.auto import tqdm
             indices = tqdm(indices)
         # indices = tqdm(indices)
@@ -888,79 +878,6 @@ class GaussianDiffusion:
                     # img = out["sample"]
             if i==0:
                 break
-#     def ddim_sample_loop_progressive(
-#         self,
-#         model,
-#         shape,
-#         noise=None,
-#         clip_denoised=True,
-#         denoised_fn=None,
-#         cond_fn=None,
-#         model_kwargs=None,
-#         device=None,
-#         progress=False,
-#         eta=0.0,
-#         skip_timesteps=0,
-#         init_image=None,
-#         postprocess_fn=None,
-#         randomize_class=False,
-#     ):
-#         """
-#         Use DDIM to sample from the model and yield intermediate samples from
-#         each timestep of DDIM.
-#         Same usage as p_sample_loop_progressive().
-#         """
-#         if device is None:
-#             device = next(model.parameters()).device
-#         assert isinstance(shape, (tuple, list))
-#         if noise is not None:
-#             img = noise
-#         else:
-#             img = th.randn(*shape, device=device)
-
-#         if skip_timesteps and init_image is None:
-#             init_image = th.zeros_like(img)
-
-#         indices = list(range(self.num_timesteps - skip_timesteps))[::-1]
-
-#         if init_image is not None:
-#             my_t = th.ones([shape[0]], device=device, dtype=th.long) * indices[0]
-#             batch_size = shape[0]
-#             init_image_batch = th.tile(init_image, dims=(batch_size, 1, 1, 1))
-#             img = self.q_sample(init_image_batch, my_t, img)
-
-#         if progress:
-#             # Lazy import so that we don't depend on tqdm.
-#             from tqdm.auto import tqdm
-
-#             indices = tqdm(indices)
-
-#         for i in indices:
-#             t = th.tensor([i] * shape[0], device=device)
-#             if randomize_class and "y" in model_kwargs:
-#                 model_kwargs["y"] = th.randint(
-#                     low=0,
-#                     high=model.num_classes,
-#                     size=model_kwargs["y"].shape,
-#                     device=model_kwargs["y"].device,
-#                 )
-#             with th.no_grad():
-#                 out = self.ddim_sample(
-#                     model,
-#                     img,
-#                     t,
-#                     clip_denoised=clip_denoised,
-#                     denoised_fn=denoised_fn,
-#                     cond_fn=cond_fn,
-#                     model_kwargs=model_kwargs,
-#                     eta=eta,
-#                 )
-
-#                 if postprocess_fn is not None:
-#                     out = postprocess_fn(out, t)
-
-#                 yield out
-#                 img = out["sample"]
     def _vb_terms_bpd(self, model, x_start, x_t, t, clip_denoised=True, model_kwargs=None):
         """
         Get a term for the variational lower-bound.
