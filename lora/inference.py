@@ -57,7 +57,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     # attention_probs_object = [head, pixel_num, sentence_len]
                     max_txt_idx = torch.max(object_attention_probs, dim=-1).indices
                     position_map = torch.where(max_txt_idx == 1, 1, 0) # [head, pixel_num]
-
+                    print(f'position_map (head, pixel_num) : {position_map.shape} | position_num : {position_map.sum()}')
                     batch_trg_index = trg_indexs_list[batch_idx]  # two times
 
                     if args.other_token_preserving :
