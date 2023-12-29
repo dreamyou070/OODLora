@@ -69,7 +69,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             attn_diff_vector = obj_attn_vector - back_attn_vector
                             head = attn_diff_vector.shape[0]
                             #object_position = torch.where(attn_diff_vector > 0.1, 1, 0)
-                            object_position = torch.where(attn_diff_vector > 0.3, 1, 0)
+                            object_position = torch.where(attn_diff_vector > 0, 1, 0)
                             object_position = object_position.sum(dim=0)
                             object_position = torch.where(object_position > head/2, 1, 0).unsqueeze(0)
                             object_position = object_position.expand(head, pixel_num)
