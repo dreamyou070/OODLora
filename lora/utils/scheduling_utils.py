@@ -131,7 +131,9 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
                                con,None, None)
         x_latent = prev_step(noise_pred, int(t), latent, scheduler)
         prev_time = int(inference_times[i + 1])
-        x_latent_dict[prev_time] = x_latent
+        noise_pred = call_unet(unet,x_latent,prev_time,con,None,None)
+        x_latent = next_step(noise_pred, prev_time, x_latent, scheduler)
+        x_latent_dict[int(t)] = x_latent
         break
 
     inference_times = inference_times[1:]
