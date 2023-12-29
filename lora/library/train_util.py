@@ -1056,7 +1056,8 @@ class BaseDataset(torch.utils.data.Dataset):
             # image/latentsを処理する
 
             img = load_image(absolute_path, self.height, self.width) # ndarray
-            masked_img = load_image(mask_dir, self.height, self.width)
+            #masked_img = load_image(mask_dir, self.height, self.width)
+            masked_img = load_image(mask_dir, 32, 32)
             binary_img = np.where(masked_img > 100, 1, 0)
             binary_img = torch.Tensor(binary_img)
 

@@ -509,6 +509,8 @@ class NetworkTrainer:
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
                                                                 weight_dtype)
+                        text_encoder_conds = text_encoder_conds[:,:2,:]
+                        print(f'text_encoder_conds : {text_encoder_conds.shape}')
                     # (3.1) attention score loss
                     log_loss = {}
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
@@ -601,7 +603,7 @@ class NetworkTrainer:
                             log_loss["loss/denoising_loss"] = task_loss
 
                         #attn_loss +=  task_loss
-                        loss += task_loss
+                        loss += task_loss * args.task_loss_weight
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
@@ -753,6 +755,7 @@ if __name__ == "__main__":
     parser.add_argument("--resume_lora_training", action="store_true",)
     parser.add_argument("--start_epoch", type = int, default = 0)
     parser.add_argument("--valid_data_dir", type=str)
+    parser.add_argument("--task_loss_weight", type=float, default=0.5)
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
