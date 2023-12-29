@@ -190,9 +190,9 @@ class ImageEditor:
                         x_clip = self.noisy_aug(t[0].item(), x, out["pred_xstart"])
 
                         pred = self.clip_net.encode_image(0.5 * x_clip + 0.5, ncuts=self.args.aug_num)
-                        print(f' clip img features : {pred.shape}')
+                        print(f' clip img features : {pred}')
                         clip_text_features = self.tgt.T
-                        print(f' clip text features : {clip_text_features.shape}')
+                        print(f' clip text features : {clip_text_features}')
                         similarity = pred @ clip_text_features
                         print(f' similarity : {similarity.shape}')
                         flatten_similarity = similarity.flatten()
