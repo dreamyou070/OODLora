@@ -105,6 +105,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
 def main(args) :
 
+    parent = os.path.split(args.network_weights)[0]
+    args.output_dir = os.path.join(parent, 'inference')
+
     print(f' \n step 1. setting')
     if args.process_title:
         setproctitle(args.process_title)
@@ -213,8 +216,8 @@ def main(args) :
     trg_h, trg_w = args.resolution
 
     print(f' (3.3) test images')
-    test_img_folder = os.path.join(args.concept_image_folder, 'test/bad')
-    test_mask_folder = os.path.join(args.concept_image_folder, 'test/corrected')
+    test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/bad')
+    test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/corrected')
     classes = os.listdir(test_img_folder)
     test_output_dir = os.path.join(output_dir, 'test')
     os.makedirs(test_output_dir, exist_ok=True)
