@@ -1,6 +1,4 @@
-from optimization.image_editor import ImageEditor
 import argparse
-# python main.py --use_range_restart --use_noise_aug_all --regularize_content --init_image input_example/lion1.jpg
 import os
 from utils_visualize.metrics_accumulator import MetricsAccumulator
 from numpy import random
@@ -235,7 +233,7 @@ class ImageEditor:
             print(f"Start iterations {iteration_number} with p_sample_loop_progressive")
             print(f'args.ddim : {self.args.ddim}')
             sample_func = (self.diffusion.ddim_sample_loop_progressive  if self.args.ddim else self.diffusion.p_sample_loop_progressive)
-            
+
             samples = sample_func(self.model,
                                   (self.args.batch_size,3,self.model_config["image_size"],self.model_config["image_size"],),
                                   clip_denoised=False,
