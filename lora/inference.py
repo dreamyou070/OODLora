@@ -44,6 +44,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
+                print(f'[cross] layer_name : {layer_name}')
                 background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
                 batch_num = len(trg_indexs_list)
                 attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
@@ -62,7 +63,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         index_info = attention_probs_back[:, :, 1:].max(dim=-1).indices
                         position_map = torch.where(index_info == 0, 1, 0)
                         back_map = torch.where(position_map == 1, 0, 1)
-                        batch_back_map.append(back_map)
+                        batch_back_map.append(back_map) # head, pixel_num
                         batch_trg_index = trg_indexs_list[batch_idx]  # two times
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
@@ -74,7 +75,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         controller.store(torch.cat(batch_back_map, dim=0), layer_name)
                     object_attention_probs[batch_idx] = attention_probs_object_sub
                 attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
-            #elif not is_cross_attention and trg_indexs_list is not None:
+            elif not is_cross_attention and trg_indexs_list is not None:
+                print(f'[self] layer_name : {layer_name}')
             #    background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
             #    attention_probs = torch.cat([background_attention_probs,background_attention_probs], dim=0)
 
