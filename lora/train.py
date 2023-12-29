@@ -510,7 +510,6 @@ class NetworkTrainer:
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
                                                                 weight_dtype)
                         text_encoder_conds = text_encoder_conds[:,:2,:]
-                        print(f'text_encoder_conds : {text_encoder_conds.shape}')
                     # (3.1) attention score loss
                     log_loss = {}
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
