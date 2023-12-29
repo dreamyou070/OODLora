@@ -188,11 +188,18 @@ class ImageEditor:
                     if self.args.clip_guidance_lambda != 0:
                         print(f'clip guidance lanbda = {self.args.clip_guidance_lambda}')
                         x_clip = self.noisy_aug(t[0].item(), x, out["pred_xstart"])
-                        pred = self.clip_net.encode_image(0.5 * x_clip + 0.5, ncuts=self.args.aug_num)
-                        clip_loss = - (pred @ self.tgt.T).flatten()
-                        print(f'clip_loss : {clip_loss}')
 
-                        clip_loss = - clip_loss.reduce(mean_sig)
+                        pred = self.clip_net.encode_image(0.5 * x_clip + 0.5, ncuts=self.args.aug_num)
+                        print(f' clip img features : {pred.shape}')
+                        clip_text_features = self.tgt.T
+                        print(f' clip text features : {clip_text_features.shape}')
+                        similarity = pred @ clip_text_features
+                        print(f' similarity : {similarity.shape}')
+                        flatten_similarity = similarity.flatten()
+                        print(f' flatten similarity : {flatten_similarity.shape}')
+
+
+                        clip_loss = - (pred @ self.tgt.T).flatten().reduce(mean_sig)
                         loss = loss + clip_loss * self.args.clip_guidance_lambda
                         print(f' [1] after CLIP loss, loss : {loss}')
                         self.metrics_accumulator.update_metric("clip_loss", clip_loss.item())
