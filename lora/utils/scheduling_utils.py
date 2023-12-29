@@ -121,58 +121,27 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
     else:
         con = context
     # inference_times = [100,80, ... 0]
-    latent = start_latent
+    x_latent = start_latent
     time_steps = []
     pil_images = []
     x_latent_dict = {}
-    next_time = inference_times[0]
+    x_latent_dict[inference_times[0]] = x_latent
 
-    z_latent = z_latent_dict[inference_times[0]]
-
-    inference_times = inference_times[1:]
     for i, t in enumerate(inference_times[:-1]):
-
         prev_time = int(inference_times[i + 1])
-
         with torch.no_grad():
-            #z_latent = z_latent_dict[next_time]
-            input_latent = torch.cat([z_latent], dim=0)
-            input_cond = torch.cat([con], dim=0)
+            z_latent = z_latent_dict[t]
+            x_latent = x_latent_dict[t]
+            input_latent = torch.cat([z_latent, x_latent], dim=0)
+            input_cond = torch.cat([con, con], dim=0)
             trg_indexs_list = [[1]]
             pixel_set = []
-            noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, pixel_set)
-        break
-        """
+            noise_pred = call_unet(unet, input_latent, t,
+                                   input_cond, trg_indexs_list, pixel_set)
 
-        with torch.enable_grad():
+        with torch.no_grad():
             mask_dict = controller.step_store
             controller.reset()
-            loss = 0
-            for layers in mask_dict.keys() :
-                normal_score = mask_dict[layers][0]
-                loss += normal_score
-            gradient = -torch.autograd.grad(outputs=loss, inputs=x_latent)[0]
-
-            x_latent = x_latent - gradient * 0.01
-            
-            noise_pred = noise_pred.chunk(3)[-1]
-            x_latent = prev_step(noise_pred, int(t), next_latent, scheduler)
-            x_latent_dict[t] = x_latent
-            pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-            pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
-            noise_pred = call_unet(unet,
-                                   x_latent,
-                                   prev_time,
-                                   con, None, None)
-            x_latent = prev_step(noise_pred, int(inference_times[0]), x_latent, scheduler)
-            x_latent_dict[prev_time] = x_latent
-
-
-
-            
-
-            z_noise_pred, x_noise_pred = noise_pred.chunk(2)
-            x_0_pred = pred_x0(x_noise_pred, t, x_latent, scheduler)
             # ------------------- 1. get mask ------------------- #
             layers = mask_dict.keys()
             mask_dict_by_res = {}
@@ -184,23 +153,25 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                     mask_dict_by_res[res] = []
                 cross_maps = mask.reshape(head, res, res) # 8, 32,32
                 mask_dict_by_res[res].append(cross_maps)
+
             mask_res_dict = {}
             for resolution in mask_dict_by_res.keys():
-                if resolution == args.pixel_mask_res :
+                if resolution == args.pixel_mask_res:
                     map_list = mask_dict_by_res[resolution]
                     out = torch.cat(map_list, dim=0)  # [num, 64,64]
-            loss = out.mean()
-            x_latent = x_latent - torch.autograd.grad(outputs=-loss, inputs=x_0_pred)[0]
-            x_latent_dict[t] = x_latent
-            
-            x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
-            x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
+                    avg_attn = out.sum(0) / out.shape[0]
+                    mask_res_dict[resolution] = avg_attn
+            for res in mask_res_dict.keys():
+                image = mask_res_dict[res]
+                image = 255 * image / image.max()
+                image = image.unsqueeze(-1).expand(*image.shape, 4).cpu()  # res,res,3
+                image = image.numpy().astype(np.uint8)
+                image = np.array(Image.fromarray(image).resize((64, 64)))
+                pixel_mask = np.array(Image.fromarray(image).resize((512, 512)))
+            mask_latent = torch.tensor(image).to(z_latent.device, dtype=z_latent.dtype)
+            x_latent = x_latent * mask_latent + z_latent * (1 - mask_latent)
             x_latent_dict[prev_time] = x_latent
             if prev_time == 0 :
                 pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
                 pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
-            #masked_pil = Image.blend(pil_img, pixel_mask_pil, 0.5)
-            #pixel_mask_pil.save(os.path.join(base_folder_dir, f'{name}_recon_masked_{prev_time}.png'))
-        """
-
-    #return x_latent, time_steps, pil_images
+    return x_latent, time_steps, pil_images
