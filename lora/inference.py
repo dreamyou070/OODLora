@@ -252,6 +252,7 @@ def main(args) :
                 with torch.no_grad():
                     org_vae_latent  = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
                     mask_vae_latent = image2latent(mask_np,     vae, device=device, weight_dtype=weight_dtype)
+
                 with torch.enable_grad():
                     inf_time = inference_times.tolist()
                     inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]

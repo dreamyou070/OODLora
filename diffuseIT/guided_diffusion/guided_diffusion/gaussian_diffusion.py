@@ -344,8 +344,9 @@ class GaussianDiffusion:
         noise = th.randn_like(x)
         nonzero_mask = ((t != 0).float().view(-1, *([1] * (len(x.shape) - 1))))  # no noise when t == 0
         if cond_fn is not None:
+            print(f'loss guided denosing (img translation) ')
             # ------------------------------------------ loss guided ------------------------------------------ #
-            out["mean"],flag = self.condition_mean(cond_fn, out, x, t, model_kwargs=model_kwargs)
+            out["mean"], flag = self.condition_mean(cond_fn, out, x, t, model_kwargs=model_kwargs)
         sample = out["mean"] + nonzero_mask * th.exp(0.5 * out["log_variance"]) * noise
         return {"sample": sample,
                 "pred_xstart": out["pred_xstart"],
@@ -528,13 +529,10 @@ class GaussianDiffusion:
             indices = tqdm(indices)
         flag = False
         while True:
-
             if flag:
                 indices = list(range(self.num_timesteps - skip_timesteps))[::-1]
                 indices = tqdm(indices)
-
             image_after_step = img
-
             for i in indices:
 
                 if flag:
@@ -562,14 +560,6 @@ class GaussianDiffusion:
                                                 denoised_fn=denoised_fn,     # False
                                                 cond_fn=cond_fn,             # cond_fn
                                                 model_kwargs=model_kwargs,)
-
-
-
-
-
-
-
-
 
 
                             if postprocess_fn is not None:

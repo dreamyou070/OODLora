@@ -164,9 +164,7 @@ class ImageEditor:
         def cond_fn(x, t, y=None):
             if self.args.prompt == "":
                 return torch.zeros_like(x)
-
             self.flag_resample = False
-
             with torch.enable_grad():
                 frac_cont = 1.0
                 if self.target_image is None:
@@ -180,7 +178,6 @@ class ImageEditor:
                             frac_cont = 2
                 x = x.detach().requires_grad_()
                 t = self.unscale_timestep(t)
-
                 out = self.diffusion.p_mean_variance(self.model, x, t, clip_denoised=False, model_kwargs={"y": y})
                 loss = torch.tensor(0)
                 print(f' start of loss = {loss}')
@@ -188,7 +185,6 @@ class ImageEditor:
                     if self.args.clip_guidance_lambda != 0:
                         print(f'clip guidance lanbda = {self.args.clip_guidance_lambda}')
                         x_clip = self.noisy_aug(t[0].item(), x, out["pred_xstart"])
-
                         pred = self.clip_net.encode_image(0.5 * x_clip + 0.5, ncuts=self.args.aug_num)
                         # RN50: tensor(1024,)
                         # RN50x4: tensor(640,)
@@ -265,7 +261,7 @@ class ImageEditor:
         print(f' (3) Iteratively denoising (image translatino through text)')
         save_image_interval = self.diffusion.num_timesteps // 5
         for iteration_number in range(self.args.iterations_num):
-            print(f"Start iterations {iteration_number} with p_sample_loop_progressive")
+
             sample_func = (self.diffusion.ddim_sample_loop_progressive  if self.args.ddim else self.diffusion.p_sample_loop_progressive)
             samples = sample_func(self.model,
                                   (self.args.batch_size,3,self.model_config["image_size"],self.model_config["image_size"],),
