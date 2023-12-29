@@ -231,18 +231,9 @@ class GaussianDiffusion:
                 model_log_variance = frac * max_log + (1 - frac) * min_log
                 model_variance = th.exp(model_log_variance)
         else:
-            model_variance, model_log_variance = {
-                # for fixedlarge, we set the initial (log-)variance like so
-                # to get a better decoder log likelihood.
-                ModelVarType.FIXED_LARGE: (
-                    np.append(self.posterior_variance[1], self.betas[1:]),
-                    np.log(np.append(self.posterior_variance[1], self.betas[1:])),
-                ),
-                ModelVarType.FIXED_SMALL: (
-                    self.posterior_variance,
-                    self.posterior_log_variance_clipped,
-                ),
-            }[self.model_var_type]
+            model_variance, model_log_variance = {ModelVarType.FIXED_LARGE: (np.append(self.posterior_variance[1], self.betas[1:]),
+                                                                             np.log(np.append(self.posterior_variance[1], self.betas[1:])),),
+                                                  ModelVarType.FIXED_SMALL: (self.posterior_variance,self.posterior_log_variance_clipped,),}[self.model_var_type]
             model_variance = _extract_into_tensor(model_variance, t, x.shape)
             model_log_variance = _extract_into_tensor(model_log_variance, t, x.shape)
 
@@ -266,8 +257,10 @@ class GaussianDiffusion:
             else:
                 print('model mean type is epsilon')
                 pred_xstart = process_xstart(self._predict_xstart_from_eps(x_t=x, t=t, eps=model_output))
-
-            model_mean, _, _ = self.q_posterior_mean_variance(x_start=pred_xstart, x_t=x, t=t)
+                print(f'pred_xstart : {type(pred_xstart)}')
+            model_mean, _, _ = self.q_posterior_mean_variance(x_start=pred_xstart,
+                                                              x_t=x,
+                                                              t=t)
 
 
         else:
@@ -584,6 +577,16 @@ class GaussianDiffusion:
                                                 denoised_fn=denoised_fn,     # False
                                                 cond_fn=cond_fn,             # cond_fn
                                                 model_kwargs=model_kwargs,)
+
+
+
+
+
+
+
+
+
+
                             if postprocess_fn is not None:
                                 out = postprocess_fn(out, t)
                             yield out
@@ -668,26 +671,21 @@ class GaussianDiffusion:
             denoised_fn=denoised_fn,
             model_kwargs=model_kwargs,
         )
+
         if cond_fn is not None:
             out,flag = self.condition_score(cond_fn, out, x, t, model_kwargs=model_kwargs)
 
         # Usually our model outputs epsilon, but we re-derive it
         # in case we used x_start or x_prev prediction.
         eps = self._predict_eps_from_xstart(x, t, out["pred_xstart"])
-
         alpha_bar = _extract_into_tensor(self.alphas_cumprod, t, x.shape)
         alpha_bar_prev = _extract_into_tensor(self.alphas_cumprod_prev, t, x.shape)
-        sigma = (
-            eta
+        sigma = (eta
             * th.sqrt((1 - alpha_bar_prev) / (1 - alpha_bar))
-            * th.sqrt(1 - alpha_bar / alpha_bar_prev)
-        )
+            * th.sqrt(1 - alpha_bar / alpha_bar_prev))
         # Equation 12.
         noise = th.randn_like(x)
-        mean_pred = (
-            out["pred_xstart"] * th.sqrt(alpha_bar_prev)
-            + th.sqrt(1 - alpha_bar_prev - sigma ** 2) * eps
-        )
+        mean_pred = (out["pred_xstart"] * th.sqrt(alpha_bar_prev) + th.sqrt(1 - alpha_bar_prev - sigma ** 2) * eps)
         nonzero_mask = (
             (t != 0).float().view(-1, *([1] * (len(x.shape) - 1)))
         )  # no noise when t == 0

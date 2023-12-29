@@ -235,6 +235,7 @@ class ImageEditor:
             print(f' after all calculating loss, loss : {loss.shape}')
             print(f' loss to x, x = {x.shape}')
             print(f' self.flag_resample = {self.flag_resample}')
+            
             return -torch.autograd.grad(loss, x)[0], self.flag_resample
 
         print(f' (3) Iteratively denoising (image translatino through text)')
