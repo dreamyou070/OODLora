@@ -16,12 +16,15 @@ from utils.model_utils import get_state_dict, init_prompt
 import shutil
 from attention_store import AttentionStore
 import torch.nn as nn
+
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
 
-def register_attention_control(unet: nn.Module, controller: AttentionStore,  mask_thredhold: float = 1):  # if mask_threshold is 1, use itself
+
+def register_attention_control(unet: nn.Module, controller: AttentionStore,
+                               mask_thredhold: float = 1):  # if mask_threshold is 1, use itself
 
     def ca_forward(self, layer_name):
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
@@ -39,7 +42,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             if self.upcast_attention:
                 query = query.float()
                 key = key.float()
-            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+            attention_scores = torch.baddbmm(
+                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
 
             attention_probs = attention_scores.softmax(dim=-1)
@@ -52,34 +56,36 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
                 attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0)
 
-                for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
+                for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(
+                        zip(attention_probs_back_batch, attention_probs_object_batch)):
                     # attention_probs_object = [head, pixel_num, sentence_len]
-                    max_txt_idx = torch.max(attention_probs_back[:,:,1:], dim=-1).indices # remove cls token
-                    position_map = torch.where(max_txt_idx == 0, 1, 0) # only 0 with lora
+                    max_txt_idx = torch.max(attention_probs_back[:, :, 1:], dim=-1).indices  # remove cls token
+                    position_map = torch.where(max_txt_idx == 0, 1, 0)  # only 0 with lora
                     batch_trg_index = trg_indexs_list[batch_idx]  # two times
-                    if args.other_token_preserving :
+                    if args.other_token_preserving:
                         attention_probs_object_sub = attention_probs_back.clone().detach()
-                    else :
+                    else:
                         attention_probs_object_sub = attention_probs_object.clone().detach()
                     pixel_num = attention_probs_object_sub.shape[1]
                     map_list = []
                     res = int(pixel_num ** 0.5)
                     if int(pixel_num ** 0.5) in args.cross_map_res:
-                        print(f'bad pixel num : {position_map.sum()}')
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (position_map) + back_attn_vector * (1 - position_map)
+                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (
+                                position_map) + back_attn_vector * (1 - position_map)
                             map_list.append(position_map)
-                        controller.store(torch.cat(map_list, dim=0), layer_name)
-                        attention_probs = torch.cat([attention_probs_back,attention_probs_object_sub], dim=0)
+                        controller.store_normal_score(position_map.sum())
+                        attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
             hidden_states = torch.bmm(attention_probs, value)
 
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
 
             return hidden_states
+
         return forward
 
     def register_recr(net_, count, layer_name):
@@ -102,8 +108,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
 
-def main(args) :
 
+def main(args):
     parent = os.path.split(args.network_weights)[0]
     args.output_dir = os.path.join(parent, 'inference')
 
@@ -140,14 +146,15 @@ def main(args) :
     print(f' (2.1) tokenizer')
     tokenizer = train_util.load_tokenizer(args)
     print(f' (2.2) SD')
-    invers_text_encoder, vae, invers_unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype,device,
+    invers_text_encoder, vae, invers_unet, load_stable_diffusion_format = train_util._load_target_model(args,
+                                                                                                        weight_dtype,
+                                                                                                        device,
                                                                                                         unet_use_linear_projection_in_v2=False, )
     invers_text_encoders = invers_text_encoder if isinstance(invers_text_encoder, list) else [invers_text_encoder]
     text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
                                                                                           unet_use_linear_projection_in_v2=False, )
     text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
     vae.to(accelerator.device, dtype=vae_dtype)
-
 
     trg_resolutions = args.cross_map_res
     title = ''
@@ -156,10 +163,9 @@ def main(args) :
     print(f'title : {title}')
 
     output_dir = os.path.join(output_dir,
-                           f'lora_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask_pixel_thred_{args.pixel_thred}_cross_res{title}')
+                              f'lora_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask_pixel_thred_{args.pixel_thred}_cross_res{title}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
-
 
     print(f' (2.4) scheduler')
     scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
@@ -170,7 +176,8 @@ def main(args) :
 
     print(f' (2.4.+) model to accelerator device')
     if len(invers_text_encoders) > 1:
-        invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device),invers_text_encoders[1].to(device)
+        invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device), \
+        invers_text_encoders[1].to(device)
         invers_text_encoder = [invers_t_enc1, invers_t_enc2]
         del invers_t_enc1, invers_t_enc2
         unet, t_enc1, t_enc2 = unet.to(device), text_encoders[0].to(device), text_encoders[1].to(device)
@@ -194,7 +201,7 @@ def main(args) :
         network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
                                                                 **net_kwargs)
     else:
-        network = network_module.create_network(1.0,args.network_dim, args.network_alpha, vae, text_encoder, unet,
+        network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae, text_encoder, unet,
                                                 neuron_dropout=args.network_dropout, **net_kwargs, )
     print(f' (2.5.3) apply trained state dict')
     network.apply_to(text_encoder, unet, True, True)
@@ -213,11 +220,13 @@ def main(args) :
     trg_h, trg_w = args.resolution
 
     print(f' (3.3) test images')
+
     test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/bad')
     test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/corrected')
     classes = os.listdir(test_img_folder)
     test_output_dir = os.path.join(output_dir, 'test')
     os.makedirs(test_output_dir, exist_ok=True)
+    lines = []
     for class_name in classes:
         if 'good' in class_name:
             class_base_folder = os.path.join(test_output_dir, class_name)
@@ -231,7 +240,6 @@ def main(args) :
             test_images = os.listdir(image_folder)
 
             for j, test_image in enumerate(test_images):
-
                 name, ext = os.path.splitext(test_image)
                 trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
                 os.makedirs(trg_img_output_dir, exist_ok=True)
@@ -239,7 +247,7 @@ def main(args) :
                 test_img_dir = os.path.join(image_folder, test_image)
                 shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
 
-                #if 'good' not in class_name:
+                # if 'good' not in class_name:
                 mask_img_dir = os.path.join(mask_folder, test_image)
                 shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
                 mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
@@ -250,39 +258,25 @@ def main(args) :
                 image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
 
                 with torch.no_grad():
-                    org_vae_latent  = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
+                    latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
 
-
+                from utils.model_utils import call_unet
                 with torch.no_grad():
-                    """
-                    inf_time = inference_times.tolist()
-                    inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
-                    org_latent_dict, time_steps, pil_images = ddim_loop(args,
-                                                                        latent=org_vae_latent,
-                                                                        context=inv_c,
-                                                                        inference_times=inf_time,
-                                                                        scheduler=scheduler,
-                                                                        unet=invers_unet,
-                                                                        vae=vae,
-                                                                        final_time=args.final_noising_time,
-                                                                        base_folder_dir=trg_img_output_dir,
-                                                                        name=name)
-                    
-                    noising_times = org_latent_dict.keys()
-                    st_noise_latent = org_latent_dict[args.final_noising_time]
-                    time_steps.reverse()
-                    recon_loop(args,
-                               org_latent_dict,
-                               start_latent=st_noise_latent,
-                               gt_pil = gt_pil,
-                               context=context,
-                               inference_times= time_steps,
-                               scheduler=scheduler,
-                               unet=unet,
-                               vae=vae,
-                               base_folder_dir=trg_img_output_dir,
-                               controller=controller,
-                               name=name,weight_dtype=weight_dtype)
+                    uncon, con = context.chunk(2)
+                    noise_pred = call_unet(unet,latent, 0,con,[[0]],None)
+                    score_list = controller.normal_score_list
+                    controller.reset()
+                    score = sum(score_list)/len(score_list)
+                    line = f'{test_image} : {score}'
+                    lines.append(line)
+
+    output_text = os.path.join(output_dir, 'normality_score.txt')
+    with open(output_text, 'w') as f:
+        for line in lines:
+            f.write(line + '\n')
+
+
+
 
 
 if __name__ == "__main__":

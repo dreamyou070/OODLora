@@ -16,7 +16,7 @@ class AttentionStore :
         self.cross_value_store = {}
         self.key_value_states_dict = {}
         self.repeat = 0
-        self.loss_list = []
+        self.normal_score_list = []
     def get_empty_store(self):
         return {}
 
@@ -27,8 +27,9 @@ class AttentionStore :
         else :
             self.key_value_states_dict[layer_name].append(key_value_states)
         return self.key_value_states_dict[layer_name].append(key_value_states)
-    def store_loss(self, loss):
-        self.loss_list.append(loss)
+
+    def store_normal_score(self, score):
+        self.normal_score_list.append(score)
 
     def store(self, attn, layer_name):
         if layer_name not in self.step_store.keys() :
@@ -110,4 +111,4 @@ class AttentionStore :
         self.cross_value_store = {}
         self.key_value_states_dict = {}
         self.repeat = 0
-        self.loss_list = []
+        self.normal_score_list = []
