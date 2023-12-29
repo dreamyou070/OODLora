@@ -211,9 +211,11 @@ class ImageEditor:
                         # ViT-B/16: tensor(1,)
 
                         flatten_similarity = similarity.flatten()
-                        print(f' flatten similarity : {flatten_similarity}')
-
-
+                        # RN50: tensor(1,)
+                        # RN50x4: tensor(1,)
+                        # ViT-B/32: tensor(1,)
+                        # RN50x16: tensor(1,)
+                        # ViT-B/16: tensor(1,)
                         clip_loss = - (pred @ self.tgt.T).flatten().reduce(mean_sig)
                         loss = loss + clip_loss * self.args.clip_guidance_lambda
                         print(f' [1] after CLIP loss, loss : {loss}')

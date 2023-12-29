@@ -11,7 +11,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --process_title parksooyeon --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned-emaonly.ckpt \
   --network_module networks.lora --network_dim 64 --network_alpha 4 --prompt 'good' --sample_sampler ddim \
   --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/bagel \
-  --network_weights ../result/MVTec3D-AD_experiment/bagel/lora_training/1_lora_normal_trining_all_res_attnmap_attn_loss/last.safetensors \
+  --network_weights ../result/MVTec3D-AD_experiment/bagel/lora_training/6_lora_diff_trining_all_res_attnmap_attn_loss/epoch-000005.safetensors \
   --resolution 512,512 --seed 42 \
   --cross_map_res [32] --pixel_mask_res 32 \
   --mask_thredhold 0 \
