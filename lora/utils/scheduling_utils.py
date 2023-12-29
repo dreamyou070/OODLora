@@ -182,6 +182,7 @@ def recon_loop(args, z_latent_dict, start_latent, context, inference_times, sche
             mask_latent = torch.where(mask_latent > args.pixel_thred, 1, 0)
             pixel_mask = np.where(pixel_mask > args.pixel_thred, 1, 0).astype(np.uint8) * 255
             pixel_mask_pil = Image.fromarray(pixel_mask).convert('RGB')
+            pixel_mask_pil.save(os.path.join(base_folder_dir, f'{name}_pred_mask_{t}.png'))
 
             # --------------------- 2. make y_latent --------------------- #
             x_latent = z_latent * (1-mask_latent) + x_latent * (mask_latent)
