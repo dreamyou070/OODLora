@@ -109,6 +109,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
 
 def main(args):
+
     parent = os.path.split(args.network_weights)[0]
     args.output_dir = os.path.join(parent, 'anormality_score')
 
@@ -133,12 +134,7 @@ def main(args):
 
     print(f" (1.3) save dir")
     output_dir = args.output_dir
-    parent, network_dir = os.path.split(args.network_weights)
-    model_name = os.path.splitext(network_dir)[0]
-    if 'last' not in model_name:
-        model_epoch = int(model_name.split('-')[-1])
-    else:
-        model_epoch = 'last'
+
 
     print(f' \n step 2. make stable diffusion model')
     device = accelerator.device
@@ -161,8 +157,6 @@ def main(args):
         title += f'_{res}'
     print(f'title : {title}')
 
-    output_dir = os.path.join(output_dir,
-                              f'lora_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask_pixel_thred_{args.pixel_thred}_cross_res{title}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
@@ -273,7 +267,13 @@ def main(args):
                 line = f'{class_name} : {test_image} : {score}'
                 lines.append(line)
 
-    output_text = os.path.join(output_dir, 'normality_score.txt')
+    parent, network_dir = os.path.split(args.network_weights)
+    model_name = os.path.splitext(network_dir)[0]
+    if 'last' not in model_name:
+        model_epoch = int(model_name.split('-')[-1])
+    else:
+        model_epoch = 'last'
+    output_text = os.path.join(output_dir, f'normality_score_lora_{model_epoch}.txt')
 
     with open(output_text, 'w') as f:
         for line in lines:
