@@ -588,13 +588,12 @@ class NetworkTrainer:
                                             answers.append(answer)
                                     score_pairs = torch.cat(score_pairs, dim=0)
                                     answers = torch.cat(answers, dim=0)
-                                    cross_loss += cross_entropy_loss(score_pairs, answers.long())
-
+                                    cross_loss += cross_entropy_loss(score_pairs, answers.long()).mean()
                         log_loss["loss/anormal_pixel_normal_score"] = normal_loss.mean().item()
                         log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.mean().item()
                         log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
-                        attn_loss = normal_loss + anormal_loss + cross_loss
-                        total_loss += attn_loss.mean()
+                        attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
+                    total_loss += attn_loss
 
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.3) natural training
