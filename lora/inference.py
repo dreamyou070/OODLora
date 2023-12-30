@@ -236,6 +236,8 @@ def main(args) :
     print(f' (3.1) prompt condition')
     prompt = args.prompt
     context = init_prompt(tokenizer, text_encoder, device, prompt)
+    uncon, con = torch.chunk(context, 2)
+    uncon, con = uncon[:,3,:], con[:,3,:]
 
     print(f' (3.2) train images')
     trg_h, trg_w = args.resolution
