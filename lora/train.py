@@ -588,9 +588,7 @@ class NetworkTrainer:
                                             answers.append(answer)
                                     score_pairs = torch.cat(score_pairs, dim=0)
                                     answers = torch.cat(answers, dim=0)
-                                    cross_ent_loss = cross_entropy_loss(score_pairs, answers.long())
-                                    print(f'cross_ent_loss (head*32*32 lesser...): {cross_ent_loss.shape}')
-                                    cross_loss += cross_ent_loss.reshape(normal_loss.shape)
+                                    cross_loss += cross_entropy_loss(score_pairs, answers.long())
 
                         log_loss["loss/anormal_pixel_normal_score"] = normal_loss.mean().item()
                         log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.mean().item()
