@@ -592,7 +592,7 @@ class NetworkTrainer:
                         if train_latents.dim() != 4:
                             train_latents = train_latents.unsqueeze(0)
                         input_latents = train_latents
-                        input_condition = text_encoder_conds[train_indexs, :, :]
+                        input_condition = text_encoder_conds[train_indexs, :2, :]
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
                                                                                                            input_latents)
