@@ -541,8 +541,7 @@ class NetworkTrainer:
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0)
                                 img_masks_batch = torch.chunk(img_masks, batch_num, dim=0) # batch, 1, res, res
                                 for i in range(batch_num):
-                                    normal_score_map = normal_score_map_batch[i]   # [head, res, res, 1]
-                                    print(f'normal_score_map (head, 32,32,1): {normal_score_map.shape}')
+                                    normal_score_map = normal_score_map_batch[i]   # [head, res, res, 1] # 8,32,32,1
                                     anormal_score_map = anormal_score_map_batch[i] # [head, res, res, 1]
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
                                     b_map = binary_map[i, :, :, :]
@@ -554,16 +553,15 @@ class NetworkTrainer:
                                     binary_aug_tensor = binary_aug_tensor.expand((8, res, res, 1))              # [head,32,32,1]
 
                                     # -------------------------------------------------- (1-2) image masks -------------------------------------------------- #
-                                    img_mask = img_masks_batch[i].unsqueeze(-1)                                 # 1, res, res, 1     # 1, res,res
+                                    img_mask = img_masks_batch[i].unsqueeze(-1)                                 # 1, 64, 64, 1     # 1, res,res
                                     _, r1, r2, c = img_mask.shape
                                     img_mask = img_mask.expand((8, r1, r2, c))                                  # [head, 32,32,1] -> only one is efficient
                                     # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
-
-                                    print(f'binary_aug_tensor : {binary_aug_tensor.shape}')
-                                    print(f'img_mask : {img_mask.shape}')
+                                    # binary_aug_tensor = 8,32,321
+                                    # img_mask = 8,32,32,1
                                     normal_position = (1-binary_aug_tensor).to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
                                     anormal_position = binary_aug_tensor.to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
-                                    print(f'normal_position (head, 32,32,1): {normal_position.shape}')
+
 
                                     # normal pixel's anormal score
                                     normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]

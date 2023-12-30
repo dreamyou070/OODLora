@@ -1051,7 +1051,7 @@ class BaseDataset(torch.utils.data.Dataset):
             anormal_mask_dir = os.path.join(super_super_parent, 'corrected', class_name, name)
 
             # (2.1) img mask """ background is zero """
-            img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((64, 64), Image.BICUBIC), np.uint8)
+            img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((32,32), Image.BICUBIC), np.uint8)
             img_mask = np.where(img_mask > 10, 1, 0) #
             img_mask = torch.Tensor(img_mask)
             img_masks.append(img_mask)
