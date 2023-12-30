@@ -489,7 +489,7 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
     caption_by_folder = '_'.join(tokens[1:])
     return n_repeats, caption_by_folder
 
-  def generate(base_dir: Optional[str], is_reg: bool, class_caption: Optional[str] = None):
+  def generate(base_dir: Optional[str], is_reg: bool, class_caption: Optional[str] = None, mask_res: Optional[int] = None):
 
     if base_dir is None:
       return []
@@ -507,7 +507,8 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
                        "num_repeats": num_repeats,
                        "is_reg": is_reg,
                        "class_tokens": class_tokens,
-                       "class_caption": class_caption}
+                       "class_caption": class_caption,
+                       "mask_res" : mask_res}
       subsets_config.append(subset_config)
     return subsets_config
   subsets_config = []
