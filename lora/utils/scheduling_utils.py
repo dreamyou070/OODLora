@@ -164,8 +164,8 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
 
                 mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(z_latent.device, dtype=z_latent.dtype)
                 x_latent = x_latent * (1 -mask_latent) + z_latent * (mask_latent)
-
-            x_latent_dict[t] = x_latent
+                x_latent_dict[t] = x_latent
+                
             x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
             #z_noise_pred, x_noise_pred = noise_pred.chunk(2)
             x_latent = prev_step(x_noise_pred, t, x_latent, scheduler)
