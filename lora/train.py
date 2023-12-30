@@ -571,7 +571,7 @@ class NetworkTrainer:
                                     flatten_score_map = score_map.view(-1, 2)
 
                                     print(f'img_mask : {img_mask.shape}')
-                                    flatten_img_mask = img_mask.view(-1, 1)
+                                    flatten_img_mask = img_mask.contiguous().view(-1, 1)
                                     flatten_img_mask = flatten_img_mask.squeeze() # [8*32*32]
 
                                     anormal_position = anormal_position.view(-1, 1)
