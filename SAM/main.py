@@ -23,13 +23,15 @@ def main(args):
             images = os.listdir(folder_dir)
             for image in images:
                 img_dir = os.path.join(folder_dir, image)
-                pil_img = Image.open(img_dir)
-                np_img = np.array(pil_img)
+                np_img = np.array(Image.open(img_dir))
                 predictor.set_image(np_img)
-                masks, _, _ = predictor.predict(cat)
-                print(f'masks : {masks}')
+                input_point = np.array([[0,0]])
+                input_label = np.array([0])
+                masks, scores, logits = predictor.predict(point_coords=input_point,
+                    point_labels=input_label,
+                    multimask_output=True,)
+                print(masks)
                 break
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
