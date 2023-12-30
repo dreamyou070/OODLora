@@ -1,6 +1,8 @@
 from segment_anything import SamPredictor, sam_model_registry
 import argparse, os
 from PIL import Image
+import numpy as np
+
 def main(args):
 
     print(f'step 1. prepare model')
