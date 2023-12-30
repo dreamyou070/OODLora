@@ -550,7 +550,7 @@ class NetworkTrainer:
                                     binary_aug_np = np.array(pil)
                                     binary_aug_np = np.where(binary_aug_np == 0, 0, 1)                          # black = 0 = normal, [res,res,1]
                                     binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,32,32,1]
-                                    binary_aug_tensor = binary_aug_tensor.expand((8, res, res, 1))              # [head,32,32,1]
+                                    binary_aug_tensor = binary_aug_tensor.expand((8, res, res, 1)).to(accelerator.device)             # [head,32,32,1]
 
                                     # -------------------------------------------------- (1-2) image masks -------------------------------------------------- #
                                     img_mask = img_masks_batch[i].unsqueeze(-1)                                 # 1, 64, 64, 1     # 1, res,res
