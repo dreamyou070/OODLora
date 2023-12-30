@@ -294,6 +294,7 @@ def main(args) :
 
                     inf_time = inference_times.tolist()
                     inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                    print(f'inf_time : {inf_time}')
                     org_latent_dict, time_steps, pil_images = ddim_loop(args,
                                                                         latent=org_vae_latent,
                                                                         context=inv_c,
@@ -305,6 +306,7 @@ def main(args) :
                                                                         base_folder_dir=trg_img_output_dir,
                                                                         name=name)
                     noising_times = org_latent_dict.keys()
+                    print(f'noiseing_times : {noising_times}')
                     st_noise_latent = org_latent_dict[args.final_noising_time]
                     time_steps.reverse()
                     recon_loop(args,
