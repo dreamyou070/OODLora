@@ -577,9 +577,14 @@ class NetworkTrainer:
 
                             score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
                             flatten_score_map = score_map.view(-1, 2)
-                            anormal_position = anormal_position.vies(-1,1)
                             print(f'flatten_score_map.shape: {flatten_score_map.shape}')
-                            print(f'anormal_position.shape: {anormal_position.shape}')
+
+                            print(f'[before view] anormal_position.shape: {anormal_position.shape}')
+                            anormal_position = anormal_position.view(-1,1)
+                            print(f'[after view] anormal_position.shape: {anormal_position.shape}')
+
+
+
 
 
 
