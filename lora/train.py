@@ -46,27 +46,31 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
+                good_map = attention_probs[:,:,1]
+                bad_map = attention_probs[:,:,2]
+                attn_score_map = torch.cat([good_map, bad_map], dim=-1)
+                controller.store(attn_score_map, layer_name)
+                """
                 batch, pix_num, _ = query.shape
                 res = int(pix_num) ** 0.5
                 if res in args.cross_map_res :
                     batch_num = len(trg_indexs_list)
                     attention_probs_batch = torch.chunk(attention_probs, batch_num, dim=0)
                     attn_list = []
+                    
                     for batch_idx, attn_probs in enumerate(attention_probs_batch):
-                        batch_trg_index = trg_indexs_list[batch_idx]  # two times
-                        good_bad_maps = []
-                        for i, word_idx in enumerate(batch_trg_index):
-                            if i == 0 :
-                                word_idx = int(word_idx)
-                                attn_map = attn_probs[:, :, word_idx].unsqueeze(-1)
-                            else :
-                                word_idx = int(word_idx)
-                                attn_map = attn_probs[:, :, word_idx].unsqueeze(-1)
-                            good_bad_maps.append(attn_map)
-                        attn_score_map = torch.cat(good_bad_maps, dim=-1)
+                        
+                        #batch_trg_index = trg_indexs_list[batch_idx]  # two times
+                        good_map = attn_probs[:,:,1]
+                        bad_map = attn_probs[:,:,2]
+                        if good_map.dim() == 2 :
+                            good_map = good_map.unsqueeze(-1)
+                            bad_map = bad_map.unsqueeze(-1)
+                        attn_score_map = torch.cat([good_map, bad_map], dim=-1)
                         attn_list.append(attn_score_map)
                     batch_attn_map = torch.cat(attn_list, dim=0)
                     controller.store(batch_attn_map, layer_name)
+                """
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -531,50 +535,55 @@ class NetworkTrainer:
                         attention_storer.reset()
 
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
+                        normal_maps, anormal_maps = [], []
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0] # [b, pix_num, 2]
                             normal_score_map, anormal_score_map = torch.chunk(attn_score, 2, dim=-1)
                             if normal_score_map.dim() != 3:
                                 normal_score_map = normal_score_map.unsqueeze(-1)
                                 anormal_score_map = anormal_score_map.unsqueeze(-1)
-
                             b, pix_num, _ = normal_score_map.shape
                             res = int(math.sqrt(pix_num))
-                            normal_score_map = normal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
-                            anormal_score_map = anormal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
+                            if res in args.cross_map_res :
+                                normal_score_map = normal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
+                                anormal_score_map = anormal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
+                                #normal_maps.append(normal_score_map)
+                                #anormal_maps.append(anormal_score_map)
 
-                            binary_map = batch['binary_images'].unsqueeze(-1) # batch, res, res, 1
-                            maps = []
-                            batch_num = binary_map.shape[0]
+                                binary_map = batch['binary_images'].unsqueeze(-1) # batch, res, res, 1
+                                maps = []
+                                batch_num = binary_map.shape[0]
+                                normal_score_map_batch = torch.chunk(normal_score_map, batch_num, dim=0)
+                                anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0)
+                                for i in range(batch_num):
+                                    normal_score_map = normal_score_map_batch[i]
+                                    anormal_score_map = anormal_score_map_batch[i]
 
-                            for i in range(batch_num):
-                                b_map = binary_map[i, :, :, :]
-                                if b_map.dim() != 2:
-                                    b_map = b_map.squeeze()
-                                # b_map = [res,res,1]
-                                pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res))
-                                binary_aug_np = np.array(pil)
-                                # binary_aug_np = [res,res,1]
-                                binary_aug_np = np.where(binary_aug_np == 0, 0, 1)  # black = 0 = normal, [res,res,1]
-                                binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,64,64,1]
-                                binary_aug_tensor = binary_aug_tensor.expand((8, res, res, 1))
-                                maps.append(binary_aug_tensor)
-                            binary_map = torch.cat(maps, dim=0).to(accelerator.device) # [b*head, 64, 64, 1]
-                            normal_position = (1-binary_map).to(dtype=weight_dtype)
-                            anormal_position = binary_map.to(dtype=weight_dtype)
+                                    b_map = binary_map[i, :, :, :]
 
-                            # normal pixel's anormal score
-                            normal_loss = (normal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]
-                            anormal_loss = (anormal_position.to(anormal_score_map.device) * normal_score_map).squeeze()  # [b, res, res, 1]
-                            score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
-                            flatten_score_map = score_map.view(-1, 2)
-                            anormal_position = anormal_position.view(-1, 1).squeeze()
-                            cross_ent_loss = cross_entropy_loss(flatten_score_map, anormal_position.long())
-                            cross_ent_loss = cross_ent_loss.reshape(normal_loss.shape)
+                                    if b_map.dim() != 2:
+                                        b_map = b_map.squeeze()
+                                    # b_map = [res,res,1]
+                                    pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res))
+                                    binary_aug_np = np.array(pil)
+                                    # binary_aug_np = [res,res,1]
+                                    binary_aug_np = np.where(binary_aug_np == 0, 0, 1)  # black = 0 = normal, [res,res,1]
+                                    binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,64,64,1]
+                                    binary_aug_tensor = binary_aug_tensor.expand((8, res, res, 1))
+                                    maps.append(binary_aug_tensor)
+                                binary_map = torch.cat(maps, dim=0).to(accelerator.device) # [b*head, 64, 64, 1]
+                                normal_position = (1-binary_map).to(dtype=weight_dtype)
+                                anormal_position = binary_map.to(dtype=weight_dtype)
 
-                            normal_loss += normal_loss
-                            anormal_loss += anormal_loss
-                            cross_loss += cross_ent_loss
+                                # normal pixel's anormal score
+                                normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]
+                                anormal_loss += (anormal_position.to(anormal_score_map.device) * normal_score_map).squeeze()  # [b, res, res, 1]
+
+                                score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
+                                flatten_score_map = score_map.view(-1, 2)
+                                anormal_position = anormal_position.view(-1, 1).squeeze()
+                                cross_ent_loss = cross_entropy_loss(flatten_score_map, anormal_position.long())
+                                cross_loss += cross_ent_loss.reshape(normal_loss.shape)
 
                         log_loss["loss/anormal_pixel_normal_score"] = normal_loss.mean().item()
                         log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.mean().item()
