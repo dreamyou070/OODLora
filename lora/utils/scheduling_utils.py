@@ -107,6 +107,7 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
             #pil_images.append(pil_img)
             #pil_img.save(os.path.join(base_folder_dir, f'{name}_noising_{next_time}.png'))
         else :
+            print(f'final_time : {final_time}')
             time_steps.append(final_time)
             latent_dict[int(final_time)] = latent
             break
