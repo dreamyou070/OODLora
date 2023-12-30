@@ -575,7 +575,7 @@ class NetworkTrainer:
 
                                     anormal_position = anormal_position.view(-1, 1)
                                     anormal_position = anormal_position.squeeze()
-                                    
+
                                     score_pairs = []
                                     answers = []
                                     for l in range(flatten_score_map.shape[0]):
@@ -590,7 +590,8 @@ class NetworkTrainer:
                         log_loss["loss/anormal_pixel_normal_score"] = normal_loss.mean().item()
                         log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.mean().item()
                         log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
-                        attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
+                        #attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
+                        attn_loss = cross_loss.mean()
                     total_loss += attn_loss
 
                     # ---------------------------------------------------------------------------------------------------------------------
