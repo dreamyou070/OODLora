@@ -482,6 +482,7 @@ class NetworkTrainer:
                 accelerator.print(f"removing old checkpoint: {old_ckpt_file}")
                 os.remove(old_ckpt_file)
 
+        cross_entropy_loss = nn.CrossEntropyLoss(reduction='none')
         for epoch in range(args.start_epoch, args.start_epoch+num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
@@ -577,11 +578,10 @@ class NetworkTrainer:
 
                             score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
                             flatten_score_map = score_map.view(-1, 2)
-                            print(f'flatten_score_map.shape: {flatten_score_map.shape}')
+                            anormal_position = anormal_position.view(-1,1).squeeze()
 
-                            print(f'[before view] anormal_position.shape: {anormal_position.shape}')
-                            anormal_position = anormal_position.view(-1,1)
-                            print(f'[after view] anormal_position.shape: {anormal_position.shape}')
+                            cross_ent_loss = cross_entropy_loss(flatten_score_map, anormal_position.long())
+                            print(f'cross_ent_loss: {cross_ent_loss}')
 
 
 
