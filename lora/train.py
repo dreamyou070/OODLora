@@ -558,6 +558,9 @@ class NetworkTrainer:
                                     _, r1, r2, c = img_mask.shape
                                     img_mask = img_mask.expand((8, r1, r2, c))                                  # [head, 32,32,1] -> only one is efficient
                                     # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
+
+                                    print(f'binary_aug_tensor : {binary_aug_tensor.shape}')
+                                    print(f'img_mask : {img_mask.shape}')
                                     normal_position = (1-binary_aug_tensor).to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
                                     anormal_position = binary_aug_tensor.to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
                                     print(f'normal_position (head, 32,32,1): {normal_position.shape}')
