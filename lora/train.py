@@ -540,19 +540,14 @@ class NetworkTrainer:
                                 anormal_score_map = anormal_score_map.unsqueeze(-1)
 
                             b, pix_num, _ = normal_score_map.shape
-
                             res = int(math.sqrt(pix_num))
-
                             normal_score_map = normal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
                             anormal_score_map = anormal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
 
-                            anormal_score_diff = anormal_score_map - normal_score_map # b,res,res,1
-                            normal_score_diff = normal_score_map - anormal_score_map  # b,res,res,1
-
                             binary_map = batch['binary_images'].unsqueeze(-1) # batch, res, res, 1
-                            #binary_map.expand(attn_score.shape)
                             maps = []
                             batch_num = binary_map.shape[0]
+
                             for i in range(batch_num):
                                 b_map = binary_map[i, :, :, :]
                                 if b_map.dim() != 2:
@@ -571,23 +566,28 @@ class NetworkTrainer:
 
                             # normal pixel's anormal score
                             normal_loss  = (normal_position.to(anormal_score_map.device) * anormal_score_map).mean([1,2])
-                            #anormal_diff_loss = (anormal_score_diff * normal_position.to(anormal_score_map.device)).mean([1,2])
-
                             anormal_loss = (anormal_position.to(anormal_score_map.device) * normal_score_map).mean([1,2])
-                            #normal_diff_loss = (normal_score_diff * anormal_position.to(anormal_score_map.device)).mean([1,2])
-
-                            #layer_attn_loss = normal_loss + anormal_loss + normal_diff_loss + anormal_diff_loss
                             layer_attn_loss = normal_loss + anormal_loss
                             attn_loss += layer_attn_loss.mean()
                             loss = attn_loss
 
                             log_loss["loss/normal_pixel_anormal_score"] = normal_loss.mean().item()
-                            #log_loss["loss/anormal_score_diff_of_normal_pixel"] = anormal_diff_loss.mean().item()
-
                             log_loss["loss/anormal_pixel_normal_score"] = anormal_loss.mean().item()
-                            #log_loss["loss/normal_score_diff_of_anormal_pixel"] = normal_diff_loss.mean().item()
-
                             log_loss["loss/attn_loss"] = attn_loss.item()
+
+                            score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
+                            flatten_score_map = score_map.view(-1, 2)
+                            anormal_position = anormal_position.vies(-1,1)
+                            print(f'flatten_score_map.shape: {flatten_score_map.shape}')
+                            print(f'anormal_position.shape: {anormal_position.shape}')
+
+
+
+
+
+
+
+
 
                     # (3) natural training
                     if len(train_indexs) > 0:
