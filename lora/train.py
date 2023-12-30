@@ -522,6 +522,32 @@ class NetworkTrainer:
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
                                                                                                        latents)
+                    # ---------------------------------------------------------------------------------------------------------------------
+                    # (3.1) anormal training
+                    if len(test_indexs) > 0:
+                        anormal_latents = latents[test_indexs, :, :, :]
+                        noise, noisy_anormal_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                                   noise_scheduler,
+                                                                                                                   anormal_latents)
+                        with torch.set_grad_enabled(train_text_encoder):
+                            #text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
+                            #                                        weight_dtype)
+                            #text_encoder_conds = text_encoder_conds[:, :3, :]
+
+                            batch_input_ids = batch["input_ids"]
+                            print(f'batch_input_ids: {batch_input_ids}')
+                            #encoder_hidden_states = train_util.get_hidden_states(args, input_ids,
+                            #                                                     tokenizers[0], text_encoders[0],
+                            #                                                     weight_dtype)
+                            #return encoder_hidden_states
+
+
+
+
+
+
+
+
                     with accelerator.autocast():
 
                         self.call_unet(args, accelerator, unet,
