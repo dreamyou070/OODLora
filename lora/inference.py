@@ -70,37 +70,22 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                         good_map = attention_probs_object[:, :, 1]
                         bad_map = attention_probs_back[:, :, 2]
-                        position_map = torch.where(good_map < bad_map, 0, 1) # head, 4096 pixel_num
-                        print(f'position_map : {position_map.shape}')
-                        #max_txt_idx = torch.max(attention_probs_back[:, :, 1:], dim=-1).indices  # remove cls token
-                        """ is i can trust original img, token should be 0 ( without cls token ) """
-                        #position_map = torch.where(max_txt_idx == 0, 1, 0)  # trust of background
-                        #position_map = torch.where(max_txt_idx == 1, 0, 1)  # where bad, trust of object
+                        position_map = torch.where(good_map < bad_map, 0, 1) #
+
                         map_list.append(position_map)
                         map_dict[common_name] = []
                         map_dict[common_name].append(position_map)
-                        """
-                        attention_probs_object_sub = attention_probs_object * (1 - position_map) + attention_probs_back * position_map                      
-                        
-                        batch_trg_index = trg_indexs_list[batch_idx]  # two times
-                        for word_idx in batch_trg_index:
-                            word_idx = int(word_idx)
-                            back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
-                            obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (1 - position_map) + back_attn_vector * position_map
-                            map_list.append(position_map)
-                        """
                         position_map = position_map.unsqueeze(-1)
                         position_map = position_map.expand(attention_probs_back.shape)
-                        attention_probs_object = attention_probs_object * (1 - position_map) + attention_probs_back * position_map
-                        #new_attns.append(position_map)
-                        #object_attention_probs = torch.cat(new_attns, dim=0)
+                        #attention_probs_object = attention_probs_object * (1 - position_map) + attention_probs_back * position_map
+
                         attention_probs = torch.cat([attention_probs_back, attention_probs_object], dim=0)
                         if len(map_list) > 0:
                             controller.store(torch.cat(map_list, dim=0), layer_name)
             elif not is_cross_attention and trg_indexs_list is not None:
                 self_common_name = layer_name.split('_')[:-1]
                 self_common_name = '_'.join(self_common_name)
+                """
                 if self_common_name in map_dict.keys() :
                     back_map = map_dict[self_common_name][0]
                     background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0) # [head, pix_num, dim]
@@ -111,6 +96,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     object_attention_probs = object_attention_probs * (1 - back_map) + background_attention_probs * back_map
                     attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
                     del map_dict[self_common_name]
+                """
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
