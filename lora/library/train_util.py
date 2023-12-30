@@ -1147,10 +1147,10 @@ class BaseDataset(torch.utils.data.Dataset):
             class_caption = image_info.class_caption
             if class_caption == caption :
                 train_class = 1
-                caption = 'good, good'
+                caption = 'good good'
             else :
                 train_class = 0
-                caption = 'good, bad'
+                caption = 'good bad'
 
             train_class_list.append(train_class)
 
@@ -1170,7 +1170,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 captions.append(caption)
             else:
                 # ------------------------------------------------------------------------------------------------------------------------------------------------
-                caption       = self.process_caption(subset, caption)
+                caption = self.process_caption(subset, caption)
                 class_caption = self.process_caption(subset, class_caption)
 
                 if self.XTI_layers:
@@ -1216,7 +1216,8 @@ class BaseDataset(torch.utils.data.Dataset):
                                 if id in trg_token_id:
                                     trg_indexs.append(i)
                         return trg_indexs
-                    trg_indexs = generate_text_embedding(class_caption, self.tokenizers[0])
+                    #trg_indexs = generate_text_embedding(class_caption, self.tokenizers[0])
+                    trg_indexs = [1,2]
                     trg_indexs_list.append(trg_indexs)
                     #------------------------------------------------------------------------------------------
                     if len(self.tokenizers) > 1:

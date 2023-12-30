@@ -54,10 +54,17 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                     attn_list = []
                     for batch_idx, attn_probs in enumerate(attention_probs_batch):
                         batch_trg_index = trg_indexs_list[batch_idx]  # two times
-                        for word_idx in batch_trg_index:
-                            word_idx = int(word_idx)
-                            attn_map = attn_probs[:, :, word_idx]
-                            attn_list.append(attn_map)
+                        good_bad_maps = []
+                        for i, word_idx in enumerate(batch_trg_index):
+                            if i == 0 :
+                                word_idx = int(word_idx)
+                                attn_map = attn_probs[:, :, word_idx].unsqueeze(-1)
+                            else :
+                                word_idx = int(word_idx)
+                                attn_map = attn_probs[:, :, word_idx].unsqueeze(-1)
+                            good_bad_maps.append(attn_map)
+                        attn_score_map = torch.cat(good_bad_maps, dim=-1)
+                        attn_list.append(attn_score_map)
                     batch_attn_map = torch.cat(attn_list, dim=0)
                     controller.store(batch_attn_map, layer_name)
             hidden_states = torch.bmm(attention_probs, value)
@@ -165,8 +172,6 @@ class NetworkTrainer:
 
     def get_text_cond(self, args, accelerator, batch, tokenizers, text_encoders, weight_dtype):
         input_ids = batch["input_ids"].to(accelerator.device)  # batch, torch_num, sen_len
-
-        print(f'input_ids : {input_ids}')
         encoder_hidden_states = train_util.get_hidden_states(args, input_ids,
                                                              tokenizers[0], text_encoders[0],
                                                              weight_dtype)
@@ -511,7 +516,7 @@ class NetworkTrainer:
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
                                                                 weight_dtype)
-                        text_encoder_conds = text_encoder_conds[:,:2,:]
+                        text_encoder_conds = text_encoder_conds[:,:3,:]
                     # (3.1) attention score loss
                     log_loss = {}
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
@@ -528,18 +533,26 @@ class NetworkTrainer:
                         attention_storer.reset()
                         attn_loss = 0
                         for layer in attn_dict.keys():
-                            attn_score = attn_dict[layer][0] # [b, pix_num, 1]
-                            if attn_score.dim() != 3:
-                                attn_score = attn_score.unsqueeze(-1)
-                            b, pix_num, _ = attn_score.shape
+                            attn_score = attn_dict[layer][0] # [b, pix_num, 2]
+                            normal_score_map, anormal_score_map = torch.chunk(attn_score, 2, dim=-1)
+                            if normal_score_map.dim() != 3:
+                                normal_score_map = normal_score_map.unsqueeze(-1)
+                                anormal_score_map = anormal_score_map.unsqueeze(-1)
+                            b, pix_num, _ = normal_score_map
                             res = int(math.sqrt(pix_num))
-                            attn_score = attn_score.reshape(b, res, res, -1) # [b, res, res, 1]
+                            normal_score_map = normal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
+                            anormal_score_map = anormal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
+
+                            anormal_score_diff = anormal_score_map - normal_score_map
+                            normal_score_diff = normal_score_map - anormal_score_map
 
                             binary_map = batch['binary_images'].unsqueeze(-1)
-                            binary_map.expand(attn_score.shape)
+                            #binary_map.expand(attn_score.shape)
                             binary_map = binary_map.expand(attn_score.shape)
-                            """
-                            #maps = []
+                            print(f'anormal_score_diff: {anormal_score_diff.shape}')
+                            print(f'binary_map: {binary_map.shape}')
+
+                            maps = []
                             for binary_map_i in binary_map:
                                 binary_map_i = binary_map_i.squeeze()
                                 binary_aug_np = np.array(Image.fromarray(binary_map_i.numpy().astype(np.uint8)).resize((res,res)))
@@ -548,14 +561,19 @@ class NetworkTrainer:
                                 binary_aug_tensor = binary_aug_tensor.unsqueeze(0) # [1,64,64]
                                 binary_aug_tensor = binary_aug_tensor.expand((8,res,res))
                                 maps.append(binary_aug_tensor)
-                            """
+
                             #maps = torch.cat(maps, dim=0).unsqueeze(-1).to(accelerator.device) # [b, 64, 64, 1]
                             #maps = maps.to(dtype=weight_dtype)
                             #print(f'binary_map : {binary_map.shape}')
                             #print(f'attn_score : {attn_score.shape}')
 
-                            attn_score_pixel = attn_score * binary_map.to(dtype=weight_dtype)
-                            layer_attn_loss = attn_score_pixel.mean([1,2])
+                            normal_loss  = (normal_score_diff * binary_map.to(dtype=weight_dtype)).mean([1,2])
+                            anormal_loss = (anormal_score_diff * (1-binary_map).to(dtype=weight_dtype)).mean([1,2])
+                            layer_attn_loss = normal_loss + normal_loss
+                            print(f'normal_loss : {normal_loss}')
+                            print(f'anormal_loss : {anormal_loss}')
+                            print(f'layer_attn_loss : {layer_attn_loss}')
+
                             attn_loss += layer_attn_loss.mean()
                             loss = attn_loss
                             log_loss["loss/attn_loss"] = attn_loss.item()
