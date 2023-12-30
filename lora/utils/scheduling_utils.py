@@ -150,7 +150,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                 if res == args.pixel_mask_res:
                     map_list.append(mask)
             map = torch.cat(map_list, dim=0)
-            map = map.mean([0])
+            map = map.float().mean([0])
             map = map.reshape(res,res)
             mask_img = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8)
             mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
