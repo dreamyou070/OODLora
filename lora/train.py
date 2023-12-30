@@ -535,7 +535,7 @@ class NetworkTrainer:
                         attention_storer.reset()
 
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
-                        normal_maps, anormal_maps = [], []
+
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0] # [b, pix_num, 2]
                             normal_score_map, anormal_score_map = torch.chunk(attn_score, 2, dim=-1)
@@ -547,8 +547,6 @@ class NetworkTrainer:
                             if res in args.cross_map_res :
                                 normal_score_map = normal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
                                 anormal_score_map = anormal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
-                                #normal_maps.append(normal_score_map)
-                                #anormal_maps.append(anormal_score_map)
 
                                 binary_map = batch['binary_images'].unsqueeze(-1) # batch, res, res, 1
                                 maps = []
@@ -568,12 +566,15 @@ class NetworkTrainer:
                                     binary_aug_np = np.array(pil)
                                     # binary_aug_np = [res,res,1]
                                     binary_aug_np = np.where(binary_aug_np == 0, 0, 1)  # black = 0 = normal, [res,res,1]
-                                    binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,64,64,1]
+                                    binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,32,32,1]
                                     binary_aug_tensor = binary_aug_tensor.expand((8, res, res, 1))
                                     maps.append(binary_aug_tensor)
                                 binary_map = torch.cat(maps, dim=0).to(accelerator.device) # [b*head, 64, 64, 1]
+
                                 normal_position = (1-binary_map).to(dtype=weight_dtype)
                                 anormal_position = binary_map.to(dtype=weight_dtype)
+                                print(f'normal_position.shape : {normal_position.sum()}')
+                                print(f'normal_position.shape : {normal_position.sum()}')
 
                                 # normal pixel's anormal score
                                 normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]
