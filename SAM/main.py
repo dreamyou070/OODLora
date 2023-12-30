@@ -22,7 +22,8 @@ def main(args):
             for image in images:
                 img_dir = os.path.join(folder_dir, image)
                 pil_img = Image.open(img_dir)
-                predictor.set_image(pil_img)
+                np_img = np.array(pil_img)
+                predictor.set_image(np_img)
                 masks, _, _ = predictor.predict(cat)
                 print(f'masks : {masks}')
                 break
