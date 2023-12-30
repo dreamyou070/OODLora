@@ -549,26 +549,29 @@ class NetworkTrainer:
                             anormal_score_diff = anormal_score_map - normal_score_map # b,res,res,1
                             normal_score_diff = normal_score_map - anormal_score_map  # b,res,res,1
 
-                            binary_map = batch['binary_images'].unsqueeze(-1)
-                            #binary_map.expand(attn_score.shape)
-                            binary_map = binary_map.expand(attn_score.shape)
-                            print(f'anormal_score_diff: {anormal_score_diff.shape}')
+                            binary_map = batch['binary_images'].unsqueeze(-1) # batch, res, res, 1
                             print(f'binary_map: {binary_map.shape}')
+                            print(f'anormal_score_diff: {anormal_score_diff.shape}')
+                            #binary_map.expand(attn_score.shape)
+                            binary_map = binary_map.expand(anormal_score_diff.shape)
 
                             maps = []
                             for binary_map_i in binary_map:
                                 binary_map_i = binary_map_i.squeeze()
                                 binary_aug_np = np.array(Image.fromarray(binary_map_i.numpy().astype(np.uint8)).resize((res,res)))
-                                binary_aug_np = np.where(binary_aug_np > 100, 1, 0)
-                                binary_aug_tensor = torch.tensor(binary_aug_np)[:,:,0]
-                                binary_aug_tensor = binary_aug_tensor.unsqueeze(0) # [1,64,64]
+                                binary_aug_np = np.where(binary_aug_np == 0, 0, 1) # black = 0 = normal
+                                binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0) # [1,64,64]
                                 binary_aug_tensor = binary_aug_tensor.expand((8,res,res))
                                 maps.append(binary_aug_tensor)
+
 
                             #maps = torch.cat(maps, dim=0).unsqueeze(-1).to(accelerator.device) # [b, 64, 64, 1]
                             #maps = maps.to(dtype=weight_dtype)
                             #print(f'binary_map : {binary_map.shape}')
                             #print(f'attn_score : {attn_score.shape}')
+
+                            normal_position = binary_map.to(dtype=weight_dtype)
+                            anormal_position = (1-binary_map).to(dtype=weight_dtype)
 
                             normal_loss  = (normal_score_diff * binary_map.to(dtype=weight_dtype)).mean([1,2])
                             anormal_loss = (anormal_score_diff * (1-binary_map).to(dtype=weight_dtype)).mean([1,2])

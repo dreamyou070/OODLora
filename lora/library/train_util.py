@@ -1059,9 +1059,9 @@ class BaseDataset(torch.utils.data.Dataset):
             #masked_img = load_image(mask_dir, self.height, self.width)
 
 
-            mask_pil = Image.open(mask_dir).resize((32,32), Image.BICUBIC)
+            mask_pil = Image.open(mask_dir).convert('L').resize((32,32), Image.BICUBIC)
             mask_img = np.array(mask_pil, np.uint8)
-            binary_img = np.where(mask_img  > 10, 1, 0)
+            binary_img = np.where(mask_img > 10, 1, 0)
             binary_img = torch.Tensor(binary_img)
 
             if self.enable_bucket:
