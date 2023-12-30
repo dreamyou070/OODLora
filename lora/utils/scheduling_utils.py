@@ -150,10 +150,13 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                 if res == args.pixel_mask_res:
                     map_list.append(mask)
             map = torch.cat(map_list, dim=0)
-            map = map.sum(0) / map.shape[0]
+            map = map.mean([0])
             map = map.reshape(res,res)
             mask_img = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8)
             mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
+
+            reverse_mask = torch.where(map > args.pixel_thred, 0, 1).cpu().numpy().astype(np.uint8)
+            reverse_mask = Image.fromarray(reverse_mask).resize((512,512))
 
             #mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(z_latent.device, dtype=z_latent.dtype)
             #x_latent = x_latent * (1 -mask_latent) + z_latent * (mask_latent)
@@ -167,8 +170,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
 
             pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
-            aug_mask_img = Image.fromarray(mask_img * 255).resize((512, 512))
-            aug_mask_img.save(os.path.join(base_folder_dir, f'{name}_mask_{t}.png'))
+            reverse_mask.save(os.path.join(base_folder_dir, f'{name}_mask_{t}.png'))
 
     pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
     pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
