@@ -191,6 +191,7 @@ class ConfigSanitizer:
   ARGPARSE_NULLABLE_OPTNAMES = [
     "face_crop_aug_range",
     "resolution",
+    "mask_res",
   ]
   # prepare map because option name may differ among argparse and user config
   ARGPARSE_OPTNAME_TO_CONFIG_OPTNAME = {
