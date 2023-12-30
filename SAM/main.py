@@ -22,7 +22,7 @@ def main(args):
             os.makedirs(save_cat_dir, exist_ok=True)
             folders = os.listdir(cat_dir)
             for folder in folders:
-                if 'good' in folder :
+                if 'good' not in folder :
                     save_folder_dir = os.path.join(save_cat_dir, folder)
                     os.makedirs(save_folder_dir, exist_ok=True)
 
