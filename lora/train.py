@@ -584,7 +584,7 @@ class NetworkTrainer:
                                         if flatten_img_mask[l] == 1:
                                             score_pair = flatten_score_map[l].unsqueeze(0)
                                             score_pairs.append(score_pair)
-                                            answer = anormal_position[l]
+                                            answer = anormal_position[l].unsqueeze(0)
                                             answers.append(answer)
                                     score_pairs = torch.cat(score_pairs, dim=0)
                                     answers = torch.cat(answers, dim=0)
