@@ -230,48 +230,49 @@ def main(args):
     os.makedirs(test_output_dir, exist_ok=True)
     lines = []
     for class_name in classes:
-        if 'good' not in class_name:
-            class_base_folder = os.path.join(test_output_dir, class_name)
-            os.makedirs(class_base_folder, exist_ok=True)
 
-            image_folder = os.path.join(test_img_folder, class_name)
-            mask_folder = os.path.join(test_mask_folder, class_name)
 
-            invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
-            inv_unc, inv_c = invers_context.chunk(2)
-            test_images = os.listdir(image_folder)
+        class_base_folder = os.path.join(test_output_dir, class_name)
+        os.makedirs(class_base_folder, exist_ok=True)
 
-            for j, test_image in enumerate(test_images):
-                name, ext = os.path.splitext(test_image)
-                trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
-                os.makedirs(trg_img_output_dir, exist_ok=True)
+        image_folder = os.path.join(test_img_folder, class_name)
+        mask_folder = os.path.join(test_mask_folder, class_name)
 
-                test_img_dir = os.path.join(image_folder, test_image)
-                shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
+        invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
+        inv_unc, inv_c = invers_context.chunk(2)
+        test_images = os.listdir(image_folder)
 
-                # if 'good' not in class_name:
-                mask_img_dir = os.path.join(mask_folder, test_image)
-                shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
-                mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
-                mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
-                gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
+        for j, test_image in enumerate(test_images):
+            name, ext = os.path.splitext(test_image)
+            trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
+            os.makedirs(trg_img_output_dir, exist_ok=True)
 
-                print(f' (2.3.1) inversion')
-                image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+            test_img_dir = os.path.join(image_folder, test_image)
+            shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
 
-                with torch.no_grad():
-                    latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
+            # if 'good' not in class_name:
+            mask_img_dir = os.path.join(mask_folder, test_image)
+            shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+            mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+            mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
+            gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
 
-                from utils.model_utils import call_unet
-                with torch.no_grad():
-                    noise_pred = call_unet(unet,latent, 0,con,[[0]],None)
-                    score_list = controller.normal_score_list
-                    controller.reset()
-                    score = sum(score_list)/len(score_list)
-                    line = f'{class_name} : {test_image} : {score}'
-                    lines.append(line)
+            print(f' (2.3.1) inversion')
+            image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
 
-    output_text = os.path.join(output_dir, 'anormality_score.txt')
+            with torch.no_grad():
+                latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
+
+            from utils.model_utils import call_unet
+            with torch.no_grad():
+                noise_pred = call_unet(unet,latent, 0,con,[[0]],None)
+                score_list = controller.normal_score_list
+                controller.reset()
+                score = sum(score_list)/len(score_list)
+                line = f'{class_name} : {test_image} : {score}'
+                lines.append(line)
+
+    output_text = os.path.join(output_dir, 'normality_score.txt')
 
     with open(output_text, 'w') as f:
         for line in lines:
