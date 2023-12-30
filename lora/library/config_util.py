@@ -351,10 +351,14 @@ class BlueprintGenerator:
         super_parent, folder_name = os.path.split(parent) # , bad
         mask_parent = os.path.join(super_parent, f'bad_sam')
         mask_dir = os.path.join(mask_parent, child)
+        mask_res = argparse_namespace.mask_res
         subset_config['mask_dir'] = mask_dir
+        subset_config['mask_res'] = mask_res
         params = self.generate_params_by_fallbacks(subset_params_klass,
-                                                   [subset_config,dataset_config,
-                                                    general_config, argparse_config,
+                                                   [subset_config,
+                                                    dataset_config,
+                                                    general_config,
+                                                    argparse_config,
                                                     runtime_params])
         subset_blueprints.append(SubsetBlueprint(params))
       params = self.generate_params_by_fallbacks(dataset_params_klass,

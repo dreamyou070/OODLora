@@ -109,6 +109,7 @@ class ImageInfo:
     def __init__(self,
                  image_key: str,
                  num_repeats: int, caption: str, is_reg: bool, absolute_path: str,
+                 mask_res: int,
                  mask_dir:str,
                  class_caption:Optional[str]) -> None:
         self.image_key: str = image_key
@@ -126,6 +127,7 @@ class ImageInfo:
         self.latents_crop_ltrb: Tuple[int, int] = None  # crop left top right bottom in original pixel size, not latents size
         self.cond_img_path: str = None
         self.image: Optional[Image.Image] = None  # optional, original PIL Image
+        self.mask_res = mask_res
         # SDXL, optional
         self.text_encoder_outputs_npz: Optional[str] = None
         self.text_encoder_outputs1: Optional[torch.Tensor] = None
@@ -1051,13 +1053,14 @@ class BaseDataset(torch.utils.data.Dataset):
             anormal_mask_dir = os.path.join(super_super_parent, 'corrected', class_name, name)
 
             # (2.1) img mask """ background is zero """
-            img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((32,32), Image.BICUBIC), np.uint8)
+            mask_res = image_info.mask_res
+            img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((mask_res,mask_res), Image.BICUBIC), np.uint8)
             img_mask = np.where(img_mask > 10, 1, 0) #
             img_mask = torch.Tensor(img_mask)
             img_masks.append(img_mask)
 
             # (2.2) anormal mask """ normal is zero, anormal is white """
-            anormal_mask = np.array(Image.open(anormal_mask_dir).convert('L').resize((32,32), Image.BICUBIC), np.uint8)
+            anormal_mask = np.array(Image.open(anormal_mask_dir).convert('L').resize((mask_res,mask_res), Image.BICUBIC), np.uint8)
             anormal_mask = np.where(anormal_mask > 10, 1, 0) #
             anormal_mask = torch.Tensor(anormal_mask)
             anormal_masks.append(anormal_mask)
