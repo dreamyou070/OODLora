@@ -365,35 +365,35 @@ class NetworkTrainer:
         print(f'\n step 7. training preparing')
         if train_unet and train_text_encoder:
             if len(text_encoders) > 1:
-                unet, t_enc1, t_enc2, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler, = accelerator.prepare(
-                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, valid_dataloader, lr_scheduler,)
+                unet, t_enc1, t_enc2, network, optimizer, train_dataloader,lr_scheduler, = accelerator.prepare(
+                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler,)
                 text_encoder = text_encoders = [t_enc1, t_enc2]
                 del t_enc1, t_enc2
                 enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1], enc_unet)
                 enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
                 del enc_t_enc1, enc_t_enc2
             else:
-                unet, text_encoder, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler = accelerator.prepare(
-                    unet, text_encoder, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler)
+                unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+                    unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler)
                 text_encoders = [text_encoder]
                 enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
                 enc_text_encoders = [enc_text_encoder]
         elif train_unet:
-            unet, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler = accelerator.prepare(
-                unet, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler)
+            unet, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+                unet, network, optimizer, train_dataloader, lr_scheduler)
             enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
         elif train_text_encoder:
             if len(text_encoders) > 1:
-                t_enc1, t_enc2, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler = accelerator.prepare(
-                    text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, valid_dataloader, lr_scheduler)
+                t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+                    text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler)
                 text_encoder = text_encoders = [t_enc1, t_enc2]
                 del t_enc1, t_enc2
                 enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1], enc_unet)
                 enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
                 del enc_t_enc1, enc_t_enc2
             else:
-                text_encoder, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler = accelerator.prepare(
-                    text_encoder, network, optimizer, train_dataloader, valid_dataloader, lr_scheduler)
+                text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+                    text_encoder, network, optimizer, train_dataloader, lr_scheduler)
                 text_encoders = [text_encoder]
                 enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
                 enc_text_encoders = [enc_text_encoder]
