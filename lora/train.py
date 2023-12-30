@@ -550,8 +550,6 @@ class NetworkTrainer:
                             normal_score_diff = normal_score_map - anormal_score_map  # b,res,res,1
 
                             binary_map = batch['binary_images'].unsqueeze(-1) # batch, res, res, 1
-                            print(f'binary_map: {binary_map.shape}')
-                            print(f'anormal_score_diff: {anormal_score_diff.shape}')
                             #binary_map.expand(attn_score.shape)
                             maps = []
                             batch_num = binary_map.shape[0]
@@ -560,7 +558,6 @@ class NetworkTrainer:
                                 if b_map.dim() != 2:
                                     b_map = b_map.squeeze()
                                 # b_map = [res,res,1]
-                                print(f'b_map: {b_map.shape}')
                                 pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res))
                                 binary_aug_np = np.array(pil)
                                 # binary_aug_np = [res,res,1]
@@ -568,25 +565,27 @@ class NetworkTrainer:
                                 binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,64,64,1]
                                 binary_aug_tensor = binary_aug_tensor.expand((8, res, res, 1))
                                 maps.append(binary_aug_tensor)
-                            maps = torch.cat(maps, dim=0).to(accelerator.device) # [b*head, 64, 64, 1]
-
+                            binary_map = torch.cat(maps, dim=0).to(accelerator.device) # [b*head, 64, 64, 1]
                             normal_position = (1-binary_map).to(dtype=weight_dtype)
                             anormal_position = binary_map.to(dtype=weight_dtype)
 
+                            # normal pixel's anormal score
                             normal_loss  = normal_position.to(anormal_score_map.device) * anormal_score_map
-                            anormal_loss = anormal_position.to(anormal_score_map.device) * normal_score_map
-                            normal_diff_loss = normal_score_diff * anormal_position.to(anormal_score_map.device)
                             anormal_diff_loss = anormal_score_diff * normal_position.to(anormal_score_map.device)
 
-                            layer_attn_loss = normal_loss + anormal_loss + normal_diff_loss + anormal_diff_loss
-                            print(f'normal_loss : {normal_loss}')
-                            print(f'anormal_loss : {anormal_loss}')
-                            print(f'normal_diff_loss : {normal_diff_loss}')
-                            print(f'anormal_diff_loss : {anormal_diff_loss}')
-                            print(f'layer_attn_loss : {layer_attn_loss}')
+                            anormal_loss = anormal_position.to(anormal_score_map.device) * normal_score_map
+                            normal_diff_loss = normal_score_diff * anormal_position.to(anormal_score_map.device)
 
+                            layer_attn_loss = normal_loss + anormal_loss + normal_diff_loss + anormal_diff_loss
                             attn_loss += layer_attn_loss.mean()
                             loss = attn_loss
+
+                            log_loss["loss/normal_pixel_anormal_score"] = normal_loss.item()
+                            log_loss["loss/anormal_score_diff_of_normal_pixel"] = anormal_diff_loss.item()
+
+                            log_loss["loss/anormal_pixel_normal_score"] = anormal_loss.item()
+                            log_loss["loss/normal_score_diff_of_anormal_pixel"] = normal_diff_loss.item()
+
                             log_loss["loss/attn_loss"] = attn_loss.item()
 
                     # (3) natural training
