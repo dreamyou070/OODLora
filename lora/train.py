@@ -241,7 +241,7 @@ class NetworkTrainer:
         else:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
 
-
+        """
         print(f' (2.2) validation dataset')
         blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
         user_config = {}
@@ -253,7 +253,7 @@ class NetworkTrainer:
             user_config['datasets'][0]['subsets'] = subsets_dict_list
         valid_blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
         valid_dataset_group = config_util.generate_dataset_group_by_blueprint(valid_blueprint.dataset_group)
-
+        """
         print(f' (2.3) collater')
         current_epoch = Value("i", 0)
         current_step = Value("i", 0)
@@ -275,7 +275,7 @@ class NetworkTrainer:
         print(f' (4.1) config saving')
         with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
-        logging_file = os.path.join(args.output_dir, f"validation_log_{time}.txt")
+        #logging_file = os.path.join(args.output_dir, f"validation_log_{time}.txt")
 
         print(f'\n step 5. model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
