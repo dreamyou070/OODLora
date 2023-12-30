@@ -331,10 +331,12 @@ class NetworkTrainer:
                                                        shuffle=True,
                                                        collate_fn=collater, num_workers=n_workers,
                                                        persistent_workers=args.persistent_data_loader_workers, )
+        """
         valid_dataloader = torch.utils.data.DataLoader(valid_dataset_group, batch_size=args.train_batch_size,
                                                        shuffle=False,
                                                        collate_fn=collater, num_workers=n_workers,
                                                        persistent_workers=args.persistent_data_loader_workers, )
+        """
         if args.max_train_epochs is not None:
             args.max_train_steps = args.max_train_epochs * math.ceil(
                 len(train_dataloader) / accelerator.num_processes / args.gradient_accumulation_steps)
