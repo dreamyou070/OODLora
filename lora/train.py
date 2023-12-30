@@ -538,14 +538,16 @@ class NetworkTrainer:
                             if normal_score_map.dim() != 3:
                                 normal_score_map = normal_score_map.unsqueeze(-1)
                                 anormal_score_map = anormal_score_map.unsqueeze(-1)
-                            print(f'normal_score_map: {normal_score_map.shape}')
-                            b, pix_num, _ = normal_score_map
+
+                            b, pix_num, _ = normal_score_map.shape
+
                             res = int(math.sqrt(pix_num))
+
                             normal_score_map = normal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
                             anormal_score_map = anormal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
 
-                            anormal_score_diff = anormal_score_map - normal_score_map
-                            normal_score_diff = normal_score_map - anormal_score_map
+                            anormal_score_diff = anormal_score_map - normal_score_map # b,res,res,1
+                            normal_score_diff = normal_score_map - anormal_score_map  # b,res,res,1
 
                             binary_map = batch['binary_images'].unsqueeze(-1)
                             #binary_map.expand(attn_score.shape)
