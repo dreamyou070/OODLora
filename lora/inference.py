@@ -238,6 +238,7 @@ def main(args) :
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = torch.chunk(context, 2)
     uncon, con = uncon[:,3,:], con[:,3,:]
+    context = torch.cat([uncon, con], dim=1)
 
     print(f' (3.2) train images')
     trg_h, trg_w = args.resolution
