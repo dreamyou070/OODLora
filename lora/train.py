@@ -220,20 +220,17 @@ class NetworkTrainer:
         print(f' (2.1) training dataset')
         if args.dataset_class is None:
             blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
-            print("Using DreamBooth method.")
             user_config = {}
             user_config['datasets'] = [{"subsets": None}]
             subsets_dict_list = []
-            for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
-                                                                                          args.reg_data_dir,
-                                                                                          args.class_caption):
-                if use_class_caption:
-                    subsets_dict['class_caption'] = args.class_caption
+            for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir, args.reg_data_dir, args.class_caption):
+                if use_class_caption : subsets_dict['class_caption'] = args.class_caption
                 subsets_dict_list.append(subsets_dict)
                 user_config['datasets'][0]['subsets'] = subsets_dict_list
             print(f'User config: {user_config}')
-            blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
-            blueprint.dataset_group
+            blueprint = blueprint_generator.generate(user_config,
+                                                     args,
+                                                     tokenizer=tokenizer)
             print(f'blueprint.dataset_group : {blueprint.dataset_group}')
             train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
 

@@ -109,9 +109,9 @@ class ImageInfo:
     def __init__(self,
                  image_key: str,
                  num_repeats: int, caption: str, is_reg: bool, absolute_path: str,
-                 mask_res: int,
                  mask_dir:str,
-                 class_caption:Optional[str]) -> None:
+                 class_caption:Optional[str],
+                 mask_res: int,) -> None:
         self.image_key: str = image_key
         self.num_repeats: int = num_repeats
         self.caption: str = caption
@@ -1482,9 +1482,11 @@ class DreamBoothDataset(BaseDataset):
                 class_caption = subset.class_caption
                 name = os.path.split(img_path)[1]
                 mask_dir = os.path.join(subset.mask_dir,name)
+                mask_res = subset.mask_res
                 info = ImageInfo(img_path, subset.num_repeats, caption, subset.is_reg, img_path,
                                  mask_dir,
-                                 class_caption)
+                                 class_caption,
+                                 mask_res)
                 if subset.is_reg:
                     reg_infos.append(info)
                 else:

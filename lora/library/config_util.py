@@ -346,7 +346,6 @@ class BlueprintGenerator:
       subset_blueprints = []
 
       for subset_config in subsets:
-        #subset_config['trg_concept'] = argparse_namespace.trg_concept
         parent, child = os.path.split(subset_config['image_dir'])  # bad, 10_combined
         super_parent, folder_name = os.path.split(parent) # , bad
         mask_parent = os.path.join(super_parent, f'bad_sam')
@@ -361,6 +360,7 @@ class BlueprintGenerator:
                                                     argparse_config,
                                                     runtime_params])
         subset_blueprints.append(SubsetBlueprint(params))
+
       params = self.generate_params_by_fallbacks(dataset_params_klass,
                                                  [dataset_config,
                                                   general_config,
@@ -453,8 +453,7 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
           face_crop_aug_range: {subset.face_crop_aug_range}
           random_crop: {subset.random_crop}
           token_warmup_min: {subset.token_warmup_min},
-          token_warmup_step: {subset.token_warmup_step},
-      """), "  ")
+          token_warmup_step: {subset.token_warmup_step},"""), "  ")
 
       if is_dreambooth:
         info += indent(dedent(f"""\
@@ -469,15 +468,11 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
 
   print(info)
 
-  # make buckets first because it determines the length of dataset
-  # and set the same seed for all datasets
-  # actual seed is seed + epoch_no
   seed = random.randint(0, 2**31)
   for i, dataset in enumerate(datasets):
     print(f"[Dataset {i}]")
     dataset.make_buckets()
     dataset.set_seed(seed)
-
   return DatasetGroup(datasets)
 
 
