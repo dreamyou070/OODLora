@@ -535,7 +535,9 @@ class NetworkTrainer:
                             #text_encoder_conds = text_encoder_conds[:, :3, :]
 
                             batch_input_ids = batch["input_ids"]
-                            print(f'batch_input_ids: {batch_input_ids}')
+                            anormal_batch_input_ids = batch_input_ids[test_indexs, :]
+                            print(f'batch_input_ids: {batch_input_ids.shape}')
+                            print(f'anormal_batch_input_ids: {anormal_batch_input_ids.shape}')
                             #encoder_hidden_states = train_util.get_hidden_states(args, input_ids,
                             #                                                     tokenizers[0], text_encoders[0],
                             #                                                     weight_dtype)
