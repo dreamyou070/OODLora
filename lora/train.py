@@ -567,30 +567,25 @@ class NetworkTrainer:
                             anormal_position = binary_map.to(dtype=weight_dtype)
 
                             # normal pixel's anormal score
-                            normal_loss = normal_position.to(anormal_score_map.device) * anormal_score_map
-                            print(f'normal_loss: {normal_loss.shape}')
-                            #normal_loss = ().mean([1,2]).mean()
-
-
-
-
-                            anormal_loss = (anormal_position.to(anormal_score_map.device) * normal_score_map).mean([1,2]).mean()
+                            normal_loss = (normal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]
+                            anormal_loss = (anormal_position.to(anormal_score_map.device) * normal_score_map).squeeze()  # [b, res, res, 1]
                             score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
                             flatten_score_map = score_map.view(-1, 2)
                             anormal_position = anormal_position.view(-1, 1).squeeze()
-                            cross_ent_loss = cross_entropy_loss(flatten_score_map, anormal_position.long()).mean()
+                            cross_ent_loss = cross_entropy_loss(flatten_score_map, anormal_position.long())
+                            cross_ent_loss = cross_ent_loss.reshape(normal_loss.shape)
 
                             normal_loss += normal_loss
                             anormal_loss += anormal_loss
                             cross_loss += cross_ent_loss
 
-                        log_loss["loss/anormal_pixel_normal_score"] = normal_loss.item()
-                        log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.item()
-                        log_loss["loss/cross_entropy_loss"] = cross_loss.item()
+                        log_loss["loss/anormal_pixel_normal_score"] = normal_loss.mean().item()
+                        log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.mean().item()
+                        log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
 
                         attn_loss = normal_loss + anormal_loss + cross_loss
 
-                        loss = attn_loss
+                        loss = attn_loss.mean()
 
                     # (3) natural training
                     if len(train_indexs) > 0:
@@ -645,7 +640,7 @@ class NetworkTrainer:
 
                         #attn_loss +=  task_loss
                         task_loss = task_loss * args.task_loss_weight
-                        loss += task_loss
+                        loss += task_loss.mean()
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
