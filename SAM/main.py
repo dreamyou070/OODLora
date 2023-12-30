@@ -1,6 +1,6 @@
 from segment_anything import SamPredictor, sam_model_registry
 import argparse, os
-
+from PIL import Image
 def main(args):
 
     print(f'step 1. prepare model')
@@ -21,7 +21,8 @@ def main(args):
             images = os.listdir(folder_dir)
             for image in images:
                 img_dir = os.path.join(folder_dir, image)
-                predictor.set_image(img_dir)
+                pil_img = Image.open(img_dir)
+                predictor.set_image(pil_img)
                 masks, _, _ = predictor.predict(cat)
                 print(f'masks : {masks}')
                 break
