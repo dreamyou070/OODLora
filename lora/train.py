@@ -522,7 +522,7 @@ class NetworkTrainer:
                     # (3.2) attention loss
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
-                        text_encoder_conds = text_encoder_conds[:,:3,:]
+                        text_encoder_conds = text_encoder_conds[:,:4,:] # add one pad token (EOS token)
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
                     with accelerator.autocast():
                         self.call_unet(args, accelerator, unet,
@@ -573,8 +573,6 @@ class NetworkTrainer:
 
                                 normal_position = (1-binary_map).to(dtype=weight_dtype)
                                 anormal_position = binary_map.to(dtype=weight_dtype)
-                                print(f'normal_position.shape : {normal_position.sum()}')
-                                print(f'anormal_position.shape : {anormal_position.sum()}')
 
                                 # normal pixel's anormal score
                                 normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]
@@ -628,6 +626,7 @@ class NetworkTrainer:
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
+
                 if args.scale_weight_norms:
                     keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(
                         args.scale_weight_norms, accelerator.device)
