@@ -56,11 +56,13 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 batch_back_map = []
                 new_attns = []
                 for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
+                    """
                     #  torch.Size([8, 4096, 77])
                     #if args.other_token_preserving :
                     #    attention_probs_object_sub = attention_probs_back.clone().detach()
                     #else :
                     #    attention_probs_object_sub = attention_probs_object.clone().detach()
+                    """
                     pixel_num = attention_probs_back.shape[1] # head, pixel_num, word_num
                     map_list = []
                     res = int(pixel_num ** 0.5)
@@ -69,10 +71,12 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         max_txt_idx = torch.max(attention_probs_back[:, :, 1:], dim=-1).indices  # remove cls token
                         """ is i can trust original img, token should be 0 ( without cls token ) """
                         position_map = torch.where(max_txt_idx == 0, 1, 0)  # trust of background
+                        map_list.append(position_map)
+
                         map_dict[common_name] = []
                         map_dict[common_name].append(position_map)
                         """
-                        attention_probs_object_sub = attention_probs_object * (1 - position_map) + attention_probs_back * position_map                        
+                        attention_probs_object_sub = attention_probs_object * (1 - position_map) + attention_probs_back * position_map                      
                         
                         batch_trg_index = trg_indexs_list[batch_idx]  # two times
                         for word_idx in batch_trg_index:
@@ -84,27 +88,22 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         """
                         position_map = position_map.unsqueeze(-1)
                         position_map = position_map.expand(attention_probs_back.shape)
-                        attention_probs_object_sub = attention_probs_object * (1 - position_map) + attention_probs_back * position_map
-
-                    if len(map_list) > 0 :
-                        controller.store(torch.cat(map_list, dim=0), layer_name)
-                    new_attns.append(attention_probs_object_sub)
-                object_attention_probs = torch.cat(new_attns, dim=0)
-                attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
-
+                        attention_probs_object = attention_probs_object * (1 - position_map) + attention_probs_back * position_map
+                        #new_attns.append(position_map)
+                        #object_attention_probs = torch.cat(new_attns, dim=0)
+                        attention_probs = torch.cat([attention_probs_back, attention_probs_object], dim=0)
+                        if len(map_list) > 0:
+                            controller.store(torch.cat(map_list, dim=0), layer_name)
             elif not is_cross_attention and trg_indexs_list is not None:
-
                 self_common_name = layer_name.split('_')[:-1]
                 self_common_name = '_'.join(self_common_name)
-
                 if self_common_name in map_dict.keys() :
-
                     back_map = map_dict[self_common_name][0]
                     background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0) # [head, pix_num, dim]
                     dim = background_attention_probs.shape[-1]
                     back_map = back_map.unsqueeze(-1)
                     back_map = back_map.repeat(1, 1, dim)
-                    batch_num = len(trg_indexs_list)
+                    #batch_num = len(trg_indexs_list)
                     object_attention_probs = object_attention_probs * (1 - back_map) + background_attention_probs * back_map
                     attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
                     del map_dict[self_common_name]
