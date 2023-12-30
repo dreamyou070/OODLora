@@ -1032,8 +1032,8 @@ class BaseDataset(torch.utils.data.Dataset):
         train_class_list = []
         mask_dirs = []
         caption_attention_masks = []
-        binary_images = []
-        binary_mask_latents = []
+        img_masks, anormal_masks = [], []
+
         for J, image_key in enumerate(bucket[image_index : image_index + bucket_batch_size ]):
 
             image_info = self.image_data[image_key]
@@ -1041,39 +1041,36 @@ class BaseDataset(torch.utils.data.Dataset):
             # (1) original iamge
             absolute_path = image_info.absolute_path
             absolute_paths.append(absolute_path)
+            img = load_image(absolute_path, self.height, self.width)  # ndarray
             # --------------------------------------------------------------------------------------------------------------
             # (2) mask
             parent, name = os.path.split(absolute_path)      # parent = 120_good , name = 000.png
             super_parent, class_name = os.path.split(parent) # class_name = 120_good
             super_super_parent, change = os.path.split(super_parent) # dir = 120
-            mask_dir = os.path.join(super_super_parent, 'corrected', class_name, name)
+            img_mask_dir = os.path.join(super_super_parent, 'bad_sam', class_name, name)
+            anormal_mask_dir = os.path.join(super_super_parent, 'corrected', class_name, name)
+
+            # (2.1) img mask """ background is zero """
+            img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((64, 64), Image.BICUBIC), np.uint8)
+            img_mask = np.where(img_mask > 10, 1, 0) #
+            img_mask = torch.Tensor(img_mask)
+            img_masks.append(img_mask)
+
+            # (2.2) anormal mask """ normal is zero, anormal is white """
+            anormal_mask = np.array(Image.open(anormal_mask_dir).convert('L').resize((32,32), Image.BICUBIC), np.uint8)
+            anormal_mask = np.where(anormal_mask > 10, 1, 0) #
+            anormal_mask = torch.Tensor(anormal_mask)
+            anormal_masks.append(anormal_mask)
+
             caption = str(class_name.split('_')[-1]).strip()
-            #if mask_dir is None:
-            #    mask_dir = os.path.join(super_parent, 'corrected', class_name, dir)
-            mask_dirs.append(mask_dir)
+
             subset = self.image_to_subset[image_key]
             loss_weights.append(self.prior_loss_weight if image_info.is_reg else 1.0)
             flipped = subset.flip_aug and random.random() < 0.5  # not flipped or flipped with 50% chance
+
             # image/latentsを処理する
-
-            img = load_image(absolute_path, self.height, self.width) # ndarray
-            #masked_img = load_image(mask_dir, self.height, self.width)
-
-
-            mask_pil = Image.open(mask_dir).convert('L').resize((32,32), Image.BICUBIC)
-            mask_img = np.array(mask_pil, np.uint8)
-            binary_img = np.where(mask_img > 10, 1, 0)
-            binary_img = torch.Tensor(binary_img)
-
-            mask_latent = Image.open(mask_dir).convert('L').resize((64,64), Image.BICUBIC)
-            mask_latent = np.array(mask_latent, np.uint8)
-            binary_mask_latent = torch.Tensor(np.where(mask_latent > 10, 1, 0))
-
-
-
             if self.enable_bucket:
                 img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
-                masked_img, _, _ = trim_and_resize_if_required(subset.random_crop, masked_img, image_info.bucket_reso, image_info.resized_size)
             else:
                 im_h, im_w = img.shape[0:2]
                 if im_h > self.height or im_w > self.width:
@@ -1081,7 +1078,6 @@ class BaseDataset(torch.utils.data.Dataset):
                     if im_h > self.height:
                         p = random.randint(0, im_h - self.height)
                         img = img[p : p + self.height]
-                        masked_img = masked_img[p : p + self.height]
                     if im_w > self.width:
                         p = random.randint(0, im_w - self.width)
                         img = img[:, p : p + self.width]
@@ -1097,9 +1093,6 @@ class BaseDataset(torch.utils.data.Dataset):
 
                 # ------------------------------------------------------------------------------------------------------------------------ #
                 # augmentationを行う
-
-                #    img = aug(image=img)["image"]
-                #    masked_img = aug(image=masked_img)["image"]
                 if aug is not None:
                     def patch_shuffle_with_index(patch_indexs, np_img):
                         patches = []
@@ -1119,28 +1112,20 @@ class BaseDataset(torch.utils.data.Dataset):
                                 int(j * patch_w):int((j + 1) * patch_w)] = patch
                         shuffled_img = zero_image
                         return shuffled_img
-
                     org_h, org_w, c = img.shape
                     patch_h, patch_w = org_h / 4, org_w / 4
                     h_num, w_num = 4, 4
                     total_patch_num = h_num * w_num
                     patch_indexs = [i for i in range(total_patch_num)]
                     random.shuffle(patch_indexs)
-
                     img = patch_shuffle_with_index(patch_indexs, img)
-                    masked_img =patch_shuffle_with_index(patch_indexs, masked_img)
-
                 if flipped:
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
-                    #masked_img = masked_img[:, ::-1, :].copy()
                 latents = None
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
-                #masked_image = self.image_transforms(masked_img)
-            binary_images.append(binary_img)
-            binary_mask_latents.append(binary_mask_latent)
 
             images.append(image)
-            #mask_imgs.append(masked_image)
+
             latents_list.append(latents)
             target_size = (image.shape[2], image.shape[1]) if image is not None else (latents.shape[2] * 8, latents.shape[1] * 8)
             if not flipped:
@@ -1271,15 +1256,15 @@ class BaseDataset(torch.utils.data.Dataset):
 
         if images[0] is not None:
             images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
-            #mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
-            binary_images = torch.stack(binary_images).to(memory_format=torch.contiguous_format).float()
-            binary_mask_latents = torch.stack(binary_mask_latents).to(memory_format=torch.contiguous_format).float()
+            img_masks = torch.stack(img_masks).to(memory_format=torch.contiguous_format).float()
+            anormal_masks = torch.stack(anormal_masks).to(memory_format=torch.contiguous_format).float()
+
         else:
             images = None
             mask_imgs = None
 
-        example["binary_images"] = binary_images
-        example["binary_mask_latents"] = binary_mask_latents
+        example["img_masks"] = img_masks
+        example["anormal_masks"] = anormal_masks
         example["mask_dirs"] = mask_dirs
         example["trg_indexs_list"] = trg_indexs_list  ##########################################################
         example["train_class_list"] = train_class_list

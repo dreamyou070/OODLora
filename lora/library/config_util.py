@@ -349,7 +349,7 @@ class BlueprintGenerator:
         #subset_config['trg_concept'] = argparse_namespace.trg_concept
         parent, child = os.path.split(subset_config['image_dir'])  # bad, 10_combined
         super_parent, folder_name = os.path.split(parent) # , bad
-        mask_parent = os.path.join(super_parent, f'corrected')
+        mask_parent = os.path.join(super_parent, f'bad_sam')
         mask_dir = os.path.join(mask_parent, child)
         subset_config['mask_dir'] = mask_dir
         params = self.generate_params_by_fallbacks(subset_params_klass,

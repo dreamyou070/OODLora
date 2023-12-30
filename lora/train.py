@@ -505,6 +505,9 @@ class NetworkTrainer:
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
+                        img_masks = batch["img_masks"].to(accelerator.device) # background = zero, foreground = one
+
+
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_class_list = batch["train_class_list"]
                     train_indexs, test_indexs = [], []
@@ -548,12 +551,18 @@ class NetworkTrainer:
                                 normal_score_map = normal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
                                 anormal_score_map = anormal_score_map.reshape(b, res, res, -1) # [b, res, res, 1]
 
-                                binary_map = batch['binary_images'].unsqueeze(-1) # batch, res, res, 1
+                                binary_map = batch['anormal_masks'].unsqueeze(-1) # batch, res, res, 1 (normal = 0, anormal = 1
                                 maps = []
                                 batch_num = binary_map.shape[0]
                                 normal_score_map_batch = torch.chunk(normal_score_map, batch_num, dim=0)
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0)
+                                img_masks_batch = torch.chunk(img_masks , batch_num, dim=0) # batch, 1, res, res
+                                img_masks_batch = img_masks_batch.squeeze(1)
+                                if img_masks_batch.dim() != 2:
+                                    img_masks_batch = img_masks_batch.unsqueeze(0) # batch, res, res
+                                img_mask = []
                                 for i in range(batch_num):
+
                                     normal_score_map = normal_score_map_batch[i]
                                     anormal_score_map = anormal_score_map_batch[i]
 
@@ -569,20 +578,37 @@ class NetworkTrainer:
                                     binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,32,32,1]
                                     binary_aug_tensor = binary_aug_tensor.expand((8, res, res, 1))
                                     maps.append(binary_aug_tensor)
-                                binary_map = torch.cat(maps, dim=0).to(accelerator.device) # [b*head, 64, 64, 1]
 
-                                normal_position = (1-binary_map).to(dtype=weight_dtype)
-                                anormal_position = binary_map.to(dtype=weight_dtype)
+                                    img_mask = img_masks_batch[i] # 1, res,res
+                                    img_mask = img_mask.unsqueeze(-1) # 1, res, res, 1
+                                    r1, r2, c = img_mask.shape
+                                    img_mask = img_mask.expand((8, r1, r2, c)) # 8, res, res, 1
 
-                                # normal pixel's anormal score
-                                normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]
-                                anormal_loss += (anormal_position.to(anormal_score_map.device) * normal_score_map).squeeze()  # [b, res, res, 1]
+                                    normal_position = (1-binary_aug_tensor).to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
+                                    anormal_position = binary_aug_tensor.to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
 
-                                score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
-                                flatten_score_map = score_map.view(-1, 2)
-                                anormal_position = anormal_position.view(-1, 1).squeeze()
-                                cross_ent_loss = cross_entropy_loss(flatten_score_map, anormal_position.long())
-                                cross_loss += cross_ent_loss.reshape(normal_loss.shape)
+                                    # normal pixel's anormal score
+                                    normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]
+                                    anormal_loss += (anormal_position.to(anormal_score_map.device) * normal_score_map).squeeze()  # [b, res, res, 1]
+
+                                    score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
+                                    flatten_score_map = score_map.view(-1, 2)
+                                    flatten_img_mask = img_mask.view(-1, 1).squeeze()
+                                    anormal_position = anormal_position.view(-1, 1).squeeze()
+
+                                    score_pairs = []
+                                    answers = []
+                                    for l in range(flatten_score_map.shape[0]):
+                                        if flatten_img_mask[l] == 1:
+                                            score_pair = flatten_score_map[l].unsqueeze(0)
+                                            score_pairs.append(score_pair)
+                                            answer = anormal_position[l]
+                                            answers.append(answer)
+                                    score_pairs = torch.cat(score_pairs, dim=0)
+                                    answers = torch.cat(answers, dim=0)
+
+                                    cross_ent_loss = cross_entropy_loss(score_pairs, answers.long())
+                                    cross_loss += cross_ent_loss.reshape(normal_loss.shape)
 
                         log_loss["loss/anormal_pixel_normal_score"] = normal_loss.mean().item()
                         log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.mean().item()
