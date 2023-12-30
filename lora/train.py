@@ -502,7 +502,7 @@ class NetworkTrainer:
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
-                        batch_size = latents.shape[0]
+
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_class_list = batch["train_class_list"]
                     train_indexs, test_indexs = [], []
@@ -514,8 +514,10 @@ class NetworkTrainer:
                     train_latents = latents[train_indexs, :, :, :]
                     trg_indexs = batch["trg_indexs_list"]
                     log_loss = {}
+
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.1) anormal training
+                    total_loss = 0
                     if len(test_indexs) > 0:
                         anormal_latents = latents[test_indexs, :, :, :]
                         noise, noisy_anormal_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, anormal_latents)
@@ -539,6 +541,9 @@ class NetworkTrainer:
                             binary_mask_latents = binary_mask_latents.expand(target.shape)
                             anormal_task_loss = torch.nn.functional.mse_loss(noise_pred.float() * binary_mask_latents,
                                                                              target.float()*binary_mask_latents, reduction="none")
+                            anormal_task_loss = anormal_task_loss.mean([1, 2, 3])
+                            log_loss["loss/anormal_task_loss"] = anormal_task_loss.mean().item()
+                            total_loss += anormal_task_loss.mean()
 
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.2) attention loss
@@ -605,10 +610,8 @@ class NetworkTrainer:
                         log_loss["loss/anormal_pixel_normal_score"] = normal_loss.mean().item()
                         log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.mean().item()
                         log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
-
                         attn_loss = normal_loss + anormal_loss + cross_loss
-
-                        loss = attn_loss.mean()
+                        total_loss += attn_loss.mean()
 
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.3) natural training
@@ -664,9 +667,9 @@ class NetworkTrainer:
 
                         #attn_loss +=  task_loss
                         task_loss = task_loss * args.task_loss_weight
-                        loss += task_loss.mean()
+                        total_loss += task_loss.mean()
                     # ------------------------------------------------------------------------------------
-                    accelerator.backward(loss)
+                    accelerator.backward(total_loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
                         accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
