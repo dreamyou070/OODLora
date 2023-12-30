@@ -557,10 +557,8 @@ class NetworkTrainer:
                             batch_num = binary_map.shape[0]
                             for i in range(batch_num):
                                 b_map = binary_map[i, :, :, :]
-                                if b_map.dim() != 3:
-                                    b_map = b_map.squeeze(0)
-                                if b_map.dim() != 3:
-                                    b_map = b_map.unsqueeze(0)
+                                if b_map.dim() != 2:
+                                    b_map = b_map.squeeze()
                                 # b_map = [res,res,1]
                                 print(f'b_map: {b_map.shape}')
                                 pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res))
