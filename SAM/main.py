@@ -17,8 +17,14 @@ def main(args):
     cats = os.listdir(base_folder)
     for cat in cats:
         cat_dir = os.path.join(base_folder, f'{cat}/train_ex/bad')
+        save_cat_dir = os.path.join(base_folder, f'{cat}/train_ex/bad_sam')
+        os.makedirs(save_cat_dir, exist_ok=True)
         folders = os.listdir(cat_dir)
         for folder in folders:
+
+            save_folder_dir = os.path.join(save_cat_dir, folder)
+            os.makedirs(save_folder_dir, exist_ok=True)
+
             folder_dir = os.path.join(cat_dir, folder)
             images = os.listdir(folder_dir)
             for image in images:
@@ -29,7 +35,8 @@ def main(args):
                 input_label = np.array([0])
                 masks, scores, logits = predictor.predict(point_coords=input_point,point_labels=input_label,multimask_output=True,)
                 for i, (mask, score) in enumerate(zip(masks, scores)):
-                    print(mask.shape)
+                    np_mask = 255 * (mask * 1)
+                    Image.fromarray(np_mask.astype(np.uint8)).save(os.path.join(save_folder_dir, f'{image[:-4]}_{i}.png'))
                 break
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
