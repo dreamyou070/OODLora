@@ -570,14 +570,12 @@ class NetworkTrainer:
                                     score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
                                     flatten_score_map = score_map.view(-1, 2)
 
-                                    print(f'img_mask : {img_mask.shape}')
                                     flatten_img_mask = img_mask.contiguous().view(-1, 1)
                                     flatten_img_mask = flatten_img_mask.squeeze() # [8*32*32]
 
                                     anormal_position = anormal_position.view(-1, 1)
                                     anormal_position = anormal_position.squeeze()
-                                    print(f'flatten_score_map (head*32*32, 2): {flatten_score_map.shape} | anormal_position (head*32*32) : {anormal_position.shape}')
-
+                                    
                                     score_pairs = []
                                     answers = []
                                     for l in range(flatten_score_map.shape[0]):
