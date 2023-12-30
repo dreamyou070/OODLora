@@ -573,10 +573,10 @@ class NetworkTrainer:
                             normal_position = (1-binary_map).to(dtype=weight_dtype)
                             anormal_position = binary_map.to(dtype=weight_dtype)
 
-                            normal_loss  = normal_position.to(anormal_score_map.defice) * anormal_score_map
-                            anormal_loss = anormal_position.to(anormal_score_map.defice) * normal_score_map
-                            normal_diff_loss = normal_score_diff * anormal_position.to(anormal_score_map.defice)
-                            anormal_diff_loss = anormal_score_diff * normal_position.to(anormal_score_map.defice)
+                            normal_loss  = normal_position.to(anormal_score_map.device) * anormal_score_map
+                            anormal_loss = anormal_position.to(anormal_score_map.device) * normal_score_map
+                            normal_diff_loss = normal_score_diff * anormal_position.to(anormal_score_map.device)
+                            anormal_diff_loss = anormal_score_diff * normal_position.to(anormal_score_map.device)
 
                             layer_attn_loss = normal_loss + anormal_loss + normal_diff_loss + anormal_diff_loss
                             print(f'normal_loss : {normal_loss}')
