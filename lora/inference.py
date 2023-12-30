@@ -188,7 +188,8 @@ def main(args) :
     output_dir = os.path.join(output_dir,f'lora_{model_epoch}_final_noising_{args.final_noising_time}_num_ddim_steps_{args.num_ddim_steps}_'
                                          f'cross_res{title}_'
                                          f'res_{args.pixel_mask_res}_'
-                                         f'pixel_mask_pixel_thred_{args.pixel_thred}')
+                                         f'pixel_mask_pixel_thred_{args.pixel_thred}_'
+                                         f'inner_iter_{args.inner_iter}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
@@ -356,6 +357,8 @@ if __name__ == "__main__":
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
     parser.add_argument("--pixel_mask_res", type=float, default=0.1)
     parser.add_argument("--pixel_thred", type=float, default=0.1)
+    parser.add_argument("--inner_iteration", type=int, default=10)
+
 
     parser.add_argument("--other_token_preserving", action = 'store_true')
     import ast
