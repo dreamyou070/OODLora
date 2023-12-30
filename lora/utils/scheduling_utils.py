@@ -129,42 +129,42 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
         with torch.no_grad():
-            for i in range(args.inner_iteration) :
-                z_latent = z_latent_dict[t]
-                x_latent = x_latent_dict[t]
-                input_latent = torch.cat([z_latent, x_latent], dim=0)
-                input_cond = torch.cat([con, con], dim=0)
-                trg_indexs_list = [[1]]
-                pixel_set = []
-                noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, pixel_set)
 
-                mask_dict = controller.step_store
-                controller.reset()
-                # ------------------- 1. get mask ------------------- #
-                layers = mask_dict.keys()
-                mask_dict_by_res = {}
-                map_list = []
-                for layer in layers:
-                    mask = mask_dict[layer][0] # [8,1024]
-                    head, pix_num = mask.shape
-                    res = int(pix_num ** 0.5)
-                    if res == args.pixel_mask_res:
-                        map_list.append(mask)
-                map = torch.cat(map_list, dim=0)
-                map = map.float().mean([0])
-                map = map.reshape(res,res)
-                #print(f'map : {map}')
+            z_latent = z_latent_dict[t]
+            x_latent = x_latent_dict[t]
+            input_latent = torch.cat([z_latent, x_latent], dim=0)
+            input_cond = torch.cat([con, con], dim=0)
+            trg_indexs_list = [[1]]
+            pixel_set = []
+            noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, pixel_set)
 
-                mask_img = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8)
-                mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
+            mask_dict = controller.step_store
+            controller.reset()
+            # ------------------- 1. get mask ------------------- #
+            layers = mask_dict.keys()
+            mask_dict_by_res = {}
+            map_list = []
+            for layer in layers:
+                mask = mask_dict[layer][0] # [8,1024]
+                head, pix_num = mask.shape
+                res = int(pix_num ** 0.5)
+                if res == args.pixel_mask_res:
+                    map_list.append(mask)
+            map = torch.cat(map_list, dim=0)
+            map = map.float().mean([0])
+            map = map.reshape(res,res)
+            #print(f'map : {map}')
 
-                reverse_mask = torch.where(map > args.pixel_thred, 0, 1).cpu().numpy().astype(np.uint8)
-                reverse_mask = reverse_mask * 255
-                reverse_mask = Image.fromarray(reverse_mask )#.resize((512,512), )
+            mask_img = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8) # 1 means original
+            mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
 
-                mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(z_latent.device, dtype=z_latent.dtype)
-                x_latent = x_latent * (1 -mask_latent) + z_latent * (mask_latent)
-                x_latent_dict[t] = x_latent
+            reverse_mask = torch.where(map > args.pixel_thred, 0, 1).cpu().numpy().astype(np.uint8) # 1 means lora
+            reverse_mask = reverse_mask * 255
+            reverse_mask = Image.fromarray(reverse_mask)#.resize((512,512), )
+
+            mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(z_latent.device, dtype=z_latent.dtype)
+            x_latent = x_latent * (1 - mask_latent) + z_latent * (mask_latent)
+            x_latent_dict[t] = x_latent
 
             x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
             #z_noise_pred, x_noise_pred = noise_pred.chunk(2)
