@@ -69,7 +69,6 @@ class BaseDatasetParams:
   tokenizer: Union[CLIPTokenizer, List[CLIPTokenizer]] = None
   max_token_length: int = None
   resolution: Optional[Tuple[int, int]] = None
-  mask_res: Optional[int] = None
   debug_dataset: bool = False
 
 @dataclass
@@ -114,7 +113,6 @@ class DatasetBlueprint:
 @dataclass
 class DatasetGroupBlueprint:
   datasets: Sequence[DatasetBlueprint]
-
 @dataclass
 class Blueprint:
   dataset_group: DatasetGroupBlueprint
@@ -191,7 +189,6 @@ class ConfigSanitizer:
   ARGPARSE_NULLABLE_OPTNAMES = [
     "face_crop_aug_range",
     "resolution",
-    "mask_res",
   ]
   # prepare map because option name may differ among argparse and user config
   ARGPARSE_OPTNAME_TO_CONFIG_OPTNAME = {
@@ -327,44 +324,39 @@ class BlueprintGenerator:
                **runtime_params) -> Blueprint:
 
     sanitized_user_config = self.sanitizer.sanitize_user_config(user_config)
-
     sanitized_argparse_namespace = self.sanitizer.sanitize_argparse_namespace(argparse_namespace)
-
     optname_map = self.sanitizer.ARGPARSE_OPTNAME_TO_CONFIG_OPTNAME
     argparse_config = {optname_map.get(optname, optname): value for optname, value in vars(sanitized_argparse_namespace).items()}
-
     general_config = sanitized_user_config.get("general", {})
     dataset_blueprints = []
-
     for dataset_config in sanitized_user_config.get("datasets", []):
-      """ about directory """
       subsets = dataset_config.get("subsets", [])
       print(f' ** subsets : {subsets}')
       is_dreambooth = all(["metadata_file" not in subset for subset in subsets])
       is_controlnet = all(["conditioning_data_dir" in subset for subset in subsets])
-      if is_dreambooth:
+      if is_controlnet:
+        subset_params_klass = ControlNetSubsetParams
+        dataset_params_klass = ControlNetDatasetParams
+      elif is_dreambooth:
         subset_params_klass = DreamBoothSubsetParams
         dataset_params_klass = DreamBoothDatasetParams
-
+      else:
+        subset_params_klass = FineTuningSubsetParams
+        dataset_params_klass = FineTuningDatasetParams
       subset_blueprints = []
 
       for subset_config in subsets:
-
+        #subset_config['trg_concept'] = argparse_namespace.trg_concept
         parent, child = os.path.split(subset_config['image_dir'])  # bad, 10_combined
         super_parent, folder_name = os.path.split(parent) # , bad
         mask_parent = os.path.join(super_parent, f'bad_sam')
         mask_dir = os.path.join(mask_parent, child)
-        mask_res = argparse_namespace.mask_res
         subset_config['mask_dir'] = mask_dir
-        #subset_config['mask_res'] = mask_res
         params = self.generate_params_by_fallbacks(subset_params_klass,
-                                                   [subset_config, # about data directory
-                                                    dataset_config,
-                                                    general_config,
-                                                    argparse_config,
+                                                   [subset_config,dataset_config,
+                                                    general_config, argparse_config,
                                                     runtime_params])
         subset_blueprints.append(SubsetBlueprint(params))
-
       params = self.generate_params_by_fallbacks(dataset_params_klass,
                                                  [dataset_config,
                                                   general_config,
@@ -426,7 +418,6 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
       [Dataset {i}]
         batch_size: {dataset.batch_size}
         resolution: {(dataset.width, dataset.height)}
-        mask_res : {dataset.mask_res}
         enable_bucket: {dataset.enable_bucket}
     """)
 
@@ -458,7 +449,8 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
           face_crop_aug_range: {subset.face_crop_aug_range}
           random_crop: {subset.random_crop}
           token_warmup_min: {subset.token_warmup_min},
-          token_warmup_step: {subset.token_warmup_step},"""), "  ")
+          token_warmup_step: {subset.token_warmup_step},
+      """), "  ")
 
       if is_dreambooth:
         info += indent(dedent(f"""\
@@ -473,11 +465,15 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
 
   print(info)
 
+  # make buckets first because it determines the length of dataset
+  # and set the same seed for all datasets
+  # actual seed is seed + epoch_no
   seed = random.randint(0, 2**31)
   for i, dataset in enumerate(datasets):
     print(f"[Dataset {i}]")
     dataset.make_buckets()
     dataset.set_seed(seed)
+
   return DatasetGroup(datasets)
 
 
@@ -512,10 +508,9 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
                        "num_repeats": num_repeats,
                        "is_reg": is_reg,
                        "class_tokens": class_tokens,
-                       "class_caption": class_caption,}
+                       "class_caption": class_caption}
       subsets_config.append(subset_config)
     return subsets_config
-
   subsets_config = []
   subsets_config += generate(train_data_dir, False, class_caption)
   subsets_config += generate(reg_data_dir, True, class_caption)
