@@ -29,6 +29,7 @@ def main(args):
                     folder_dir = os.path.join(cat_dir, folder)
                     images = os.listdir(folder_dir)
                     for image in images:
+                        print(f'image : {image}')
                         img_dir = os.path.join(folder_dir, image)
                         np_img = np.array(Image.open(img_dir))
                         predictor.set_image(np_img)
@@ -36,10 +37,13 @@ def main(args):
                         input_label = np.array([0])
                         masks, scores, logits = predictor.predict(point_coords=input_point,point_labels=input_label,multimask_output=True,)
                         for i, (mask, score) in enumerate(zip(masks, scores)):
-                            if i == 1 :
-                                np_mask = (mask * 1)
-                                np_mask = np.where(np_mask == 1, 0, 1) * 255
-                                Image.fromarray(np_mask.astype(np.uint8)).save(os.path.join(save_folder_dir, image))
+                            if len(masks) < 3 :
+                                print('wrong')
+                            else :
+                                if i == 1 :
+                                    np_mask = (mask * 1)
+                                    np_mask = np.where(np_mask == 1, 0, 1) * 255
+                                    Image.fromarray(np_mask.astype(np.uint8)).save(os.path.join(save_folder_dir, image))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
