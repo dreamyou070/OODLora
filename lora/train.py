@@ -540,9 +540,6 @@ class NetworkTrainer:
                                 normal_score_map_batch  = torch.chunk(normal_score_map,  batch_num, dim=0)
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0)
                                 img_masks_batch = torch.chunk(img_masks, batch_num, dim=0) # batch, 1, res, res
-                                img_masks_batch = img_masks_batch.squeeze(1)
-                                if img_masks_batch.dim() != 2:
-                                    img_masks_batch = img_masks_batch.unsqueeze(0) # batch, res, res
                                 for i in range(batch_num):
                                     normal_score_map = normal_score_map_batch[i]   # [head, res, res, 1]
                                     print(f'normal_score_map (head, 32,32,1): {normal_score_map.shape}')
