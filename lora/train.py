@@ -598,6 +598,7 @@ class NetworkTrainer:
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.3) natural training
                     if len(train_indexs) > 0:
+                        train_latents = latents[train_indexs, :]
                         if train_latents.dim() != 4:
                             train_latents = train_latents.unsqueeze(0)
                         input_latents = train_latents
@@ -623,7 +624,7 @@ class NetworkTrainer:
                         log_loss["loss/task_loss"] = task_loss
                         task_loss = task_loss * args.task_loss_weight
                         total_loss += task_loss.mean()
-                        
+
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(total_loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
