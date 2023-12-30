@@ -226,12 +226,12 @@ class NetworkTrainer:
             for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir, args.reg_data_dir, args.class_caption):
                 if use_class_caption :
                     subsets_dict['class_caption'] = args.class_caption
-                subsets_dict['mask_res'] = args.mask_res
                 subsets_dict_list.append(subsets_dict)
                 user_config['datasets'][0]['subsets'] = subsets_dict_list
             print(f'User config: {user_config}')
-
-            blueprint = blueprint_generator.generate(user_config,
+            # --------------------------------------------------------------------------------------------------------
+            """ config_util.generate_dreambooth_subsets_config_by_subdirs """
+            blueprint = blueprint_generator.generate(user_config, # about data directory
                                                      args,
                                                      tokenizer=tokenizer)
 

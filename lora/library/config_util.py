@@ -69,6 +69,7 @@ class BaseDatasetParams:
   tokenizer: Union[CLIPTokenizer, List[CLIPTokenizer]] = None
   max_token_length: int = None
   resolution: Optional[Tuple[int, int]] = None
+  mask_res: Optional[int] = None
   debug_dataset: bool = False
 
 @dataclass
@@ -113,6 +114,7 @@ class DatasetBlueprint:
 @dataclass
 class DatasetGroupBlueprint:
   datasets: Sequence[DatasetBlueprint]
+
 @dataclass
 class Blueprint:
   dataset_group: DatasetGroupBlueprint
@@ -324,38 +326,38 @@ class BlueprintGenerator:
                **runtime_params) -> Blueprint:
 
     sanitized_user_config = self.sanitizer.sanitize_user_config(user_config)
+
     sanitized_argparse_namespace = self.sanitizer.sanitize_argparse_namespace(argparse_namespace)
+
     optname_map = self.sanitizer.ARGPARSE_OPTNAME_TO_CONFIG_OPTNAME
     argparse_config = {optname_map.get(optname, optname): value for optname, value in vars(sanitized_argparse_namespace).items()}
+
     general_config = sanitized_user_config.get("general", {})
     dataset_blueprints = []
 
     for dataset_config in sanitized_user_config.get("datasets", []):
+      """ about directory """
       subsets = dataset_config.get("subsets", [])
       print(f' ** subsets : {subsets}')
       is_dreambooth = all(["metadata_file" not in subset for subset in subsets])
       is_controlnet = all(["conditioning_data_dir" in subset for subset in subsets])
-      if is_controlnet:
-        subset_params_klass = ControlNetSubsetParams
-        dataset_params_klass = ControlNetDatasetParams
-      elif is_dreambooth:
+      if is_dreambooth:
         subset_params_klass = DreamBoothSubsetParams
         dataset_params_klass = DreamBoothDatasetParams
-      else:
-        subset_params_klass = FineTuningSubsetParams
-        dataset_params_klass = FineTuningDatasetParams
+
       subset_blueprints = []
 
       for subset_config in subsets:
+
         parent, child = os.path.split(subset_config['image_dir'])  # bad, 10_combined
         super_parent, folder_name = os.path.split(parent) # , bad
         mask_parent = os.path.join(super_parent, f'bad_sam')
         mask_dir = os.path.join(mask_parent, child)
         mask_res = argparse_namespace.mask_res
         subset_config['mask_dir'] = mask_dir
-        subset_config['mask_res'] = mask_res
+        #subset_config['mask_res'] = mask_res
         params = self.generate_params_by_fallbacks(subset_params_klass,
-                                                   [subset_config,
+                                                   [subset_config, # about data directory
                                                     dataset_config,
                                                     general_config,
                                                     argparse_config,
@@ -423,6 +425,7 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
       [Dataset {i}]
         batch_size: {dataset.batch_size}
         resolution: {(dataset.width, dataset.height)}
+        mask_res : {dataset.mask_res}
         enable_bucket: {dataset.enable_bucket}
     """)
 

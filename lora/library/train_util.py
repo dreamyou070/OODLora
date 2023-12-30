@@ -389,7 +389,7 @@ class DreamBoothSubset(BaseSubset):
         token_warmup_min,
         token_warmup_step,
         mask_dir,
-    class_caption) -> None:
+        class_caption) -> None:
         assert image_dir is not None, "image_dir must be specified / image_dirは指定が必須です"
 
         super().__init__(
@@ -527,6 +527,7 @@ class BaseDataset(torch.utils.data.Dataset):
         tokenizer: Union[CLIPTokenizer, List[CLIPTokenizer]],
         max_token_length: int,
         resolution: Optional[Tuple[int, int]],
+        mask_res:Optional[int],
         debug_dataset: bool,
     ) -> None:
         super().__init__()
@@ -534,6 +535,7 @@ class BaseDataset(torch.utils.data.Dataset):
         self.max_token_length = max_token_length
         # width/height is used when enable_bucket==False
         self.width, self.height = (None, None) if resolution is None else resolution
+        self.mask_res = mask_res
         self.debug_dataset = debug_dataset
         self.subsets: List[Union[DreamBoothSubset, FineTuningSubset]] = []
         self.token_padding_disabled = False
