@@ -1033,6 +1033,7 @@ class BaseDataset(torch.utils.data.Dataset):
         mask_dirs = []
         caption_attention_masks = []
         binary_images = []
+        binary_mask_latents = []
         for J, image_key in enumerate(bucket[image_index : image_index + bucket_batch_size ]):
 
             image_info = self.image_data[image_key]
@@ -1063,6 +1064,12 @@ class BaseDataset(torch.utils.data.Dataset):
             mask_img = np.array(mask_pil, np.uint8)
             binary_img = np.where(mask_img > 10, 1, 0)
             binary_img = torch.Tensor(binary_img)
+
+            mask_latent = Image.open(mask_dir).convert('L').resize((64,64), Image.BICUBIC)
+            mask_latent = np.array(mask_latent, np.uint8)
+            binary_mask_latent = torch.Tensor(np.where(mask_latent > 10, 1, 0))
+
+
 
             if self.enable_bucket:
                 img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
@@ -1130,6 +1137,8 @@ class BaseDataset(torch.utils.data.Dataset):
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 #masked_image = self.image_transforms(masked_img)
             binary_images.append(binary_img)
+            binary_mask_latents.append(binary_mask_latent)
+
             images.append(image)
             #mask_imgs.append(masked_image)
             latents_list.append(latents)
@@ -1264,11 +1273,13 @@ class BaseDataset(torch.utils.data.Dataset):
             images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
             #mask_imgs = torch.stack(mask_imgs).to(memory_format=torch.contiguous_format).float()
             binary_images = torch.stack(binary_images).to(memory_format=torch.contiguous_format).float()
+            binary_mask_latents = torch.stack(binary_mask_latents).to(memory_format=torch.contiguous_format).float()
         else:
             images = None
             mask_imgs = None
 
         example["binary_images"] = binary_images
+        example["binary_mask_latents"] = binary_mask_latents
         example["mask_dirs"] = mask_dirs
         example["trg_indexs_list"] = trg_indexs_list  ##########################################################
         example["train_class_list"] = train_class_list

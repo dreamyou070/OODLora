@@ -519,29 +519,39 @@ class NetworkTrainer:
                         text_encoder_conds = text_encoder_conds[:,:3,:]
                     # (3.1) attention score loss
                     log_loss = {}
-                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                       noise_scheduler,
-                                                                                                       latents)
+                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
+
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.1) anormal training
                     if len(test_indexs) > 0:
                         anormal_latents = latents[test_indexs, :, :, :]
-                        noise, noisy_anormal_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                                   noise_scheduler,
-                                                                                                                   anormal_latents)
+                        noise, noisy_anormal_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, anormal_latents)
                         with torch.set_grad_enabled(train_text_encoder):
-                            #text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
-                            #                                        weight_dtype)
-                            #text_encoder_conds = text_encoder_conds[:, :3, :]
-
                             batch_input_ids = batch["input_ids"]
                             anormal_batch_input_ids = batch_input_ids[test_indexs, :]
-                            print(f'batch_input_ids: {batch_input_ids.shape}')
-                            print(f'anormal_batch_input_ids: {anormal_batch_input_ids.shape}')
-                            #encoder_hidden_states = train_util.get_hidden_states(args, input_ids,
-                            #                                                     tokenizers[0], text_encoders[0],
-                            #                                                     weight_dtype)
-                            #return encoder_hidden_states
+                            anormal_text_cls = anormal_batch_input_ids[:,:, 0].unsqueeze(-1)
+                            anormal_text_ids = anormal_batch_input_ids[:,:, 2:]
+                            anormal_text = torch.cat([anormal_text_cls, anormal_text_ids], dim=-1)
+                            anormal_encoder_hidden_states = train_util.get_hidden_states(args, anormal_text, tokenizers[0], text_encoders[0], weight_dtype)
+                            anormal_encoder_hidden_states = anormal_encoder_hidden_states[:, :2, :]
+                            with accelerator.autocast():
+                                noise_pred = self.call_unet(args, accelerator, unet, noisy_anormal_latents, timesteps, anormal_encoder_hidden_states, batch, weight_dtype,
+                                                            None, mask_imgs=None)
+                            if args.v_parameterization:
+                                target = noise_scheduler.get_velocity(latents, noise, timesteps) # batch, 4, 64,64
+                            else:
+                                target = noise
+                            binary_mask_latents = batch["binary_mask_latents"].unsqueeze(1)  # batch, 1, res, res, 1
+                            binary_mask_latents = binary_mask_latents[test_indexs, :, :, :]
+                            print("binary_mask_latents = ", binary_mask_latents.shape)
+                            print(f'target : {target.shape}')
+                            binary_mask_latents = binary_mask_latents.expand(target.shape)
+                            anormal_task_loss = torch.nn.functional.mse_loss(noise_pred.float() * binary_map,
+                                                                             target.float()*binary_map, reduction="none")
+
+
+
+
 
 
 
