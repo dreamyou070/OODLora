@@ -69,6 +69,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         max_txt_idx = torch.max(attention_probs_back[:, :, 1:], dim=-1).indices  # remove cls token
                         """ is i can trust original img, token should be 0 ( without cls token ) """
                         position_map = torch.where(max_txt_idx == 0, 1, 0)  # trustaonly 0 with lora
+                        print(f'position_map (head, pixel_num) : {position_map.shape}')
 
 
                         map_dict[common_name] = []
