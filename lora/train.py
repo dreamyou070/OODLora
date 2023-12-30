@@ -623,6 +623,7 @@ class NetworkTrainer:
                         log_loss["loss/task_loss"] = task_loss
                         task_loss = task_loss * args.task_loss_weight
                         total_loss += task_loss.mean()
+                        
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(total_loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
