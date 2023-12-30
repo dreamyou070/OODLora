@@ -567,8 +567,14 @@ class NetworkTrainer:
                             anormal_position = binary_map.to(dtype=weight_dtype)
 
                             # normal pixel's anormal score
-                            normal_loss = ((normal_position.to(anormal_score_map.device) * anormal_score_map)/normal_position.sum()).mean([1,2]).mean()
-                            anormal_loss = ((anormal_position.to(anormal_score_map.device) * normal_score_map)/anormal_position.sum()).mean([1,2]).mean()
+                            normal_loss = normal_position.to(anormal_score_map.device) * anormal_score_map
+                            print(f'normal_loss: {normal_loss.shape}')
+                            #normal_loss = ().mean([1,2]).mean()
+
+
+
+
+                            anormal_loss = (anormal_position.to(anormal_score_map.device) * normal_score_map).mean([1,2]).mean()
                             score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
                             flatten_score_map = score_map.view(-1, 2)
                             anormal_position = anormal_position.view(-1, 1).squeeze()
