@@ -110,8 +110,7 @@ class ImageInfo:
                  image_key: str,
                  num_repeats: int, caption: str, is_reg: bool, absolute_path: str,
                  mask_dir:str,
-                 class_caption:Optional[str],
-                 mask_res: int,) -> None:
+                 class_caption:Optional[str]) -> None:
         self.image_key: str = image_key
         self.num_repeats: int = num_repeats
         self.caption: str = caption
@@ -127,7 +126,6 @@ class ImageInfo:
         self.latents_crop_ltrb: Tuple[int, int] = None  # crop left top right bottom in original pixel size, not latents size
         self.cond_img_path: str = None
         self.image: Optional[Image.Image] = None  # optional, original PIL Image
-        self.mask_res = mask_res
         # SDXL, optional
         self.text_encoder_outputs_npz: Optional[str] = None
         self.text_encoder_outputs1: Optional[torch.Tensor] = None
@@ -389,7 +387,7 @@ class DreamBoothSubset(BaseSubset):
         token_warmup_min,
         token_warmup_step,
         mask_dir,
-        class_caption) -> None:
+    class_caption) -> None:
         assert image_dir is not None, "image_dir must be specified / image_dirは指定が必須です"
 
         super().__init__(
@@ -527,7 +525,6 @@ class BaseDataset(torch.utils.data.Dataset):
         tokenizer: Union[CLIPTokenizer, List[CLIPTokenizer]],
         max_token_length: int,
         resolution: Optional[Tuple[int, int]],
-        mask_res:Optional[int],
         debug_dataset: bool,
     ) -> None:
         super().__init__()
@@ -535,7 +532,6 @@ class BaseDataset(torch.utils.data.Dataset):
         self.max_token_length = max_token_length
         # width/height is used when enable_bucket==False
         self.width, self.height = (None, None) if resolution is None else resolution
-        self.mask_res = mask_res
         self.debug_dataset = debug_dataset
         self.subsets: List[Union[DreamBoothSubset, FineTuningSubset]] = []
         self.token_padding_disabled = False
@@ -1055,14 +1051,13 @@ class BaseDataset(torch.utils.data.Dataset):
             anormal_mask_dir = os.path.join(super_super_parent, 'corrected', class_name, name)
 
             # (2.1) img mask """ background is zero """
-            mask_res = image_info.mask_res
-            img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((mask_res,mask_res), Image.BICUBIC), np.uint8)
+            img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((64,64), Image.BICUBIC), np.uint8)
             img_mask = np.where(img_mask > 10, 1, 0) #
             img_mask = torch.Tensor(img_mask)
             img_masks.append(img_mask)
 
             # (2.2) anormal mask """ normal is zero, anormal is white """
-            anormal_mask = np.array(Image.open(anormal_mask_dir).convert('L').resize((mask_res,mask_res), Image.BICUBIC), np.uint8)
+            anormal_mask = np.array(Image.open(anormal_mask_dir).convert('L').resize((64,64), Image.BICUBIC), np.uint8)
             anormal_mask = np.where(anormal_mask > 10, 1, 0) #
             anormal_mask = torch.Tensor(anormal_mask)
             anormal_masks.append(anormal_mask)
@@ -1484,11 +1479,9 @@ class DreamBoothDataset(BaseDataset):
                 class_caption = subset.class_caption
                 name = os.path.split(img_path)[1]
                 mask_dir = os.path.join(subset.mask_dir,name)
-                mask_res = subset.mask_res
                 info = ImageInfo(img_path, subset.num_repeats, caption, subset.is_reg, img_path,
                                  mask_dir,
-                                 class_caption,
-                                 mask_res)
+                                 class_caption)
                 if subset.is_reg:
                     reg_infos.append(info)
                 else:
