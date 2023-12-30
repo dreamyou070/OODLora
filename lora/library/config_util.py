@@ -329,6 +329,7 @@ class BlueprintGenerator:
     argparse_config = {optname_map.get(optname, optname): value for optname, value in vars(sanitized_argparse_namespace).items()}
     general_config = sanitized_user_config.get("general", {})
     dataset_blueprints = []
+
     for dataset_config in sanitized_user_config.get("datasets", []):
       subsets = dataset_config.get("subsets", [])
       print(f' ** subsets : {subsets}')
@@ -489,7 +490,7 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
     caption_by_folder = '_'.join(tokens[1:])
     return n_repeats, caption_by_folder
 
-  def generate(base_dir: Optional[str], is_reg: bool, class_caption: Optional[str] = None, mask_res: Optional[int] = None):
+  def generate(base_dir: Optional[str], is_reg: bool, class_caption: Optional[str] = None):
 
     if base_dir is None:
       return []
@@ -507,10 +508,10 @@ def generate_dreambooth_subsets_config_by_subdirs(train_data_dir: Optional[str] 
                        "num_repeats": num_repeats,
                        "is_reg": is_reg,
                        "class_tokens": class_tokens,
-                       "class_caption": class_caption,
-                       "mask_res" : mask_res}
+                       "class_caption": class_caption,}
       subsets_config.append(subset_config)
     return subsets_config
+
   subsets_config = []
   subsets_config += generate(train_data_dir, False, class_caption)
   subsets_config += generate(reg_data_dir, True, class_caption)
