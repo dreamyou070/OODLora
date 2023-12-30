@@ -189,7 +189,7 @@ def main(args) :
                                          f'cross_res{title}_'
                                          f'res_{args.pixel_mask_res}_'
                                          f'pixel_mask_pixel_thred_{args.pixel_thred}_'
-                                         f'inner_iter_{args.inner_iter}')
+                                         f'inner_iter_{args.inner_iteration}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
