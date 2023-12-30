@@ -158,7 +158,8 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             #mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
 
             reverse_mask = torch.where(map > args.pixel_thred, 0, 1).cpu().numpy().astype(np.uint8)
-            reverse_mask = Image.fromarray(reverse_mask).resize((32,32))
+            reverse_mask = reverse_mask * 255
+            reverse_mask = Image.fromarray(reverse_mask ).resize((32,32), )
 
             #mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(z_latent.device, dtype=z_latent.dtype)
             #x_latent = x_latent * (1 -mask_latent) + z_latent * (mask_latent)
