@@ -69,8 +69,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     if res in args.cross_map_res :
 
                         good_map = attention_probs_object[:, :, 1]
-                        bad_map = attention_probs_back[:, :, 1]
+                        bad_map = attention_probs_back[:, :, 2]
                         position_map = torch.where(good_map < bad_map, 0, 1)
+                        print(f'position_map : {position_map.shape}')
 
                         #max_txt_idx = torch.max(attention_probs_back[:, :, 1:], dim=-1).indices  # remove cls token
                         """ is i can trust original img, token should be 0 ( without cls token ) """
