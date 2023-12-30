@@ -27,10 +27,9 @@ def main(args):
                 predictor.set_image(np_img)
                 input_point = np.array([[0,0]])
                 input_label = np.array([0])
-                masks, scores, logits = predictor.predict(point_coords=input_point,
-                    point_labels=input_label,
-                    multimask_output=True,)
-                print(masks)
+                masks, scores, logits = predictor.predict(point_coords=input_point,point_labels=input_label,multimask_output=True,)
+                for i, (mask, score) in enumerate(zip(masks, scores)):
+                    print(mask.shape)
                 break
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
