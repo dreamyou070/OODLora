@@ -570,21 +570,21 @@ class NetworkTrainer:
                             anormal_position = binary_map.to(dtype=weight_dtype)
 
                             # normal pixel's anormal score
-                            normal_loss  = normal_position.to(anormal_score_map.device) * anormal_score_map
-                            anormal_diff_loss = anormal_score_diff * normal_position.to(anormal_score_map.device)
+                            normal_loss  = (normal_position.to(anormal_score_map.device) * anormal_score_map).mean([1,2])
+                            anormal_diff_loss = (anormal_score_diff * normal_position.to(anormal_score_map.device)).mean([1,2])
 
-                            anormal_loss = anormal_position.to(anormal_score_map.device) * normal_score_map
-                            normal_diff_loss = normal_score_diff * anormal_position.to(anormal_score_map.device)
+                            anormal_loss = (anormal_position.to(anormal_score_map.device) * normal_score_map).mean([1,2])
+                            normal_diff_loss = (normal_score_diff * anormal_position.to(anormal_score_map.device)).mean([1,2])
 
                             layer_attn_loss = normal_loss + anormal_loss + normal_diff_loss + anormal_diff_loss
                             attn_loss += layer_attn_loss.mean()
                             loss = attn_loss
 
-                            log_loss["loss/normal_pixel_anormal_score"] = normal_loss.item()
-                            log_loss["loss/anormal_score_diff_of_normal_pixel"] = anormal_diff_loss.item()
+                            log_loss["loss/normal_pixel_anormal_score"] = normal_loss.mean().item()
+                            log_loss["loss/anormal_score_diff_of_normal_pixel"] = anormal_diff_loss.mean().item()
 
-                            log_loss["loss/anormal_pixel_normal_score"] = anormal_loss.item()
-                            log_loss["loss/normal_score_diff_of_anormal_pixel"] = normal_diff_loss.item()
+                            log_loss["loss/anormal_pixel_normal_score"] = anormal_loss.mean().item()
+                            log_loss["loss/normal_score_diff_of_anormal_pixel"] = normal_diff_loss.mean().item()
 
                             log_loss["loss/attn_loss"] = attn_loss.item()
 
