@@ -118,7 +118,7 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
             break
     if final_time not in latent_dict.keys():
         latent_dict[int(final_time)] = latent
-        
+
     return latent_dict, time_steps, pil_images
 
 
