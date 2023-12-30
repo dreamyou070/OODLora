@@ -513,14 +513,7 @@ class NetworkTrainer:
                             test_indexs.append(index)
                     train_latents = latents[train_indexs, :, :, :]
                     trg_indexs = batch["trg_indexs_list"]
-                    with torch.set_grad_enabled(train_text_encoder):
-                        text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
-                                                                weight_dtype)
-                        text_encoder_conds = text_encoder_conds[:,:3,:]
-                    # (3.1) attention score loss
                     log_loss = {}
-                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
-
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.1) anormal training
                     if len(test_indexs) > 0:
@@ -543,25 +536,17 @@ class NetworkTrainer:
                                 target = noise
                             binary_mask_latents = batch["binary_mask_latents"].unsqueeze(1)  # batch, 1, res, res, 1
                             binary_mask_latents = binary_mask_latents[test_indexs, :, :, :]
-                            print("binary_mask_latents = ", binary_mask_latents.shape)
-                            print(f'target : {target.shape}')
                             binary_mask_latents = binary_mask_latents.expand(target.shape)
-                            anormal_task_loss = torch.nn.functional.mse_loss(noise_pred.float() * binary_map,
-                                                                             target.float()*binary_map, reduction="none")
+                            anormal_task_loss = torch.nn.functional.mse_loss(noise_pred.float() * binary_mask_latents,
+                                                                             target.float()*binary_mask_latents, reduction="none")
 
-
-
-
-
-
-
-
-
-
-
-
+                    # ---------------------------------------------------------------------------------------------------------------------
+                    # (3.2) attention loss
+                    with torch.set_grad_enabled(train_text_encoder):
+                        text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
+                        text_encoder_conds = text_encoder_conds[:,:3,:]
+                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
                     with accelerator.autocast():
-
                         self.call_unet(args, accelerator, unet,
                                        noisy_latents, timesteps,
                                        text_encoder_conds,
@@ -625,7 +610,8 @@ class NetworkTrainer:
 
                         loss = attn_loss.mean()
 
-                    # (3) natural training
+                    # ---------------------------------------------------------------------------------------------------------------------
+                    # (3.3) natural training
                     if len(train_indexs) > 0:
                         if train_latents.dim() != 4:
                             train_latents = train_latents.unsqueeze(0)
