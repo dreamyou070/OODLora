@@ -562,7 +562,9 @@ class NetworkTrainer:
                                 if b_map.dim() != 3:
                                     b_map = b_map.unsqueeze(0)
                                 # b_map = [res,res,1]
-                                binary_aug_np = np.array(Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res)))
+                                print(f'b_map: {b_map.shape}')
+                                pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res))
+                                binary_aug_np = np.array(pil)
                                 # binary_aug_np = [res,res,1]
                                 binary_aug_np = np.where(binary_aug_np == 0, 0, 1)  # black = 0 = normal, [res,res,1]
                                 binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0)  # [1,64,64,1]
