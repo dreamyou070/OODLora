@@ -532,7 +532,8 @@ class NetworkTrainer:
                                        test_indexs)
                         attn_dict = attention_storer.step_store
                         attention_storer.reset()
-                        attn_loss = 0
+
+                        normal_loss, anormal_loss, cross_loss = 0, 0, 0
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0] # [b, pix_num, 2]
                             normal_score_map, anormal_score_map = torch.chunk(attn_score, 2, dim=-1)
@@ -566,33 +567,24 @@ class NetworkTrainer:
                             anormal_position = binary_map.to(dtype=weight_dtype)
 
                             # normal pixel's anormal score
-                            normal_loss  = (normal_position.to(anormal_score_map.device) * anormal_score_map).mean([1,2])
-                            anormal_loss = (anormal_position.to(anormal_score_map.device) * normal_score_map).mean([1,2])
-                            layer_attn_loss = normal_loss + anormal_loss
-                            attn_loss += layer_attn_loss.mean()
-                            loss = attn_loss
-
-                            log_loss["loss/normal_pixel_anormal_score"] = normal_loss.mean().item()
-                            log_loss["loss/anormal_pixel_normal_score"] = anormal_loss.mean().item()
-                            log_loss["loss/attn_loss"] = attn_loss.item()
-
+                            normal_loss = (normal_position.to(anormal_score_map.device) * anormal_score_map).mean([1,2]).mean()
+                            anormal_loss = (anormal_position.to(anormal_score_map.device) * normal_score_map).mean([1,2]).mean()
                             score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
                             flatten_score_map = score_map.view(-1, 2)
-                            anormal_position = anormal_position.view(-1,1).squeeze()
+                            anormal_position = anormal_position.view(-1, 1).squeeze()
+                            cross_ent_loss = cross_entropy_loss(flatten_score_map, anormal_position.long()).mean()
 
-                            cross_ent_loss = cross_entropy_loss(flatten_score_map, anormal_position.long())
-                            print(f'cross_ent_loss: {cross_ent_loss}')
+                            normal_loss += normal_loss
+                            anormal_loss += anormal_loss
+                            cross_loss += cross_ent_loss
 
+                        log_loss["loss/anormal_pixel_normal_score"] = normal_loss.item()
+                        log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.item()
+                        log_loss["loss/cross_entropy_loss"] = cross_loss.item()
 
+                        attn_loss = normal_loss + anormal_loss + cross_loss
 
-
-
-
-
-
-
-
-
+                        loss = attn_loss
 
                     # (3) natural training
                     if len(train_indexs) > 0:
@@ -646,7 +638,8 @@ class NetworkTrainer:
                             log_loss["loss/denoising_loss"] = task_loss
 
                         #attn_loss +=  task_loss
-                        loss += task_loss * args.task_loss_weight
+                        task_loss = task_loss * args.task_loss_weight
+                        loss += task_loss
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
