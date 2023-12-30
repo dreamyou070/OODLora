@@ -135,7 +135,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0]
-    args.output_dir = os.path.join(parent, 'inference')
+    super_parent, folder = os.path.split(parent)[0]
+    args.output_dir = os.path.join(parent, f'{folder}/inference')
 
     print(f' \n step 1. setting')
     if args.process_title:
