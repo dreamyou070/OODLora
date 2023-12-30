@@ -465,7 +465,6 @@ class NetworkTrainer:
         else:
             on_step_start = lambda *args, **kwargs: None
 
-
         # function for saving/removing
         def save_model(ckpt_name, unwrapped_nw, steps, epoch_no, force_sync_upload=False):
             os.makedirs(args.output_dir, exist_ok=True)
@@ -524,6 +523,7 @@ class NetworkTrainer:
                                                                                                        noise_scheduler,
                                                                                                        latents)
                     with accelerator.autocast():
+
                         self.call_unet(args, accelerator, unet,
                                        noisy_latents, timesteps,
                                        text_encoder_conds,
@@ -567,8 +567,8 @@ class NetworkTrainer:
                             anormal_position = binary_map.to(dtype=weight_dtype)
 
                             # normal pixel's anormal score
-                            normal_loss = (normal_position.to(anormal_score_map.device) * anormal_score_map).mean([1,2]).mean()
-                            anormal_loss = (anormal_position.to(anormal_score_map.device) * normal_score_map).mean([1,2]).mean()
+                            normal_loss = ((normal_position.to(anormal_score_map.device) * anormal_score_map)/normal_position.sum()).mean([1,2]).mean()
+                            anormal_loss = ((anormal_position.to(anormal_score_map.device) * normal_score_map)/anormal_position.sum()).mean([1,2]).mean()
                             score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
                             flatten_score_map = score_map.view(-1, 2)
                             anormal_position = anormal_position.view(-1, 1).squeeze()
