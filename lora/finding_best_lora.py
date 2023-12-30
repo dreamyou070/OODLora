@@ -215,7 +215,7 @@ def main(args):
     prompt = args.prompt
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = torch.chunk(context, 2)
-    uncon, con = uncon[:, 3, :], con[:, 3, :]
+    uncon, con = uncon[:, :, :3], con[:, :, :3]
     print(f'uncon : {uncon.shape} | con : {con.shape}')
     context = torch.cat([uncon, con], dim=1)
 
