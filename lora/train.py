@@ -486,7 +486,6 @@ class NetworkTrainer:
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             network.on_epoch_start(text_encoder, unet)
-
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -502,7 +501,6 @@ class NetworkTrainer:
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
-
                     # ---------------------------------------------------------------------------------------------------------------------
                     train_class_list = batch["train_class_list"]
                     train_indexs, test_indexs = [], []
@@ -516,36 +514,7 @@ class NetworkTrainer:
                     log_loss = {}
 
                     # ---------------------------------------------------------------------------------------------------------------------
-                    # (3.1) anormal training
                     total_loss = 0
-                    if len(test_indexs) > 0:
-                        anormal_latents = latents[test_indexs, :, :, :]
-                        noise, noisy_anormal_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, anormal_latents)
-                        with torch.set_grad_enabled(train_text_encoder):
-                            batch_input_ids = batch["input_ids"]
-                            anormal_batch_input_ids = batch_input_ids[test_indexs, :]
-                            anormal_text_cls = anormal_batch_input_ids[:,:, 0].unsqueeze(-1)
-                            anormal_text_ids = anormal_batch_input_ids[:,:, 2:]
-                            anormal_text = torch.cat([anormal_text_cls, anormal_text_ids], dim=-1)
-                            anormal_encoder_hidden_states = train_util.get_hidden_states(args, anormal_text, tokenizers[0], text_encoders[0], weight_dtype)
-                            anormal_encoder_hidden_states = anormal_encoder_hidden_states[:, :2, :]
-                            with accelerator.autocast():
-                                noise_pred = self.call_unet(args, accelerator, unet, noisy_anormal_latents, timesteps, anormal_encoder_hidden_states, batch, weight_dtype,
-                                                            None, mask_imgs=None)
-                            if args.v_parameterization:
-                                target = noise_scheduler.get_velocity(latents, noise, timesteps) # batch, 4, 64,64
-                            else:
-                                target = noise
-                            binary_mask_latents = batch["binary_mask_latents"].unsqueeze(1)  # batch, 1, res, res, 1
-                            binary_mask_latents = binary_mask_latents[test_indexs, :, :, :]
-                            binary_mask_latents = binary_mask_latents.expand(target.shape)
-                            anormal_task_loss = torch.nn.functional.mse_loss(noise_pred.float() * binary_mask_latents,
-                                                                             target.float()*binary_mask_latents, reduction="none")
-                            anormal_task_loss = anormal_task_loss.mean([1, 2, 3])
-                            log_loss["loss/anormal_task_loss"] = anormal_task_loss.mean().item()
-                            total_loss += anormal_task_loss.mean()
-
-                    # ---------------------------------------------------------------------------------------------------------------------
                     # (3.2) attention loss
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
@@ -623,22 +592,6 @@ class NetworkTrainer:
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
                                                                                                            input_latents)
-                        next_timesteps = (timesteps+1).tolist()
-                        next_timesteps = [j if j != len(noise_scheduler.alphas_cumprod.tolist()) else len(noise_scheduler.alphas_cumprod.tolist()) - 1
-                                          for j in next_timesteps]
-                        alpha_prod_t_next = noise_scheduler.alphas_cumprod[next_timesteps]
-                        alpha_prod_t = noise_scheduler.alphas_cumprod[timesteps.tolist()]
-                        gamma = (alpha_prod_t / alpha_prod_t_next) ** 0.5
-                        with torch.no_grad():
-                            noise_pred_org = self.call_unet(args, accelerator, enc_unet,
-                                                        noisy_latents, timesteps,
-                                                        input_condition, batch, weight_dtype,
-                                                        None,
-                                                        mask_imgs=None)
-                            noise_diff = noise - noise_pred_org
-                            gamma = gamma.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-                            gamma = gamma.expand(noise_pred_org.shape)
-                            noise_diff_org = noise_diff * gamma.to(noise_diff.device)
                         with accelerator.autocast():
                             noise_pred = self.call_unet(args, accelerator, unet,
                                                         noisy_latents, timesteps,
@@ -646,26 +599,15 @@ class NetworkTrainer:
                                                         None,
                                                         mask_imgs =None)
                         attention_storer.reset()
-                        noise_diff_pred = noise_pred - noise
-
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
                             target = noise
-                        if args.normal_training :
-                            task_loss = torch.nn.functional.mse_loss(noise_pred.float(),
-                                                                     target.float(), reduction="none")
-                            task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
-                            task_loss = task_loss.mean()
-                            log_loss["loss/task_loss"] = task_loss
-                        else :
-                            denoising_loss = torch.nn.functional.mse_loss(noise_diff_org.float(),
-                                                                       noise_diff_pred.float(), reduction="none")
-                            denoising_loss = denoising_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
-                            task_loss = denoising_loss.mean()
-                            log_loss["loss/denoising_loss"] = task_loss
-
-                        #attn_loss +=  task_loss
+                        task_loss = torch.nn.functional.mse_loss(noise_pred.float(),
+                                                                 target.float(), reduction="none")
+                        task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
+                        task_loss = task_loss.mean()
+                        log_loss["loss/task_loss"] = task_loss
                         task_loss = task_loss * args.task_loss_weight
                         total_loss += task_loss.mean()
                     # ------------------------------------------------------------------------------------
