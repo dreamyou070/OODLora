@@ -701,7 +701,7 @@ class NetworkTrainer:
                                 remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as,
                                                                                  remove_step_no)
                                 remove_model(remove_ckpt_name)
-                current_loss = loss.detach().item()
+                current_loss = total_loss.detach().item()
                 log_loss["loss/current_loss"] = current_loss
                 # ------------------------------------------------------------------------------------------------------------------------------
                 if epoch == args.start_epoch :
