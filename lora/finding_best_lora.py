@@ -216,6 +216,7 @@ def main(args):
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = torch.chunk(context, 2)
     uncon, con = uncon[:, 3, :], con[:, 3, :]
+    print(f'uncon : {uncon.shape} | con : {con.shape}')
     context = torch.cat([uncon, con], dim=1)
 
     print(f' (3.2) train images')
@@ -265,7 +266,7 @@ def main(args):
 
             from utils.model_utils import call_unet
             with torch.no_grad():
-                noise_pred = call_unet(unet,latent, 0,con,[[0]],None)
+                noise_pred = call_unet(unet,latent, 0, con, [[1]], None)
                 score_list = controller.normal_score_list
                 controller.reset()
                 score = sum(score_list)/len(score_list)
