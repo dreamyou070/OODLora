@@ -184,7 +184,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
 
             pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
-            reverse_mask.save(os.path.join(base_folder_dir, f'{name}_mask_{t}.png'))
+            #reverse_mask.save(os.path.join(base_folder_dir, f'{name}_mask_{t}.png'))
 
     pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
     pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
