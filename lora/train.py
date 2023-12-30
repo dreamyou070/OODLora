@@ -574,7 +574,7 @@ class NetworkTrainer:
                                 normal_position = (1-binary_map).to(dtype=weight_dtype)
                                 anormal_position = binary_map.to(dtype=weight_dtype)
                                 print(f'normal_position.shape : {normal_position.sum()}')
-                                print(f'normal_position.shape : {normal_position.sum()}')
+                                print(f'anormal_position.shape : {anormal_position.sum()}')
 
                                 # normal pixel's anormal score
                                 normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]
