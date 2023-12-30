@@ -211,7 +211,7 @@ def main(args):
     uncon, con = torch.chunk(context, 2)
     uncon, con = uncon[:, :3, :], con[:, :3, :]
     print(f'uncon : {uncon.shape} | con : {con.shape}')
-    context = torch.cat([uncon, con], dim=1)
+    context = torch.cat([uncon, con], dim=0)
 
     print(f' (3.2) train images')
     trg_h, trg_w = args.resolution

@@ -65,34 +65,35 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     map_list = []
                     res = int(pixel_num ** 0.5)
                     if res in args.cross_map_res :
-                        # attention_probs_object = [head, pixel_num, sentence_len]
-                        index_info = attention_probs_back[:, :, 1:].max(dim=-1).indices
-                        back_map = torch.where(index_info == 0, 1, 0) # [head, pixel_num]
+
+                        max_txt_idx = torch.max(attention_probs_back[:, :, 1:], dim=-1).indices  # remove cls token
+                        """ is i can trust original img, token should be 0 ( without cls token ) """
+                        position_map = torch.where(max_txt_idx == 0, 1, 0)  # trustaonly 0 with lora
+
 
                         map_dict[common_name] = []
-                        map_dict[common_name].append(back_map)
+                        map_dict[common_name].append(position_map)
 
                         batch_trg_index = trg_indexs_list[batch_idx]  # two times
                         for word_idx in batch_trg_index:
                             word_idx = int(word_idx)
                             back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
                             obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (1 - back_map) + back_attn_vector * back_map
-                            map_list.append(back_map)
+                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (1 - position_map) + back_attn_vector * position_map
+                            map_list.append(position_map)
                     if len(map_list) > 0 :
                         controller.store(torch.cat(map_list, dim=0), layer_name)
                     new_attns.append(attention_probs_object_sub)
                 object_attention_probs = torch.cat(new_attns, dim=0)
                 attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
+
             elif not is_cross_attention and trg_indexs_list is not None:
-                print(f'[self] layer_name : {layer_name}')
+
                 self_common_name = layer_name.split('_')[:-1]
                 self_common_name = '_'.join(self_common_name)
                 if self_common_name in map_dict.keys() :
 
                     back_map = map_dict[self_common_name][0]
-
-                    #map_dict = {}
 
                     background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0) # [head, pix_num, dim]
                     dim = background_attention_probs.shape[-1]
@@ -176,18 +177,18 @@ def main(args) :
     text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
     vae.to(accelerator.device, dtype=vae_dtype)
 
-
     trg_resolutions = args.cross_map_res
     title = ''
     for res in trg_resolutions:
         title += f'_{res}'
     print(f'title : {title}')
 
-    output_dir = os.path.join(output_dir,
-                           f'not_pixel_copy_self_attn_lora_{model_epoch}_final_noising_{args.final_noising_time}_res_{args.pixel_mask_res}_pixel_mask_pixel_thred_{args.pixel_thred}_cross_res{title}_num_ddim_steps_{args.num_ddim_steps}')
+    output_dir = os.path.join(output_dir,f'lora_{model_epoch}_final_noising_{args.final_noising_time}_num_ddim_steps_{args.num_ddim_steps}_'
+                                         f'cross_res{title}_'
+                                         f'res_{args.pixel_mask_res}_'
+                                         f'pixel_mask_pixel_thred_{args.pixel_thred}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
-
 
     print(f' (2.4) scheduler')
     scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
@@ -237,8 +238,8 @@ def main(args) :
     prompt = args.prompt
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = torch.chunk(context, 2)
-    uncon, con = uncon[:,3,:], con[:,3,:]
-    context = torch.cat([uncon, con], dim=1)
+    uncon, con = uncon[:, :3, :], con[:, :3, :]
+    context = torch.cat([uncon, con], dim=0)
 
     print(f' (3.2) train images')
     trg_h, trg_w = args.resolution
@@ -247,11 +248,10 @@ def main(args) :
     test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/bad')
     test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/corrected')
     classes = os.listdir(test_img_folder)
-    test_output_dir = os.path.join(output_dir, 'test')
-    os.makedirs(test_output_dir, exist_ok=True)
+
     for class_name in classes:
         if 'good' not in class_name:
-            class_base_folder = os.path.join(test_output_dir, class_name)
+            class_base_folder = os.path.join(output_dir, class_name)
             os.makedirs(class_base_folder, exist_ok=True)
 
             image_folder = os.path.join(test_img_folder, class_name)
@@ -270,7 +270,6 @@ def main(args) :
                 test_img_dir = os.path.join(image_folder, test_image)
                 shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
 
-                #if 'good' not in class_name:
                 mask_img_dir = os.path.join(mask_folder, test_image)
                 shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
                 mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
@@ -282,7 +281,6 @@ def main(args) :
 
                 with torch.no_grad():
                     org_vae_latent  = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
-
 
                 with torch.no_grad():
 
