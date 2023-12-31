@@ -639,14 +639,13 @@ class NetworkTrainer:
                         binary_maps = []
                         for i in range(binary_map.shape[0]) :
                             b_map = binary_map[i]
-                            print(f'[before] b_map.shape : {b_map.shape}')
                             if b_map.dim() != 2:
                                 b_map = b_map.squeeze()  # [res,res]
-                            print(f'[after] b_map.shape : {b_map.shape}')
                             pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res))
                             binary_aug_np = np.array(pil)
                             binary_aug_np = np.where(binary_aug_np == 0, 0, 1)  # black = 0 = normal, [res,res,1]
-                            binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,64,64,1]
+                            binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(0)  # [1,64,64,1]
+
                             binary_maps.append(binary_aug_tensor)
                         binary_maps = torch.cat(binary_maps, dim=0).to(accelerator.device)  # [Batch, Res, Res, 1]
                         anormal_task_loss = torch.nn.functional.mse_loss(noise_pred.float() * binary_maps,

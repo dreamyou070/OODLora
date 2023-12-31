@@ -1,7 +1,6 @@
 import torch
-anormal_score_map = torch.randn((16, 256,1))
-batch_num = 2
-anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch, head, pixel_num, 1
-for i in range(batch_num):
-    a = anormal_score_map_batch[i]
-    print(f'a : {a.shape}')
+
+binary_aug_tensor = torch.randn((1,64,64,1))
+a = [binary_aug_tensor,binary_aug_tensor]
+a = torch.cat(a, dim=0)
+print(a.shape)
