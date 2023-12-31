@@ -117,6 +117,7 @@ class ImageInfo:
         self.is_reg: bool = is_reg
         self.absolute_path: str = absolute_path
         self.image_size: Tuple[int, int] = None
+        self.mask_res : int
         self.resized_size: Tuple[int, int] = None
         self.bucket_reso: Tuple[int, int] = None
         self.latents: torch.Tensor = None
@@ -134,7 +135,8 @@ class ImageInfo:
         self.mask_dir: Optional[str] = mask_dir
         if self.mask_dir is not None:
             assert os.path.exists(self.mask_dir), f"mask_dir {self.mask_dir} does not exist"
-        self.class_caption: Optional[str] = class_caption
+        self.class_caption:\
+            Optional[str] = class_caption
 
 
 class BucketManager:
@@ -1053,6 +1055,8 @@ class BaseDataset(torch.utils.data.Dataset):
             anormal_mask_dir = os.path.join(super_super_parent, 'corrected', class_name, name)
 
             # (2.1) img mask """ background is zero """
+            # image_info.mask_res
+            print(f'image_info.mask_res : {image_info.mask_res}')
             img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((32,32), Image.BICUBIC), np.uint8)
             img_mask = np.where(img_mask > 10, 1, 0) #
             img_mask = torch.Tensor(img_mask)
