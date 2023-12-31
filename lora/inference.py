@@ -70,15 +70,14 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             map_list = []
                             res = int(pixel_num ** 0.5)
                             if res in args.cross_map_res :
-
                                 query = self.to_q(hidden_states)
                                 query = self.reshape_heads_to_batch_dim(query)
-                                _, back_query, object_query = query.chunk(3, dim=0)
+                                back_query, object_query = query.chunk(2, dim=0)
                                 map_list.append(position_map)
                                 position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
                                 position_map = position_map.expand(object_query.shape)
                                 object_query = object_query * (1-position_map) + back_query * (position_map)
-                                query = torch.cat([_, back_query, object_query], dim=0)
+                                query = torch.cat([back_query, object_query], dim=0)
                                 attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
                                                                              device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
                                 attention_probs = attention_scores.softmax(dim=-1)
