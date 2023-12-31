@@ -50,45 +50,43 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 common_name = layer_name.split('_')[:-1]
                 common_name = '_'.join(common_name)
 
-                background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
+                original_probs, background_attention_probs, object_attention_probs = attention_probs.chunk(3, dim=0)
+
                 batch_num = len(trg_indexs_list)
+
+                original_probs_batch = torch.chunk(original_probs, batch_num, dim=0)
                 attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
                 attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0) #  torch.Size([8, 4096, 77])
-                batch_back_map = []
-                new_attns = []
-                
-                for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
+
+                for batch_idx, (original_probs, attention_probs_back, attention_probs_object) in enumerate(zip(original_probs_batch,
+                                                                                                               attention_probs_back_batch,
+                                                                                                               attention_probs_object_batch)):
                     
-                    #  torch.Size([8, 4096, 77])
-                    if args.other_token_preserving :
-                        attention_probs_object_sub = attention_probs_back.clone().detach()
-                    else :
-                        attention_probs_object_sub = attention_probs_object.clone().detach()
-                    
+
                     pixel_num = attention_probs_back.shape[1] # head, pixel_num, word_num
                     map_list = []
                     res = int(pixel_num ** 0.5)
                     if res in args.cross_map_res :
 
-                        cls_map = attention_probs_back[:,:,0]
-                        good_map = attention_probs_back[:, :, 1] # head, pixel_num, 1
+                        cls_map = original_probs[:,:,0]
+                        good_map = original_probs[:, :, 1] # head, pixel_num, 1
                         position_map = torch.where(cls_map < good_map , 1, 0) # only good pixel -> bakground
                         print(f'position_map : {position_map}')
                         #position_map = torch.where(good_map < bad_map, 0, 1) # head, pixel_num, 1
 
                         query = self.to_q(hidden_states)
                         query = self.reshape_heads_to_batch_dim(query)
-                        back_query, object_query = query.chunk(2, dim=0)
+                        _, back_query, object_query = query.chunk(2, dim=0)
                         map_list.append(position_map)
                         position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
                         #map_list.append(position_map)
 
                         map_dict[common_name] = []
                         map_dict[common_name].append(position_map)
-                        position_map = position_map.expand(object_query.shape)
 
+                        position_map = position_map.expand(object_query.shape)
                         object_query = object_query * (1-position_map) + back_query * (position_map)
-                        query = torch.cat([back_query, object_query], dim=0)
+                        query = torch.cat([_, back_query, object_query], dim=0)
                         attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
                                                                      device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
                         attention_probs = attention_scores.softmax(dim=-1)

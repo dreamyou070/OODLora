@@ -125,10 +125,13 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
 
 @torch.no_grad()
 def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_times, scheduler, unet, vae, base_folder_dir, controller, name,weight_dtype):
+    original_latent = z_latent_dict[0]
+
     if context.shape[0] == 2:
         uncon, con = context.chunk(2)
     else:
         con = context
+
     # inference_times = [100,80, ... 0]
     x_latent = start_latent
     time_steps = []
@@ -143,8 +146,8 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
 
                 z_latent = z_latent_dict[t]
                 x_latent = x_latent_dict[t]
-                input_latent = torch.cat([z_latent, x_latent], dim=0)
-                input_cond = torch.cat([uncon, con], dim=0)
+                input_latent = torch.cat([original_latent, z_latent, x_latent], dim=0)
+                input_cond = torch.cat([con, uncon, con], dim=0)
                 trg_indexs_list = [[1]]
                 pixel_set = []
                 noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, pixel_set)
@@ -162,6 +165,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                     res = int(pix_num ** 0.5)
                     if res == args.pixel_mask_res:
                         map_list.append(mask)
+
                 if len(map_list) > 0:
                     print(f'making pixel mask')
                     map = torch.cat(map_list, dim=0)
@@ -172,7 +176,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                     mask_img = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8) # 1 means bad position
                     mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
 
-                    reverse_mask = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8) # 1 means lora
+                    reverse_mask = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8) # only good white
                     reverse_mask = reverse_mask * 255
                     reverse_mask = Image.fromarray(reverse_mask).resize((512,512),)
 
