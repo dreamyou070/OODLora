@@ -98,24 +98,24 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         # attention_probs = torch.cat([attention_probs_back, attention_probs_object], dim=0)
                         if len(map_list) > 0:
                             controller.store(torch.cat(map_list, dim=0), layer_name)
-
+            """  
             elif not is_cross_attention and trg_indexs_list is not None:
                 self_common_name = layer_name.split('_')[:-1]
                 self_common_name = '_'.join(self_common_name)
                 
                 if self_common_name in map_dict.keys() :
 
-                    background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0) # [head, pix_num, dim]
+                    _, background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0) # [head, pix_num, dim]
                     dim = background_attention_probs.shape[-1]
                     back_map = map_dict[self_common_name][0]  # 8, 1024, 1024
                     #back_map = back_map.unsqueeze(-1)        # 8, 1024, 1
-                    print(f'dim : {dim} | back_map.shape : {back_map.shape}')
+                    #print(f'dim : {dim} | back_map.shape : {back_map.shape}')
                     back_map = back_map.expand(background_attention_probs.shape)    #
                     #batch_num = len(trg_indexs_list)
                     object_attention_probs = object_attention_probs * (1 - back_map) + background_attention_probs * back_map
                     attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
                     del map_dict[self_common_name]
-
+            """
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
