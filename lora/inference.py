@@ -78,7 +78,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         query = self.reshape_heads_to_batch_dim(query)
                         back_query, object_query = query.chunk(2, dim=0)
                         position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
-                        torch.expand(position_map, object_query.shape)
+
+
+                        position_map = position_map.expand(object_query.shape)
+
                         object_query = object_query * (1-position_map) + back_query * (position_map)
                         query = torch.cat([back_query, object_query], dim=0)
                         attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
