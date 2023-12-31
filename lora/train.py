@@ -623,8 +623,7 @@ class NetworkTrainer:
                         # anormal masked training #
                         # -------------------------------------------------- (1) attention loss -------------------------------------------------- #
                         with torch.set_grad_enabled(train_text_encoder):
-                            text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
-                                                                    weight_dtype)
+                            text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,weight_dtype)
                             text_encoder_conds = text_encoder_conds[:, :2, :]  # add one pad token (EOS token)
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
