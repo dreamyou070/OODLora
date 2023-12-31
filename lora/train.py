@@ -546,9 +546,7 @@ class NetworkTrainer:
                             res = int(math.sqrt(pix_num))
                             if res in args.cross_map_res :
                                 normal_score_map_batch = torch.chunk(normal_score_map,  batch_num, dim=0) # batch, head, pixel_num, 1
-                                anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch, head, pixel_num, 1
-                                print(f'anormal_score_map : {anormal_score_map.shape}')
-                                print(f'batch_num : {batch_num}')
+                                anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
 
                                 for i in range(batch_num):
                                     normal_score_map = normal_score_map_batch[i].reshape(batch_num, res, res, -1)   # [h, res, res, 1]
@@ -579,6 +577,9 @@ class NetworkTrainer:
                                     # img_mask = 8,32,32,1
                                     normal_position = (1-binary_aug_tensor).to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
                                     anormal_position = binary_aug_tensor.to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
+                                    print(f'anormal_position (8, res,res,1): {anormal_position.shape}')
+                                    anormal_position_pixel_num = anormal_position.sum() / 8
+                                    print(f'anormal_position_pixel_num : {anormal_position_pixel_num}')
 
 
                                     # normal pixel's anormal score
