@@ -256,9 +256,11 @@ def main(args):
                 cls_score = torch.cat(cls_score_list, dim=0).mean(dim=0).squeeze() # [res*res]
                 good_score = torch.cat(good_score_list, dim=0).mean(dim=0).squeeze() # [res*res]
                 bad_score = torch.cat(bad_score_list, dim=0).mean(dim=0).squeeze() # [res*res]
+                total_score = cls_score + good_score + bad_score
                 print(f'cls_score : {cls_score}')
                 print(f'good_score : {good_score}')
                 print(f'bad_score : {bad_score}')
+                print(f'total_score : {total_score}')
 
                 #score_diff = torch.cat(score_list, dim=0).mean(dim=0).squeeze() # [res*res]
                 #print(f'score_diff : {score_diff}')
