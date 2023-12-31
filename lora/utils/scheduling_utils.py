@@ -148,8 +148,8 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
         # head, pix_num, 1
         cls_score_list.append(cls_score)
         good_score_list.append(good_score)
-    cls_score = torch.cat(cls_score_list, dim=0).mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res]
-    good_score = torch.cat(good_score_list, dim=0).mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res
+    cls_score = torch.cat(cls_score_list, dim=0).float().mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res]
+    good_score = torch.cat(good_score_list, dim=0).float().mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res
     mask_latent = torch.where(cls_score > good_score + 0.1, 0, 1) # [16,16]
     print(f'mask latent : {mask_latent}')
 
