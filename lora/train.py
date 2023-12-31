@@ -619,7 +619,6 @@ class NetworkTrainer:
                         # attn_loss = cross_loss.mean()
                     total_loss += attn_loss
 
-                    """
 
                     if args.anormal_training :
                         # anormal masked training #
@@ -654,7 +653,7 @@ class NetworkTrainer:
                                                                  target.float() * binary_maps, reduction="none").mean(dim=(1, 2, 3))
                         log_loss["loss/anormal_task_loss"] = anormal_task_loss.mean().item()
                         total_loss += anormal_task_loss.mean()
-                    """
+
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.3) natural training
                     if len(train_indexs) > 0:
