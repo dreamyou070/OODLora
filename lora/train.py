@@ -802,4 +802,3 @@ if __name__ == "__main__":
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
     trainer.train(args)
-                    """
