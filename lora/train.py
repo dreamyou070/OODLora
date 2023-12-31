@@ -522,6 +522,7 @@ class NetworkTrainer:
                         attn_dict = attention_storer.step_store
                         attention_storer.reset()
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
+                        normal_position_normal_score, anormal_position_anormal_score = 0, 0
                         img_masks  = batch["img_masks"].to(accelerator.device)                    # [Batch, Res, Res], foreground = white = 1, background = black = 0
                         print(f'img_masks.shape : {img_masks.shape}')
                         binary_map = batch['anormal_masks'].to(accelerator.device).unsqueeze(-1)  # [Batch, Res, Res, 1]
@@ -572,15 +573,14 @@ class NetworkTrainer:
                                     # normal pixel's anormal score
                                     normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]
                                     anormal_loss += (anormal_position.to(anormal_score_map.device) * normal_score_map).squeeze()  # [b, res, res, 1]
+                                    normal_position_normal_score += (normal_position.to(anormal_score_map.device) * normal_score_map).squeeze()  # [b, res, res, 1]
+                                    anormal_position_anormal_score += (anormal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]
+
 
                                     score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
                                     flatten_score_map = score_map.view(-1, 2)
-                                    #flatten_img_mask = img_mask.contiguous().view(-1, 1)
-
                                     position_map = torch.cat([normal_position.contiguous().view(-1, 1),
                                                               anormal_position.contiguous().view(-1, 1)], dim=-1)
-                                    #flatten_position_map = position_map.view(-1, 1)
-
                                     score_pairs = []
                                     anormal_pos = []
                                     for i in range(flatten_score_map.shape[0]):
@@ -592,14 +592,13 @@ class NetworkTrainer:
                                     score_pairs = torch.stack(score_pairs)
                                     anormal_pos = torch.stack(anormal_pos)
                                     cross_ent_loss = cross_entropy_loss(score_pairs, anormal_pos.long())
-                                    print(f'cross_ent_loss.shape : {cross_ent_loss.shape}')
                                     cross_loss += cross_ent_loss.mean()
-
-
                         log_loss["loss/anormal_pixel_normal_score"] = normal_loss.mean().item()
                         log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.mean().item()
+                        log_loss["loss/normal_pixel_normal_score_normal_position"] = normal_position_normal_score.mean().item()
+                        log_loss["loss/anormal_pixel_anormal_score_anormal_position"] = anormal_position_anormal_score.mean().item()
                         log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
-                        #attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
+                        # attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
                         attn_loss = cross_loss.mean()
                     total_loss += attn_loss
                     
