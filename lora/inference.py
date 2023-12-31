@@ -93,8 +93,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         map_list.append(position_map)
                         map_dict[common_name] = []
                         map_dict[common_name].append(position_map)
-                        position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
-                        position_map = position_map.expand(attention_probs_back.shape)
+                        #position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
+                        #position_map = position_map.expand(attention_probs_back.shape)
                         # attention_probs_object shape = [head,pixel_num, 77 sen]
                         # attention_probs_object = attention_probs_object * (1 - position_map) + attention_probs_back * position_map
                         # attention_probs = torch.cat([attention_probs_back, attention_probs_object], dim=0)
