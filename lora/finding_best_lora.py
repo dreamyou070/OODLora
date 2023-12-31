@@ -257,7 +257,7 @@ def main(args):
                 mask_np = torch.tensor(mask_np, dtype=torch.float32, device=device)
 
                 anormal_position = torch.flatten(mask_np)
-                print(f'anormal_position (16,16): {anormal_position.shape}')
+                print(f'anormal_position (16,16): {anormal_position.sum()}')
 
                 anormal_score_diff = score_diff * anormal_position
                 record = f'{class_name} | {test_image} | {anormal_score_diff}'
