@@ -309,7 +309,6 @@ class ConfigSanitizer:
   def __merge_dict(*dict_list: dict) -> dict:
     merged = {}
     for schema in dict_list:
-      print(schema)
       for k, v in schema.items():
         merged[k] = v
     return merged
@@ -359,6 +358,7 @@ class BlueprintGenerator:
         mask_parent = os.path.join(super_parent, f'bad_sam')
         mask_dir = os.path.join(mask_parent, child)
         subset_config['mask_dir'] = mask_dir
+        #subset_config['mask_res'] = mask_res
         params = self.generate_params_by_fallbacks(subset_params_klass,
                                                    [subset_config,dataset_config,
                                                     general_config, argparse_config,
@@ -594,7 +594,7 @@ if __name__ == "__main__":
   train_util.add_training_arguments(parser, config_args.support_dreambooth)
   argparse_namespace = parser.parse_args(remain)
   train_util.prepare_dataset_args(argparse_namespace, config_args.support_finetuning)
-  print("[argparse_namespace]")
+  print("[********************************** argparse_namespace]")
   print(vars(argparse_namespace))
   user_config = load_user_config(config_args.dataset_config)
   print("\n[user_config]")
