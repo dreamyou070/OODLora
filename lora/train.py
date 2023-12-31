@@ -523,6 +523,7 @@ class NetworkTrainer:
                         attention_storer.reset()
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
                         img_masks  = batch["img_masks"].to(accelerator.device)                    # [Batch, Res, Res], foreground = white = 1, background = black = 0
+                        print(f'img_masks.shape : {img_masks.shape}')
                         binary_map = batch['anormal_masks'].to(accelerator.device).unsqueeze(-1)  # [Batch, Res, Res, 1]
                         batch_num = img_masks.shape[0]
                         for layer in attn_dict.keys():
@@ -553,7 +554,10 @@ class NetworkTrainer:
                                     binary_aug_tensor = binary_aug_tensor.expand(normal_score_map.shape).to(accelerator.device)             # [head,32,32,1]
 
                                     # -------------------------------------------------- (1-2) image masks -------------------------------------------------- #
-                                    img_mask = img_masks[i, :, :].unsqueeze(-1)                                 # 1, 64, 64, 1     # 1, res,res
+                                    img_mask = img_masks[i, :, :]
+                                    print(f'img_mask.shape (res,res) : {img_mask.shape}')
+                                    if img_mask.dim() != 2:
+                                        img_mask = img_mask.unsqueeze(0).unsqueeze(-1)                          # [1,32,32,1]
                                     _, r1, r2, c = img_mask.shape
                                     img_mask = img_mask.expand(normal_score_map.shape)                          # [head, 32,32,1] -> only one is efficient
 
