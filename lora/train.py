@@ -630,7 +630,7 @@ class NetworkTrainer:
                                                                                                            latents)
                         with accelerator.autocast():
                             noise_pred = self.call_unet(args, accelerator, unet, noisy_latents, timesteps, text_encoder_conds, batch,
-                                                        weight_dtype, trg_indexs, test_indexs)
+                                                        weight_dtype, None, None)
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
