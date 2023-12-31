@@ -145,23 +145,23 @@ class ConfigSanitizer:
                               "shuffle_caption": bool,
                               "keep_tokens": int,
                               "token_warmup_min": int,
-                              "token_warmup_step": Any(float,int),
+                              "token_warmup_step": Any(float, int),
                               "caption_prefix": str,
-                              "caption_suffix": str,}
+                              "caption_suffix": str, }
   # DO means DropOut
   DO_SUBSET_ASCENDABLE_SCHEMA = {"caption_dropout_every_n_epochs": int,
                                  "caption_dropout_rate": Any(float, int),
-                                 "caption_tag_dropout_rate": Any(float, int),}
+                                 "caption_tag_dropout_rate": Any(float, int), }
   # DB means DreamBooth
   DB_SUBSET_ASCENDABLE_SCHEMA = {"caption_extension": str,
                                  "class_tokens": str}
   DB_SUBSET_DISTINCT_SCHEMA = {Required("image_dir"): str,
                                "is_reg": bool,
-                               "class_caption" : str}
-                               #""}
+                               "class_caption": str}
+  # ""}
   # FT means FineTuning
   FT_SUBSET_DISTINCT_SCHEMA = {Required("metadata_file"): str,
-                               "image_dir": str,}
+                               "image_dir": str, }
   CN_SUBSET_ASCENDABLE_SCHEMA = {
     "caption_extension": str,
   }
@@ -179,9 +179,7 @@ class ConfigSanitizer:
     "max_bucket_reso": int,
     "min_bucket_reso": int,
     "resolution": functools.partial(__validate_and_convert_scalar_or_twodim.__func__, int),
-    #"mask_res" : int,
-  },
-
+  }
 
   # options handled by argparse but not handled by user config
   ARGPARSE_SPECIFIC_SCHEMA = {
@@ -193,7 +191,6 @@ class ConfigSanitizer:
   ARGPARSE_NULLABLE_OPTNAMES = [
     "face_crop_aug_range",
     "resolution",
-    "mask_res",
   ]
   # prepare map because option name may differ among argparse and user config
   ARGPARSE_OPTNAME_TO_CONFIG_OPTNAME = {
