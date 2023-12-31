@@ -135,7 +135,6 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
     noise_pred = call_unet(unet, original_latent, 0, good_bad_con, [[1]], None)
     map_dict = controller.step_store
     controller.reset()
-    map_list = []
     cls_score_list, good_score_list, bad_score_list = [], [], []
 
     mask_dict = {}
@@ -151,9 +150,12 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
         good_score_list.append(good_score)
     cls_score = torch.cat(cls_score_list, dim=0).float().mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res]
     good_score = torch.cat(good_score_list, dim=0).float().mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res
+    print(f'cls_score : {cls_score}')
+    print(f'good_score : {good_score}')
     mask_latent = torch.where(cls_score > good_score , 0, 1) # [16,16]
     print(f'mask latent : {mask_latent}')
-
+    import time
+    time.sleep(100)
     mask_img = mask_latent.cpu().numpy().astype(np.uint8)  # 1 means bad position
     mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
     mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(original_latent.device,
