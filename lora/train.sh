@@ -13,4 +13,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/train_ex/bad \
   --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/test_ex/bad --seed 42 --class_caption 'good' --contrastive_eps 0.0 --start_epoch 0 \
   --output_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/3_training_32res_with_CrossEntropy \
-  --cross_map_res [16] --mask_res 16
+  --cross_map_res [32] --mask_res 32
