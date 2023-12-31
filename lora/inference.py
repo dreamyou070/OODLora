@@ -76,7 +76,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                         query = self.to_q(hidden_states)
                         query = self.reshape_heads_to_batch_dim(query)
-                        _, back_query, object_query = query.chunk(2, dim=0)
+                        _, back_query, object_query = query.chunk(3, dim=0)
                         map_list.append(position_map)
                         position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
                         #map_list.append(position_map)
