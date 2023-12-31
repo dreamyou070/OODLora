@@ -128,73 +128,58 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
     original_latent = z_latent_dict[0]
 
     if context.shape[0] == 2:
-        uncon, con = context.chunk(2)
+        bad_good_con, good_con = context.chunk(2)
     else:
-        con = context
+        good_con = context
+
+    noise_pred = call_unet(unet, original_latent, 0, bad_good_con, [[1]], None)
+    mask_dict = controller.step_store
+    controller.reset()
+    map_list = []
+    for layer in mask_dict.keys():
+        mask = mask_dict[layer][0]  # [8,1024]
+        head, pix_num = mask.shape
+        res = int(pix_num ** 0.5)
+        if res == args.pixel_mask_res:
+            map_list.append(mask)
+    if len(map_list) > 0:
+        map = torch.cat(map_list, dim=0)
+        map = map.float().mean([0])
+        map = map.reshape(res, res)
+        mask_img = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8)  # 1 means bad position
+        mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
+
+        reverse_mask = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8)  # only good white
+        reverse_mask = reverse_mask * 255
+        reverse_mask = Image.fromarray(reverse_mask).resize((512, 512), )
+        reverse_mask.save(os.path.join(base_folder_dir, f'predicted_mask.png'))
+        mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(original_latent.device, dtype=original_latent.dtype)
+
 
     # inference_times = [100,80, ... 0]
     x_latent = start_latent
-    time_steps = []
-    pil_images = []
     x_latent_dict = {}
     x_latent_dict[inference_times[0]] = x_latent
     for i, t in enumerate(inference_times[:-1]):
         prev_time = int(inference_times[i + 1])
         with torch.no_grad():
-
             for i in range(args.inner_iteration) :
 
                 z_latent = z_latent_dict[t]
                 x_latent = x_latent_dict[t]
-                input_latent = torch.cat([original_latent, z_latent, x_latent], dim=0)
-                input_cond = torch.cat([con, uncon, con], dim=0)
+                input_latent = torch.cat([z_latent, x_latent], dim=0)
+                input_cond = torch.cat([good_con, good_con], dim=0)
                 trg_indexs_list = [[1]]
                 pixel_set = []
-                noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, pixel_set)
-
-                mask_dict = controller.step_store
-                controller.reset()
-
-                # ------------------- 1. get mask ------------------- #
-                layers = mask_dict.keys()
-                mask_dict_by_res = {}
-                map_list = []
-                for layer in layers:
-                    mask = mask_dict[layer][0] # [8,1024]
-                    head, pix_num = mask.shape
-                    res = int(pix_num ** 0.5)
-                    if res == args.pixel_mask_res:
-                        map_list.append(mask)
-
-                if len(map_list) > 0:
-                    print(f'making pixel mask')
-                    map = torch.cat(map_list, dim=0)
-                    map = map.float().mean([0])
-                    map = map.reshape(res,res)
-                    print(f'map : {map}')
-
-                    mask_img = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8) # 1 means bad position
-                    mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
-
-                    reverse_mask = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8) # only good white
-                    reverse_mask = reverse_mask * 255
-                    reverse_mask = Image.fromarray(reverse_mask).resize((512,512),)
-
-
-                    mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(z_latent.device, dtype=z_latent.dtype)
-                    x_latent = x_latent * (1 - mask_latent) + z_latent * (mask_latent)
-
+                noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, mask_dict)
+                z_noise_pred, x_noise_pred = noise_pred.chunk(2)
+                x_latent = x_latent * (1 - mask_latent) + z_latent * (mask_latent)
                 x_latent_dict[t] = x_latent
-
-            x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
+            x_noise_pred = call_unet(unet, x_latent, t, good_con, None, None)
             #z_noise_pred, x_noise_pred = noise_pred.chunk(2)
             x_latent = prev_step(x_noise_pred, t, x_latent, scheduler)
             x_latent_dict[prev_time] = x_latent
-
             pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
             pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
-            reverse_mask.save(os.path.join(base_folder_dir, f'{name}_mask_{t}.png'))
-
     pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
     pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
-    return x_latent, time_steps, pil_images

@@ -47,75 +47,42 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             attention_probs = attention_probs.to(value.dtype)
 
             if is_cross_attention and trg_indexs_list is not None:
-                common_name = layer_name.split('_')[:-1]
-                common_name = '_'.join(common_name)
 
-                original_probs, background_attention_probs, object_attention_probs = attention_probs.chunk(3, dim=0)
+                if attention_scores.shape[0] == 8 :
+                    cls_map = attention_probs[:, :, 0]
+                    good_map = attention_probs[:, :, 1]  # head, pixel_num, 1
+                    position_map = torch.where(cls_map < good_map, 1, 0)  # only good pixel -> bakground
+                    controller.store(position_map, layer_name)
 
-                batch_num = len(trg_indexs_list)
+                else :
+                    if layer_name in mask.keys() :
+                        position_map = mask[layer_name][0]
+                        background_attention_probs, object_attention_probs = attention_probs.chunk(3, dim=0)
 
-                original_probs_batch = torch.chunk(original_probs, batch_num, dim=0)
-                attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
-                attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0) #  torch.Size([8, 4096, 77])
+                        batch_num = len(trg_indexs_list)
 
-                for batch_idx, (original_probs, attention_probs_back, attention_probs_object) in enumerate(zip(original_probs_batch,
-                                                                                                               attention_probs_back_batch,
-                                                                                                               attention_probs_object_batch)):
-                    
+                        attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
+                        attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0) #  torch.Size([8, 4096, 77])
 
-                    pixel_num = attention_probs_back.shape[1] # head, pixel_num, word_num
-                    map_list = []
-                    res = int(pixel_num ** 0.5)
-                    if res in args.cross_map_res :
+                        for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch,attention_probs_object_batch)):
 
-                        cls_map = original_probs[:,:,0]
-                        good_map = original_probs[:, :, 1] # head, pixel_num, 1
-                        position_map = torch.where(cls_map < good_map , 1, 0) # only good pixel -> bakground
-                        print(f'position_map : {position_map}')
-                        #position_map = torch.where(good_map < bad_map, 0, 1) # head, pixel_num, 1
+                            pixel_num = attention_probs_back.shape[1] # head, pixel_num, word_num
+                            map_list = []
+                            res = int(pixel_num ** 0.5)
+                            if res in args.cross_map_res :
 
-                        query = self.to_q(hidden_states)
-                        query = self.reshape_heads_to_batch_dim(query)
-                        _, back_query, object_query = query.chunk(3, dim=0)
-                        map_list.append(position_map)
-                        position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
-                        #map_list.append(position_map)
+                                query = self.to_q(hidden_states)
+                                query = self.reshape_heads_to_batch_dim(query)
+                                _, back_query, object_query = query.chunk(3, dim=0)
+                                map_list.append(position_map)
+                                position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
+                                position_map = position_map.expand(object_query.shape)
+                                object_query = object_query * (1-position_map) + back_query * (position_map)
+                                query = torch.cat([_, back_query, object_query], dim=0)
+                                attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                                                                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+                                attention_probs = attention_scores.softmax(dim=-1)
 
-                        map_dict[common_name] = []
-                        map_dict[common_name].append(position_map)
-
-                        position_map = position_map.expand(object_query.shape)
-                        object_query = object_query * (1-position_map) + back_query * (position_map)
-                        query = torch.cat([_, back_query, object_query], dim=0)
-                        attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                                                                     device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
-                        attention_probs = attention_scores.softmax(dim=-1)
-
-                        #position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
-                        #position_map = position_map.expand(attention_probs_back.shape)
-                        # attention_probs_object shape = [head,pixel_num, 77 sen]
-                        # attention_probs_object = attention_probs_object * (1 - position_map) + attention_probs_back * position_map
-                        # attention_probs = torch.cat([attention_probs_back, attention_probs_object], dim=0)
-                        if len(map_list) > 0:
-                            controller.store(torch.cat(map_list, dim=0), layer_name)
-            """  
-            elif not is_cross_attention and trg_indexs_list is not None:
-                self_common_name = layer_name.split('_')[:-1]
-                self_common_name = '_'.join(self_common_name)
-                
-                if self_common_name in map_dict.keys() :
-
-                    _, background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0) # [head, pix_num, dim]
-                    dim = background_attention_probs.shape[-1]
-                    back_map = map_dict[self_common_name][0]  # 8, 1024, 1024
-                    #back_map = back_map.unsqueeze(-1)        # 8, 1024, 1
-                    #print(f'dim : {dim} | back_map.shape : {back_map.shape}')
-                    back_map = back_map.expand(background_attention_probs.shape)    #
-                    #batch_num = len(trg_indexs_list)
-                    object_attention_probs = object_attention_probs * (1 - back_map) + background_attention_probs * back_map
-                    attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
-                    del map_dict[self_common_name]
-            """
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -259,7 +226,7 @@ def main(args) :
     good_con = torch.chunk(good_context, 2)[-1]
 
     good_bad_con,good_con = good_bad_con[:, :3, :], good_con[:, :3, :]
-    context = torch.cat([good_bad_con,good_con], dim=0)
+    context = torch.cat([good_bad_con, good_con], dim=0)
 
     print(f' (3.2) train images')
     trg_h, trg_w = args.resolution
