@@ -248,6 +248,9 @@ def main(args):
                     score_diff = map_dict[layer][0]
                     score_list.append(score_diff)
                 score_diff = torch.cat(score_list, dim=0).mean(dim=0).squeeze() # [res*res]
+                print(f'score_diff : {score_diff}')
+                import time
+                time.sleep(5)
 
                 mask_pil = Image.open(mask_img_dir).convert('L')
                 mask_pil = mask_pil.resize((int(args.cross_map_res[0]),int(args.cross_map_res[0])), Image.BICUBIC)
