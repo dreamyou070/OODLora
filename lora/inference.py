@@ -70,6 +70,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     res = int(pixel_num ** 0.5)
                     if res in args.cross_map_res :
 
+                        print(f'attention_probs_back.shape : {attention_probs_back.shape}')
+
                         good_map = attention_probs_back[:, :, 1] # head, pixel_num, 1
                         bad_map  = attention_probs_back[:, :, 2]
                         diff_score = good_map - bad_map
