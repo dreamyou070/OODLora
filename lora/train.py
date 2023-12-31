@@ -526,7 +526,6 @@ class NetworkTrainer:
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
                         normal_position_normal_score, anormal_position_anormal_score = 0, 0
                         img_masks  = batch["img_masks"].to(accelerator.device)                    # [Batch, Res, Res], foreground = white = 1, background = black = 0
-                        print(f'img_masks.shape : {img_masks.shape}')
                         binary_map = batch['anormal_masks'].to(accelerator.device).unsqueeze(-1)  # [Batch, Res, Res, 1]
                         batch_num = img_masks.shape[0]
                         for layer in attn_dict.keys():

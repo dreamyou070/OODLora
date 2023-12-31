@@ -5,7 +5,7 @@
 # cd ./Lora/OODLora/lora/
 # srun -p suma_a6000 -q big_qos --job-name=lora_8_5 --gres=gpu:2 --pty bash -i
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 50289 train.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 50389 train.py \
   --process_title parksooyeon --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc --wandb_init_name bagel_16res \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora --network_dim 64 --network_alpha 4 --train_batch_size 2 --optimizer_type AdamW --lr_scheduler cosine_with_restarts --lr_warmup_steps 144 --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 \
@@ -13,4 +13,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/train_ex/bad \
   --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/test_ex/bad --seed 42 --class_caption 'good' --contrastive_eps 0.0 --start_epoch 0 \
   --output_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/3_training_32res_with_CrossEntropy \
-  --cross_map_res [32] --mask_res 32
+  --cross_map_res [16] --mask_res 16
