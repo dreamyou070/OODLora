@@ -49,12 +49,14 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
 
-                good_score = attention_probs[:,:,1]
-                bad_score = attention_probs[:,:,2]
+                cls_score  = attention_probs[:, :, 0]
+                good_score = attention_probs[:, :, 1]
+                bad_score  = attention_probs[:, :, 2]
+                scores = torch.cat([cls_score, good_score, bad_score], dim=-1)
                 res = int((good_score.shape[1]) ** 0.5)
                 if res in args.cross_map_res:
-                    score_diff = good_score - bad_score
-                    controller.store(score_diff, layer_name)
+                    #score_diff = good_score - bad_score
+                    controller.store(scores, layer_name)
 
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -243,14 +245,25 @@ def main(args):
                 noise_pred = call_unet(unet, latent, 0, con, [[1]], None)
                 map_dict = controller.step_store
                 controller.reset()
-                score_list = []
+
+                cls_score_list, good_score_list, bad_score_list = [], [], []
                 for layer in map_dict.keys():
-                    score_diff = map_dict[layer][0]
-                    score_list.append(score_diff)
-                score_diff = torch.cat(score_list, dim=0).mean(dim=0).squeeze() # [res*res]
-                print(f'score_diff : {score_diff}')
+                    scores = map_dict[layer][0]
+                    cls_score, good_score, bad_score = scores.chunk(3, dim=-1)
+                    cls_score_list.append(cls_score)
+                    good_score_list.append(good_score)
+                    bad_score_list.append(bad_score)
+                cls_score = torch.cat(cls_score_list, dim=0).mean(dim=0).squeeze() # [res*res]
+                good_score = torch.cat(good_score_list, dim=0).mean(dim=0).squeeze() # [res*res]
+                bad_score = torch.cat(bad_score_list, dim=0).mean(dim=0).squeeze() # [res*res]
+                print(f'cls_score : {cls_score}')
+                print(f'good_score : {good_score}')
+                print(f'bad_score : {bad_score}')
+
+                #score_diff = torch.cat(score_list, dim=0).mean(dim=0).squeeze() # [res*res]
+                #print(f'score_diff : {score_diff}')
                 import time
-                time.sleep(5)
+                time.sleep(50)
 
                 mask_pil = Image.open(mask_img_dir).convert('L')
                 mask_pil = mask_pil.resize((int(args.cross_map_res[0]),int(args.cross_map_res[0])), Image.BICUBIC)
@@ -261,13 +274,13 @@ def main(args):
                 anormal_position = torch.flatten(mask_np)
                 normal_position = torch.flatten(1 - mask_np)
 
-                if anormal_position.sum() > 0:
-                    anormal_score_diff = score_diff * anormal_position
-                    print(f'anormal_score_diff : {anormal_score_diff}')
+                #if anormal_position.sum() > 0:
+                 #   anormal_score_diff = score_diff * anormal_position
+                  #  print(f'anormal_score_diff : {anormal_score_diff}')
                     #anormal_score = anormal_score_diff.sum() / anormal_position.sum()
-                    normal_score_diff = (score_diff * normal_position)
-                    print(f'normal_score_diff : {normal_score_diff}')
-                    normal_score = normal_score_diff.sum() / normal_position.sum()
+                   # normal_score_diff = (score_diff * normal_position)
+                    #print(f'normal_score_diff : {normal_score_diff}')
+                    #normal_score = normal_score_diff.sum() / normal_position.sum()
                     #record = f'{class_name} | {test_image} | anormal_score = {anormal_score} | normal_score = {normal_score}'
                     #with open(record_file, 'a') as f:
                     #    f.write(record + '\n')
