@@ -229,6 +229,8 @@ class NetworkTrainer:
                 subsets_dict_list.append(subsets_dict)
                 user_config['datasets'][0]['subsets'] = subsets_dict_list
             print(f'User config: {user_config}')
+
+
             # --------------------------------------------------------------------------------------------------------
             """ config_util.generate_dreambooth_subsets_config_by_subdirs """
             blueprint = blueprint_generator.generate(user_config, # about data directory
@@ -598,8 +600,8 @@ class NetworkTrainer:
                         log_loss["loss/normal_pixel_normal_score_normal_position"] = normal_position_normal_score.mean().item()
                         log_loss["loss/anormal_pixel_anormal_score_anormal_position"] = anormal_position_anormal_score.mean().item()
                         log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
-                        # attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
-                        attn_loss = cross_loss.mean()
+                        attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
+                        # attn_loss = cross_loss.mean()
                     total_loss += attn_loss
                     
                     # ---------------------------------------------------------------------------------------------------------------------

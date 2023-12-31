@@ -525,6 +525,7 @@ class BaseDataset(torch.utils.data.Dataset):
         tokenizer: Union[CLIPTokenizer, List[CLIPTokenizer]],
         max_token_length: int,
         resolution: Optional[Tuple[int, int]],
+        mask_res: Optional[int],
         debug_dataset: bool,
     ) -> None:
         super().__init__()
@@ -532,6 +533,7 @@ class BaseDataset(torch.utils.data.Dataset):
         self.max_token_length = max_token_length
         # width/height is used when enable_bucket==False
         self.width, self.height = (None, None) if resolution is None else resolution
+        self.mask_res = mask_res
         self.debug_dataset = debug_dataset
         self.subsets: List[Union[DreamBoothSubset, FineTuningSubset]] = []
         self.token_padding_disabled = False
@@ -1051,13 +1053,13 @@ class BaseDataset(torch.utils.data.Dataset):
             anormal_mask_dir = os.path.join(super_super_parent, 'corrected', class_name, name)
 
             # (2.1) img mask """ background is zero """
-            img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((16,16), Image.BICUBIC), np.uint8)
+            img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((32,32), Image.BICUBIC), np.uint8)
             img_mask = np.where(img_mask > 10, 1, 0) #
             img_mask = torch.Tensor(img_mask)
             img_masks.append(img_mask)
 
             # (2.2) anormal mask """ normal is zero, anormal is white """
-            anormal_mask = np.array(Image.open(anormal_mask_dir).convert('L').resize((16,16), Image.BICUBIC), np.uint8)
+            anormal_mask = np.array(Image.open(anormal_mask_dir).convert('L').resize((32,32), Image.BICUBIC), np.uint8)
             anormal_mask = np.where(anormal_mask > 10, 1, 0) #
             anormal_mask = torch.Tensor(anormal_mask)
             anormal_masks.append(anormal_mask)
@@ -1346,15 +1348,15 @@ class DreamBoothDataset(BaseDataset):
         tokenizer,
         max_token_length,
         resolution,
+        mask_res: int ,
         enable_bucket: bool,
         min_bucket_reso: int,
         max_bucket_reso: int,
         bucket_reso_steps: int,
         bucket_no_upscale: bool,
         prior_loss_weight: float,
-        debug_dataset,
-    ) -> None:
-        super().__init__(tokenizer, max_token_length, resolution, debug_dataset)
+        debug_dataset,) -> None:
+        super().__init__(tokenizer, max_token_length, resolution, mask_res, debug_dataset)
 
         assert resolution is not None, f"resolution is required / resolution（解像度）指定は必須です"
 
@@ -1362,6 +1364,7 @@ class DreamBoothDataset(BaseDataset):
         self.size = min(self.width, self.height)  # 短いほう
         self.prior_loss_weight = prior_loss_weight
         self.latents_cache = None
+        #self.mask_res = mask_res
 
         self.enable_bucket = enable_bucket
         if self.enable_bucket:
@@ -1730,7 +1733,7 @@ class ControlNetDataset(BaseDataset):
         max_bucket_reso: int,
         bucket_reso_steps: int,
         bucket_no_upscale: bool,
-        debug_dataset,
+        debug_dataset,mask_res,
     ) -> None:
         super().__init__(tokenizer, max_token_length, resolution, debug_dataset)
 
@@ -1764,14 +1767,14 @@ class ControlNetDataset(BaseDataset):
             tokenizer,
             max_token_length,
             resolution,
+            mask_res,
             enable_bucket,
             min_bucket_reso,
             max_bucket_reso,
             bucket_reso_steps,
             bucket_no_upscale,
             1.0,
-            debug_dataset,
-        )
+            debug_dataset,)
 
         # config_util等から参照される値をいれておく（若干微妙なのでなんとかしたい）
         self.image_data = self.dreambooth_dataset_delegate.image_data
@@ -2080,8 +2083,8 @@ def glob_images_pathlib(dir_path, recursive):
 
 class MinimalDataset(BaseDataset):
 
-    def __init__(self, tokenizer, max_token_length, resolution, debug_dataset=False):
-        super().__init__(tokenizer, max_token_length, resolution, debug_dataset)
+    def __init__(self, tokenizer, max_token_length, resolution, mask_res, debug_dataset=False):
+        super().__init__(tokenizer, max_token_length, resolution, mask_res, debug_dataset)
 
         self.num_train_images = 0  # update in subclass
         self.num_reg_images = 0  # update in subclass
@@ -2148,7 +2151,7 @@ def load_arbitrary_dataset(args, tokenizer) -> MinimalDataset:
     dataset_class = args.dataset_class.split(".")[-1]
     module = importlib.import_module(module)
     dataset_class = getattr(module, dataset_class)
-    train_dataset_group: MinimalDataset = dataset_class(tokenizer, args.max_token_length, args.resolution, args.debug_dataset)
+    train_dataset_group: MinimalDataset = dataset_class(tokenizer, args.max_token_length, args.resolution, args.mask_res, args.debug_dataset)
     return train_dataset_group
 
 
@@ -2491,6 +2494,7 @@ def get_sai_model_spec(
     v2 = args.v2
     v_parameterization = args.v_parameterization
     reso = args.resolution
+    mask_res = args.mask_res
 
     title = args.metadata_title if args.metadata_title is not None else args.output_name
 

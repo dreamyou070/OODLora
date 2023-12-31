@@ -69,6 +69,7 @@ class BaseDatasetParams:
   tokenizer: Union[CLIPTokenizer, List[CLIPTokenizer]] = None
   max_token_length: int = None
   resolution: Optional[Tuple[int, int]] = None
+  mask_res: Optional[int] = None
   debug_dataset: bool = False
 
 @dataclass
@@ -177,7 +178,9 @@ class ConfigSanitizer:
     "enable_bucket": bool,
     "max_bucket_reso": int,
     "min_bucket_reso": int,
-    "resolution": functools.partial(__validate_and_convert_scalar_or_twodim.__func__, int),}
+    "resolution": functools.partial(__validate_and_convert_scalar_or_twodim.__func__, int),
+    "mask_res" : int,},
+
 
   # options handled by argparse but not handled by user config
   ARGPARSE_SPECIFIC_SCHEMA = {
@@ -189,6 +192,7 @@ class ConfigSanitizer:
   ARGPARSE_NULLABLE_OPTNAMES = [
     "face_crop_aug_range",
     "resolution",
+    "mask_res",
   ]
   # prepare map because option name may differ among argparse and user config
   ARGPARSE_OPTNAME_TO_CONFIG_OPTNAME = {
@@ -334,15 +338,19 @@ class BlueprintGenerator:
       print(f' ** subsets : {subsets}')
       is_dreambooth = all(["metadata_file" not in subset for subset in subsets])
       is_controlnet = all(["conditioning_data_dir" in subset for subset in subsets])
+
       if is_controlnet:
         subset_params_klass = ControlNetSubsetParams
         dataset_params_klass = ControlNetDatasetParams
+
       elif is_dreambooth:
         subset_params_klass = DreamBoothSubsetParams
         dataset_params_klass = DreamBoothDatasetParams
+
       else:
         subset_params_klass = FineTuningSubsetParams
         dataset_params_klass = FineTuningDatasetParams
+
       subset_blueprints = []
 
       for subset_config in subsets:
@@ -406,7 +414,8 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
       dataset_klass = FineTuningDataset
 
     subsets = [subset_klass(**asdict(subset_blueprint.params)) for subset_blueprint in dataset_blueprint.subsets]
-    dataset = dataset_klass(subsets=subsets, **asdict(dataset_blueprint.params))
+    dataset = dataset_klass(subsets=subsets,
+                            **asdict(dataset_blueprint.params))
     datasets.append(dataset)
 
   # print info
@@ -418,6 +427,7 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
       [Dataset {i}]
         batch_size: {dataset.batch_size}
         resolution: {(dataset.width, dataset.height)}
+        "mask_res" : {dataset.mask_res}
         enable_bucket: {dataset.enable_bucket}
     """)
 
@@ -565,6 +575,7 @@ def load_user_config(file: str) -> dict:
 
   return config
 
+
 # for config test
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
@@ -574,28 +585,20 @@ if __name__ == "__main__":
   parser.add_argument("--support_dropout", action="store_true")
   parser.add_argument("dataset_config")
   config_args, remain = parser.parse_known_args()
-
   parser = argparse.ArgumentParser()
   train_util.add_dataset_arguments(parser, config_args.support_dreambooth, config_args.support_finetuning, config_args.support_dropout)
   train_util.add_training_arguments(parser, config_args.support_dreambooth)
   argparse_namespace = parser.parse_args(remain)
   train_util.prepare_dataset_args(argparse_namespace, config_args.support_finetuning)
-
   print("[argparse_namespace]")
   print(vars(argparse_namespace))
-
   user_config = load_user_config(config_args.dataset_config)
-
   print("\n[user_config]")
   print(user_config)
-
   sanitizer = ConfigSanitizer(config_args.support_dreambooth, config_args.support_finetuning, config_args.support_controlnet, config_args.support_dropout)
   sanitized_user_config = sanitizer.sanitize_user_config(user_config)
-
   print("\n[sanitized_user_config]")
   print(sanitized_user_config)
-
   blueprint = BlueprintGenerator(sanitizer).generate(user_config, argparse_namespace)
-
   print("\n[blueprint]")
   print(blueprint)
