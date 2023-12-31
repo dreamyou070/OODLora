@@ -141,6 +141,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
     for layer in map_dict.keys():
         scores = map_dict[layer][0]
         cls_score, good_score = scores.chunk(2, dim=-1)
+        print(f'cls score : {cls_score.shape}')
         # head, pix_num, 1
         cls_score_list.append(cls_score)
         good_score_list.append(good_score)
