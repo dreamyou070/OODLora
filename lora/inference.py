@@ -82,7 +82,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
                         print(f'[second] position_map.shape : {position_map.shape}')
                         print(f'object_query.shape : {object_query.shape}')
+                        map_list.append(position_map)
 
+                        map_dict[common_name] = []
+                        map_dict[common_name].append(position_map)
                         position_map = position_map.expand(object_query.shape)
 
                         object_query = object_query * (1-position_map) + back_query * (position_map)
@@ -90,9 +93,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
                                                                      device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
                         attention_probs = attention_scores.softmax(dim=-1)
-                        map_list.append(position_map)
-                        map_dict[common_name] = []
-                        map_dict[common_name].append(position_map)
+
                         #position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
                         #position_map = position_map.expand(attention_probs_back.shape)
                         # attention_probs_object shape = [head,pixel_num, 77 sen]
@@ -105,11 +106,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 self_common_name = '_'.join(self_common_name)
                 
                 if self_common_name in map_dict.keys() :
-                    back_map = map_dict[self_common_name][0]
+                    back_map = map_dict[self_common_name][0] # 8, 1024
                     background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0) # [head, pix_num, dim]
                     dim = background_attention_probs.shape[-1]
-                    back_map = back_map.unsqueeze(-1)
-                    back_map = back_map.repeat(1, 1, dim)
+                    back_map = back_map.unsqueeze(-1)        # 8, 1024, 1
+                    back_map = back_map.repeat(1, 1, dim)    # 
                     #batch_num = len(trg_indexs_list)
                     object_attention_probs = object_attention_probs * (1 - back_map) + background_attention_probs * back_map
                     attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
