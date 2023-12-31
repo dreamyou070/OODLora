@@ -74,7 +74,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                         good_map = attention_probs_back[:, :, 1] # head, pixel_num, 1
                         bad_map  = attention_probs_back[:, :, 2]
-                        position_map = torch.where(bad_map > good_map , 0, 1)
+                        diff_map = good_map - bad_map
+                        position_map = torch.where(diff_map > mask_thredhold , 1, 0)
                         print(f'position_map : {position_map}')
                         #position_map = torch.where(good_map < bad_map, 0, 1) # head, pixel_num, 1
 
@@ -262,7 +263,7 @@ def main(args) :
     good_context = init_prompt(tokenizer, text_encoder, device, good_prompt)
     good_con = torch.chunk(good_context, 2)[-1]
 
-    good_bad_con,good_con = good_bad_con[:, :4, :], good_con[:, :4, :]
+    good_bad_con,good_con = good_bad_con[:, :3, :], good_con[:, :3, :]
     context = torch.cat([good_bad_con,good_con], dim=0)
 
     print(f' (3.2) train images')
