@@ -487,7 +487,7 @@ class NetworkTrainer:
             return pil_img
 
         cross_entropy_loss = nn.CrossEntropyLoss(reduction='none')
-        record_file = open(os.path.join(args.output_dir, 'score_record.txt'), 'w')
+        record_file = os.path.join(args.output_dir, 'score_record.txt')
         for epoch in range(args.start_epoch, args.start_epoch+num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
