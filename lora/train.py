@@ -638,8 +638,12 @@ class NetworkTrainer:
                         binary_map = batch['anormal_masks'].to(accelerator.device).unsqueeze(-1)  # [Batch, Res, Res, 1] # anormal = 1 normal = 0
                         binary_maps = []
                         for i in range(binary_map.shape[0]) :
-                            b_map = binary_map[i].squeeze(0) # res,res
-                            pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((64,64))
+                            b_map = binary_map[i]
+                            print(f'[before] b_map.shape : {b_map.shape}')
+                            if b_map.dim() != 2:
+                                b_map = b_map.squeeze()  # [res,res]
+                            print(f'[after] b_map.shape : {b_map.shape}')
+                            pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res))
                             binary_aug_np = np.array(pil)
                             binary_aug_np = np.where(binary_aug_np == 0, 0, 1)  # black = 0 = normal, [res,res,1]
                             binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,64,64,1]
