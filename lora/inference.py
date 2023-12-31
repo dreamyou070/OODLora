@@ -74,7 +74,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                         good_map = attention_probs_back[:, :, 1] # head, pixel_num, 1
                         bad_map  = attention_probs_back[:, :, 2]
-                        position_map = torch.where(bad_map > good_map + args.mask_thredhold, 0, 1)
+                        position_map = torch.where(bad_map > good_map - args.mask_thredhold, 0, 1)
                         #position_map = torch.where(good_map < bad_map, 0, 1) # head, pixel_num, 1
 
                         query = self.to_q(hidden_states)
