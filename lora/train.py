@@ -558,7 +558,6 @@ class NetworkTrainer:
 
                                     # -------------------------------------------------- (1-2) image masks -------------------------------------------------- #
                                     img_mask = img_masks[i, :, :]
-                                    print(f'img_mask.shape (res,res) : {img_mask.shape}')
                                     if img_mask.dim() == 2:
                                         img_mask = img_mask.unsqueeze(0).unsqueeze(-1)                          # [1,32,32,1]
                                     if img_mask.dim() == 3:
