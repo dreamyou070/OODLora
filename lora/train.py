@@ -584,6 +584,7 @@ class NetworkTrainer:
                                     anormal_pos = []
                                     for i in range(flatten_img_mask.shape[0]):
                                         position_info = position_map[i]
+                                        print(f'position_info : {position_info}')
                                         if position_info[0] == 1 or position_info[1] == 1:
                                             score_pair = flatten_img_mask[i]
                                             anormal_pos.append(position_info[1])
