@@ -150,6 +150,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
         map = map.reshape(int(args.pixel_mask_res),int(args.pixel_mask_res))
         mask_img = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8)  # 1 means bad position
         mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
+        print(f'pixel mask img : {mask_img}')
 
         reverse_mask = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8)  # only good white
         reverse_mask = reverse_mask * 255
