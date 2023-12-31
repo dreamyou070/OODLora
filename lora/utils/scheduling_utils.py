@@ -133,32 +133,30 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
         good_con = context
 
     noise_pred = call_unet(unet, original_latent, 0, bad_good_con, [[1]], None)
-    mask_dict = controller.step_store
+    map_dict = controller.step_store
     controller.reset()
     map_list = []
-    for layer in mask_dict.keys():
-        mask = mask_dict[layer][0]  # [8,1024]
-        head, pix_num = mask.shape
-        res = int(pix_num ** 0.5)
-        if res == args.pixel_mask_res:
-            map_list.append(mask)
-    if len(map_list) > 0:
-        map = torch.cat(map_list, dim=0)
-        map = map.float().mean([0])
-        print(f'map shape : {map.shape}')
+    cls_score_list, good_score_list, bad_score_list = [], [], []
 
-        map = map.reshape(int(args.pixel_mask_res),int(args.pixel_mask_res))
-        print(f'map : {map}')
-        mask_img = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8)  # 1 means bad position
-        mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
-        print(f'pixel mask img : {mask_img}')
+    for layer in map_dict.keys():
+        scores = map_dict[layer][0]
+        cls_score, good_score = scores.chunk(2, dim=-1)
+        cls_score_list.append(cls_score)
+        good_score_list.append(good_score)
+    cls_score = torch.cat(cls_score_list, dim=0).mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res]
+    good_score = torch.cat(good_score_list, dim=0).mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res
+    mask_latent = torch.where(cls_score > good_score, 0, 1) # [16,16]
+    print(f'mask latent : {mask_latent}')
 
-        reverse_mask = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8)  # only good white
-        reverse_mask = reverse_mask * 255
-        reverse_mask = Image.fromarray(reverse_mask).resize((512, 512), )
-        reverse_mask.save(os.path.join(base_folder_dir, f'predicted_mask.png'))
-        mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(original_latent.device, dtype=original_latent.dtype)
+    mask_img = mask_latent.cpu().numpy().astype(np.uint8)  # 1 means bad position
+    mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
+    print(f'pixel mask img : {mask_img}')
 
+    reverse_mask = (1-mask_latent).cpu().numpy().astype(np.uint8)  # only good white
+    reverse_mask = reverse_mask * 255
+    reverse_mask = Image.fromarray(reverse_mask).resize((512, 512), )
+    reverse_mask.save(os.path.join(base_folder_dir, f'predicted_mask.png'))
+    mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(original_latent.device, dtype=original_latent.dtype)
 
     # inference_times = [100,80, ... 0]
     x_latent = start_latent

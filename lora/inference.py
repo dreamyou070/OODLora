@@ -51,8 +51,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 if attention_scores.shape[0] == 8 :
                     cls_map = attention_probs[:, :, 0]
                     good_map = attention_probs[:, :, 1]  # head, pixel_num, 1
+
                     position_map = torch.where(cls_map < good_map, 1, 0)  # only good pixel -> bakground
-                    controller.store(position_map, layer_name)
+                    controller.store(torch.cat([cls_map, good_map], dim=--1),
+                                     layer_name)
 
                 else :
                     if layer_name in mask.keys() :
