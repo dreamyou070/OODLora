@@ -141,7 +141,9 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
     mask_dict = {}
 
     for layer in map_dict.keys():
-        mask_dict[layer] = map_dict[layer][1]
+        position_map = map_dict[layer][1]
+        print(f'type of position_map : {type(position_map)}')
+        mask_dict[layer] = position_map
         scores = map_dict[layer][0]
         cls_score, good_score = scores.chunk(2, dim=-1)
         # head, pix_num, 1
