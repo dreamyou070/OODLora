@@ -79,10 +79,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         query = self.to_q(hidden_states)
                         query = self.reshape_heads_to_batch_dim(query)
                         back_query, object_query = query.chunk(2, dim=0)
+                        map_list.append(position_map)
                         position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
                         print(f'[second] position_map.shape : {position_map.shape}')
                         print(f'object_query.shape : {object_query.shape}')
-                        map_list.append(position_map)
+                        #map_list.append(position_map)
 
                         map_dict[common_name] = []
                         map_dict[common_name].append(position_map)
