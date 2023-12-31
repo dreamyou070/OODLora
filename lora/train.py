@@ -617,7 +617,7 @@ class NetworkTrainer:
                         with open(record_file, 'a') as f:
                             f.write(json.dumps(record) + '\n')
 
-                        attn_loss = normal_loss.mean() + anormal_loss.mean() * 100 + cross_loss.mean()
+                        attn_loss = normal_loss.mean() + anormal_loss.mean()+ cross_loss.mean()
                         # attn_loss = cross_loss.mean()
                     total_loss += attn_loss
 
