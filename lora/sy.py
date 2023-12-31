@@ -1,8 +1,8 @@
 import torch
 
 a = torch.randn(8, 1024)
-map_list = [a,a,a,a,a]
-map = torch.cat(map_list, dim=0)
-map = map.float().mean([0])
-map = map.reshape(32,32)
-print(map.shape)
+b = torch.randn(8, 1024)
+c = torch.cat([a,b], dim=-1)
+print(c.shape)
+a_, b_ = torch.chunk(c, 2, dim=-1)
+print(a_.shape)
