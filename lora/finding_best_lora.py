@@ -49,35 +49,14 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
 
-                background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
-                batch_num = len(trg_indexs_list)
+                good_score = attention_probs[:,:,1]
+                bad_score = attention_probs[:,:,0]
+                res = int((good_score.shape[1]) ** 0.5)
+                if res in args.cross_map_res:
+                    score_diff = good_score - bad_score
+                    controller.store(score_diff, layer_name)
 
-                attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
-                attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0)
 
-                for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(
-                        zip(attention_probs_back_batch, attention_probs_object_batch)):
-                    # attention_probs_object = [head, pixel_num, sentence_len]
-                    max_txt_idx = torch.max(attention_probs_back[:, :, 1:], dim=-1).indices  # remove cls token
-                    """ is i can trust original img, token should be 0 ( without cls token ) """
-                    position_map = torch.where(max_txt_idx == 0, 1, 0)  # trustaonly 0 with lora
-                    batch_trg_index = trg_indexs_list[batch_idx]  # two times
-                    if args.other_token_preserving:
-                        attention_probs_object_sub = attention_probs_back.clone().detach()
-                    else:
-                        attention_probs_object_sub = attention_probs_object.clone().detach()
-                    pixel_num = attention_probs_object_sub.shape[1]
-                    map_list = []
-                    res = int(pixel_num ** 0.5)
-                    if int(pixel_num ** 0.5) in args.cross_map_res:
-                        for word_idx in batch_trg_index:
-                            word_idx = int(word_idx)
-                            back_attn_vector = attention_probs_back[:, :, word_idx].squeeze(-1)
-                            obj_attn_vector = attention_probs_object[:, :, word_idx].squeeze(-1)
-                            attention_probs_object_sub[:, :, word_idx] = obj_attn_vector * (1-position_map) + back_attn_vector * (position_map)
-                            map_list.append(position_map)
-                        controller.store_normal_score(position_map.sum())
-                        attention_probs = torch.cat([attention_probs_back, attention_probs_object_sub], dim=0)
             hidden_states = torch.bmm(attention_probs, value)
 
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -200,13 +179,17 @@ def main(args):
     network.apply_to(text_encoder, unet, True, True)
     if args.network_weights is not None:
         info = network.load_weights(args.network_weights)
+        parent, epoch = os.path.split(args.network_weights)
+        epoch, ext = os.path.splitext(epoch)
+        epoch = int(epoch.split("-")[-1])
+
     network.to(device)
     controller = AttentionStore()
     register_attention_control(unet, controller, mask_thredhold=args.mask_thredhold)
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
-    prompt = args.prompt
+    prompt = 'good bad'
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = torch.chunk(context, 2)
     uncon, con = uncon[:, :3, :], con[:, :3, :]
@@ -217,16 +200,14 @@ def main(args):
     trg_h, trg_w = args.resolution
 
     print(f' (3.3) test images')
-
     test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/bad')
     test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/corrected')
     classes = os.listdir(test_img_folder)
     test_output_dir = os.path.join(output_dir, 'test')
     os.makedirs(test_output_dir, exist_ok=True)
+    record_file = os.path.join(test_output_dir, f'lora_epoch_{epoch}_score_diff_record.txt')
     lines = []
     for class_name in classes:
-
-
         class_base_folder = os.path.join(test_output_dir, class_name)
         os.makedirs(class_base_folder, exist_ok=True)
 
@@ -248,9 +229,7 @@ def main(args):
             # if 'good' not in class_name:
             mask_img_dir = os.path.join(mask_folder, test_image)
             shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
-            mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
-            mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
-            gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
+
 
             print(f' (2.3.1) inversion')
             image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
@@ -260,24 +239,24 @@ def main(args):
 
             from utils.model_utils import call_unet
             with torch.no_grad():
-                noise_pred = call_unet(unet,latent, 0, con, [[1]], None)
-                score_list = controller.normal_score_list
+                # con = [CLS, Good, Bad]
+                noise_pred = call_unet(unet, latent, 0, con, [[1]], None)
+                map_dict = controller.step_store
                 controller.reset()
-                score = sum(score_list)/len(score_list)
-                line = f'{class_name} : {test_image} : {score}'
-                lines.append(line)
+                score_list = []
+                for layer in map_dict.keys():
+                    score_diff = map_dict[layer][0]
+                    score_list.append(score_diff)
+                score_diff = torch.cat(score_list, dim=0).mean(dim=0).squeeze() # [res*res]
 
-    parent, network_dir = os.path.split(args.network_weights)
-    model_name = os.path.splitext(network_dir)[0]
-    if 'last' not in model_name:
-        model_epoch = int(model_name.split('-')[-1])
-    else:
-        model_epoch = 'last'
-    output_text = os.path.join(output_dir, f'normality_score_lora_{model_epoch}.txt')
-
-    with open(output_text, 'w') as f:
-        for line in lines:
-            f.write(line + '\n')
+                mask_np = load_image(mask_img_dir, trg_h=int(args.cross_map_res[0]), trg_w=int(args.cross_map_res[0]))
+                mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
+                mask_np = torch.tensor(mask_np, dtype=torch.float32, device=device)
+                anormal_position = torch.flatten(mask_np)
+                anormal_score_diff = score_diff * anormal_position
+                record = f'{class_name} | {test_image} | {anormal_score_diff}'
+                with open(record_file, 'a') as f:
+                    f.write(record + '\n')
 
 
 
