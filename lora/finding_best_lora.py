@@ -264,8 +264,6 @@ def main(args):
 
                 #score_diff = torch.cat(score_list, dim=0).mean(dim=0).squeeze() # [res*res]
                 #print(f'score_diff : {score_diff}')
-                import time
-                time.sleep(50)
 
                 mask_pil = Image.open(mask_img_dir).convert('L')
                 mask_pil = mask_pil.resize((int(args.cross_map_res[0]),int(args.cross_map_res[0])), Image.BICUBIC)
@@ -278,10 +276,8 @@ def main(args):
 
                 print(f'cls score of anormal_position : {cls_score*anormal_position}')
                 print(f'good score of anormal_position : {good_score*anormal_position}')
-
-
-
-
+                import time
+                time.sleep(50)
 
 
 if __name__ == "__main__":
