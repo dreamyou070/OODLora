@@ -101,6 +101,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         # attention_probs = torch.cat([attention_probs_back, attention_probs_object], dim=0)
                         if len(map_list) > 0:
                             controller.store(torch.cat(map_list, dim=0), layer_name)
+
             elif not is_cross_attention and trg_indexs_list is not None:
                 self_common_name = layer_name.split('_')[:-1]
                 self_common_name = '_'.join(self_common_name)
@@ -109,8 +110,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                     background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0) # [head, pix_num, dim]
                     dim = background_attention_probs.shape[-1]
-
-                    back_map = map_dict[self_common_name][0]  # 8, 1024
+                    back_map = map_dict[self_common_name][0]  # 8, 1024, 1024
                     #back_map = back_map.unsqueeze(-1)        # 8, 1024, 1
                     print(f'dim : {dim} | back_map.shape : {back_map.shape}')
                     back_map = back_map.expand(background_attention_probs.shape)    #
@@ -151,7 +151,7 @@ def main(args) :
 
     parent = os.path.split(args.network_weights)[0]
     folder = os.path.split(parent)[-1]
-    args.output_dir = os.path.join(parent, f'{folder}/crossattention_bland_inference')
+    args.output_dir = os.path.join(parent, f'{folder}/pixel_crossattention_bland_inference')
 
     print(f' \n step 1. setting')
     if args.process_title:

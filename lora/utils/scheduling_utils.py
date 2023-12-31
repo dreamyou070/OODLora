@@ -149,7 +149,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
 
             mask_dict = controller.step_store
             controller.reset()
-            """
+
             # ------------------- 1. get mask ------------------- #
             layers = mask_dict.keys()
             mask_dict_by_res = {}
@@ -175,16 +175,15 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
 
                 mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(z_latent.device, dtype=z_latent.dtype)
                 x_latent = x_latent * (1 - mask_latent) + z_latent * (mask_latent)
-            """
-            #x_latent_dict[t] = x_latent
 
-            #x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
-            z_noise_pred, x_noise_pred = noise_pred.chunk(2)
+            x_latent_dict[t] = x_latent
+
+            x_noise_pred = call_unet(unet, x_latent, t, con, None, None)
+            #z_noise_pred, x_noise_pred = noise_pred.chunk(2)
             x_latent = prev_step(x_noise_pred, t, x_latent, scheduler)
-            x_latent_dict[prev_time] = x_latent
+            #x_latent_dict[prev_time] = x_latent
 
             pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-
             pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
             #reverse_mask.save(os.path.join(base_folder_dir, f'{name}_mask_{t}.png'))
 
