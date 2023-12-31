@@ -57,7 +57,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 else :
                     if layer_name in mask.keys() :
                         position_map = mask[layer_name][0]
-                        background_attention_probs, object_attention_probs = attention_probs.chunk(3, dim=0)
+                        background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
 
                         batch_num = len(trg_indexs_list)
 
