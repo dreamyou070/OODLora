@@ -588,6 +588,7 @@ if __name__ == "__main__":
   parser.add_argument("--support_controlnet", action="store_true")
   parser.add_argument("--support_dropout", action="store_true")
   parser.add_argument("dataset_config")
+  parser.add_argument("--mask_res", type = int)
   config_args, remain = parser.parse_known_args()
   parser = argparse.ArgumentParser()
   train_util.add_dataset_arguments(parser, config_args.support_dreambooth, config_args.support_finetuning, config_args.support_dropout)
