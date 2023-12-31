@@ -74,7 +74,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                         good_map = attention_probs_back[:, :, 1] # head, pixel_num, 1
                         bad_map  = attention_probs_back[:, :, 2]
-                        position_map = torch.where(bad_map > good_map - args.mask_thredhold, 0, 1)
+                        position_map = torch.where(bad_map > good_map , 0, 1)
+                        print(f'position_map : {position_map}')
                         #position_map = torch.where(good_map < bad_map, 0, 1) # head, pixel_num, 1
 
                         query = self.to_q(hidden_states)
@@ -82,8 +83,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         back_query, object_query = query.chunk(2, dim=0)
                         map_list.append(position_map)
                         position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
-                        print(f'[second] position_map.shape : {position_map.shape}')
-                        print(f'object_query.shape : {object_query.shape}')
                         #map_list.append(position_map)
 
                         map_dict[common_name] = []
