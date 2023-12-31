@@ -575,18 +575,19 @@ class NetworkTrainer:
 
                                     score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
                                     flatten_score_map = score_map.view(-1, 2)
-                                    flatten_img_mask = img_mask.contiguous().view(-1, 1)
+                                    #flatten_img_mask = img_mask.contiguous().view(-1, 1)
 
-                                    position_map = torch.cat([normal_position, anormal_position], dim=-1)
+                                    position_map = torch.cat([normal_position.contiguous().view(-1, 1),
+                                                              anormal_position.contiguous().view(-1, 1)], dim=-1)
                                     #flatten_position_map = position_map.view(-1, 1)
 
                                     score_pairs = []
                                     anormal_pos = []
-                                    for i in range(flatten_img_mask.shape[0]):
+                                    for i in range(flatten_score_map.shape[0]):
                                         position_info = position_map[i]
                                         print(f'position_info : {position_info}')
                                         if position_info[0] == 1 or position_info[1] == 1:
-                                            score_pair = flatten_img_mask[i]
+                                            score_pair = flatten_score_map[i]
                                             anormal_pos.append(position_info[1])
                                             score_pairs.append(score_pair)
                                     score_pairs = torch.stack(score_pairs)
