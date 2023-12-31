@@ -161,6 +161,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                 if res == args.pixel_mask_res:
                     map_list.append(mask)
             if len(map_list) > 0:
+                print(f'making pixel mask')
                 map = torch.cat(map_list, dim=0)
                 map = map.float().mean([0])
                 map = map.reshape(res,res)
