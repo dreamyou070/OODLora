@@ -179,6 +179,7 @@ class ConfigSanitizer:
     "max_bucket_reso": int,
     "min_bucket_reso": int,
     "resolution": functools.partial(__validate_and_convert_scalar_or_twodim.__func__, int),
+    "mask_res" : int,
   }
 
   # options handled by argparse but not handled by user config
