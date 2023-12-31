@@ -386,6 +386,8 @@ class BlueprintGenerator:
     default_params = asdict(param_klass())
     param_names = default_params.keys()
     params = {name: search_value(name_map.get(name, name), fallbacks, default_params.get(name)) for name in param_names}
+    print(f'********* parmas ********** ; {params}')
+    print(f'param_klass : {param_klass.__class__.__name__}')
     return param_klass(**params)
 
   @staticmethod
