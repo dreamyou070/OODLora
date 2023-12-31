@@ -276,6 +276,10 @@ def main(args):
 
                 print(f'cls score of anormal_position : {cls_score*anormal_position}')
                 print(f'good score of anormal_position : {good_score*anormal_position}')
+                print(f'cls good diff of anormal_position (maybe plus)  : {(cls_score-good_score)*anormal_position}')
+                print(f'cls scpre of normal_position : {cls_score*normal_position}')
+                print(f'good score of normal_position : {good_score*normal_position}')
+                print(f'cls good diff of normal_position (maybe minus) : {(cls_score-good_score)*normal_position}')
                 import time
                 time.sleep(50)
 
