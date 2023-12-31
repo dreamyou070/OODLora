@@ -390,8 +390,7 @@ class DreamBoothSubset(BaseSubset):
         token_warmup_min,
         token_warmup_step,
         mask_dir,
-        class_caption,
-        mask_res) -> None:
+        class_caption,) -> None:
         assert image_dir is not None, "image_dir must be specified / image_dirは指定が必須です"
 
         super().__init__(
