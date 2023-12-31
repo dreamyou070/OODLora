@@ -549,8 +549,9 @@ class NetworkTrainer:
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
 
                                 for i in range(batch_num):
-                                    normal_score_map = normal_score_map_batch[i].reshape(batch_num, res, res, -1)   # [h, res, res, 1]
-                                    anormal_score_map = anormal_score_map_batch[i].reshape(batch_num, res, res, -1) # [h, res, res, 1]
+                                    normal_score_map = normal_score_map_batch[i].reshape(8, res, res, -1)   # [h, res, res, 1]
+                                    anormal_score_map = anormal_score_map_batch[i].reshape(8, res, res, -1) # [h, res, res, 1]
+                                    print(f'[first] anormal_score_map : {anormal_score_map.shape}')
 
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
                                     # (1) normal & anormal binary map
@@ -562,6 +563,7 @@ class NetworkTrainer:
                                     binary_aug_np = np.where(binary_aug_np == 0, 0, 1)                          # black = 0 = normal, [res,res,1]
                                     binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,32,32,1]
                                     binary_aug_tensor = binary_aug_tensor.expand(normal_score_map.shape).to(accelerator.device)             # [head,32,32,1]
+                                    print(f'[first] binary_aug_tensor : {binary_aug_tensor.shape}')
 
                                     # -------------------------------------------------- (1-2) image masks -------------------------------------------------- #
                                     img_mask = img_masks[i, :, :]
