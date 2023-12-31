@@ -179,7 +179,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                 input_cond = torch.cat([good_con, good_con], dim=0)
                 trg_indexs_list = [[1]]
                 pixel_set = []
-                noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, map_dict)
+                noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, mask_dict)
                 z_noise_pred, x_noise_pred = noise_pred.chunk(2)
                 x_latent = x_latent * (1 - mask_latent) + z_latent * (mask_latent)
                 x_latent_dict[t] = x_latent
