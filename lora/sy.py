@@ -1,5 +1,5 @@
 import torch
 
-a= torch.randn((8,32))
-b = a[:,:2]
-print(b.shape)
+a= torch.randn((2, 16, 16, 4))
+aa = a.sum(dim=[1,2,3])
+print(aa)
