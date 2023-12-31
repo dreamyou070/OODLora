@@ -111,7 +111,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     dim = background_attention_probs.shape[-1]
 
                     back_map = map_dict[self_common_name][0]  # 8, 1024
-                    back_map = back_map.unsqueeze(-1)        # 8, 1024, 1
+                    #back_map = back_map.unsqueeze(-1)        # 8, 1024, 1
                     print(f'dim : {dim} | back_map.shape : {back_map.shape}')
                     back_map = back_map.expand(background_attention_probs.shape)    #
                     #batch_num = len(trg_indexs_list)
