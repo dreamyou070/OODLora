@@ -487,6 +487,7 @@ class NetworkTrainer:
             return pil_img
 
         cross_entropy_loss = nn.CrossEntropyLoss(reduction='none')
+        record_file = open(os.path.join(args.output_dir, 'score_record.txt'), 'w')
         for epoch in range(args.start_epoch, args.start_epoch+num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
@@ -595,9 +596,17 @@ class NetworkTrainer:
                                     cross_loss += cross_ent_loss.mean()
                         log_loss["loss/anormal_pixel_normal_score"] = normal_loss.mean().item()
                         log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.mean().item()
-                        log_loss["loss/normal_pixel_normal_score_normal_position"] = normal_position_normal_score.mean().item()
-                        log_loss["loss/anormal_pixel_anormal_score_anormal_position"] = anormal_position_anormal_score.mean().item()
+                        log_loss["loss/normal_pixel_normal_score"] = normal_position_normal_score.mean().item()
+                        log_loss["loss/anormal_pixel_anormal_score"] = anormal_position_anormal_score.mean().item()
                         log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
+
+                        record = {"anormal_pixel_normal_score": normal_loss.mean().item(),
+                                  "normal_pixel_anormal_score": anormal_loss.mean().item(),
+                                  "normal_pixel_normal_score": normal_position_normal_score.mean().item(),
+                                  "anormal_pixel_anormal_score": anormal_position_anormal_score.mean().item(),}
+                        with open(record_file, 'a') as f:
+                            f.write(json.dumps(record) + '\n')
+
                         attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
                         # attn_loss = cross_loss.mean()
                     total_loss += attn_loss
