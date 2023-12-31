@@ -1488,7 +1488,8 @@ class DreamBoothDataset(BaseDataset):
                 mask_dir = os.path.join(subset.mask_dir,name)
                 info = ImageInfo(img_path, subset.num_repeats, caption, subset.is_reg, img_path,
                                  mask_dir,
-                                 class_caption)
+                                 class_caption,
+                                 mask_res = subset.mask_res,)
                 if subset.is_reg:
                     reg_infos.append(info)
                 else:
