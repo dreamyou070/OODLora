@@ -52,14 +52,14 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     cls_map = attention_probs[:, :, 0]
                     good_map = attention_probs[:, :, 1]  # head, pixel_num, 1
 
-                    position_map = torch.where(cls_map < good_map, 1, 0)  # only good pixel -> bakground
+                    position_map = torch.where(cls_map < good_map, 1, 0)  # only good pixel -> bakground # head, pixel_num, 1
                     if int(position_map.shape[1] ** 0.5) in args.cross_map_res :
-                        controller.store(torch.cat([cls_map, good_map], dim=--1),
-                                         layer_name)
+                        controller.store(torch.cat([cls_map, good_map], dim=--1),layer_name)
+                        controller.store(position_map, layer_name)
 
                 else :
                     if layer_name in mask.keys() :
-                        position_map = mask[layer_name][0]
+                        position_map = mask[layer_name]
                         background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
 
                         batch_num = len(trg_indexs_list)
