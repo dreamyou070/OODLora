@@ -253,9 +253,9 @@ def main(args):
                     cls_score_list.append(cls_score)
                     good_score_list.append(good_score)
                     bad_score_list.append(bad_score)
-                cls_score = torch.cat(cls_score_list, dim=0).mean(dim=0).squeeze() # [res*res]
-                good_score = torch.cat(good_score_list, dim=0).mean(dim=0).squeeze() # [res*res]
-                bad_score = torch.cat(bad_score_list, dim=0).mean(dim=0).squeeze() # [res*res]
+                cls_score = torch.cat(cls_score_list, dim=0).mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]),int(args.cross_map_res[0])) # [res*res]
+                good_score = torch.cat(good_score_list, dim=0).mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]),int(args.cross_map_res[0])) # [res*res]
+                bad_score = torch.cat(bad_score_list, dim=0).mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]),int(args.cross_map_res[0])) # [res*res]
                 total_score = cls_score + good_score + bad_score
                 print(f'cls_score : {cls_score}')
                 print(f'good_score : {good_score}')
@@ -271,7 +271,7 @@ def main(args):
                 mask_np = np.where(mask_np > 10, 1, 0)  # binary mask
                 mask_np = torch.tensor(mask_np, dtype=torch.float32, device=device)
 
-                anormal_position = mask_np
+                anormal_position = mask_np # 16,16
                 normal_position =  1- mask_np
 
                 print(f'cls score of anormal_position : {cls_score*anormal_position}')
