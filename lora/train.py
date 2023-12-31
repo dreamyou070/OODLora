@@ -492,6 +492,7 @@ class NetworkTrainer:
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
+
                     on_step_start(text_encoder, unet)
                     img_masks = batch["img_masks"].to(accelerator.device)  # background = zero, foreground = one
                     print(f'img_mask (batch, 1, 16,16): {img_masks.shape}')
@@ -504,10 +505,9 @@ class NetworkTrainer:
                     forground_img.save(f'./foreground_img_{step}.png')
                     background_img.save(f'./background_img_{step}.png')
 
-                break
-            break
+                    time.sleep(1000)
 
-                    """
+
                     with torch.no_grad():
                         instance_seed = random.randint(0, 2 ** 31)
                         generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
@@ -644,8 +644,7 @@ class NetworkTrainer:
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
-                    """
-                """
+
                 if args.scale_weight_norms:
                     keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(
                         args.scale_weight_norms, accelerator.device)
@@ -693,8 +692,7 @@ class NetworkTrainer:
                     wandb.log(logs)
                 if global_step >= args.max_train_steps:
                     break
-                """
-            """
+
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_total / len(loss_list)}
                 accelerator.log(logs, step=epoch + 1)
@@ -717,8 +715,7 @@ class NetworkTrainer:
                                    text_encoder, unet)
             if attention_storer is not None:
                 attention_storer.reset()
-            """
-        """
+
         if is_main_process:
             network = accelerator.unwrap_model(network)
         accelerator.end_training()
@@ -728,7 +725,6 @@ class NetworkTrainer:
             ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
             save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
             print("model saved.")
-        """
 
 
 if __name__ == "__main__":
