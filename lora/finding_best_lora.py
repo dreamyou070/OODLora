@@ -209,7 +209,7 @@ def main(args):
     lines = []
     for class_name in classes:
         class_base_folder = os.path.join(test_output_dir, class_name)
-        os.makedirs(class_base_folder, exist_ok=True)
+        #os.makedirs(class_base_folder, exist_ok=True)
 
         image_folder = os.path.join(test_img_folder, class_name)
         mask_folder = os.path.join(test_mask_folder, class_name)
@@ -220,15 +220,15 @@ def main(args):
 
         for j, test_image in enumerate(test_images):
             name, ext = os.path.splitext(test_image)
-            trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
-            os.makedirs(trg_img_output_dir, exist_ok=True)
+            #trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
+            #os.makedirs(trg_img_output_dir, exist_ok=True)
 
             test_img_dir = os.path.join(image_folder, test_image)
-            shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
+            #shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
 
             # if 'good' not in class_name:
             mask_img_dir = os.path.join(mask_folder, test_image)
-            shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+            #shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
 
 
             print(f' (2.3.1) inversion')
@@ -248,11 +248,14 @@ def main(args):
                     score_diff = map_dict[layer][0]
                     score_list.append(score_diff)
                 score_diff = torch.cat(score_list, dim=0).mean(dim=0).squeeze() # [res*res]
+                print(f'score_diff : {score_diff.shape}')
 
                 mask_np = load_image(mask_img_dir, trg_h=int(args.cross_map_res[0]), trg_w=int(args.cross_map_res[0]))
                 mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
                 mask_np = torch.tensor(mask_np, dtype=torch.float32, device=device)
                 anormal_position = torch.flatten(mask_np)
+                print(f'anormal_position (32,32): {anormal_position.shape}')
+
                 anormal_score_diff = score_diff * anormal_position
                 record = f'{class_name} | {test_image} | {anormal_score_diff}'
                 with open(record_file, 'a') as f:
