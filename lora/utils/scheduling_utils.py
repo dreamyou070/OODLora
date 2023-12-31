@@ -140,12 +140,13 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
         mask = mask_dict[layer][0]  # [8,1024]
         head, pix_num = mask.shape
         res = int(pix_num ** 0.5)
+        print(f'res : {res}')
         if res == args.pixel_mask_res:
             map_list.append(mask)
     if len(map_list) > 0:
         map = torch.cat(map_list, dim=0)
         map = map.float().mean([0])
-        map = map.reshape(res, res)
+        map = map.reshape(16,16)
         mask_img = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8)  # 1 means bad position
         mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
 
