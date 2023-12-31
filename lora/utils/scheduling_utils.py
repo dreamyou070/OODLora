@@ -142,13 +142,14 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
             z_latent = z_latent_dict[t]
             x_latent = x_latent_dict[t]
             input_latent = torch.cat([z_latent, x_latent], dim=0)
-            input_cond = torch.cat([con, con], dim=0)
+            input_cond = torch.cat([uncon, con], dim=0)
             trg_indexs_list = [[1]]
             pixel_set = []
             noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, pixel_set)
 
             mask_dict = controller.step_store
             controller.reset()
+            """
             # ------------------- 1. get mask ------------------- #
             layers = mask_dict.keys()
             mask_dict_by_res = {}
@@ -174,6 +175,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
 
                 mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(z_latent.device, dtype=z_latent.dtype)
                 x_latent = x_latent * (1 - mask_latent) + z_latent * (mask_latent)
+            """
             #x_latent_dict[t] = x_latent
 
             #x_noise_pred = call_unet(unet, x_latent, t, con, None, None)

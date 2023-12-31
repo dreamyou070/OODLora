@@ -45,6 +45,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
+            """
             if is_cross_attention and trg_indexs_list is not None:
                 common_name = layer_name.split('_')[:-1]
                 common_name = '_'.join(common_name)
@@ -55,14 +56,15 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0) #  torch.Size([8, 4096, 77])
                 batch_back_map = []
                 new_attns = []
+                
                 for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch, attention_probs_object_batch)):
-                    """
+                    
                     #  torch.Size([8, 4096, 77])
                     #if args.other_token_preserving :
                     #    attention_probs_object_sub = attention_probs_back.clone().detach()
                     #else :
                     #    attention_probs_object_sub = attention_probs_object.clone().detach()
-                    """
+                    
                     pixel_num = attention_probs_back.shape[1] # head, pixel_num, word_num
                     map_list = []
                     res = int(pixel_num ** 0.5)
@@ -85,7 +87,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             elif not is_cross_attention and trg_indexs_list is not None:
                 self_common_name = layer_name.split('_')[:-1]
                 self_common_name = '_'.join(self_common_name)
-                """
+                
                 if self_common_name in map_dict.keys() :
                     back_map = map_dict[self_common_name][0]
                     background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0) # [head, pix_num, dim]
@@ -96,7 +98,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     object_attention_probs = object_attention_probs * (1 - back_map) + background_attention_probs * back_map
                     attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
                     del map_dict[self_common_name]
-                """
+            """
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -129,7 +131,7 @@ def main(args) :
 
     parent = os.path.split(args.network_weights)[0]
     folder = os.path.split(parent)[-1]
-    args.output_dir = os.path.join(parent, f'{folder}/inference')
+    args.output_dir = os.path.join(parent, f'{folder}/only_lora_inference')
 
     print(f' \n step 1. setting')
     if args.process_title:
@@ -231,11 +233,15 @@ def main(args) :
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
-    prompt = args.prompt
-    context = init_prompt(tokenizer, text_encoder, device, prompt)
-    uncon, con = torch.chunk(context, 2)
-    uncon, con = uncon[:, :3, :], con[:, :3, :]
-    context = torch.cat([uncon, con], dim=0)
+    good_bad_prompt = 'good bad'
+    good_bad_context = init_prompt(tokenizer, text_encoder, device, good_bad_prompt)
+    good_bad_con = torch.chunk(good_bad_context, 2)[-1]
+    good_prompt = 'good'
+    good_context = init_prompt(tokenizer, text_encoder, device, good_prompt)
+    good_con = torch.chunk(good_context, 2)[-1]
+
+    good_bad_con,good_con = good_bad_con[:, :4, :], good_con[:, :4, :]
+    context = torch.cat([good_bad_con,good_con], dim=0)
 
     print(f' (3.2) train images')
     trg_h, trg_w = args.resolution
