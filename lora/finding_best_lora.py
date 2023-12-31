@@ -50,7 +50,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if is_cross_attention and trg_indexs_list is not None:
 
                 good_score = attention_probs[:,:,1]
-                bad_score = attention_probs[:,:,0]
+                bad_score = attention_probs[:,:,2]
                 res = int((good_score.shape[1]) ** 0.5)
                 if res in args.cross_map_res:
                     score_diff = good_score - bad_score
