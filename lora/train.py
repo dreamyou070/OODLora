@@ -46,9 +46,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
+                bad_map = attention_probs[:, :,1]
                 good_map = attention_probs[:,:,2] # [batch*head, pixel_num, 1]
-                bad_map = attention_probs[:,:,1]
-                attn_score_map = torch.cat([good_map, bad_map], dim=-1)
+                attn_score_map = torch.cat([bad_map, good_map], dim=-1)
                 controller.store(attn_score_map, layer_name)
                 """
                 batch, pix_num, _ = query.shape
@@ -505,8 +505,6 @@ class NetworkTrainer:
 
                     on_step_start(text_encoder, unet)
 
-
-
                     with torch.no_grad():
                         latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
                         if torch.any(torch.isnan(latents)):
@@ -523,6 +521,7 @@ class NetworkTrainer:
                     # -------------------------------------------------- (1) attention loss -------------------------------------------------- #
                     total_loss = 0
                     with torch.set_grad_enabled(train_text_encoder):
+                        """ text = CLS bad good EOS """
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
                         text_encoder_conds = text_encoder_conds[:,:4,:] # add one pad token (EOS token)
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
@@ -533,8 +532,8 @@ class NetworkTrainer:
                         attention_storer.reset()
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
                         normal_position_normal_score, anormal_position_anormal_score = 0, 0
-                        img_masks  = batch["img_masks"].to(accelerator.device)                    # [Batch, Res, Res], foreground = white = 1, background = black = 0
-                        binary_map = batch['anormal_masks'].to(accelerator.device).unsqueeze(-1)  # [Batch, Res, Res, 1]
+                        img_masks = batch["img_masks"].to(accelerator.device)                    # [Batch, Res, Res], foreground = white = 1, background = black = 0
+                        binary_map = batch['anormal_masks'].to(accelerator.device)#.unsqueeze(-1)  # [Batch, Res, Res, 1]
                         batch_num = img_masks.shape[0]
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
@@ -553,7 +552,7 @@ class NetworkTrainer:
                                     anormal_score_map = anormal_score_map_batch[i].reshape(8, res, res, -1) # [h, res, res, 1]
 
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
-                                    # (1) normal & anormal binary map
+                                    # (1) normal & anormal binary map """ normal zero is zero """
                                     b_map = binary_map[i, :, :, :]
                                     if b_map.dim() != 2:
                                         b_map = b_map.squeeze()                    # [res,res]
@@ -564,13 +563,16 @@ class NetworkTrainer:
                                     binary_aug_tensor = binary_aug_tensor.expand(normal_score_map.shape).to(accelerator.device)             # [head,32,32,1]
 
                                     # -------------------------------------------------- (1-2) image masks -------------------------------------------------- #
-                                    img_mask = img_masks[i, :, :]
-                                    if img_mask.dim() == 2:
-                                        img_mask = img_mask.unsqueeze(0).unsqueeze(-1)                          # [1,32,32,1]
-                                    if img_mask.dim() == 3:
-                                        img_mask = img_mask.unsqueeze(-1)
+                                    img_mask = img_masks[i, :, :,:] # """ background is zero """
+                                    if img_mask.dim() != 2:
+                                        img_mask = img_mask.squeeze()
+                                    pil = Image.fromarray(img_mask.cpu().numpy().astype(np.uint8)).resize((res, res))
+                                    img_mask = np.array(pil)
+                                    img_mask = np.where(img_mask == 0, 0, 1)                                   # black = 0 = background, 1 = foreground
+                                    img_mask = torch.tensor(img_mask).unsqueeze(0).unsqueeze(-1)               # [1,32,32,1]
+                                    img_mask = img_mask.expand(normal_score_map.shape).to(accelerator.device)  # [head,32,32,1]
                                     _, r1, r2, c = img_mask.shape
-                                    img_mask = img_mask.expand(normal_score_map.shape)                          # [head, 32,32,1] -> only one is efficient
+                                    img_mask = img_mask.expand(normal_score_map.shape)                         # [head, 32,32,1] -> only one is efficient
 
                                     # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
                                     # binary_aug_tensor = 8,32,321
@@ -618,41 +620,6 @@ class NetworkTrainer:
                         attn_loss = normal_loss.mean() + anormal_loss.mean() * 100 + cross_loss.mean()
                         # attn_loss = cross_loss.mean()
                     total_loss += attn_loss
-
-
-                    if args.anormal_training :
-                        # anormal masked training #
-                        # -------------------------------------------------- (1) attention loss -------------------------------------------------- #
-                        with torch.set_grad_enabled(train_text_encoder):
-                            text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,weight_dtype)
-                            text_encoder_conds = text_encoder_conds[:, :2, :]  # add one pad token (EOS token)
-                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                           noise_scheduler,
-                                                                                                           latents)
-                        with accelerator.autocast():
-                            noise_pred = self.call_unet(args, accelerator, unet, noisy_latents, timesteps, text_encoder_conds, batch,
-                                                        weight_dtype, None, None)
-                        if args.v_parameterization:
-                            target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                        else:
-                            target = noise
-                        binary_map = batch['anormal_masks'].to(accelerator.device).unsqueeze(-1)  # [Batch, Res, Res, 1] # anormal = 1 normal = 0
-                        binary_maps = []
-                        for i in range(binary_map.shape[0]) :
-                            b_map = binary_map[i]
-                            if b_map.dim() != 2:
-                                b_map = b_map.squeeze()  # [res,res]
-                            pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res))
-                            binary_aug_np = np.array(pil)
-                            binary_aug_np = np.where(binary_aug_np == 0, 0, 1)  # black = 0 = normal, [res,res,1]
-                            binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(0)  # [1,64,64,1]
-
-                            binary_maps.append(binary_aug_tensor)
-                        binary_maps = torch.cat(binary_maps, dim=0).to(accelerator.device)  # [Batch, Res, Res, 1]
-                        anormal_task_loss = torch.nn.functional.mse_loss(noise_pred.float() * binary_maps,
-                                                                 target.float() * binary_maps, reduction="none").mean(dim=(1, 2, 3))
-                        log_loss["loss/anormal_task_loss"] = anormal_task_loss.mean().item()
-                        total_loss += anormal_task_loss.mean()
 
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.3) natural training
