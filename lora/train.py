@@ -538,7 +538,7 @@ class NetworkTrainer:
                         batch_num = img_masks.shape[0]
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
-                            normal_score_map, anormal_score_map = torch.chunk(attn_score, 2, dim=-1)       # [batch*head, pixel_num, 1]
+                            anormal_score_map, normal_score_map = torch.chunk(attn_score, 2, dim=-1)       # [batch*head, pixel_num, 1]
                             if normal_score_map.dim() != 3:
                                 normal_score_map = normal_score_map.unsqueeze(-1)
                                 anormal_score_map = anormal_score_map.unsqueeze(-1)
@@ -618,6 +618,38 @@ class NetworkTrainer:
                         attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
                         # attn_loss = cross_loss.mean()
                     total_loss += attn_loss
+
+                    if args.anormal_training :
+                        # anormal masked training #
+                        # -------------------------------------------------- (1) attention loss -------------------------------------------------- #
+                        with torch.set_grad_enabled(train_text_encoder):
+                            text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
+                                                                    weight_dtype)
+                            text_encoder_conds = text_encoder_conds[:, :2, :]  # add one pad token (EOS token)
+                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                           noise_scheduler,
+                                                                                                           latents)
+                        with accelerator.autocast():
+                            noise_pred = self.call_unet(args, accelerator, unet, noisy_latents, timesteps, text_encoder_conds, batch,
+                                                        weight_dtype, trg_indexs, test_indexs)
+                        if args.v_parameterization:
+                            target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                        else:
+                            target = noise
+                        binary_map = batch['anormal_masks'].to(accelerator.device).unsqueeze(-1)  # [Batch, Res, Res, 1] # anormal = 1 normal = 0
+                        binary_maps = []
+                        for i in range(binary_map.shape[0]) :
+                            b_map = binary_map[i].squeeze(0) # res,res
+                            pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((64,64))
+                            binary_aug_np = np.array(pil)
+                            binary_aug_np = np.where(binary_aug_np == 0, 0, 1)  # black = 0 = normal, [res,res,1]
+                            binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,64,64,1]
+                            binary_maps.append(binary_aug_tensor)
+                        binary_maps = torch.cat(binary_maps, dim=0).to(accelerator.device)  # [Batch, Res, Res, 1]
+                        anormal_task_loss = torch.nn.functional.mse_loss(noise_pred.float() * binary_maps,
+                                                                 target.float() * binary_maps, reduction="none").mean(dim=(1, 2, 3))
+                        log_loss["loss/anormal_task_loss"] = anormal_task_loss.mean().item()
+                        total_loss += anormal_task_loss.mean()
                     
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.3) natural training
@@ -808,6 +840,8 @@ if __name__ == "__main__":
     parser.add_argument("--start_epoch", type = int, default = 0)
     parser.add_argument("--valid_data_dir", type=str)
     parser.add_argument("--task_loss_weight", type=float, default=0.5)
+    parser.add_argument("--anormal_training", action = 'store_true')
+
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)

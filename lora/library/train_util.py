@@ -1147,10 +1147,10 @@ class BaseDataset(torch.utils.data.Dataset):
             class_caption = image_info.class_caption
             if class_caption == caption :
                 train_class = 1
-                caption = 'good bad'
+                caption = 'bad good'
             else :
                 train_class = 0
-                caption = 'good bad'
+                caption = 'bad good'
 
             train_class_list.append(train_class)
 
