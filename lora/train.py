@@ -475,6 +475,15 @@ class NetworkTrainer:
                 accelerator.print(f"removing old checkpoint: {old_ckpt_file}")
                 os.remove(old_ckpt_file)
 
+        def img_to_pil(torch_img):
+            torch_img = torch_img[0, :, :, :].squeeze()
+            if torch_img.dim() == 2:
+                torch_img = torch_img.unsqueeze(0)
+            torch_img = torch_img.permute(1, 2, 0)
+            np_img = torch_img.cpu().numpy().astype(np.uint8) * 255
+            pil_img = Image.fromarray(np_img)
+            return pil_img
+
         cross_entropy_loss = nn.CrossEntropyLoss(reduction='none')
         for epoch in range(args.start_epoch, args.start_epoch+num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
@@ -484,6 +493,21 @@ class NetworkTrainer:
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
+                    img_masks = batch["img_masks"].to(accelerator.device)  # background = zero, foreground = one
+                    print(f'img_mask (batch, 1, 16,16): {img_masks.shape}')
+                    foreground_sum = torch.sum(img_masks)
+                    reverse_masks = 1-img_masks
+                    print(f' foreground_sum: {foreground_sum}')
+                    print(f' background_sum: {reverse_masks.sum()}')
+                    forground_img = img_to_pil(img_masks)
+                    background_img = img_to_pil(reverse_masks)
+                    forground_img.save(f'./foreground_img_{step}.png')
+                    background_img.save(f'./background_img_{step}.png')
+
+                break
+            break
+
+                    """
                     with torch.no_grad():
                         instance_seed = random.randint(0, 2 ** 31)
                         generator = torch.Generator(device=accelerator.device).manual_seed(instance_seed)
@@ -581,7 +605,7 @@ class NetworkTrainer:
                         #attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
                         attn_loss = cross_loss.mean()
                     total_loss += attn_loss
-
+                    
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.3) natural training
                     if len(train_indexs) > 0:
@@ -620,7 +644,8 @@ class NetworkTrainer:
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
-
+                    """
+                """
                 if args.scale_weight_norms:
                     keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(
                         args.scale_weight_norms, accelerator.device)
@@ -668,7 +693,8 @@ class NetworkTrainer:
                     wandb.log(logs)
                 if global_step >= args.max_train_steps:
                     break
-
+                """
+            """
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_total / len(loss_list)}
                 accelerator.log(logs, step=epoch + 1)
@@ -691,7 +717,8 @@ class NetworkTrainer:
                                    text_encoder, unet)
             if attention_storer is not None:
                 attention_storer.reset()
-
+            """
+        """
         if is_main_process:
             network = accelerator.unwrap_model(network)
         accelerator.end_training()
@@ -701,6 +728,7 @@ class NetworkTrainer:
             ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
             save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
             print("model saved.")
+        """
 
 
 if __name__ == "__main__":
@@ -778,3 +806,4 @@ if __name__ == "__main__":
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
     trainer.train(args)
+                    """

@@ -29,6 +29,8 @@ def image2latent(image, vae, device, weight_dtype):
         latents = latents * 0.18215
     return latents
 
+
+
 @torch.no_grad()
 def customizing_image2latent(image, student, device, weight_dtype):
     if type(image) is Image:
