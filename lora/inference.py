@@ -62,6 +62,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 else :
                     if layer_name in mask.keys() :
                         position_map = mask[layer_name]
+                        print(f'type of positionmap in infer : {type(position_map)}')
                         background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
 
                         batch_num = len(trg_indexs_list)
@@ -72,13 +73,13 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                         for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch,attention_probs_object_batch)):
 
                             pixel_num = attention_probs_back.shape[1] # head, pixel_num, word_num
-                            map_list = []
+                            #map_list = []
                             res = int(pixel_num ** 0.5)
                             if res in args.cross_map_res :
                                 query = self.to_q(hidden_states)
                                 query = self.reshape_heads_to_batch_dim(query)
                                 back_query, object_query = query.chunk(2, dim=0)
-                                map_list.append(position_map)
+                                #map_list.append(position_map)
                                 position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
                                 position_map = position_map.expand(object_query.shape)
                                 object_query = object_query * (1-position_map) + back_query * (position_map)
