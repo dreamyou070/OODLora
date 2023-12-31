@@ -585,17 +585,17 @@ class NetworkTrainer:
                                     anormal_pos = []
                                     for i in range(flatten_score_map.shape[0]):
                                         position_info = position_map[i]
-                                        print(f'position_info : {position_info}')
                                         if position_info[0] == 1 or position_info[1] == 1:
                                             score_pair = flatten_score_map[i]
                                             anormal_pos.append(position_info[1])
                                             score_pairs.append(score_pair)
                                     score_pairs = torch.stack(score_pairs)
                                     anormal_pos = torch.stack(anormal_pos)
-                                    #flatten_img_mask = flatten_img_mask.squeeze() # [8*32*32]
-                                    #anormal_position = anormal_position.view(-1, 1)
-                                    #anormal_position = anormal_position.squeeze()
-                                    cross_loss += cross_entropy_loss(score_pairs, anormal_pos.long()).mean()
+                                    cross_ent_loss = cross_entropy_loss(score_pairs, anormal_pos.long())
+                                    print(f'cross_ent_loss.shape : {cross_ent_loss.shape}')
+                                    cross_loss += cross_ent_loss.mean()
+
+
                         log_loss["loss/anormal_pixel_normal_score"] = normal_loss.mean().item()
                         log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.mean().item()
                         log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
