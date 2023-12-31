@@ -556,8 +556,10 @@ class NetworkTrainer:
                                     # -------------------------------------------------- (1-2) image masks -------------------------------------------------- #
                                     img_mask = img_masks[i, :, :]
                                     print(f'img_mask.shape (res,res) : {img_mask.shape}')
-                                    if img_mask.dim() != 2:
+                                    if img_mask.dim() == 2:
                                         img_mask = img_mask.unsqueeze(0).unsqueeze(-1)                          # [1,32,32,1]
+                                    if img_mask.dim() == 3:
+                                        img_mask = img_mask.unsqueeze(-1)
                                     _, r1, r2, c = img_mask.shape
                                     img_mask = img_mask.expand(normal_score_map.shape)                          # [head, 32,32,1] -> only one is efficient
 
