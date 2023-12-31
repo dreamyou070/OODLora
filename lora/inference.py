@@ -106,11 +106,14 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                 self_common_name = '_'.join(self_common_name)
                 
                 if self_common_name in map_dict.keys() :
-                    back_map = map_dict[self_common_name][0] # 8, 1024
+
                     background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0) # [head, pix_num, dim]
                     dim = background_attention_probs.shape[-1]
+
+                    back_map = map_dict[self_common_name][0]  # 8, 1024
                     back_map = back_map.unsqueeze(-1)        # 8, 1024, 1
-                    back_map = back_map.repeat(1, 1, dim)    # 
+                    print(f'dim : {dim} | back_map.shape : {back_map.shape}')
+                    back_map = back_map.expand(background_attention_probs.shape)    #
                     #batch_num = len(trg_indexs_list)
                     object_attention_probs = object_attention_probs * (1 - back_map) + background_attention_probs * back_map
                     attention_probs = torch.cat([background_attention_probs, object_attention_probs], dim=0)
