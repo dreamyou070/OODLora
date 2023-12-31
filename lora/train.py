@@ -780,7 +780,7 @@ if __name__ == "__main__":
                         help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率", )
     parser.add_argument("--no_half_vae", action="store_true",
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
-    #parser.add_argument("--mask_res", type=int, default=64)
+
     parser.add_argument("--mask_threshold", type=float, default=0.5)
 
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
