@@ -46,8 +46,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
-                good_map = attention_probs[:,:,1] # [batch*head, pixel_num, 1]
-                bad_map = attention_probs[:,:,2]
+                good_map = attention_probs[:,:,2] # [batch*head, pixel_num, 1]
+                bad_map = attention_probs[:,:,1]
                 attn_score_map = torch.cat([good_map, bad_map], dim=-1)
                 controller.store(attn_score_map, layer_name)
                 """
@@ -619,6 +619,8 @@ class NetworkTrainer:
                         # attn_loss = cross_loss.mean()
                     total_loss += attn_loss
 
+                    """
+
                     if args.anormal_training :
                         # anormal masked training #
                         # -------------------------------------------------- (1) attention loss -------------------------------------------------- #
@@ -652,7 +654,7 @@ class NetworkTrainer:
                                                                  target.float() * binary_maps, reduction="none").mean(dim=(1, 2, 3))
                         log_loss["loss/anormal_task_loss"] = anormal_task_loss.mean().item()
                         total_loss += anormal_task_loss.mean()
-                    
+                    """
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.3) natural training
                     if len(train_indexs) > 0:
