@@ -260,8 +260,10 @@ def main(args):
 
                 if anormal_position.sum() > 0:
                     anormal_score_diff = (score_diff * anormal_position)
+                    anormal_score = anormal_score_diff.sum() / anormal_position.sum()
                     normal_score_diff = (score_diff * normal_position)
-                    record = f'{class_name} | {test_image} | anormal_score = {anormal_score_diff} | normal_score = {normal_score_diff}'
+                    normal_score = normal_score_diff.sum() / normal_position.sum()
+                    record = f'{class_name} | {test_image} | anormal_score = {anormal_score} | normal_score = {normal_score}'
                     with open(record_file, 'a') as f:
                         f.write(record + '\n')
 
