@@ -128,11 +128,11 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
     original_latent = z_latent_dict[0]
 
     if context.shape[0] == 2:
-        bad_good_con, good_con = context.chunk(2)
+        good_bad_con, good_con = context.chunk(2)
     else:
         good_con = context
 
-    noise_pred = call_unet(unet, original_latent, 0, bad_good_con, [[1]], None)
+    noise_pred = call_unet(unet, original_latent, 0, good_bad_con, [[1]], None)
     map_dict = controller.step_store
     controller.reset()
     map_list = []
@@ -151,18 +151,16 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
         good_score_list.append(good_score)
     cls_score = torch.cat(cls_score_list, dim=0).float().mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res]
     good_score = torch.cat(good_score_list, dim=0).float().mean(dim=0).squeeze().reshape(int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res
-    mask_latent = torch.where(cls_score > good_score + 0.1, 0, 1) # [16,16]
+    mask_latent = torch.where(cls_score > good_score , 0, 1) # [16,16]
     print(f'mask latent : {mask_latent}')
 
     mask_img = mask_latent.cpu().numpy().astype(np.uint8)  # 1 means bad position
     mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
-    print(f'pixel mask img : {mask_img}')
+    mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(original_latent.device,
+                                                                      dtype=original_latent.dtype)
+    Image.fromarray(mask_img * 255).save(os.path.join(base_folder_dir, f'predicted_mask.png'))
 
-    reverse_mask = (1-mask_latent).cpu().numpy().astype(np.uint8)  # only good white
-    reverse_mask = reverse_mask * 255
-    reverse_mask = Image.fromarray(reverse_mask).resize((512, 512), )
-    reverse_mask.save(os.path.join(base_folder_dir, f'predicted_mask.png'))
-    mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(original_latent.device, dtype=original_latent.dtype)
+
 
     # inference_times = [100,80, ... 0]
     x_latent = start_latent
@@ -178,11 +176,9 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
                 input_latent = torch.cat([z_latent, x_latent], dim=0)
                 input_cond = torch.cat([good_con, good_con], dim=0)
                 trg_indexs_list = [[1]]
-                pixel_set = []
                 noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list, mask_dict)
-                z_noise_pred, x_noise_pred = noise_pred.chunk(2)
                 x_latent = x_latent * (1 - mask_latent) + z_latent * (mask_latent)
-                x_latent_dict[t] = x_latent
+                #x_latent_dict[t] = x_latent
             x_noise_pred = call_unet(unet, x_latent, t, good_con, None, None)
             #z_noise_pred, x_noise_pred = noise_pred.chunk(2)
             x_latent = prev_step(x_noise_pred, t, x_latent, scheduler)
