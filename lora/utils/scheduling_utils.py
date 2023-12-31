@@ -171,7 +171,8 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
 
                 reverse_mask = torch.where(map > args.pixel_thred, 1, 0).cpu().numpy().astype(np.uint8) # 1 means lora
                 reverse_mask = reverse_mask * 255
-                reverse_mask = Image.fromarray(reverse_mask)#.resize((512,512), )
+                reverse_mask = Image.fromarray(reverse_mask).resize((512,512),)
+
 
                 mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(z_latent.device, dtype=z_latent.dtype)
                 x_latent = x_latent * (1 - mask_latent) + z_latent * (mask_latent)
@@ -185,7 +186,7 @@ def recon_loop(args, z_latent_dict, start_latent, gt_pil, context, inference_tim
 
             pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
             pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
-            #reverse_mask.save(os.path.join(base_folder_dir, f'{name}_mask_{t}.png'))
+            reverse_mask.save(os.path.join(base_folder_dir, f'{name}_mask_{t}.png'))
 
     pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
     pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
