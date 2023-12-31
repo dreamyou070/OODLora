@@ -110,14 +110,15 @@ class ImageInfo:
                  image_key: str,
                  num_repeats: int, caption: str, is_reg: bool, absolute_path: str,
                  mask_dir:str,
-                 class_caption:Optional[str]) -> None:
+                 class_caption:Optional[str],
+                 mask_res) -> None:
         self.image_key: str = image_key
         self.num_repeats: int = num_repeats
         self.caption: str = caption
         self.is_reg: bool = is_reg
         self.absolute_path: str = absolute_path
         self.image_size: Tuple[int, int] = None
-        self.mask_res : int
+        self.mask_res : mask_res
         self.resized_size: Tuple[int, int] = None
         self.bucket_reso: Tuple[int, int] = None
         self.latents: torch.Tensor = None
@@ -389,7 +390,8 @@ class DreamBoothSubset(BaseSubset):
         token_warmup_min,
         token_warmup_step,
         mask_dir,
-    class_caption) -> None:
+        class_caption,
+        mask_res) -> None:
         assert image_dir is not None, "image_dir must be specified / image_dirは指定が必須です"
 
         super().__init__(
@@ -1345,6 +1347,7 @@ class BaseDataset(torch.utils.data.Dataset):
         return example
 
 class DreamBoothDataset(BaseDataset):
+
     def __init__(
         self,
         subsets: Sequence[DreamBoothSubset],
@@ -1368,7 +1371,7 @@ class DreamBoothDataset(BaseDataset):
         self.size = min(self.width, self.height)  # 短いほう
         self.prior_loss_weight = prior_loss_weight
         self.latents_cache = None
-        #self.mask_res = mask_res
+        self.mask_res = mask_res
 
         self.enable_bucket = enable_bucket
         if self.enable_bucket:
@@ -1489,7 +1492,7 @@ class DreamBoothDataset(BaseDataset):
                 info = ImageInfo(img_path, subset.num_repeats, caption, subset.is_reg, img_path,
                                  mask_dir,
                                  class_caption,
-                                 mask_res = subset.mask_res,)
+                                 mask_res = self.mask_res)
                 if subset.is_reg:
                     reg_infos.append(info)
                 else:
@@ -1526,6 +1529,7 @@ class DreamBoothDataset(BaseDataset):
         self.num_reg_images = num_reg_images
 
 class FineTuningDataset(BaseDataset):
+
     def __init__(
         self,
         subsets: Sequence[FineTuningSubset],
@@ -1949,7 +1953,6 @@ class DatasetGroup(torch.utils.data.ConcatDataset):
         for dataset in self.datasets:
             dataset.disable_token_padding()
 
-
 def is_disk_cached_latents_is_expected(reso, npz_path: str, flip_aug: bool):
     expected_latents_size = (reso[1] // 8, reso[0] // 8)  # bucket_resoはWxHなので注意
 
@@ -2158,7 +2161,6 @@ def load_arbitrary_dataset(args, tokenizer) -> MinimalDataset:
     dataset_class = getattr(module, dataset_class)
     train_dataset_group: MinimalDataset = dataset_class(tokenizer, args.max_token_length, args.resolution, args.mask_res, args.debug_dataset)
     return train_dataset_group
-
 
 def load_image(image_path, trg_h, trg_w):
     image = Image.open(image_path)
