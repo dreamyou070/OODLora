@@ -1057,7 +1057,6 @@ class BaseDataset(torch.utils.data.Dataset):
 
             # (2.1) img mask """ background is zero """
             # image_info.mask_res
-            print(f'image_info.mask_res : {image_info.mask_res}')
             img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((32,32), Image.BICUBIC), np.uint8)
             img_mask = np.where(img_mask > 10, 1, 0) #
             img_mask = torch.Tensor(img_mask)
