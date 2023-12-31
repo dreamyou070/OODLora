@@ -3,7 +3,7 @@
 # qkrtndus0701?!
 # conda activate venv_lora
 # cd ./Lora/OODLora/lora/
-# srun -p suma_a6000 -q big_qos --job-name=lora_8_5 --gres=gpu:2 --pty bash -i
+# srun -p suma_a6000 -q big_qos --job-name=lora_8_5 --gres=gpu:2 --time=48:00:00 --pty bash -i
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 52589 train.py \
   --process_title parksooyeon --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc --wandb_init_name bagel_16res \

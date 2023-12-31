@@ -553,7 +553,7 @@ class NetworkTrainer:
 
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
                                     # (1) normal & anormal binary map """ normal zero is zero """
-                                    b_map = binary_map[i, :, :, :]
+                                    b_map = binary_map[i, :, :]
                                     if b_map.dim() != 2:
                                         b_map = b_map.squeeze()                    # [res,res]
                                     pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res))
@@ -563,7 +563,7 @@ class NetworkTrainer:
                                     binary_aug_tensor = binary_aug_tensor.expand(normal_score_map.shape).to(accelerator.device)             # [head,32,32,1]
 
                                     # -------------------------------------------------- (1-2) image masks -------------------------------------------------- #
-                                    img_mask = img_masks[i, :, :,:] # """ background is zero """
+                                    img_mask = img_masks[i, :, :] # """ background is zero """
                                     if img_mask.dim() != 2:
                                         img_mask = img_mask.squeeze()
                                     pil = Image.fromarray(img_mask.cpu().numpy().astype(np.uint8)).resize((res, res))
