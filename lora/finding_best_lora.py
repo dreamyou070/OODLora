@@ -273,19 +273,12 @@ def main(args):
                 mask_np = np.where(mask_np > 10, 1, 0)  # binary mask
                 mask_np = torch.tensor(mask_np, dtype=torch.float32, device=device)
 
-                anormal_position = torch.flatten(mask_np)
-                normal_position = torch.flatten(1 - mask_np)
+                anormal_position = mask_np
+                normal_position =  1- mask_np
 
-                #if anormal_position.sum() > 0:
-                 #   anormal_score_diff = score_diff * anormal_position
-                  #  print(f'anormal_score_diff : {anormal_score_diff}')
-                    #anormal_score = anormal_score_diff.sum() / anormal_position.sum()
-                   # normal_score_diff = (score_diff * normal_position)
-                    #print(f'normal_score_diff : {normal_score_diff}')
-                    #normal_score = normal_score_diff.sum() / normal_position.sum()
-                    #record = f'{class_name} | {test_image} | anormal_score = {anormal_score} | normal_score = {normal_score}'
-                    #with open(record_file, 'a') as f:
-                    #    f.write(record + '\n')
+                print(f'cls score of anormal_position : {cls_score*anormal_position}')
+                print(f'good score of anormal_position : {good_score*anormal_position}')
+
 
 
 
