@@ -11,12 +11,12 @@ def main(args) :
             for line in content :
                 line = line.strip()
                 if len(line) > 0 :
-                    class_name, img_name, anormal_score, normal_score = line.sptlie(' | ')
+                    class_name, img_name, anormal_score, normal_score = line.splite(' | ')
                     anormal_score = float(anormal_score.replace('anormal_score = ',''))
                     normal_score = float(anormal_score.replace('normal_score = ',''))
                     score_diff = normal_score - anormal_score
                     score_diffs += score_diff
-                    
+
         print(f'lora_epoch : {lora_epoch}, score_diffs : {score_diffs}')
 
 
