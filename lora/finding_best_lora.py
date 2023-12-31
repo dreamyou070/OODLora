@@ -248,21 +248,22 @@ def main(args):
                     score_diff = map_dict[layer][0]
                     score_list.append(score_diff)
                 score_diff = torch.cat(score_list, dim=0).mean(dim=0).squeeze() # [res*res]
-                print(f'score_diff (256 = 16*16) : {score_diff.shape}')
 
                 mask_pil = Image.open(mask_img_dir).convert('L')
                 mask_pil = mask_pil.resize((int(args.cross_map_res[0]),int(args.cross_map_res[0])), Image.BICUBIC)
                 mask_np = np.array(mask_pil, np.uint8)
-                mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
+                mask_np = np.where(mask_np > 10, 1, 0)  # binary mask
                 mask_np = torch.tensor(mask_np, dtype=torch.float32, device=device)
 
                 anormal_position = torch.flatten(mask_np)
-                print(f'anormal_position (16,16): {anormal_position.sum()}')
+                normal_position = torch.flatten(1 - mask_np)
 
-                anormal_score_diff = score_diff * anormal_position
-                record = f'{class_name} | {test_image} | {anormal_score_diff}'
-                with open(record_file, 'a') as f:
-                    f.write(record + '\n')
+                if anormal_position.sum() > 0:
+                    anormal_score_diff = (score_diff * anormal_position)
+                    normal_score_diff = (score_diff * normal_position)
+                    record = f'{class_name} | {test_image} | anormal_score = {anormal_score_diff} | normal_score = {normal_score_diff}'
+                    with open(record_file, 'a') as f:
+                        f.write(record + '\n')
 
 
 
