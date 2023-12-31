@@ -262,13 +262,15 @@ def main(args):
                 normal_position = torch.flatten(1 - mask_np)
 
                 if anormal_position.sum() > 0:
-                    anormal_score_diff = (score_diff * anormal_position)
-                    anormal_score = anormal_score_diff.sum() / anormal_position.sum()
+                    anormal_score_diff = score_diff * anormal_position
+                    print(f'anormal_score_diff : {anormal_score_diff}')
+                    #anormal_score = anormal_score_diff.sum() / anormal_position.sum()
                     normal_score_diff = (score_diff * normal_position)
+                    print(f'normal_score_diff : {normal_score_diff}')
                     normal_score = normal_score_diff.sum() / normal_position.sum()
-                    record = f'{class_name} | {test_image} | anormal_score = {anormal_score} | normal_score = {normal_score}'
-                    with open(record_file, 'a') as f:
-                        f.write(record + '\n')
+                    #record = f'{class_name} | {test_image} | anormal_score = {anormal_score} | normal_score = {normal_score}'
+                    #with open(record_file, 'a') as f:
+                    #    f.write(record + '\n')
 
 
 
