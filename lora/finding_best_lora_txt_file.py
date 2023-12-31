@@ -16,6 +16,7 @@ def main(args) :
                     normal_score = float(anormal_score.replace('normal_score = ',''))
                     score_diff = normal_score - anormal_score
                     score_diffs += score_diff
+                    
         print(f'lora_epoch : {lora_epoch}, score_diffs : {score_diffs}')
 
 
