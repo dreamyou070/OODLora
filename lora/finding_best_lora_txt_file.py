@@ -2,7 +2,7 @@ import os
 import argparse
 def main(args) :
 
-    files = os.listir(args.folder)
+    files = os.listdir(args.folder)
     for file in files :
         lora_epoch = file.split('_')[2]
         score_diffs = 0
