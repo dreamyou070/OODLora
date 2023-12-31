@@ -181,6 +181,14 @@ class NetworkTrainer:
                                                              weight_dtype)
         return encoder_hidden_states
 
+    def get_class_text_cond(self, args, accelerator, batch, tokenizers, text_encoders, weight_dtype):
+        input_ids = batch["class_input_ids"].to(accelerator.device)  # batch, torch_num, sen_len
+        print(f'class input ids: {input_ids}')
+        encoder_hidden_states = train_util.get_hidden_states(args, input_ids,
+                                                             tokenizers[0], text_encoders[0],
+                                                             weight_dtype)
+        return encoder_hidden_states
+
     def call_unet(self,
                   args, accelerator, unet,
                   noisy_latents, timesteps,
@@ -617,8 +625,13 @@ class NetworkTrainer:
                         train_latents = latents[train_indexs, :]
                         if train_latents.dim() != 4:
                             train_latents = train_latents.unsqueeze(0)
+
+                        with torch.set_grad_enabled(train_text_encoder):
+                            text_class_encoder_conds = self.get_class_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
+                            text_class_encoder_conds = text_class_encoder_conds[train_indexs, :]
+
                         input_latents = train_latents
-                        input_condition = text_encoder_conds[train_indexs, :2, :]
+                        input_condition = text_class_encoder_conds[:, :2, :]  # add one pad token (EOS token)
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                            noise_scheduler,
                                                                                                            input_latents)

@@ -1057,13 +1057,13 @@ class BaseDataset(torch.utils.data.Dataset):
 
             # (2.1) img mask """ background is zero """
             # image_info.mask_res
-            img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((16,16), Image.BICUBIC), np.uint8)
+            img_mask = np.array(Image.open(img_mask_dir).convert('L').resize((32,32), Image.BICUBIC), np.uint8)
             img_mask = np.where(img_mask > 10, 1, 0) #
             img_mask = torch.Tensor(img_mask)
             img_masks.append(img_mask)
 
             # (2.2) anormal mask """ normal is zero, anormal is white """
-            anormal_mask = np.array(Image.open(anormal_mask_dir).convert('L').resize((16,16), Image.BICUBIC), np.uint8)
+            anormal_mask = np.array(Image.open(anormal_mask_dir).convert('L').resize((32,32), Image.BICUBIC), np.uint8)
             anormal_mask = np.where(anormal_mask > 10, 1, 0) #
             anormal_mask = torch.Tensor(anormal_mask)
             anormal_masks.append(anormal_mask)
