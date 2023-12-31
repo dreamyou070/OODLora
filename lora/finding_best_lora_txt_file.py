@@ -12,9 +12,8 @@ def main(args) :
                 line = line.strip()
                 if len(line) > 0 :
                     class_name, img_name, anormal_score, normal_score = line.split(' | ')
-                    print(anormal_score)
                     anormal_score = float(anormal_score.replace('anormal_score = ',''))
-                    normal_score = float(anormal_score.replace('normal_score = ',''))
+                    normal_score = float(normal_score.replace('normal_score = ',''))
                     score_diff = normal_score - anormal_score
                     score_diffs += score_diff
 
