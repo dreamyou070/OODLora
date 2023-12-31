@@ -70,10 +70,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     res = int(pixel_num ** 0.5)
                     if res in args.cross_map_res :
 
+                        cls_map = attention_probs_back[:,:,0]
                         good_map = attention_probs_back[:, :, 1] # head, pixel_num, 1
-                        bad_map  = attention_probs_back[:, :, 2]
-                        diff_map = good_map - bad_map
-                        position_map = torch.where(diff_map > mask_thredhold , 1, 0) # only good pixel -> bakground
+                        position_map = torch.where(cls_map < good_map , 1, 0) # only good pixel -> bakground
                         print(f'position_map : {position_map}')
                         #position_map = torch.where(good_map < bad_map, 0, 1) # head, pixel_num, 1
 
