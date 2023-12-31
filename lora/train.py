@@ -576,7 +576,8 @@ class NetworkTrainer:
                                     # binary_aug_tensor = 8,32,321
                                     # img_mask = 8,32,32,1
                                     normal_position = (1-binary_aug_tensor).to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
-                                    anormal_position = binary_aug_tensor.to(dtype=weight_dtype)    * img_mask.to(dtype=weight_dtype)
+                                    anormal_position = binary_aug_tensor.to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
+                                    print(f'anormal_position : {anormal_position.shape}')
 
                                     # normal pixel's anormal score
                                     normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).squeeze()  # [b, res, res, 1]
