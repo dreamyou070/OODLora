@@ -518,8 +518,6 @@ class NetworkTrainer:
                         img_masks = batch["img_masks"].to(accelerator.device)      # [Batch, 1, 512, 512], foreground = white = 1, background = black = 0
                         binary_map = batch['anormal_masks'].to(accelerator.device) # [Batch, 1, 512, 512], normal = black = 0, anormal = white = 1
                         batch_num = img_masks.shape[0]
-
-                                                 # [Batch, 1, 512, 512], normal = white = 1, anormal = black = 0
                         original_anormal_position = torch.sum(torch.where(binary_map == 1, 1, 0))
                         print(f'original, anormal position : {original_anormal_position}')
 
@@ -538,7 +536,7 @@ class NetworkTrainer:
 
                                 img_masks_res = (resize_transform(img_masks) == 0.0).float() # background = 0, foreground = 1
                                 binary_map_res = (resize_transform(binary_map) == 0.0).float() # normal = 0, anormal = 1
-                                img_masks_rees = 1-img_masks_res
+                                img_masks_res = 1-img_masks_res
                                 binary_map_res = 1-binary_map_res
 
                                 normal_mask_res = (img_masks_res*(1-binary_map_res)> 0.0).float()
