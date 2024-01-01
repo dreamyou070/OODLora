@@ -657,6 +657,7 @@ class NetworkTrainer:
                         for layer_name in attn_dict.keys() :
                             score_map = attn_dict[layer_name]
                             print(f'layer_name : {layer_name} | len of score map : {len(score_map)}')
+                            score_map = score_map[0]
 
 
 
