@@ -483,6 +483,7 @@ class NetworkTrainer:
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             network.on_epoch_start(text_encoder, unet)
+
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -562,6 +563,7 @@ class NetworkTrainer:
                                     normal_activation_value = normal_pos_normal_score / normal_total_score
                                     anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
+                                    print(f'current normal loss : {(1.0 - torch.mean(normal_activation_value)) ** 2}')
                                     if len(test_indexs) > 0 :
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
                                         print(f'current anormal loss : {(1.0 - torch.mean(anormal_activation_value)) ** 2}')
@@ -591,8 +593,10 @@ class NetworkTrainer:
 
                                     #normal_position_normal_score +=
                         log_loss["loss/normal_pixel_reverse_normal_loss"] = normal_loss.mean().item()
-                        log_loss["loss/anormal_pixel_reverse_anormal_loss"] = anormal_loss.mean().item()
-                        log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
+
+                        if len(test_indexs) > 0:
+                            log_loss["loss/anormal_pixel_reverse_anormal_loss"] = anormal_loss.mean().item()
+                            log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
 
                         record = {"normal_pixel_reverse_normal_score": normal_loss.mean().item(),
                                   "anormal_pixel_reverse_anormal_score": anormal_loss.mean().item(),}
@@ -601,7 +605,11 @@ class NetworkTrainer:
 
                         # attn_loss = normal_loss.mean() + anormal_loss.mean()+ cross_loss.mean()
                         # attn_loss = cross_loss.mean()
-                        attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
+                        if len(test_indexs) > 0:
+                            attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
+                        else :
+                            attn_loss = normal_loss.mean()
+
                     total_loss += attn_loss
 
                     # ---------------------------------------------------------------------------------------------------------------------
