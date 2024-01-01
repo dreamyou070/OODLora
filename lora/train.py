@@ -654,28 +654,23 @@ class NetworkTrainer:
                         attn_dict = attention_storer.step_store
                         attention_storer.reset()
 
-
+                        attn_loss = 0
                         for layer_name in attn_dict.keys() :
-                            score_map = attn_dict[layer_name][0]
-                            print(f'score_map.shape : {score_map.shape}')
+                            score_map = attn_dict[layer_name][0] # 8, res*res
                             res = int(score_map.shape[1] ** 0.5)
                             from torchvision import transforms
                             resize_transform = transforms.Resize((res, res))
                             img_masks = resize_transform(batch["img_masks"]) # [1,1,res,res], back = 0, fore = 1
                             anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0) # [1,1,res,res] anomal = 1
                             mask = (img_masks * anormal_mask).squeeze() # res,res
-                            mask = torch.stack([mask.flatten() for i in range(8)], dim=0)
-                            print(f'mask.shape : {mask.shape}')
+                            mask = torch.stack([mask.flatten() for i in range(8)], dim=0) # 8, res*res
                             activation = (score_map * mask).sum(dim=-1)
                             total_score = (score_map ).sum(dim=-1)
-                            activation_loss = (1- (activation / total_score))**2
-
-                            #trigger_score =
-                            import time
-                            time.sleep(1000)
-
-
-
+                            activation_loss = (1- (activation / total_score))**2 # 8, res*res
+                            activation_loss = activation_loss.sum(dim=1).mean()
+                            attn_loss += activation_loss
+                        if is_main_process:
+                            loss_dict["attn_loss"] = attn_loss.item()
 
                     if args.v_parameterization:
                         target = noise_scheduler.get_velocity(latents, noise, timesteps)
@@ -686,7 +681,10 @@ class NetworkTrainer:
                     loss_weights = batch["loss_weights"]  # 各sampleごとのweight
                     loss = loss * loss_weights
                     loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-                    accelerator.backward(loss)
+                    if is_main_process:
+                        loss_dict["task_loss"] = loss.item()
+                    total_loss = loss + attn_loss
+                    accelerator.backward(total_loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
                         accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
@@ -726,13 +724,14 @@ class NetworkTrainer:
                 avr_loss = loss_total / len(loss_list)
                 if is_main_process:
                     loss_dict[global_step] = avr_loss
+
                 logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
                 progress_bar.set_postfix(**logs)
 
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
                 if args.logging_dir is not None:
-                    logs = self.generate_step_logs(logs, lr_scheduler)
+                    logs = self.generate_step_logs(loss_dict, lr_scheduler)
                     accelerator.log(logs, step=global_step)
                     if is_main_process:
                         wandb.log(logs, step=global_step)
