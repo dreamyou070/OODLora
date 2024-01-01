@@ -587,6 +587,7 @@ class NetworkTrainer:
                                                 normal_answers.append(1-position_info)
 
                                             elif position_info[1] == 1: # anormal_pixel
+                                                print(f'when anormal...')
                                                 anormal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
                                                 anormal_pairs.append(anormal_score_pair)
                                                 anormal_answers.append(1 - position_info)
