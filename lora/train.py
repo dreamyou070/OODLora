@@ -533,8 +533,12 @@ class NetworkTrainer:
                                 resize_transform = transforms.Resize((res, res))
                                 img_masks_res = (1 -(resize_transform(img_masks) == 0.0).float())  # background = 0, foreground = 1
 
-                                binary_map = binary_gt_map_dict[batch_num] [res]
+                                print(f'len of binary_gt_map_dict: {type(binary_gt_map_dict)}')
                                 print(f'len of binary_gt_map_dict: {len(binary_gt_map_dict)}')
+
+
+                                binary_map = binary_gt_map_dict[batch_num][res]
+
                                 normal_mask_res = img_masks_res * ((binary_map== 0.0).float()) # [1,1,res,res]
                                 anormal_mask_res = img_masks_res * ((binary_map!= 0.0).float()) # [1,1,res,res]
 
