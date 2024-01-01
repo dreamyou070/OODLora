@@ -2,17 +2,15 @@ from torchvision import transforms
 from PIL import Image
 import torch
 import torchvision
-attn_transforms = transforms.Compose([transforms.Resize(512, interpolation=transforms.InterpolationMode.BILINEAR),
-                                          transforms.ToTensor(),])
+from torch import nn
 
-img_mask_dir = '000.png'
-mask_img = Image.open(img_mask_dir).convert('L').resize((512, 512), Image.BICUBIC)
-mask_img = attn_transforms(mask_img)
-mask_list = [mask_img]
-mask_img = torch.stack(mask_list, dim=0)
-resize_transform = transforms.Resize((32,32),)
-resized_mask = resize_transform(mask_img)
-img_masks_res = (resized_mask == 0.0).float() # background = 0, foreground = 1
-print('img_masks_res.shape (1,1,32,32) : ', img_masks_res.shape)
-a = transforms.ToTensor()(Image.open(img_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
-print('a.shape (1,32,32) : ', a.shape)
+normal_score = torch.tensor([[0.8, 0.1],
+                             [0.9, 0.9]])
+# big to big
+answer = torch.tensor([[1., 0.], [1., 1.]])
+answer2 = torch.tensor([[0., 1.], [0., 0.]])
+bce_loss_func = nn.BCELoss()
+a = bce_loss_func(normal_score, answer)
+b = bce_loss_func(normal_score, answer2)
+print(a)
+print(b)

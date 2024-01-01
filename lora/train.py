@@ -513,7 +513,7 @@ class NetworkTrainer:
                                        batch, weight_dtype, trg_indexs, test_indexs)
                         attn_dict = attention_storer.step_store
                         attention_storer.reset()
-                        normal_loss, anormal_loss, cross_loss = 0, 0, 0
+                        normal_loss, anormal_loss, bce_loss = 0, 0, 0
                         img_masks = batch["img_masks"].to(accelerator.device)      # [Batch, 1, 512, 512], foreground = white = 1, background = black = 0
                         binary_gt_map_dict =  batch["anormal_masks"][0]
                         batch_num = img_masks.shape[0]
@@ -563,57 +563,18 @@ class NetworkTrainer:
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
                                         # binary_aug_tensor = 8,32,321
                                         # img_mask = 8,32,32,1
-                                        score_map = torch.cat([normal_score_map_i.unsqueeze(-1), anormal_score_map_i.unsqueeze(-1)], dim=-1).softmax(dim=-1)  #
-                                        flatten_score_map = score_map.view(-1, 2)
 
-                                        position_map = torch.cat([normal_mask_.unsqueeze(-1),anormal_mask_.unsqueeze(-1)], dim=-1)
-                                        position_map = position_map.view(-1, 2)
+                                        bce_loss_func = nn.BCELoss()
+                                        normal_bce = bce_loss_func(normal_score_map_i.mean(0), normal_mask_.squeeze())
+                                        anormal_bce = bce_loss_func(anormal_score_map_i.mean(0), anormal_mask_.squeeze())
+                                        bce_loss += normal_bce.mena() + anormal_bce.mena()
+                                        log_loss["loss/normal_bce"] = normal_bce.mean().item()
+                                        log_loss["loss/anormal_bce"] = anormal_bce.mean().item()
 
-                                        normal_pairs, anormal_pairs, score_pairs = [], [], []
-                                        normal_answers, anormal_answers, answers = [], [], []
-
-                                        for i in range(flatten_score_map.shape[0]):
-
-                                            position_info = position_map[i]
-
-                                            if position_info[0] == 1 and position_info[1] != 1 : # normal_pixel
-                                                normal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
-                                                normal_pairs.append(normal_score_pair)
-                                                normal_answers.append(position_info[1])
-
-                                            elif position_info[1] == 1 and position_info[0] != 1: # anormal_pixel
-                                                anormal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
-                                                anormal_pairs.append(anormal_score_pair)
-                                                anormal_answers.append(position_info[1])
-
-                                            if position_info[0] == 1 or position_info[1] == 1:
-                                                score_pair = flatten_score_map[i] # normal = 0, anormal = 1
-                                                score_pairs.append(score_pair)
-                                                answers.append(position_info[1])
-
-                                        normal_pairs = torch.stack(normal_pairs)
-                                        anormal_pairs = torch.stack(anormal_pairs)
-                                        score_pairs = torch.stack(score_pairs)
-
-                                        normal_answers = torch.stack(normal_answers, dim=0)
-                                        anormal_answers = torch.stack(anormal_answers, dim=0)
-                                        answers = torch.stack(answers, dim=0)
-
-                                        cross_ent_loss = torch.nn.CrossEntropyLoss(reduction='none')(score_pairs, answers)
-                                        cross_loss += cross_ent_loss.mean()
-
-                                        normal_cross_loss = torch.nn.CrossEntropyLoss(reduction='none')(normal_pairs,normal_answers)
-                                        anormal_cross_loss = torch.nn.BCELoss()(anormal_pairs,anormal_answers)
-
-                                        log_loss["loss/normal_cross_loss"] = normal_cross_loss.mean().item()
-                                        log_loss["loss/anormal_cross_loss"] = anormal_cross_loss.mean().item()
 
                         log_loss["loss/normal_pixel_reverse_normal_loss"] = normal_loss.mean().item()
                         if len(test_indexs) > 0:
-                            log_loss["loss/anormal_pixel_reverse_anormal_loss"] = anormal_loss.mean().item()
-                            log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
-                        if len(test_indexs) > 0:
-                            attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
+                            attn_loss = normal_loss.mean() + bce_loss.mean()
                         else :
                             attn_loss = normal_loss.mean()
 
