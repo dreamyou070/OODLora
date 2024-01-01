@@ -628,7 +628,6 @@ class NetworkTrainer:
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
-                    b_size = latents.shape[0]
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args,
                                                                     accelerator,
@@ -652,7 +651,6 @@ class NetworkTrainer:
                                                     batch,
                                                     weight_dtype,None, None)
                         # -----------------------------------------------------------------------------------------------------------------------
-                        atten_collection = attention_storer.step_store
                         attention_storer.reset()
 
 
@@ -665,8 +663,6 @@ class NetworkTrainer:
                     loss_weights = batch["loss_weights"]  # 各sampleごとのweight
                     loss = loss * loss_weights
                     loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-                    task_loss = loss
-
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
@@ -674,13 +670,6 @@ class NetworkTrainer:
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
-                if args.scale_weight_norms:
-                    keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(
-                        args.scale_weight_norms,
-                        accelerator.device)
-                    max_mean_logs = {"Keys Scaled": keys_scaled, "Average key norm": mean_norm}
-                else:
-                    keys_scaled, mean_norm, maximum_norm = None, None, None
 
                 # Checks if the accelerator has performed an optimization step behind the scenes
                 if accelerator.sync_gradients:
@@ -688,10 +677,6 @@ class NetworkTrainer:
                     global_step += 1
                     self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
                     attention_storer.reset()
-                    attention_storer.step_store = {}
-                    attention_storer.self_query_store = {}
-                    attention_storer.self_key_store = {}
-                    attention_storer.cross_key_store = {}
 
                     # 指定ステップごとにモデルを保存
                     if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
@@ -720,8 +705,7 @@ class NetworkTrainer:
                     loss_dict[global_step] = avr_loss
                 logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
                 progress_bar.set_postfix(**logs)
-                if args.scale_weight_norms:
-                    progress_bar.set_postfix(**{**max_mean_logs, **logs})
+
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
                 if args.logging_dir is not None:
@@ -734,8 +718,7 @@ class NetworkTrainer:
             if args.logging_dir is not None:
                 if args.heatmap_loss:
                     logs = {"loss/epoch": loss_total / len(loss_list),
-                            "loss/task_loss": task_loss.item(),
-                            "loss/attn_loss": attn_loss.item()}
+                            "loss/task_loss": loss.item(),}
                 else:
                     logs = {"loss/epoch": loss_total / len(loss_list), }
                 accelerator.log(logs, step=epoch + 1)
@@ -757,13 +740,9 @@ class NetworkTrainer:
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
 
-            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
-                               text_encoder, unet, attention_storer=attention_storer)
+            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
             attention_storer.reset()
-            attention_storer.step_store = {}
-            attention_storer.self_query_store = {}
-            attention_storer.self_key_store = {}
-            attention_storer.cross_key_store = {}
+            
         # metadata["ss_epoch"] = str(num_train_epochs)
         metadata["ss_training_finished_at"] = str(time.time())
 
