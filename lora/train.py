@@ -563,7 +563,7 @@ class NetworkTrainer:
                                         bce_loss_func = nn.BCELoss()
                                         normal_bce = bce_loss_func(normal_score_map_i.mean(0), normal_mask_[0,:,:].squeeze())
                                         anormal_bce = bce_loss_func(anormal_score_map_i.mean(0), anormal_mask_[0,:,:].squeeze())
-                                        bce_loss += normal_bce.mena() + anormal_bce.mena()
+                                        bce_loss += normal_bce.mean() + anormal_bce.mean()
                                         log_loss["loss/normal_bce"] = normal_bce.mean().item()
                                         log_loss["loss/anormal_bce"] = anormal_bce.mean().item()
 
