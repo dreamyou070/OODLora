@@ -46,7 +46,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None and ('up' in layer_name or 'mid' in layer_name) :
-                print(f'attention_probs (8, pix_num, 4) : {attention_probs.shape}')
                 good_map = attention_probs[:, :,1]
                 bad_map = attention_probs[:,:,2] # [batch*head, pixel_num, 1]
                 attn_score_map = torch.cat([good_map, bad_map], dim=-1)
@@ -558,14 +557,16 @@ class NetworkTrainer:
                                     anormal_mask_ = anormal_mask_.repeat(8, 1, 1) # [h, res, res]
 
                                     normal_total_score = normal_score_map_i.reshape(b, -1).sum(dim=-1)
-                                    anormal_total_score = anormal_score_map_i.reshape(b, -1).sum(dim=-1)
+                                    anormal_total_score = anormal_score_map_i.reshape(b, -1).sum(dim=-1) # [head, res*res]
+                                    print(f'anormal total score : {anormal_total_score.shape} | {anormal_total_score.sum()}')
 
                                     normal_pos_normal_score = (normal_mask_ * normal_score_map_i).reshape(b, -1).sum(dim=-1) # [8, res,res] * [8, res,res]
                                     anormal_pos_anormal_score = (anormal_mask_ * anormal_score_map_i).reshape(b, -1).sum(dim=-1)
+                                    print(f'anormal pos anormal score : {anormal_pos_anormal_score.shape} | {anormal_pos_anormal_score.sum()}')
+                                    
                                     normal_activation_value = normal_pos_normal_score / normal_total_score
                                     anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
-                                    print(f'current normal loss : {(1.0 - torch.mean(normal_activation_value)) ** 2}')
                                     if len(test_indexs) > 0 :
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
                                         print(f'total anormal score : {anormal_total_score.sum()}')
