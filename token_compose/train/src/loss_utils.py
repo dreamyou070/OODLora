@@ -85,7 +85,6 @@ def get_grounding_loss_by_layer(_gt_seg_list,
     for attn_map in input_attn_map_ls:
         # len is 3 or 1
         b, H, W, j = attn_map.shape
-        print(f'attn_map.shape (8=head, 8, 8, 77) : {attn_map.shape}')
         for i in range(len(word_token_idx_ls)): # [[word1 token_idx1, word1 token_idx2, ...], [word2 token_idx1, word2 token_idx2, ...]]
             obj_loss = 0.0
             single_word_idx_ls = word_token_idx_ls[i] #[token_idx1, token_idx2, ...]
@@ -93,20 +92,11 @@ def get_grounding_loss_by_layer(_gt_seg_list,
             for obj_position in single_word_idx_ls:
                 # ca map obj shape 8 * 16 * 16
                 ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W) # 1, 8, 8
-                print(f'ca_map_obj.shape (8, 8, 8) : {ca_map_obj.shape}')
-                # why sum on dim -1 ???
                 trg_score =  (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)
                 all_score =  ca_map_obj.reshape(b, -1).sum(dim=-1)
                 activation_value = (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)/ca_map_obj.reshape(b, -1).sum(dim=-1)
-                print(f'all_score : {all_score} | trg_score : {trg_score} | activation_value : {activation_value}')
-
-                import time
-                time.sleep(1000)
-
                 obj_loss += (1.0 - torch.mean(activation_value)) ** 2
-
             token_loss += (obj_loss/len(single_word_idx_ls))
-
     # normalize with len words
     token_loss = token_loss / len(word_token_idx_ls)
     ################## token loss end ##########################
@@ -114,24 +104,25 @@ def get_grounding_loss_by_layer(_gt_seg_list,
     ################## pixel loss start ######################
     # average cross attention map on different layers
     avg_attn_map_ls = []
+    # input_attn_map_list ?
     for i in range(len(input_attn_map_ls)):
-        avg_attn_map_ls.append(
-            input_attn_map_ls[i].reshape(-1, res, res, input_attn_map_ls[i].shape[-1]).mean(0)
-        )
-    avg_attn_map = torch.stack(avg_attn_map_ls, dim=0)
-    avg_attn_map = avg_attn_map.sum(0) / avg_attn_map.shape[0]
-    avg_attn_map = avg_attn_map.unsqueeze(0)
-
+        # len is 1 or 3
+        avg_attn_map_ls.append(input_attn_map_ls[i].reshape(-1, res, res, input_attn_map_ls[i].shape[-1]).mean(0))
+        # [head, res,res,c]
+    avg_attn_map = torch.stack(avg_attn_map_ls, dim=0) # head, res, res, 1
+    avg_attn_map = avg_attn_map.sum(0) / avg_attn_map.shape[0] # res,res,1
+    avg_attn_map = avg_attn_map.unsqueeze(0) # 1, rse,res,1
     bce_loss_func = nn.BCELoss()
     pixel_loss = 0.0
-
     for i in range(len(word_token_idx_ls)):
+
+        # token idx
         word_cross_attn_ls = []
         for token_idx in word_token_idx_ls[i]:
-            word_cross_attn_ls.append(
-                avg_attn_map[..., token_idx]
-            )
+            print(f'{i} : token_idx = {token_idx}')
+            word_cross_attn_ls.append(avg_attn_map[..., token_idx])
         word_cross_attn_ls = torch.stack(word_cross_attn_ls, dim=0).sum(dim=0)
+
         pixel_loss += bce_loss_func(word_cross_attn_ls, gt_seg_list[i])
 
     # average with len word_token_idx_ls

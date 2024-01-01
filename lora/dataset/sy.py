@@ -14,4 +14,5 @@ resize_transform = transforms.Resize((32,32),)
 resized_mask = resize_transform(mask_img)
 img_masks_res = (resized_mask == 0.0).float() # background = 0, foreground = 1
 print('img_masks_res.shape (1,1,32,32) : ', img_masks_res.shape)
-transforms.ToTensor()(Image.open(img_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
+a = transforms.ToTensor()(Image.open(img_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
+print('a.shape (1,32,32) : ', a.shape)

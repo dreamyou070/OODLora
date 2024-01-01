@@ -572,7 +572,6 @@ class NetworkTrainer:
                                         normal_pairs, anormal_pairs, score_pairs = [], [], []
                                         normal_answers, anormal_answers, answers = [], [], []
 
-                                        normal_num, anormal_num = 0, 0
                                         for i in range(flatten_score_map.shape[0]):
 
                                             position_info = position_map[i]
@@ -580,53 +579,39 @@ class NetworkTrainer:
                                             if position_info[0] == 1 and position_info[1] != 1 : # normal_pixel
                                                 normal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
                                                 normal_pairs.append(normal_score_pair)
-                                                normal_answers.append(1-position_info)
-                                                normal_num += 1
+                                                normal_answers.append(position_info[1])
 
                                             elif position_info[1] == 1 and position_info[0] != 1: # anormal_pixel
                                                 anormal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
                                                 anormal_pairs.append(anormal_score_pair)
-                                                anormal_answers.append(1 - position_info)
-                                                anormal_num += 1
+                                                anormal_answers.append(position_info[1])
 
                                             if position_info[0] == 1 or position_info[1] == 1:
                                                 score_pair = flatten_score_map[i] # normal = 0, anormal = 1
-                                                answer = 1-position_info
                                                 score_pairs.append(score_pair)
-                                                answers.append(answer)
+                                                answers.append(position_info[1])
 
                                         normal_pairs = torch.stack(normal_pairs)
                                         anormal_pairs = torch.stack(anormal_pairs)
                                         score_pairs = torch.stack(score_pairs)
 
-                                        normal_answers = torch.stack(normal_answers)
-                                        anormal_answers = torch.stack(anormal_answers)
-                                        answers = torch.stack(answers)
+                                        normal_answers = torch.stack(normal_answers, dim=0)
+                                        anormal_answers = torch.stack(anormal_answers, dim=0)
+                                        answers = torch.stack(answers, dim=0)
 
-                                        cross_ent_loss = torch.nn.BCELoss()(score_pairs, answers)
+                                        cross_ent_loss = torch.nn.CrossEntropyLoss(reduction='none')(score_pairs, answers)
                                         cross_loss += cross_ent_loss.mean()
 
-                                        normal_cross_loss = torch.nn.BCELoss()(normal_pairs,normal_answers.long().to(accelerator.device, dtype=weight_dtype))
-                                        anormal_cross_loss = torch.nn.BCELoss()(anormal_pairs,anormal_answers.long().to(accelerator.device, dtype=weight_dtype))
+                                        normal_cross_loss = torch.nn.CrossEntropyLoss(reduction='none')(normal_pairs,normal_answers)
+                                        anormal_cross_loss = torch.nn.BCELoss()(anormal_pairs,anormal_answers)
 
                                         log_loss["loss/normal_cross_loss"] = normal_cross_loss.mean().item()
                                         log_loss["loss/anormal_cross_loss"] = anormal_cross_loss.mean().item()
 
-
-                                    #normal_position_normal_score +=
                         log_loss["loss/normal_pixel_reverse_normal_loss"] = normal_loss.mean().item()
-
                         if len(test_indexs) > 0:
                             log_loss["loss/anormal_pixel_reverse_anormal_loss"] = anormal_loss.mean().item()
                             log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
-
-                        #record = {"normal_pixel_reverse_normal_score": normal_loss.mean().item(),
-                        #          "anormal_pixel_reverse_anormal_score": anormal_loss.mean().item(),}
-                        #with open(record_file, 'a') as f:
-                        #    f.write(json.dumps(record) + '\n')
-
-                        # attn_loss = normal_loss.mean() + anormal_loss.mean()+ cross_loss.mean()
-                        # attn_loss = cross_loss.mean()
                         if len(test_indexs) > 0:
                             attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
                         else :
