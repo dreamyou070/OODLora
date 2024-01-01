@@ -516,7 +516,7 @@ class NetworkTrainer:
                         attention_storer.reset()
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
                         img_masks = batch["img_masks"].to(accelerator.device)      # [Batch, 1, 512, 512], foreground = white = 1, background = black = 0
-                        binary_gt_map =  batch["anormal_masks"].to(accelerator.device)
+                        binary_gt_map_list =  batch["anormal_masks"]
                         batch_num = img_masks.shape[0]
 
                         for layer in attn_dict.keys():
@@ -531,12 +531,11 @@ class NetworkTrainer:
 
                                 from torchvision import transforms
                                 resize_transform = transforms.Resize((res, res))
-
                                 img_masks_res = (1 -(resize_transform(img_masks) == 0.0).float())  # background = 0, foreground = 1
-                                resized_binary_map = resize_transform(binary_gt_map)
-                                print(f'img_masks_res : {img_masks_res.shape} resized_binary_map : {resized_binary_map.shape}')
-                                normal_mask_res = img_masks_res * ((resized_binary_map== 0.0).float()) # [1,1,res,res]
-                                anormal_mask_res = img_masks_res * ((resized_binary_map!= 0.0).float()) # [1,1,res,res]
+
+                                binary_map = binary_gt_map_list[res]
+                                normal_mask_res = img_masks_res * ((binary_map== 0.0).float()) # [1,1,res,res]
+                                anormal_mask_res = img_masks_res * ((binary_map!= 0.0).float()) # [1,1,res,res]
 
                                 normal_score_map_batch = torch.chunk(normal_score_map,  batch_num, dim=0)  # batch*head, pixel_num, 1
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
@@ -602,9 +601,8 @@ class NetworkTrainer:
                                         if len(normal_pairs) == 0 or len(anormal_pairs) == 0 :
                                             print(f'normal_num : {normal_num}, anormal_num : {anormal_num} '
                                                   f'| anormal_mask_ : {anormal_mask_.sum()} | anormal_mask_res : {anormal_mask_res.sum()} '
-                                                  f'| resized_binary_map : {resized_binary_map.sum()} '
-                                                  f'| binary_gt_map : {binary_gt_map.sum()} '
-                                                  f'| binary_gt_map : {binary_gt_map.shape} ')
+                                                  f'| binary_gt_map : {binary_map.sum()} '
+                                                  f'| binary_gt_map : {binary_map.shape} ')
                                             print(f'wronge, sum of normal_mask_res : {torch.sum(normal_mask_res)}')
                                             print(f'wronge, sum of anormal_mask_res : {torch.sum(anormal_mask_res)}')
 
