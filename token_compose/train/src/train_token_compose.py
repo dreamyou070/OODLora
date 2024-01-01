@@ -178,20 +178,13 @@ def main(args):
     print(f'\n step 11. accelerator preparing model')
     unet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(unet, optimizer, train_dataloader,
                                                                           lr_scheduler)
-    """  
-    
-
-    
-
     if args.use_ema:
         ema_unet.to(accelerator.device)
-
     weight_dtype = torch.float32
 
     # Move text_encode and vae to gpu and cast to weight_dtype
     text_encoder.to(accelerator.device, dtype=weight_dtype)
     vae.to(accelerator.device, dtype=weight_dtype)
-
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
     # Afterwards we recalculate our number of training epochs
@@ -201,22 +194,19 @@ def main(args):
     # The trackers initializes automatically on the main process.
     if accelerator.is_main_process:
         tracker_config = dict(vars(args))
-
         if args.resume_from_checkpoint:
             resume_ckpt_number = args.resume_from_checkpoint.split("-")[-1]
             args.tracker_run_name = f"{args.tracker_run_name}-resume-{resume_ckpt_number}"
-
         init_kwargs = {
             "wandb" : {
                 "name" : args.tracker_run_name
             }
         }
-
-        accelerator.init_trackers(project_name=args.tracker_project_name, 
+        accelerator.init_trackers(project_name=args.tracker_project_name,
                                   config=tracker_config,
                                   init_kwargs=init_kwargs)
 
-    # Train!
+    print(f'\n step 12. train!')
     total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
     token_loss_scale = args.token_loss_scale
     pixel_loss_scale = args.pixel_loss_scale
@@ -449,7 +439,7 @@ def main(args):
     accelerator.wait_for_everyone()
 
     accelerator.end_training()
-    """
+    
 if __name__ == "__main__":
 
     # put all arg parse here
