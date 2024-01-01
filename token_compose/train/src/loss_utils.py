@@ -65,7 +65,6 @@ def get_grounding_loss_by_layer(_gt_seg_list,
         # training with sd21, using resolution 768 = 512 * 1.5 (text dimension change)
         res = int(SD14_TO_SD21_RATIO * res)
 
-    print(f'in get grounding loss, res : {res}')
 
     gt_seg_list = deepcopy(_gt_seg_list)
 
@@ -73,8 +72,12 @@ def get_grounding_loss_by_layer(_gt_seg_list,
     resize_transform = transforms.Resize((res, res))
 
     for i in range(len(gt_seg_list)):
+        print(f'before resizing, gt_seg_list[{i}] shape: {gt_seg_list[i].shape}')
         gt_seg_list[i] = resize_transform(gt_seg_list[i])
+        print(f'after resizing, gt_seg_list[{i}] shape: {gt_seg_list[i].shape}')
         gt_seg_list[i] = gt_seg_list[i].squeeze(0) # 1, 1, res, res => 1, res, res
+        import time
+        time.sleep(1000)
         # add binary
         gt_seg_list[i] = (gt_seg_list[i] > 0.0).float()
 

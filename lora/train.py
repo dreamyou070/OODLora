@@ -45,7 +45,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
-            if is_cross_attention and trg_indexs_list is not None:
+            if is_cross_attention and trg_indexs_list is not None and ('up' in layer_name or 'mid' in layer_name) :
                 good_map = attention_probs[:, :,1]
                 bad_map = attention_probs[:,:,2] # [batch*head, pixel_num, 1]
                 attn_score_map = torch.cat([good_map, bad_map], dim=-1)
@@ -538,7 +538,11 @@ class NetworkTrainer:
                                     # (1) normal & anormal binary map """ normal zero is zero """
                                     b_map = binary_map[i, :, :]
                                     if b_map.dim() != 2:
-                                        b_map = b_map.squeeze()                    # [res,res]
+                                        b_map = b_map.squeeze()
+
+                                    from torchvision import transforms
+                                    resize_transform = transforms.Resize((res, res))# [res,res]
+
                                     pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res))
                                     binary_aug_np = np.array(pil)
                                     binary_aug_np = np.where(binary_aug_np == 0, 0, 1)                          # black = 0 = normal, [res,res,1]
