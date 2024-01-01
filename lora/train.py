@@ -546,7 +546,7 @@ class NetworkTrainer:
                                     normal_score_map_i = normal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1)   # [h, res, res, 1]
                                     anormal_score_map_i = anormal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1) # [h, res, res, 1]
                                     b, H, W, = normal_score_map_i.shape
-                                    
+
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
 
                                     normal_mask_ = normal_mask_res[i, :, :] # """ background is zero """
@@ -563,6 +563,7 @@ class NetworkTrainer:
                                     anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
                                     anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
+                                    print(f'current anormal loss : {(1.0 - torch.mean(anormal_activation_value)) ** 2}')
 
                                     # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
                                     # binary_aug_tensor = 8,32,321
