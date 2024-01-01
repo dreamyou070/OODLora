@@ -46,9 +46,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
-                bad_map = attention_probs[:, :,1]
-                good_map = attention_probs[:,:,2] # [batch*head, pixel_num, 1]
-                attn_score_map = torch.cat([bad_map, good_map], dim=-1)
+                good_map = attention_probs[:, :,1]
+                bad_map = attention_probs[:,:,2] # [batch*head, pixel_num, 1]
+                attn_score_map = torch.cat([good_map, bad_map], dim=-1)
                 controller.store(attn_score_map, layer_name)
                 """
                 batch, pix_num, _ = query.shape
@@ -328,12 +328,6 @@ class NetworkTrainer:
                                                        shuffle=True,
                                                        collate_fn=collater, num_workers=n_workers,
                                                        persistent_workers=args.persistent_data_loader_workers, )
-        """
-        valid_dataloader = torch.utils.data.DataLoader(valid_dataset_group, batch_size=args.train_batch_size,
-                                                       shuffle=False,
-                                                       collate_fn=collater, num_workers=n_workers,
-                                                       persistent_workers=args.persistent_data_loader_workers, )
-        """
         if args.max_train_epochs is not None:
             args.max_train_steps = args.max_train_epochs * math.ceil(
                 len(train_dataloader) / accelerator.num_processes / args.gradient_accumulation_steps)
@@ -443,7 +437,6 @@ class NetworkTrainer:
         accelerator.print(f"  num epochs / epoch数: {num_train_epochs}")
         accelerator.print(f"  gradient accumulation steps / 勾配を合計するステップ数 = {args.gradient_accumulation_steps}")
         accelerator.print(f"  total optimization steps / 学習ステップ数: {args.max_train_steps}")
-        training_started_at = time.time()
 
         progress_bar = tqdm(range(args.max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process, desc="steps")
         global_step = 0
@@ -484,15 +477,6 @@ class NetworkTrainer:
                 accelerator.print(f"removing old checkpoint: {old_ckpt_file}")
                 os.remove(old_ckpt_file)
 
-        def img_to_pil(torch_img):
-            torch_img = torch_img[0, :, :].squeeze()
-            if torch_img.dim() == 2:
-                torch_img = torch_img.unsqueeze(0)
-            torch_img = torch_img.permute(1, 2, 0)
-            np_img = torch_img.cpu().numpy().astype(np.uint8) * 255
-            pil_img = Image.fromarray(np_img)
-            return pil_img
-
         cross_entropy_loss = nn.CrossEntropyLoss(reduction='none')
         record_file = os.path.join(args.output_dir, 'score_record.txt')
         for epoch in range(args.start_epoch, args.start_epoch+num_train_epochs):
@@ -502,9 +486,7 @@ class NetworkTrainer:
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
-
                     on_step_start(text_encoder, unet)
-
                     with torch.no_grad():
                         latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
                         if torch.any(torch.isnan(latents)):
@@ -527,7 +509,8 @@ class NetworkTrainer:
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
 
                     with accelerator.autocast():
-                        self.call_unet(args, accelerator, unet, noisy_latents, timesteps, text_encoder_conds, batch, weight_dtype, trg_indexs, test_indexs)
+                        self.call_unet(args, accelerator, unet, noisy_latents, timesteps, text_encoder_conds,
+                                       batch, weight_dtype, trg_indexs, test_indexs)
                         attn_dict = attention_storer.step_store
                         attention_storer.reset()
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
@@ -537,7 +520,7 @@ class NetworkTrainer:
                         batch_num = img_masks.shape[0]
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
-                            anormal_score_map, normal_score_map = torch.chunk(attn_score, 2, dim=-1)       # [batch*head, pixel_num, 1]
+                            normal_score_map, anormal_score_map = torch.chunk(attn_score, 2, dim=-1)       # [batch*head, pixel_num, 1]
                             if normal_score_map.dim() != 3:
                                 normal_score_map = normal_score_map.unsqueeze(-1)
                                 anormal_score_map = anormal_score_map.unsqueeze(-1)
@@ -582,10 +565,11 @@ class NetworkTrainer:
                                     anormal_position_pixel_num = anormal_position.sum() / 8
 
                                     # normal pixel's anormal score
-                                    normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).mean()  # [b, res, res, 1]
-                                    anormal_loss += (anormal_position.to(anormal_score_map.device) * normal_score_map).mean()  # [b, res, res, 1]
-                                    normal_position_normal_score += (normal_position.to(anormal_score_map.device) * normal_score_map).mean()  # [b, res, res, 1]
-                                    anormal_position_anormal_score += (anormal_position.to(anormal_score_map.device) * anormal_score_map).mean()  # [b, res, res, 1]
+                                    # normal map total score
+                                    # normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).mean()  # [b, res, res, 1]
+                                    anormal_loss += ((anormal_position.to(anormal_score_map.device) * normal_score_map) / (anormal_score_map)).mean()  # [b, res, res, 1]
+                                    #normal_position_normal_score += (normal_position.to(anormal_score_map.device) * normal_score_map).mean()  # [b, res, res, 1]
+                                    #anormal_position_anormal_score += (anormal_position.to(anormal_score_map.device) * anormal_score_map).mean()  # [b, res, res, 1]
 
 
                                     score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
@@ -617,44 +601,33 @@ class NetworkTrainer:
                         with open(record_file, 'a') as f:
                             f.write(json.dumps(record) + '\n')
 
-                        attn_loss = normal_loss.mean() + anormal_loss.mean()+ cross_loss.mean()
+                        # attn_loss = normal_loss.mean() + anormal_loss.mean()+ cross_loss.mean()
                         # attn_loss = cross_loss.mean()
+                        attn_loss = anormal_loss.mean() + cross_loss.mean()
                     total_loss += attn_loss
 
                     # ---------------------------------------------------------------------------------------------------------------------
                     # (3.3) natural training
-                    if len(train_indexs) > 0:
-                        train_latents = latents[train_indexs, :]
-                        if train_latents.dim() != 4:
-                            train_latents = train_latents.unsqueeze(0)
-
-                        with torch.set_grad_enabled(train_text_encoder):
-                            text_class_encoder_conds = self.get_class_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
-                            text_class_encoder_conds = text_class_encoder_conds[train_indexs, :]
-
-                        input_latents = train_latents
-                        input_condition = text_class_encoder_conds[:, :2, :]  # add one pad token (EOS token)
-                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                           noise_scheduler,
-                                                                                                           input_latents)
-                        with accelerator.autocast():
-                            noise_pred = self.call_unet(args, accelerator, unet,
-                                                        noisy_latents, timesteps,
-                                                        input_condition, batch, weight_dtype,
-                                                        None,
-                                                        mask_imgs =None)
-                        attention_storer.reset()
-                        if args.v_parameterization:
-                            target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                        else:
-                            target = noise
-                        task_loss = torch.nn.functional.mse_loss(noise_pred.float(),
-                                                                 target.float(), reduction="none")
-                        task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
-                        task_loss = task_loss.mean()
-                        log_loss["loss/task_loss"] = task_loss
-                        task_loss = task_loss * args.task_loss_weight
-                        total_loss += task_loss.mean()
+                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                       noise_scheduler,
+                                                                                                       latents)
+                    with accelerator.autocast():
+                        noise_pred = self.call_unet(args, accelerator, unet,
+                                                    noisy_latents, timesteps,
+                                                    text_encoder_conds, batch, weight_dtype,
+                                                    None, mask_imgs =None)
+                    attention_storer.reset()
+                    if args.v_parameterization:
+                        target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                    else:
+                        target = noise
+                    task_loss = torch.nn.functional.mse_loss(noise_pred.float(),
+                                                             target.float(), reduction="none")
+                    task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
+                    task_loss = task_loss.mean()
+                    log_loss["loss/task_loss"] = task_loss
+                    task_loss = task_loss * args.task_loss_weight
+                    total_loss += task_loss.mean()
 
                     # ------------------------------------------------------------------------------------
                     accelerator.backward(total_loss)
