@@ -601,7 +601,7 @@ class NetworkTrainer:
                                                 score_pairs.append(score_pair)
                                                 answers.append(answer)
 
-                                        if len(normal_pairs) == 0 :
+                                        if len(normal_pairs) == 0 or len(anormal_pairs) == 0 :
                                             print(f'wronge, sum of normal_mask_res : {torch.sum(normal_mask_res)}')
                                             print(f'wronge, sum of anormal_mask_res : {torch.sum(anormal_mask_res)}')
 
