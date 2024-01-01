@@ -7,7 +7,6 @@ import shutil
 import random
 import itertools
 import wandb
-
 import accelerate
 import datasets
 import numpy as np
@@ -16,7 +15,6 @@ import torch.nn.functional as F
 import torch.utils.checkpoint
 import transformers
 import diffusers
-
 from tqdm.auto import tqdm
 from accelerate import Accelerator
 from accelerate.logging import get_logger
@@ -28,7 +26,6 @@ from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel
 from diffusers.optimization import get_scheduler
 from diffusers.training_utils import EMAModel
-
 from attn_utils import AttentionStore
 from attn_utils import register_attention_control, get_cross_attn_map_from_unet
 from loss_utils import get_grounding_loss_by_layer, get_word_idx
@@ -169,11 +166,9 @@ def main(args):
                                            train_data_dir=data_dir,)
     train_dataset = dataset_preprocess.preprocess(dataset["train"])
     print(f' (10.1.2) dataloader')
-    train_dataloader = torch.utils.data.DataLoader(
-        train_dataset,
-        shuffle=True,
-        batch_size=args.train_batch_size,
-        num_workers=args.dataloader_num_workers,)
+    train_dataloader = torch.utils.data.DataLoader(train_dataset,shuffle=True,
+                                                   batch_size=args.train_batch_size,
+                                                   num_workers=args.dataloader_num_workers,)
 
     print(f'\n step 11. accelerator preparing model')
     unet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(unet, optimizer, train_dataloader,
@@ -439,7 +434,7 @@ def main(args):
     accelerator.wait_for_everyone()
 
     accelerator.end_training()
-    
+
 if __name__ == "__main__":
 
     # put all arg parse here
@@ -473,9 +468,7 @@ if __name__ == "__main__":
         ),
     )
 
-    parser.add_argument(
-        "--train_batch_size", type=int, default=16, help="Batch size (per device) for the training dataloader."
-    )
+    parser.add_argument("--train_batch_size", type=int, default=16, help="Batch size (per device) for the training dataloader.")
 
     parser.add_argument("--num_train_epochs", type=int, default=100)
 
