@@ -523,7 +523,7 @@ class NetworkTrainer:
                         background = torch.sum(1 - img_masks)
                         print(f'batch_num: {batch_num}')
                         print(f'normal pixel num : {torch.sum(normal_mask)} | anormal pixel num : {torch.sum(anormal_mask)} | background pixel num : {background}')
-                        
+
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
                             normal_score_map, anormal_score_map = torch.chunk(attn_score, 2, dim=-1)       # [batch*head, pixel_num, 1]

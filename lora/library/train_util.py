@@ -1066,8 +1066,8 @@ class BaseDataset(torch.utils.data.Dataset):
             img_masks.append(mask_img)
 
             # (2.2) anormal mask """ normal is zero, anormal is white """
-            anormal_mask = attn_transforms(Image.open(anormal_mask_dir).convert('L').resize((512, 512), Image.BICUBIC))
-            # normalize to [0, 1]
+            anormal_mask = Image.open(anormal_mask_dir).convert('L').resize((512, 512), Image.BICUBIC)
+            anormal_mask = attn_transforms(anormal_mask)
             if anormal_mask.max() > 0:
                 anormal_mask = anormal_mask / anormal_mask.max()
             anormal_masks.append(anormal_mask)
