@@ -597,8 +597,8 @@ class NetworkTrainer:
                                         cross_ent_loss = cross_entropy_loss(score_pairs, anormal_pos.long())
                                         cross_loss += cross_ent_loss.mean()
 
-                                        normal_cross_loss = cross_entropy_loss(torch.stack(normal_pairs), torch.ones(len(normal_pairs)).long())
-                                        anormal_cross_loss = cross_entropy_loss(torch.stack(anormal_pairs), torch.zeros(len(anormal_pairs)).long())
+                                        normal_cross_loss = cross_entropy_loss(torch.stack(normal_pairs), torch.ones(len(normal_pairs)).long().to(accelerator.device))
+                                        anormal_cross_loss = cross_entropy_loss(torch.stack(anormal_pairs), torch.zeros(len(anormal_pairs)).long().to(accelerator.device))
                                         log_loss["loss/normal_cross_loss"] = normal_cross_loss.mean().item()
                                         log_loss["loss/anormal_cross_loss"] = anormal_cross_loss.mean().item()
 
