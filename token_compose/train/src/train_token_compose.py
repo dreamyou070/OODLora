@@ -158,8 +158,8 @@ def main(args):
         train_section = dataset['train']
     print(f' (10.1) training data')
     print(f' (10.1.1) data preprocessor')
-    dataset_preprocess = DatasetPreprocess(caption_column=args.caption_column,
-                                           image_column=args.image_column,
+    dataset_preprocess = DatasetPreprocess(caption_column=args.caption_column, # text
+                                           image_column=args.image_column,     # image
                                            train_transforms=train_transforms,
                                            attn_transforms=attn_transforms,
                                            tokenizer=tokenizer,
