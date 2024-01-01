@@ -554,6 +554,7 @@ class NetworkTrainer:
                                     normal_mask_ = normal_mask_.repeat(8, 1, 1) # [h, res, res]
                                     anormal_mask_ = anormal_mask_res[i, :, :] # """ background is zero """
                                     anormal_mask_ = anormal_mask_.repeat(8, 1, 1) # [h, res, res]
+                                    print(f'normal_mask_.shape (8, res,res): {normal_mask_.shape}')
 
                                     normal_total_score = normal_score_map_i.reshape(b, -1).sum(dim=-1)
                                     anormal_total_score = anormal_score_map_i.reshape(b, -1).sum(dim=-1)
