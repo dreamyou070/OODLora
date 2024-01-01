@@ -107,12 +107,16 @@ def get_grounding_loss_by_layer(_gt_seg_list,
     # input_attn_map_list ?
     for i in range(len(input_attn_map_ls)):
         # len is 1 or 3
-        avg_attn_map_ls.append(input_attn_map_ls[i].reshape(-1, res, res, input_attn_map_ls[i].shape[-1]).mean(0))
+        org_map = input_attn_map_ls[i]
+        print(f'org_map.shape (head, res*res, 77) : {org_map.shape}')
+        map = input_attn_map_ls[i].reshape(-1, res, res, input_attn_map_ls[i].shape[-1]).mean(0)
+
+        avg_attn_map_ls.append(map)
         # [head, res,res,c]
     avg_attn_map = torch.stack(avg_attn_map_ls, dim=0) # head, res, res, 1
-    print(f'avg_attn_map.shape (head, res,res, 77) : {avg_attn_map.shape}')
+    print(f'avg_attn_map.shape (1, res,res, 77) : {avg_attn_map.shape}')
     avg_attn_map = avg_attn_map.sum(0) / avg_attn_map.shape[0] # res,res,1
-    print(f'avg_attn_map.shape (1, res, res, 77) : {avg_attn_map.shape}')
+    print(f'avg_attn_map.shape (res, res, 77) : {avg_attn_map.shape}')
     avg_attn_map = avg_attn_map.unsqueeze(0) # 1, rse,res, 77
     bce_loss_func = nn.BCELoss()
     pixel_loss = 0.0
