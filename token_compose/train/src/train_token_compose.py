@@ -314,13 +314,15 @@ def main(args):
 
                 for train_layer in train_layers_ls:
                     layer_res = int(train_layer.split("_")[1])
-                    print(f'train_layer: {train_layer}, layer_res: {layer_res}')
+                    print(f'first, word_token_idx_ls : {word_token_idx_ls}')
 
                     attn_loss_dict = get_grounding_loss_by_layer(_gt_seg_list=gt_seg_ls,                   # answer of segmentatio map
                                                                  word_token_idx_ls=word_token_idx_ls,      # word token positions
                                                                  res=layer_res, # 64,32,16,8
                                                                  input_attn_map_ls=attn_dict[train_layer], # list with len 3 or 1
                                                                  is_training_sd21=is_training_sd21,)       # False
+                    import time
+                    time.sleep(1000)
 
                     layer_token_loss = attn_loss_dict["token_loss"]
                     layer_pixel_loss = attn_loss_dict["pixel_loss"]
