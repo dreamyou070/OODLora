@@ -562,31 +562,32 @@ class NetworkTrainer:
                                     normal_activation_value = normal_pos_normal_score / normal_total_score
                                     anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
-                                    anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
-                                    print(f'current anormal loss : {(1.0 - torch.mean(anormal_activation_value)) ** 2}')
+                                    if len(test_indexs) > 0 :
+                                        anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
+                                        print(f'current anormal loss : {(1.0 - torch.mean(anormal_activation_value)) ** 2}')
 
-                                    # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
-                                    # binary_aug_tensor = 8,32,321
-                                    # img_mask = 8,32,32,1
-                                    score_map = torch.cat([normal_score_map_i.unsqueeze(-1), anormal_score_map_i.unsqueeze(-1)], dim=-1).softmax(dim=-1)  #
-                                    flatten_score_map = score_map.view(-1, 2)
+                                        # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
+                                        # binary_aug_tensor = 8,32,321
+                                        # img_mask = 8,32,32,1
+                                        score_map = torch.cat([normal_score_map_i.unsqueeze(-1), anormal_score_map_i.unsqueeze(-1)], dim=-1).softmax(dim=-1)  #
+                                        flatten_score_map = score_map.view(-1, 2)
 
-                                    position_map = torch.cat([normal_mask_.unsqueeze(-1),anormal_mask_.unsqueeze(-1)], dim=-1)
-                                    position_map = position_map.view(-1, 2)
+                                        position_map = torch.cat([normal_mask_.unsqueeze(-1),anormal_mask_.unsqueeze(-1)], dim=-1)
+                                        position_map = position_map.view(-1, 2)
 
-                                    score_pairs = []
-                                    anormal_pos = []
+                                        score_pairs = []
+                                        anormal_pos = []
 
-                                    for i in range(flatten_score_map.shape[0]):
-                                        position_info = position_map[i]
-                                        if position_info[0] == 1 or position_info[1] == 1:
-                                            score_pair = flatten_score_map[i] # normal = 0, anormal = 1
-                                            anormal_pos.append(position_info[0])
-                                            score_pairs.append(score_pair)
-                                    score_pairs = torch.stack(score_pairs)
-                                    anormal_pos = torch.stack(anormal_pos)
-                                    cross_ent_loss = cross_entropy_loss(score_pairs, anormal_pos.long())
-                                    cross_loss += cross_ent_loss.mean()
+                                        for i in range(flatten_score_map.shape[0]):
+                                            position_info = position_map[i]
+                                            if position_info[0] == 1 or position_info[1] == 1:
+                                                score_pair = flatten_score_map[i] # normal = 0, anormal = 1
+                                                anormal_pos.append(position_info[0])
+                                                score_pairs.append(score_pair)
+                                        score_pairs = torch.stack(score_pairs)
+                                        anormal_pos = torch.stack(anormal_pos)
+                                        cross_ent_loss = cross_entropy_loss(score_pairs, anormal_pos.long())
+                                        cross_loss += cross_ent_loss.mean()
 
                                     #normal_position_normal_score +=
                         log_loss["loss/normal_pixel_reverse_normal_loss"] = normal_loss.mean().item()
