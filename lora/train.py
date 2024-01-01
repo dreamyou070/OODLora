@@ -46,6 +46,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None and ('up' in layer_name or 'mid' in layer_name) :
+                print(f'attention_probs (8, pix_num, 4) : {attention_probs.shape}')
                 good_map = attention_probs[:, :,1]
                 bad_map = attention_probs[:,:,2] # [batch*head, pixel_num, 1]
                 attn_score_map = torch.cat([good_map, bad_map], dim=-1)
@@ -598,10 +599,10 @@ class NetworkTrainer:
                             log_loss["loss/anormal_pixel_reverse_anormal_loss"] = anormal_loss.mean().item()
                             log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
 
-                        record = {"normal_pixel_reverse_normal_score": normal_loss.mean().item(),
-                                  "anormal_pixel_reverse_anormal_score": anormal_loss.mean().item(),}
-                        with open(record_file, 'a') as f:
-                            f.write(json.dumps(record) + '\n')
+                        #record = {"normal_pixel_reverse_normal_score": normal_loss.mean().item(),
+                        #          "anormal_pixel_reverse_anormal_score": anormal_loss.mean().item(),}
+                        #with open(record_file, 'a') as f:
+                        #    f.write(json.dumps(record) + '\n')
 
                         # attn_loss = normal_loss.mean() + anormal_loss.mean()+ cross_loss.mean()
                         # attn_loss = cross_loss.mean()
