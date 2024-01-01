@@ -570,7 +570,7 @@ class NetworkTrainer:
 
                                         print(f'sum of normal_mask_res : {torch.sum(normal_mask_res)}')
                                         print(f'sum of anormal_mask_res : {torch.sum(anormal_mask_res)}')
-                                        
+
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
 
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
@@ -618,10 +618,8 @@ class NetworkTrainer:
                                         cross_ent_loss = torch.nn.BCELoss()(score_pairs, answers)
                                         cross_loss += cross_ent_loss.mean()
 
-                                        normal_cross_loss = torch.nn.BCELoss()(torch.stack(normal_pairs),
-                                                                               normal_answers.long().to(accelerator.device))
-                                        anormal_cross_loss = torch.nn.BCELoss()(torch.stack(anormal_pairs),
-                                                                                anormal_answers.long().to(accelerator.device))
+                                        normal_cross_loss = torch.nn.BCELoss()(normal_pairs,normal_answers.long().to(accelerator.device))
+                                        anormal_cross_loss = torch.nn.BCELoss()(anormal_pairs,anormal_answers.long().to(accelerator.device))
 
                                         log_loss["loss/normal_cross_loss"] = normal_cross_loss.mean().item()
                                         log_loss["loss/anormal_cross_loss"] = anormal_cross_loss.mean().item()
