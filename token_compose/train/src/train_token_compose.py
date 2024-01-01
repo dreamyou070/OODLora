@@ -159,14 +159,14 @@ def main(args):
                                data_dir=data_dir,
                                cache_dir=args.cache_dir,)
         train_section = dataset['train']
-    """    
+    print(f' (10.1) training data preprocessor')
     dataset_preprocess = DatasetPreprocess(caption_column=args.caption_column,
                                            image_column=args.image_column,
                                            train_transforms=train_transforms,
                                            attn_transforms=attn_transforms,
                                            tokenizer=tokenizer,
                                            train_data_dir=data_dir,)
-
+    """  
     
     train_dataset = dataset_preprocess.preprocess(dataset["train"])
 
