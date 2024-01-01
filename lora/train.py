@@ -521,8 +521,6 @@ class NetworkTrainer:
 
                         batch_num = img_masks.shape[0]
                         background = torch.sum(1 - img_masks)
-                        print(f'batch_num: {batch_num}')
-                        print(f'normal pixel num : {torch.sum(normal_mask)} | anormal pixel num : {torch.sum(anormal_mask)} | background pixel num : {background}')
 
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
@@ -544,17 +542,24 @@ class NetworkTrainer:
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
 
                                 for i in range(batch_num):
-                                    normal_score_map = normal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1)   # [h, res, res, 1]
-                                    anormal_score_map = anormal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1) # [h, res, res, 1]
-                                    b, H, W, = normal_score_map.shape
+
+                                    normal_score_map_i = normal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1)   # [h, res, res, 1]
+                                    anormal_score_map_i = anormal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1) # [h, res, res, 1]
+                                    b, H, W, = normal_score_map_i.shape
+                                    print(f'normal_score_map_i.shape (8, res,res): {normal_score_map_i.shape}')
+
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
-                                    # (1) normal & anormal binary map """ normal zero is zero """
+
                                     normal_mask_ = normal_mask_res[i, :, :] # """ background is zero """
+                                    normal_mask_ = normal_mask_.repeat(8, 1, 1) # [h, res, res]
                                     anormal_mask_ = anormal_mask_res[i, :, :] # """ background is zero """
-                                    normal_total_score = normal_score_map.reshape(b, -1).sum(dim=-1)
-                                    anormal_total_score = anormal_score_map.reshape(b, -1).sum(dim=-1)
-                                    normal_pos_normal_score = (normal_mask_ * normal_score_map).reshape(b, -1).sum(dim=-1)
-                                    anormal_pos_anormal_score = (anormal_mask_ * anormal_score_map).reshape(b, -1).sum(dim=-1)
+                                    anormal_mask_ = anormal_mask_.repeat(8, 1, 1) # [h, res, res]
+
+                                    normal_total_score = normal_score_map_i.reshape(b, -1).sum(dim=-1)
+                                    anormal_total_score = anormal_score_map_i.reshape(b, -1).sum(dim=-1)
+
+                                    normal_pos_normal_score = (normal_mask_ * normal_score_map_i).reshape(b, -1).sum(dim=-1) # [8, res,res] * [8, res,res]
+                                    anormal_pos_anormal_score = (anormal_mask_ * anormal_score_map_i).reshape(b, -1).sum(dim=-1)
                                     normal_activation_value = normal_pos_normal_score / normal_total_score
                                     anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
@@ -562,12 +567,15 @@ class NetworkTrainer:
                                     # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
                                     # binary_aug_tensor = 8,32,321
                                     # img_mask = 8,32,32,1
-                                    score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
+                                    score_map = torch.cat([normal_score_map_i, anormal_score_map_i], dim=-1).softmax(dim=-1)  #
                                     flatten_score_map = score_map.view(-1, 2)
+                                    print(f'score_map (8*res*res, 2): {score_map.shape}')
+
                                     position_map = torch.cat([normal_mask_.contiguous().view(-1, 1),
                                                               anormal_mask_.contiguous().view(-1, 1)], dim=-1)
                                     score_pairs = []
                                     anormal_pos = []
+
                                     for i in range(flatten_score_map.shape[0]):
                                         position_info = position_map[i]
                                         if position_info[0] == 1 or position_info[1] == 1:
