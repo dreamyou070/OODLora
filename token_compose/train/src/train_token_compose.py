@@ -288,14 +288,10 @@ def main(args):
                 assert len(prompts) == 1, "only support batch size 1"
 
                 postprocess_seg_ls = batch["postprocess_seg_ls"]
-                print(f'postprocess_seg_ls : {postprocess_seg_ls}')
 
                 word_token_idx_ls = [] # postion of token in text
                 gt_seg_ls = []
                 for item in postprocess_seg_ls:
-                    print(f'item : {item}')
-                    import time
-                    time.sleep(100)
                     # item: [[[words], attn_gt], [[words], attn_gt], ...]
                     # words = "teddy bear" or "surfboard" or, ....
                     words_indices = []
@@ -304,15 +300,18 @@ def main(args):
                     words_indices = get_word_idx(prompts[0], words, tokenizer)
 
                     word_token_idx_ls.append(words_indices)
-
-                    seg_gt = item[1] # seg_gt: torch.Size([1, 1, 512, 512])
+                    seg_gt = item[1] # seg_gt: torch.Size([1, 1, 512, 512]) --> image from ground sam mask
                     gt_seg_ls.append(seg_gt)
 
                 # calculate loss
-                attn_dict = get_cross_attn_map_from_unet(
-                    attention_store=controller, 
-                    is_training_sd21=is_training_sd21
-                )
+                attn_dict = get_cross_attn_map_from_unet(attention_store=controller,
+                                                         is_training_sd21=is_training_sd21)
+                # key of attn_dict
+                # value of attn_dict = temp_list (1, res, res, 1)
+                layer_names = attn_dict.keys()
+                for layer_name in layer_names:
+                    attn_map_list = attn_dict[layer_name]
+                    print(f'{layer_name} : {len(attn_map_list)} : shape of the map = {attn_map_list[0].shape}')
 
                 token_loss = 0.0
                 pixel_loss = 0.0
