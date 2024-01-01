@@ -293,12 +293,14 @@ def main(args):
                 word_token_idx_ls = [] # postion of token in text
                 gt_seg_ls = []
                 for item in postprocess_seg_ls:
+                    print(f'item : {item}')
+                    import time
+                    time.sleep(100)
                     # item: [[[words], attn_gt], [[words], attn_gt], ...]
                     # words = "teddy bear" or "surfboard" or, ....
                     words_indices = []
                     words = item[0][0]
-                    words = words.lower()
-                    print(f'words : {words}')
+                    words = words.lower() # only noun
                     words_indices = get_word_idx(prompts[0], words, tokenizer)
 
                     word_token_idx_ls.append(words_indices)
