@@ -46,10 +46,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None and ('up' in layer_name or 'mid' in layer_name) :
-                good_map = attention_probs[:, :,1]
-                bad_map = attention_probs[:,:,2] # [batch*head, pixel_num, 1]
-                attn_score_map = torch.cat([good_map, bad_map], dim=-1)
-                controller.store(attn_score_map, layer_name)
+                trg_map = attention_probs[:, :,1]
+                controller.store(trg_map, layer_name)
                 """
                 batch, pix_num, _ = query.shape
                 res = int(pix_num) ** 0.5
@@ -653,7 +651,13 @@ class NetworkTrainer:
                                                     batch,
                                                     weight_dtype,None, None)
                         # -----------------------------------------------------------------------------------------------------------------------
+                        attn_dict = attention_storer.step_store
                         attention_storer.reset()
+
+                        for layer_name in attn_dict.keys() :
+                            score_map = attn_dict[layer_name]
+                            print(f'layer_name : {layer_name} | len of score map : {len(score_map)}')
+
 
 
                     if args.v_parameterization:
