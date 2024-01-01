@@ -546,7 +546,7 @@ class NetworkTrainer:
                                     normal_score_map_i = normal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1)   # [h, res, res, 1]
                                     anormal_score_map_i = anormal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1) # [h, res, res, 1]
                                     b, H, W, = normal_score_map_i.shape
-                                    print(f'normal_score_map_i.shape (8, res,res): {normal_score_map_i.shape}')
+                                    print(f'normal_score_map_i.shape (8, res, res): {normal_score_map_i.shape}')
 
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
 
@@ -558,6 +558,7 @@ class NetworkTrainer:
 
                                     normal_total_score = normal_score_map_i.reshape(b, -1).sum(dim=-1)
                                     anormal_total_score = anormal_score_map_i.reshape(b, -1).sum(dim=-1)
+                                    print(f'normal_total_score.shape (8, res*res): {normal_total_score.shape}')
 
                                     normal_pos_normal_score = (normal_mask_ * normal_score_map_i).reshape(b, -1).sum(dim=-1) # [8, res,res] * [8, res,res]
                                     anormal_pos_anormal_score = (anormal_mask_ * anormal_score_map_i).reshape(b, -1).sum(dim=-1)
@@ -565,26 +566,26 @@ class NetworkTrainer:
                                     anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
                                     anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
+
                                     # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
                                     # binary_aug_tensor = 8,32,321
                                     # img_mask = 8,32,32,1
-                                    score_map = torch.cat([normal_score_map_i, anormal_score_map_i], dim=-1).softmax(dim=-1)  #
+                                    score_map = torch.cat([normal_score_map_i.unsqueeze(-1), anormal_score_map_i.unsqueeze(-1)], dim=-1).softmax(dim=-1)  #
                                     flatten_score_map = score_map.view(-1, 2)
                                     print(f'score_map (8*res*res, 2): {score_map.shape}')
 
-                                    position_map = torch.cat([normal_mask_.contiguous().view(-1, 1),
-                                                              anormal_mask_.contiguous().view(-1, 1)], dim=-1)
+                                    position_map = torch.cat([normal_mask_.unsqueeze(-1),anormal_mask_.unsqueeze(-1)], dim=-1)
+                                    position_map = position_map.view(-1, 2)
+
                                     score_pairs = []
                                     anormal_pos = []
 
                                     for i in range(flatten_score_map.shape[0]):
                                         position_info = position_map[i]
                                         if position_info[0] == 1 or position_info[1] == 1:
-                                            score_pair = flatten_score_map[i]
-                                            anormal_pos.append(position_info[1])
+                                            score_pair = flatten_score_map[i] # normal = 0, anormal = 1
+                                            anormal_pos.append(position_info[0])
                                             score_pairs.append(score_pair)
-                                        else :
-                                            print('background')
                                     score_pairs = torch.stack(score_pairs)
                                     anormal_pos = torch.stack(anormal_pos)
                                     cross_ent_loss = cross_entropy_loss(score_pairs, anormal_pos.long())
