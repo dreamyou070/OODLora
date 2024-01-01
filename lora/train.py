@@ -722,17 +722,16 @@ class NetworkTrainer:
                     loss_list[step] = current_loss
                 loss_total += current_loss
                 avr_loss = loss_total / len(loss_list)
-                
+
                 logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
                 progress_bar.set_postfix(**logs)
 
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
                 if args.logging_dir is not None:
-                    logs = self.generate_step_logs(loss_dict, lr_scheduler)
-                    print(f"logs: {logs}")
                     #accelerator.log(logs, step=global_step)
                     if is_main_process:
+                        logs = self.generate_step_logs(loss_dict, lr_scheduler)
                         wandb.log(logs, step=global_step)
                 if global_step >= args.max_train_steps:
                     break
