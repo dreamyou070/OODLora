@@ -618,8 +618,8 @@ class NetworkTrainer:
                                         cross_ent_loss = torch.nn.BCELoss()(score_pairs, answers)
                                         cross_loss += cross_ent_loss.mean()
 
-                                        normal_cross_loss = torch.nn.BCELoss()(normal_pairs,normal_answers.long().to(accelerator.device))
-                                        anormal_cross_loss = torch.nn.BCELoss()(anormal_pairs,anormal_answers.long().to(accelerator.device))
+                                        normal_cross_loss = torch.nn.BCELoss()(normal_pairs,normal_answers.long().to(accelerator.device, dtype=weight_dtype))
+                                        anormal_cross_loss = torch.nn.BCELoss()(anormal_pairs,anormal_answers.long().to(accelerator.device, dtype=weight_dtype))
 
                                         log_loss["loss/normal_cross_loss"] = normal_cross_loss.mean().item()
                                         log_loss["loss/anormal_cross_loss"] = anormal_cross_loss.mean().item()
