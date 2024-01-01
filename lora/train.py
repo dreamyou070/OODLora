@@ -649,10 +649,11 @@ class NetworkTrainer:
                                                     timesteps,
                                                     text_encoder_conds,
                                                     batch,
-                                                    weight_dtype,None, None)
+                                                    weight_dtype, 1, None)
                         # -----------------------------------------------------------------------------------------------------------------------
                         attn_dict = attention_storer.step_store
                         attention_storer.reset()
+
 
                         for layer_name in attn_dict.keys() :
                             score_map = attn_dict[layer_name]
