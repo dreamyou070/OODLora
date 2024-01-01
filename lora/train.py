@@ -732,7 +732,8 @@ class NetworkTrainer:
                 # 2) total loss
                 if args.logging_dir is not None:
                     logs = self.generate_step_logs(loss_dict, lr_scheduler)
-                    accelerator.log(logs, step=global_step)
+                    print(f"logs: {logs}")
+                    #accelerator.log(logs, step=global_step)
                     if is_main_process:
                         wandb.log(logs, step=global_step)
                 if global_step >= args.max_train_steps:
