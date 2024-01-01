@@ -569,7 +569,7 @@ class NetworkTrainer:
                                     if len(test_indexs) > 0 :
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
                                         print(f'total anormal score : {anormal_total_score.sum()}')
-                                        print(f'number of anormal pixel : {}')
+                                        #print(f'number of anormal pixel : {}')
                                         print(f'current anormal loss : {(1.0 - torch.mean(anormal_activation_value)) ** 2}')
 
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
