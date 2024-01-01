@@ -542,9 +542,7 @@ class NetworkTrainer:
                                     normal_score_map_i =normal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1)    # [h, res, res]
                                     anormal_score_map_i = anormal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1) # [h, res, res]
                                     b, H, W, = normal_score_map_i.shape
-
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
-
                                     normal_mask_ = normal_mask_res[i, :, :].repeat(8, 1, 1) # [h, res, res] # """ background is zero """
                                     anormal_mask_ = anormal_mask_res[i, :, :].repeat(8, 1, 1) # [h, res, res]
 
@@ -561,12 +559,10 @@ class NetworkTrainer:
 
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
-                                        # binary_aug_tensor = 8,32,321
-                                        # img_mask = 8,32,32,1
 
                                         bce_loss_func = nn.BCELoss()
-                                        normal_bce = bce_loss_func(normal_score_map_i.mean(0), normal_mask_.squeeze())
-                                        anormal_bce = bce_loss_func(anormal_score_map_i.mean(0), anormal_mask_.squeeze())
+                                        normal_bce = bce_loss_func(normal_score_map_i.mean(0), normal_mask_[0,:,:].squeeze())
+                                        anormal_bce = bce_loss_func(anormal_score_map_i.mean(0), anormal_mask_[0,:,:].squeeze())
                                         bce_loss += normal_bce.mena() + anormal_bce.mena()
                                         log_loss["loss/normal_bce"] = normal_bce.mean().item()
                                         log_loss["loss/anormal_bce"] = anormal_bce.mean().item()

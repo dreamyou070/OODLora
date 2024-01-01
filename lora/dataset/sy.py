@@ -14,3 +14,7 @@ a = bce_loss_func(normal_score, answer)
 b = bce_loss_func(normal_score, answer2)
 print(a)
 print(b)
+normal_score_map_i = torch.randn(8,8,8)
+b, H, W, = normal_score_map_i.shape
+a = normal_score_map_i.mean(0)
+print(a.shape)
