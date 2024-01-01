@@ -554,11 +554,9 @@ class NetworkTrainer:
                                     normal_mask_ = normal_mask_.repeat(8, 1, 1) # [h, res, res]
                                     anormal_mask_ = anormal_mask_res[i, :, :] # """ background is zero """
                                     anormal_mask_ = anormal_mask_.repeat(8, 1, 1) # [h, res, res]
-                                    print(f'normal_mask_.shape (8, res,res): {normal_mask_.shape}')
 
                                     normal_total_score = normal_score_map_i.reshape(b, -1).sum(dim=-1)
                                     anormal_total_score = anormal_score_map_i.reshape(b, -1).sum(dim=-1)
-                                    print(f'normal_total_score.shape (8, res*res): {normal_total_score.shape}')
 
                                     normal_pos_normal_score = (normal_mask_ * normal_score_map_i).reshape(b, -1).sum(dim=-1) # [8, res,res] * [8, res,res]
                                     anormal_pos_anormal_score = (anormal_mask_ * anormal_score_map_i).reshape(b, -1).sum(dim=-1)
@@ -572,7 +570,6 @@ class NetworkTrainer:
                                     # img_mask = 8,32,32,1
                                     score_map = torch.cat([normal_score_map_i.unsqueeze(-1), anormal_score_map_i.unsqueeze(-1)], dim=-1).softmax(dim=-1)  #
                                     flatten_score_map = score_map.view(-1, 2)
-                                    print(f'score_map (8*res*res, 2): {score_map.shape}')
 
                                     position_map = torch.cat([normal_mask_.unsqueeze(-1),anormal_mask_.unsqueeze(-1)], dim=-1)
                                     position_map = position_map.view(-1, 2)
@@ -592,8 +589,8 @@ class NetworkTrainer:
                                     cross_loss += cross_ent_loss.mean()
 
                                     #normal_position_normal_score +=
-                        log_loss["loss/normal_pixel_reverse_normal_score"] = normal_loss.mean().item()
-                        log_loss["loss/anormal_pixel_reverse_anormal_score"] = anormal_loss.mean().item()
+                        log_loss["loss/normal_pixel_reverse_normal_loss"] = normal_loss.mean().item()
+                        log_loss["loss/anormal_pixel_reverse_anormal_loss"] = anormal_loss.mean().item()
                         log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
 
                         record = {"normal_pixel_reverse_normal_score": normal_loss.mean().item(),
