@@ -518,15 +518,6 @@ class NetworkTrainer:
                         img_masks = batch["img_masks"].to(accelerator.device)      # [Batch, 1, 512, 512], foreground = white = 1, background = black = 0
                         binary_map = batch['anormal_masks'].to(accelerator.device) # [Batch, 1, 512, 512], normal = black = 0, anormal = white = 1
                         batch_num = img_masks.shape[0]
-                        print(f'binary_map : {binary_map.shape}')
-                        from torchvision import transforms
-                        resize_transform = transforms.Resize((8,8))
-                        small_binary_map = resize_transform(binary_map)
-                        print(f'small_binary_map : {small_binary_map.shape}')
-                        print(f'sum(small_binary_map) : {torch.sum(small_binary_map)}')
-                        print(f'sum_binary_map : {small_binary_map}')
-                        original_anormal_position = torch.sum(torch.where(binary_map == 1, 1, 0))
-                        print(f'original, anormal position : {original_anormal_position}')
 
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
@@ -541,14 +532,14 @@ class NetworkTrainer:
                                 from torchvision import transforms
                                 resize_transform = transforms.Resize((res, res))
 
-                                img_masks_res = (resize_transform(img_masks) == 0.0).float() # background = 0, foreground = 1
-                                binary_map_res = (resize_transform(binary_map) == 0.0).float() # normal = 0, anormal = 1
-                                print(f'after binarize, binary_map_res : {binary_map_res}')
-                                img_masks_res = 1-img_masks_res
-                                binary_map_res = 1-binary_map_res
-
-                                normal_mask_res = (img_masks_res*(1-binary_map_res)> 0.0).float()
-                                anormal_mask_res =(img_masks_res*binary_map_res> 0.0).float() #
+                                img_masks_res = (1 -(resize_transform(img_masks) == 0.0).float())  # background = 0, foreground = 1
+                                binary_map_res = (1-(resize_transform(binary_map) == 0.0).float()) # normal = 0, anormal = 1
+                                print(f'after binarize, binary_map_res(many 0 some 1) : {binary_map_res}')
+                                
+                                normal_mask_res = img_masks_res*(1-binary_map_res)
+                                anormal_mask_res =img_masks_res*binary_map_res
+                                print(f'after mask forground normal  : {normal_mask_res}')
+                                print(f'after mask forground anormal : {anormal_mask_res}')
 
                                 normal_score_map_batch = torch.chunk(normal_score_map,  batch_num, dim=0) # batch, head, pixel_num, 1
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
