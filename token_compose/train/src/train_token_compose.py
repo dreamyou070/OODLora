@@ -159,7 +159,8 @@ def main(args):
                                data_dir=data_dir,
                                cache_dir=args.cache_dir,)
         train_section = dataset['train']
-    print(f' (10.1) training data preprocessor')
+    print(f' (10.1) training data')
+    print(f' (10.1.1) data preprocessor')
     dataset_preprocess = DatasetPreprocess(caption_column=args.caption_column,
                                            image_column=args.image_column,
                                            train_transforms=train_transforms,
@@ -167,21 +168,20 @@ def main(args):
                                            tokenizer=tokenizer,
                                            train_data_dir=data_dir,)
     train_dataset = dataset_preprocess.preprocess(dataset["train"])
-    """  
-    
-    
-
-    # DataLoaders creation:
+    print(f' (10.1.2) dataloader')
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,
         shuffle=True,
         batch_size=args.train_batch_size,
-        num_workers=args.dataloader_num_workers,
-    )
+        num_workers=args.dataloader_num_workers,)
 
-    unet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-        unet, optimizer, train_dataloader, lr_scheduler
-    )
+    print(f'\n step 11. accelerator preparing model')
+    unet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(unet, optimizer, train_dataloader,
+                                                                          lr_scheduler)
+    """  
+    
+
+    
 
     if args.use_ema:
         ema_unet.to(accelerator.device)
