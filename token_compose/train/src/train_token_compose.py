@@ -1,8 +1,3 @@
-'''
-Following code is adapted from 
-https://github.com/huggingface/diffusers/blob/main/examples/text_to_image/train_text_to_image.py
-'''
-
 import argparse
 import logging
 import math
@@ -502,18 +497,10 @@ if __name__ == "__main__":
 
     # put all arg parse here
     parser = argparse.ArgumentParser(description="Simple example of a training script.")
-
-    parser.add_argument(
-        "--pretrained_model_name_or_path",
-        type=str,
+    parser.add_argument("--pretrained_model_name_or_path",type=str,
         default="CompVis/stable-diffusion-v1-4",
-        choices=[
-            "CompVis/stable-diffusion-v1-4",
-            "stabilityai/stable-diffusion-2-1"
-        ],
-        help="Path to pretrained model or model identifier from huggingface.co/models.",
-    )
-
+        choices=["CompVis/stable-diffusion-v1-4","stabilityai/stable-diffusion-2-1"],
+        help="Path to pretrained model or model identifier from huggingface.co/models.",)
     parser.add_argument(
         "--train_data_dir",
         type=str,
