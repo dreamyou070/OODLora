@@ -73,16 +73,11 @@ def get_grounding_loss_by_layer(_gt_seg_list,
     noun_num = len(gt_seg_list)
     print(f'noun_num: {noun_num}')
     for i in range(len(gt_seg_list)):
-        #print(f'before resizing, gt_seg_list[{i}] shape: {gt_seg_list[i].shape}')
         gt_seg_list[i] = resize_transform(gt_seg_list[i])
-        #print(f'after resizing, gt_seg_list[{i}] shape: {gt_seg_list[i].shape}')
         gt_seg_list[i] = gt_seg_list[i].squeeze(0) # 1, 1, res, res => 1, 1, res(8,16,32,64), res(8,16,32,64)
         # add binary
-        binary = (gt_seg_list[i] > 0.0).float()
-        print(f'binary (true, false, if black false, if true trg object) : {binary}')
+        binary = (gt_seg_list[i] > 0.0).float() # 1, res, res
         gt_seg_list[i] = (gt_seg_list[i] > 0.0).float()
-
-
 
     ################### token loss start ###################
     # Following code is adapted from
@@ -91,7 +86,7 @@ def get_grounding_loss_by_layer(_gt_seg_list,
     for attn_map in input_attn_map_ls:
         # len is 3 or 1
         b, H, W, j = attn_map.shape
-        print(f'attn_map.shape (1, 8, 8, 77) : {attn_map.shape}')
+        print(f'attn_map.shape (8=head, 8, 8, 77) : {attn_map.shape}')
         for i in range(len(word_token_idx_ls)): # [[word1 token_idx1, word1 token_idx2, ...], [word2 token_idx1, word2 token_idx2, ...]]
             obj_loss = 0.0
             single_word_idx_ls = word_token_idx_ls[i] #[token_idx1, token_idx2, ...]
@@ -99,7 +94,7 @@ def get_grounding_loss_by_layer(_gt_seg_list,
             for obj_position in single_word_idx_ls:
                 # ca map obj shape 8 * 16 * 16
                 ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W) # 1, 8, 8
-                print(f'ca_map_obj.shape (1, 8, 8) : {ca_map_obj.shape}')
+                print(f'ca_map_obj.shape (8, 8, 8) : {ca_map_obj.shape}')
                 # why dum on dim -1 ???
                 trg_score =  (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)
                 all_score =  ca_map_obj.reshape(b, -1).sum(dim=-1)

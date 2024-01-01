@@ -514,10 +514,16 @@ class NetworkTrainer:
                         attn_dict = attention_storer.step_store
                         attention_storer.reset()
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
-                        img_masks = batch["img_masks"].to(accelerator.device)                    # [Batch, Res, Res], foreground = white = 1, background = black = 0
-                        binary_map = batch['anormal_masks'].to(accelerator.device)#.unsqueeze(-1)  # [Batch, Res, Res, 1]
+                        img_masks = batch["img_masks"].to(accelerator.device)      # [Batch, 1, 512, 512], foreground = white = 1, background = black = 0
+                        binary_map = batch['anormal_masks'].to(accelerator.device) # [Batch, 1, 512, 512], normal = black = 0, anormal = white = 1
+                        normal_mask = img_masks * (1-binary_map)                   # [Batch, 1, 512, 512], normal = white = 1, anormal = black = 0
+                        anormal_mask = img_masks * binary_map                       # [Batch, 1, 512, 512], normal = black = 0, anormal = white = 1
+
                         batch_num = img_masks.shape[0]
+                        background = torch.sum(1 - img_masks)
                         print(f'batch_num: {batch_num}')
+                        print(f'normal pixel num : {torch.sum(normal_mask)} | anormal pixel num : {torch.sum(anormal_mask)} | background pixel num : {background}')
+                        
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
                             normal_score_map, anormal_score_map = torch.chunk(attn_score, 2, dim=-1)       # [batch*head, pixel_num, 1]
@@ -527,64 +533,39 @@ class NetworkTrainer:
                             pix_num = normal_score_map.shape[1]
                             res = int(math.sqrt(pix_num))
                             if res in args.cross_map_res :
+
+                                from torchvision import transforms
+                                resize_transform = transforms.Resize((res, res))
+
+                                normal_mask_res = (resize_transform(normal_mask)  > 0.0).float()
+                                anormal_mask_res = (resize_transform(anormal_mask)> 0.0).float()
+
                                 normal_score_map_batch = torch.chunk(normal_score_map,  batch_num, dim=0) # batch, head, pixel_num, 1
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
 
                                 for i in range(batch_num):
-                                    normal_score_map = normal_score_map_batch[i].reshape(8, res, res, -1)   # [h, res, res, 1]
-                                    anormal_score_map = anormal_score_map_batch[i].reshape(8, res, res, -1) # [h, res, res, 1]
-
+                                    normal_score_map = normal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1)   # [h, res, res, 1]
+                                    anormal_score_map = anormal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1) # [h, res, res, 1]
+                                    b, H, W, = normal_score_map.shape
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
                                     # (1) normal & anormal binary map """ normal zero is zero """
-                                    b_map = binary_map[i, :, :]
-                                    if b_map.dim() != 2:
-                                        b_map = b_map.squeeze()
-
-                                    from torchvision import transforms
-                                    resize_transform = transforms.Resize((res, res))# [res,res]
-
-                                    pil = Image.fromarray(b_map.cpu().numpy().astype(np.uint8)).resize((res, res))
-                                    binary_aug_np = np.array(pil)
-                                    binary_aug_np = np.where(binary_aug_np == 0, 0, 1)                          # black = 0 = normal, [res,res,1]
-                                    binary_aug_tensor = torch.tensor(binary_aug_np).unsqueeze(0).unsqueeze(-1)  # [1,32,32,1]
-                                    binary_aug_tensor = binary_aug_tensor.expand(normal_score_map.shape).to(accelerator.device)             # [head,32,32,1]
-
-                                    # -------------------------------------------------- (1-2) image masks -------------------------------------------------- #
-                                    img_mask = img_masks[i, :, :] # """ background is zero """
-                                    if img_mask.dim() != 2:
-                                        img_mask = img_mask.squeeze()
-                                    pil = Image.fromarray(img_mask.cpu().numpy().astype(np.uint8)).resize((res, res))
-                                    img_mask = np.array(pil)
-                                    img_mask = np.where(img_mask == 0, 0, 1)                                   # black = 0 = background, 1 = foreground
-                                    img_mask = torch.tensor(img_mask).unsqueeze(0).unsqueeze(-1)               # [1,32,32,1]
-                                    img_mask = img_mask.expand(normal_score_map.shape).to(accelerator.device)  # [head,32,32,1]
-                                    _, r1, r2, c = img_mask.shape
-                                    img_mask = img_mask.expand(normal_score_map.shape)                         # [head, 32,32,1] -> only one is efficient
-
+                                    normal_mask_ = normal_mask_res[i, :, :] # """ background is zero """
+                                    anormal_mask_ = anormal_mask_res[i, :, :] # """ background is zero """
+                                    normal_total_score = normal_score_map.reshape(b, -1).sum(dim=-1)
+                                    anormal_total_score = anormal_score_map.reshape(b, -1).sum(dim=-1)
+                                    normal_pos_normal_score = (normal_mask_ * normal_score_map).reshape(b, -1).sum(dim=-1)
+                                    anormal_pos_anormal_score = (anormal_mask_ * anormal_score_map).reshape(b, -1).sum(dim=-1)
+                                    normal_activation_value = normal_pos_normal_score / normal_total_score
+                                    anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
+                                    normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
+                                    anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
                                     # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
                                     # binary_aug_tensor = 8,32,321
                                     # img_mask = 8,32,32,1
-                                    normal_position = (1-binary_aug_tensor).to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
-                                    anormal_position = binary_aug_tensor.to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
-                                    anormal_position_pixel_num = anormal_position.sum() / 8
-
-
-                                    # normal pixel's normal score should be high
-                                    normal_map_total_score = normal_score_map.mean(0).squeeze() # [res,res]
-                                    normal_pixel_normal_score = (normal_position.to(anormal_score_map.device) * normal_score_map).mean()  # [b, res, res, 1]
-                                    normal_loss = (1-normal_pixel_normal_score/normal_map_total_score) ** 2
-
-                                    anormal_map_total_score = anormal_score_map.mean(0).squeeze() # [res,res]
-                                    anormal_pixel_anormal_score = (anormal_position.to(anormal_score_map.device) * anormal_score_map).mean()  # [b, res, res, 1]
-                                    anormal_loss = (1-anormal_pixel_anormal_score/anormal_map_total_score) ** 2
-
-                                    normal_loss += normal_loss.mean()  # [b, res, res, 1]
-                                    anormal_loss += anormal_loss.mean()  # [b, res, res, 1]
-
                                     score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
                                     flatten_score_map = score_map.view(-1, 2)
-                                    position_map = torch.cat([normal_position.contiguous().view(-1, 1),
-                                                              anormal_position.contiguous().view(-1, 1)], dim=-1)
+                                    position_map = torch.cat([normal_mask_.contiguous().view(-1, 1),
+                                                              anormal_mask_.contiguous().view(-1, 1)], dim=-1)
                                     score_pairs = []
                                     anormal_pos = []
                                     for i in range(flatten_score_map.shape[0]):
@@ -593,6 +574,8 @@ class NetworkTrainer:
                                             score_pair = flatten_score_map[i]
                                             anormal_pos.append(position_info[1])
                                             score_pairs.append(score_pair)
+                                        else :
+                                            print('background')
                                     score_pairs = torch.stack(score_pairs)
                                     anormal_pos = torch.stack(anormal_pos)
                                     cross_ent_loss = cross_entropy_loss(score_pairs, anormal_pos.long())
@@ -601,15 +584,10 @@ class NetworkTrainer:
                                     #normal_position_normal_score +=
                         log_loss["loss/normal_pixel_reverse_normal_score"] = normal_loss.mean().item()
                         log_loss["loss/anormal_pixel_reverse_anormal_score"] = anormal_loss.mean().item()
-                        #log_loss["loss/normal_pixel_normal_score"] = normal_position_normal_score.mean().item()
-                        #log_loss["loss/anormal_pixel_anormal_score"] = anormal_position_anormal_score.mean().item()
                         log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
 
                         record = {"normal_pixel_reverse_normal_score": normal_loss.mean().item(),
-                                  "anormal_pixel_reverse_anormal_score": anormal_loss.mean().item(),
-                                  #"normal_pixel_normal_score": normal_position_normal_score.mean().item(),
-                                  #"anormal_pixel_anormal_score": anormal_position_anormal_score.mean().item(),
-                                  }
+                                  "anormal_pixel_reverse_anormal_score": anormal_loss.mean().item(),}
                         with open(record_file, 'a') as f:
                             f.write(json.dumps(record) + '\n')
 

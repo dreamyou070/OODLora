@@ -311,6 +311,7 @@ def main(args):
 
                 grounding_loss_dict = {}
                 # mid_8, up_16, up_32, up_64 for sd14
+
                 for train_layer in train_layers_ls:
                     layer_res = int(train_layer.split("_")[1])
                     print(f'train_layer: {train_layer}, layer_res: {layer_res}')
