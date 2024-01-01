@@ -166,9 +166,10 @@ def main(args):
                                            attn_transforms=attn_transforms,
                                            tokenizer=tokenizer,
                                            train_data_dir=data_dir,)
+    train_dataset = dataset_preprocess.preprocess(dataset["train"])
     """  
     
-    train_dataset = dataset_preprocess.preprocess(dataset["train"])
+    
 
     # DataLoaders creation:
     train_dataloader = torch.utils.data.DataLoader(
