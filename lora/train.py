@@ -524,6 +524,7 @@ class NetworkTrainer:
                         small_binary_map = resize_transform(binary_map)
                         print(f'small_binary_map : {small_binary_map.shape}')
                         print(f'sum(small_binary_map) : {torch.sum(small_binary_map)}')
+                        print(f'sum_binary_map : {small_binary_map}')
                         original_anormal_position = torch.sum(torch.where(binary_map == 1, 1, 0))
                         print(f'original, anormal position : {original_anormal_position}')
 
