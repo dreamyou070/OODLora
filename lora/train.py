@@ -546,8 +546,7 @@ class NetworkTrainer:
                                     normal_score_map_i = normal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1)   # [h, res, res, 1]
                                     anormal_score_map_i = anormal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1) # [h, res, res, 1]
                                     b, H, W, = normal_score_map_i.shape
-                                    print(f'normal_score_map_i.shape (8, res, res): {normal_score_map_i.shape}')
-
+                                    
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
 
                                     normal_mask_ = normal_mask_res[i, :, :] # """ background is zero """
