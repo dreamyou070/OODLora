@@ -42,28 +42,20 @@ def main(args):
     train_layers_ls = [f"down_{res}" for res in args.train_down] + \
         [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
     print(f' - train_layers_ls: {train_layers_ls}')
-    
+
+    print(f' step 2. make accelerate')
     logging_dir = os.path.join(args.output_dir, args.logging_dir)
-
-    accelerator_project_config = ProjectConfiguration(project_dir=args.output_dir, logging_dir=logging_dir)
-
+    accelerator_project_config = ProjectConfiguration(project_dir=args.output_dir,logging_dir=logging_dir)
     mixed_precision = None
+    accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps,
+                              mixed_precision=mixed_precision,log_with=args.report_to,project_config=accelerator_project_config,)
 
-    accelerator = Accelerator(
-        gradient_accumulation_steps=args.gradient_accumulation_steps,
-        mixed_precision=mixed_precision,
-        log_with=args.report_to,
-        project_config=accelerator_project_config,
-    )
-
-    # Make one log on every process with the configuration for debugging.
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-        datefmt="%m/%d/%Y %H:%M:%S",
-        level=logging.INFO,
-    )
+    print(f' step 3. log on every process with the configuration for debugging.')
+    logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+                        datefmt="%m/%d/%Y %H:%M:%S",level=logging.INFO,)
     logger.info(accelerator.state, main_process_only=False)
 
+    print(f' step 4. resume or not')
     # change output dir first
     if args.resume_from_checkpoint:
         # change the output dir manually
@@ -71,6 +63,11 @@ def main(args):
         args.output_dir = f"{args.output_dir}-resume-{resume_ckpt_number}"
         logger.info(f"change output dir to {args.output_dir}")
 
+    print(f' step 5. set logging level (only main warning, other error)')
+    # level : ALL < DEBUG < INFO < WARN < ERROR < FATAL < OFF (logging just higher level)
+    # log level warning : warn, error, fatal
+    # log level info : info, warn, error, fatal
+    # log level error : error, fatal
     if accelerator.is_local_main_process:
         datasets.utils.logging.set_verbosity_warning()
         transformers.utils.logging.set_verbosity_warning()
@@ -80,57 +77,36 @@ def main(args):
         transformers.utils.logging.set_verbosity_error()
         diffusers.utils.logging.set_verbosity_error()
 
-    # Handle the repository creation
+    print(f' step 6. make output dir')
     if accelerator.is_main_process:
         if args.output_dir is not None:
             os.makedirs(args.output_dir, exist_ok=True)
 
-    # Load scheduler, tokenizer and models.
-    noise_scheduler = DDPMScheduler.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="scheduler"
-    )
-    
-    tokenizer = CLIPTokenizer.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="tokenizer"
-    )
-
-    text_encoder = CLIPTextModel.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="text_encoder"
-    )
-    vae = AutoencoderKL.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="vae"
-    )
-
-    unet = UNet2DConditionModel.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="unet"
-    )
-
-    # Freeze vae and text_encoder
+    print(f' step 7. models')
+    noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
+    tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer")
+    text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
+    vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae")
+    unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
+    print(f' (7.1) freeze vae and text_encoder')
     vae.requires_grad_(False)
     text_encoder.requires_grad_(False)
-
-    # register attn control to unet
+    print(f' (7.2) make attn map collector')
     controller = AttentionStore()
     register_attention_control(unet, controller)
-
-    # Create EMA for the unet.
+    print(f' (7.3) create EMA for the unet')
     if args.use_ema:
-        ema_unet = UNet2DConditionModel.from_pretrained(
-            args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision
-        )
+        ema_unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision)
         ema_unet = EMAModel(ema_unet.parameters(), model_cls=UNet2DConditionModel, model_config=ema_unet.config)
-
     assert version.parse(accelerate.__version__) >= version.parse("0.16.0"), "accelerate 0.16.0 or above is required"
 
     # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
     def save_model_hook(models, weights, output_dir):
         if args.use_ema:
             ema_unet.save_pretrained(os.path.join(output_dir, "unet_ema"))
-
         for i, model in enumerate(models):
+            # change model = make sure to pop weight so that corresponding model is not saved again
             model.save_pretrained(os.path.join(output_dir, "unet"))
-
-            # make sure to pop weight so that corresponding model is not saved again
             weights.pop()
 
     def load_model_hook(models, input_dir):
@@ -143,61 +119,40 @@ def main(args):
         for i in range(len(models)):
             # pop models so that they are not loaded again
             model = models.pop()
-
             # load diffusers style into model
             load_model = UNet2DConditionModel.from_pretrained(input_dir, subfolder="unet")
             model.register_to_config(**load_model.config)
-
             model.load_state_dict(load_model.state_dict())
             del load_model
 
+    print(f' step 8. save or load state pre hook')
+    print(f' (8.1) save state pre hook')
     accelerator.register_save_state_pre_hook(save_model_hook)
+    print(f' (8.2) load state pre hook')
     accelerator.register_load_state_pre_hook(load_model_hook)
 
+    print(f' step 9. unet training mode')
     if args.gradient_checkpointing:
         unet.enable_gradient_checkpointing()
-
+    print(f' (9.1) trainable param and optimizer')
     optimizer_cls = torch.optim.AdamW
-
     trained_params = unet.parameters()
-
     learning_rate = args.learning_rate
+    optimizer = optimizer_cls(trained_params, lr=learning_rate,
+                              betas=(args.adam_beta1, args.adam_beta2), weight_decay=args.adam_weight_decay,
+                              eps=args.adam_epsilon, )
+    print(f' (9.2) learning rate scheduler')
+    lr_scheduler = get_scheduler(args.lr_scheduler,optimizer=optimizer,
+                                 num_warmup_steps=args.lr_warmup_steps * accelerator.num_processes,
+                                 num_training_steps=args.max_train_steps * accelerator.num_processes,)
 
-    optimizer = optimizer_cls(
-        trained_params,
-        lr=learning_rate,
-        betas=(args.adam_beta1, args.adam_beta2),
-        weight_decay=args.adam_weight_decay,
-        eps=args.adam_epsilon,
-    )
+    print(f' step 10. training dataset')
+    train_transforms = transforms.Compose([transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
+            transforms.CenterCrop(args.resolution),transforms.ToTensor(),transforms.Normalize([0.5], [0.5]),])
 
-    lr_scheduler = get_scheduler(
-        args.lr_scheduler,
-        optimizer=optimizer,
-        num_warmup_steps=args.lr_warmup_steps * accelerator.num_processes,
-        num_training_steps=args.max_train_steps * accelerator.num_processes,
-    )
-
-    # Preprocessing the datasets.
-    train_transforms = transforms.Compose(
-        [
-            transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
-            transforms.CenterCrop(args.resolution),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5], [0.5]),
-        ]
-    )
-
-    attn_transforms = transforms.Compose(
-        [
-            transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
-            transforms.CenterCrop(args.resolution),
-            transforms.ToTensor(),
-        ]
-    )
-
+    attn_transforms = transforms.Compose([transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
+                                          transforms.CenterCrop(args.resolution),transforms.ToTensor(),])
     data_dir = args.train_data_dir
-
     dataset_preprocess = DatasetPreprocess(
         caption_column=args.caption_column,
         image_column=args.image_column,

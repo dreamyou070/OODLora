@@ -35,6 +35,7 @@ mkdir -p $OUTPUT_DIR
 python train_token_compose.py \
   --pretrained_model_name_or_path=$MODEL_NAME \
   --train_data_dir=$TRAIN_DIR \
+  --report_to="wandb" \
   --train_batch_size=1 \
   --resolution $IMGAE_RESOLUTION \
   --dataloader_num_workers $DATALOADER_NUM_WORKERS \
@@ -51,7 +52,6 @@ python train_token_compose.py \
   --pixel_loss_scale $PIXEL_LOSS_SCALE \
   --train_mid 8 \
   --train_up 16 32 64 \
-  --report_to="wandb" \
   --tracker_run_name $RUN_NAME \
   --tracker_project_name $PROJ_NAME \
 
