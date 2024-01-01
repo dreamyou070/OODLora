@@ -708,6 +708,7 @@ class NetworkTrainer:
 
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
+                print(f'log : {logs}')
                 if args.logging_dir is not None:
                     logs = self.generate_step_logs(args, logs, lr_scheduler)
                     accelerator.log(logs, step=global_step)
@@ -742,7 +743,7 @@ class NetworkTrainer:
 
             self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
             attention_storer.reset()
-            
+
         # metadata["ss_epoch"] = str(num_train_epochs)
         metadata["ss_training_finished_at"] = str(time.time())
 
