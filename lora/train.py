@@ -503,16 +503,17 @@ class NetworkTrainer:
 
                     total_loss = 0
                     with torch.set_grad_enabled(train_text_encoder):
-                        """ text = CLS bad good EOS """
+                        #text = CLS bad good EOS
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
                         text_encoder_conds = text_encoder_conds[:,:4,:] # add one pad token (EOS token)
+                    """
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
                     with accelerator.autocast():
                         self.call_unet(args, accelerator, unet, noisy_latents, timesteps, text_encoder_conds,
                                        batch, weight_dtype, trg_indexs, test_indexs)
                         attn_dict = attention_storer.step_store
                         attention_storer.reset()
-                        normal_loss, anormal_loss, bce_loss = 0, 0, 0
+                        normal_loss, anormal_loss, bce_loss, normal_score_of_anormal_pixel = 0, 0, 0, 0
                         img_masks = batch["img_masks"].to(accelerator.device)      # [Batch, 1, 512, 512], foreground = white = 1, background = black = 0
                         binary_gt_map_dict =  batch["anormal_masks"][0]
                         batch_num = img_masks.shape[0]
@@ -542,25 +543,26 @@ class NetworkTrainer:
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
 
                                 for i in range(batch_num):
-                                    normal_score_map_i =normal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1)    # [h, res, res]
+                                    normal_score_map_i = normal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1)    # [h, res, res]
                                     anormal_score_map_i = anormal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1) # [h, res, res]
                                     b, H, W, = normal_score_map_i.shape
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
-                                    normal_mask_ = normal_mask_res[i, :, :].repeat(8, 1, 1) # [h, res, res] # """ background is zero """
+                                    normal_mask_ = normal_mask_res[i, :, :].repeat(8, 1, 1) # [h, res, res] # background is zero 
                                     anormal_mask_ = anormal_mask_res[i, :, :].repeat(8, 1, 1) # [h, res, res]
 
                                     normal_total_score = normal_score_map_i.reshape(b, -1).sum(dim=-1)
                                     anormal_total_score = anormal_score_map_i.reshape(b, -1).sum(dim=-1) # [head, res*res]
 
-                                    normal_pos_normal_score =     (normal_mask_ * normal_score_map_i).reshape(b, -1).sum(dim=-1) # [8, res,res] * [8, res,res]
+                                    normal_pos_normal_score = (normal_mask_ * normal_score_map_i).reshape(b, -1).sum(dim=-1) # [8, res,res] * [8, res,res]
                                     anormal_pos_anormal_score = (anormal_mask_ * anormal_score_map_i).reshape(b, -1).sum(dim=-1)
 
                                     normal_activation_value = normal_pos_normal_score / normal_total_score
                                     anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
                                     if len(test_indexs) > 0 :
-                                        """ anormal pixel's normal score"""
-                                        normal_score_of_anormal_pixel = normal_score_map_i.mean(0) * anormal_mask_res.squeeze()
+                                        anormal pixel's normal score
+
+                                        normal_score_of_anormal_pixel += normal_score_map_i.mean(0) * anormal_mask_res.squeeze()
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
 
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
@@ -575,93 +577,97 @@ class NetworkTrainer:
 
 
                         log_loss["loss/normal_pixel_reverse_normal_loss"] = normal_loss.mean().item()
-                        if len(test_indexs) > 0:
-                            attn_loss = normal_loss.mean() + bce_loss.mean()
-                        else :
-                            attn_loss = normal_loss.mean()
+                        #if len(test_indexs) > 0:
+                            #attn_loss = normal_loss.mean() + bce_loss.mean()
+                            #anormal_loss
+                         #   attn_loss =
+                        #else :
+                         #   attn_loss = normal_loss.mean()
 
-                    total_loss += attn_loss
-
-                    # ---------------------------------------------------------------------------------------------------------------------
-                    # (3.3) natural training
-                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                       noise_scheduler,
-                                                                                                       latents)
-                    with accelerator.autocast():
-                        noise_pred = self.call_unet(args, accelerator, unet,
-                                                    noisy_latents, timesteps,
-                                                    text_encoder_conds, batch, weight_dtype,
-                                                    None, mask_imgs =None)
-                    attention_storer.reset()
-                    if args.v_parameterization:
-                        target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                    else:
-                        target = noise
-                    task_loss = torch.nn.functional.mse_loss(noise_pred.float(),
-                                                             target.float(), reduction="none")
-                    task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
-                    task_loss = task_loss.mean()
-                    log_loss["loss/task_loss"] = task_loss
-                    task_loss = task_loss * args.task_loss_weight
-                    total_loss += task_loss.mean()
-
-                    # ------------------------------------------------------------------------------------
-                    accelerator.backward(task_loss)
-                    #accelerator.backward(total_loss)
-                    if accelerator.sync_gradients and args.max_grad_norm != 0.0:
-                        params_to_clip = network.get_trainable_params()
-                        accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
-                    optimizer.step()
-                    lr_scheduler.step()
-                    optimizer.zero_grad(set_to_none=True)
-
-                if args.scale_weight_norms:
-                    keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(
-                        args.scale_weight_norms, accelerator.device)
-                    max_mean_logs = {"Keys Scaled": keys_scaled, "Average key norm": mean_norm}
+                    #total_loss += attn_loss
+                """
+                # ---------------------------------------------------------------------------------------------------------------------
+                # (3.3) natural training
+                noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                   noise_scheduler,
+                                                                                                   latents)
+                with accelerator.autocast():
+                    noise_pred = self.call_unet(args, accelerator, unet,
+                                                noisy_latents, timesteps,
+                                                text_encoder_conds, batch, weight_dtype,
+                                                None, mask_imgs =None)
+                attention_storer.reset()
+                if args.v_parameterization:
+                    target = noise_scheduler.get_velocity(latents, noise, timesteps)
                 else:
-                    keys_scaled, mean_norm, maximum_norm = None, None, None
-                if accelerator.sync_gradients:
-                    progress_bar.update(1)
-                    global_step += 1
-                    # (4) sample images
-                    # self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
-                    if attention_storer is not None: attention_storer.step_store = {}
-                    # (5) save or erase model
-                    if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
-                        accelerator.wait_for_everyone()
-                        if accelerator.is_main_process:
-                            ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
-                            save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch)
-                            if args.save_state:
-                                train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
-                            remove_step_no = train_util.get_remove_step_no(args, global_step)
-                            if remove_step_no is not None:
-                                remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as,
-                                                                                 remove_step_no)
-                                remove_model(remove_ckpt_name)
-                current_loss = total_loss.detach().item()
-                log_loss["loss/current_loss"] = current_loss
-                # ------------------------------------------------------------------------------------------------------------------------------
-                if epoch == args.start_epoch :
-                    loss_list.append(current_loss)
-                else:
-                    loss_total -= loss_list[step]
-                    loss_list[step] = current_loss
-                loss_total += current_loss
-                avr_loss = loss_total / len(loss_list)
-                log_loss["loss/avr_loss"] = avr_loss
-                # ------------------------------------------------------------------------------------------------------------------------------
-                progress_bar.set_postfix(**log_loss)
-                if args.scale_weight_norms:
-                    progress_bar.set_postfix(**{**max_mean_logs, **log_loss})
-                if args.logging_dir is not None:
-                    logs = self.generate_step_logs(log_loss, lr_scheduler, keys_scaled, mean_norm, maximum_norm)
-                    accelerator.log(logs, step=global_step)
-                if is_main_process:
-                    wandb.log(logs)
-                if global_step >= args.max_train_steps:
-                    break
+                    target = noise
+                task_loss = torch.nn.functional.mse_loss(noise_pred.float(),
+                                                         target.float(), reduction="none")
+                task_loss = task_loss.mean([1, 2, 3])  # * batch["loss_weights"]  # 各sampleごとのweight
+                task_loss = task_loss.mean()
+                log_loss["loss/task_loss"] = task_loss
+                task_loss = task_loss * args.task_loss_weight
+                total_loss += task_loss.mean()
+
+                # ------------------------------------------------------------------------------------
+                #if len(test_indexs) > 0 :
+                #    task_loss += normal_score_of_anormal_pixel.mean()
+                accelerator.backward(task_loss)
+                #accelerator.backward(total_loss)
+                if accelerator.sync_gradients and args.max_grad_norm != 0.0:
+                    params_to_clip = network.get_trainable_params()
+                    accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad(set_to_none=True)
+
+            if args.scale_weight_norms:
+                keys_scaled, mean_norm, maximum_norm = network.apply_max_norm_regularization(
+                    args.scale_weight_norms, accelerator.device)
+                max_mean_logs = {"Keys Scaled": keys_scaled, "Average key norm": mean_norm}
+            else:
+                keys_scaled, mean_norm, maximum_norm = None, None, None
+            if accelerator.sync_gradients:
+                progress_bar.update(1)
+                global_step += 1
+                # (4) sample images
+                # self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
+                if attention_storer is not None: attention_storer.step_store = {}
+                # (5) save or erase model
+                if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
+                    accelerator.wait_for_everyone()
+                    if accelerator.is_main_process:
+                        ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
+                        save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch)
+                        if args.save_state:
+                            train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
+                        remove_step_no = train_util.get_remove_step_no(args, global_step)
+                        if remove_step_no is not None:
+                            remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as,
+                                                                             remove_step_no)
+                            remove_model(remove_ckpt_name)
+            current_loss = total_loss.detach().item()
+            log_loss["loss/current_loss"] = current_loss
+            # ------------------------------------------------------------------------------------------------------------------------------
+            if epoch == args.start_epoch :
+                loss_list.append(current_loss)
+            else:
+                loss_total -= loss_list[step]
+                loss_list[step] = current_loss
+            loss_total += current_loss
+            avr_loss = loss_total / len(loss_list)
+            log_loss["loss/avr_loss"] = avr_loss
+            # ------------------------------------------------------------------------------------------------------------------------------
+            progress_bar.set_postfix(**log_loss)
+            if args.scale_weight_norms:
+                progress_bar.set_postfix(**{**max_mean_logs, **log_loss})
+            if args.logging_dir is not None:
+                logs = self.generate_step_logs(log_loss, lr_scheduler, keys_scaled, mean_norm, maximum_norm)
+                accelerator.log(logs, step=global_step)
+            if is_main_process:
+                wandb.log(logs)
+            if global_step >= args.max_train_steps:
+                break
 
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_total / len(loss_list)}
@@ -686,91 +692,91 @@ class NetworkTrainer:
             if attention_storer is not None:
                 attention_storer.reset()
 
-        if is_main_process:
-            network = accelerator.unwrap_model(network)
-        accelerator.end_training()
-        if is_main_process and args.save_state:
-            train_util.save_state_on_train_end(args, accelerator)
-        if is_main_process:
-            ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
-            save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
-            print("model saved.")
+            if is_main_process:
+                network = accelerator.unwrap_model(network)
+            accelerator.end_training()
+            if is_main_process and args.save_state:
+                train_util.save_state_on_train_end(args, accelerator)
+            if is_main_process:
+                ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
+                save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
+                print("model saved.")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser()
 
-    # step 1. setting
-    parser.add_argument("--process_title", type=str, default='parksooyeon')
-    parser.add_argument("--wandb_log_template_path", type=str)
-    parser.add_argument("--wandb_key", type=str)
-    # step 2. dataset
-    train_util.add_dataset_arguments(parser, True, True, True)
-    parser.add_argument("--mask_dir", type=str, default='')
-    parser.add_argument("--class_caption", type=str, default='')
-    parser.add_argument("--no_metadata", action="store_true",
-                        help="do not save metadata in output model")
-    # step 3. model
-    train_util.add_sd_models_arguments(parser)
-    parser.add_argument("--network_weights", type=str, default=None,
-                        help="pretrained weights for network / 学習するネットワークの初期重み")
-    parser.add_argument("--network_module", type=str, default=None,
-                        help="network module to train / 学習対象のネットワークのモジュール")
-    parser.add_argument("--network_dim", type=int, default=None,
-                        help="network dimensions (depends on each network) / モジュールの次元数（ネットワークにより定義は異なります）")
-    parser.add_argument("--network_alpha", type=float, default=1,
-                        help="alpha for LoRA weight scaling, default 1 (same as network_dim for same behavior as old version)", )
-    parser.add_argument("--network_dropout", type=float, default=None,
-                        help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
-    parser.add_argument("--network_args", type=str, default=None, nargs="*",
-                        help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
-    # step 4. training
-    train_util.add_training_arguments(parser, True)
-    custom_train_functions.add_custom_train_arguments(parser)
-    parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")
-    parser.add_argument("--text_encoder_lr", type=float, default=None,
-                        help="learning rate for Text Encoder / Text Encoderの学習率")
-    # step 5. optimizer
-    train_util.add_optimizer_arguments(parser)
-    config_util.add_config_arguments(parser)
-    parser.add_argument("--save_model_as", type=str, default="safetensors",
-                        choices=[None, "ckpt", "pt", "safetensors"],
-                        help="format to save the model (default is .safetensors) / モデル保存時の形式（デフォルトはsafetensors）", )
-    parser.add_argument("--network_train_unet_only", action="store_true",
-                        help="only training U-Net part / U-Net関連部分のみ学習する")
-    parser.add_argument("--network_train_text_encoder_only", action="store_true",
-                        help="only training Text Encoder part / Text Encoder関連部分のみ学習する")
-    parser.add_argument("--training_comment", type=str, default=None,
-                        help="arbitrary comment string stored in metadata / メタデータに記録する任意のコメント文字列")
-    parser.add_argument("--dim_from_weights", action="store_true",
-                        help="automatically determine dim (rank) from network_weights / dim (rank)をnetwork_weightsで指定した重みから自動で決定する", )
-    parser.add_argument("--scale_weight_norms", type=float, default=None,
-                        help="Scale the weight of each key pair to help prevent overtraing via exploding gradients. ", )
-    parser.add_argument("--base_weights", type=str, default=None, nargs="*",
-                        help="network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みファイル", )
-    parser.add_argument("--base_weights_multiplier", type=float, default=None, nargs="*",
-                        help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率", )
-    parser.add_argument("--no_half_vae", action="store_true",
-                        help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
+# step 1. setting
+parser.add_argument("--process_title", type=str, default='parksooyeon')
+parser.add_argument("--wandb_log_template_path", type=str)
+parser.add_argument("--wandb_key", type=str)
+# step 2. dataset
+train_util.add_dataset_arguments(parser, True, True, True)
+parser.add_argument("--mask_dir", type=str, default='')
+parser.add_argument("--class_caption", type=str, default='')
+parser.add_argument("--no_metadata", action="store_true",
+                    help="do not save metadata in output model")
+# step 3. model
+train_util.add_sd_models_arguments(parser)
+parser.add_argument("--network_weights", type=str, default=None,
+                    help="pretrained weights for network / 学習するネットワークの初期重み")
+parser.add_argument("--network_module", type=str, default=None,
+                    help="network module to train / 学習対象のネットワークのモジュール")
+parser.add_argument("--network_dim", type=int, default=None,
+                    help="network dimensions (depends on each network) / モジュールの次元数（ネットワークにより定義は異なります）")
+parser.add_argument("--network_alpha", type=float, default=1,
+                    help="alpha for LoRA weight scaling, default 1 (same as network_dim for same behavior as old version)", )
+parser.add_argument("--network_dropout", type=float, default=None,
+                    help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
+parser.add_argument("--network_args", type=str, default=None, nargs="*",
+                    help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
+# step 4. training
+train_util.add_training_arguments(parser, True)
+custom_train_functions.add_custom_train_arguments(parser)
+parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")
+parser.add_argument("--text_encoder_lr", type=float, default=None,
+                    help="learning rate for Text Encoder / Text Encoderの学習率")
+# step 5. optimizer
+train_util.add_optimizer_arguments(parser)
+config_util.add_config_arguments(parser)
+parser.add_argument("--save_model_as", type=str, default="safetensors",
+                    choices=[None, "ckpt", "pt", "safetensors"],
+                    help="format to save the model (default is .safetensors) / モデル保存時の形式（デフォルトはsafetensors）", )
+parser.add_argument("--network_train_unet_only", action="store_true",
+                    help="only training U-Net part / U-Net関連部分のみ学習する")
+parser.add_argument("--network_train_text_encoder_only", action="store_true",
+                    help="only training Text Encoder part / Text Encoder関連部分のみ学習する")
+parser.add_argument("--training_comment", type=str, default=None,
+                    help="arbitrary comment string stored in metadata / メタデータに記録する任意のコメント文字列")
+parser.add_argument("--dim_from_weights", action="store_true",
+                    help="automatically determine dim (rank) from network_weights / dim (rank)をnetwork_weightsで指定した重みから自動で決定する", )
+parser.add_argument("--scale_weight_norms", type=float, default=None,
+                    help="Scale the weight of each key pair to help prevent overtraing via exploding gradients. ", )
+parser.add_argument("--base_weights", type=str, default=None, nargs="*",
+                    help="network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みファイル", )
+parser.add_argument("--base_weights_multiplier", type=float, default=None, nargs="*",
+                    help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率", )
+parser.add_argument("--no_half_vae", action="store_true",
+                    help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
 
-    parser.add_argument("--mask_threshold", type=float, default=0.5)
+parser.add_argument("--mask_threshold", type=float, default=0.5)
 
-    parser.add_argument("--contrastive_eps", type=float, default=0.00005)
-    parser.add_argument("--resume_lora_training", action="store_true",)
-    parser.add_argument("--start_epoch", type = int, default = 0)
-    parser.add_argument("--valid_data_dir", type=str)
-    parser.add_argument("--task_loss_weight", type=float, default=0.5)
-    parser.add_argument("--anormal_training", action = 'store_true')
+parser.add_argument("--contrastive_eps", type=float, default=0.00005)
+parser.add_argument("--resume_lora_training", action="store_true",)
+parser.add_argument("--start_epoch", type = int, default = 0)
+parser.add_argument("--valid_data_dir", type=str)
+parser.add_argument("--task_loss_weight", type=float, default=0.5)
+parser.add_argument("--anormal_training", action = 'store_true')
 
-    import ast
-    def arg_as_list(arg):
-        v = ast.literal_eval(arg)
-        if type(v) is not list:
-            raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
-        return v
-    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
-    parser.add_argument("--normal_training", action="store_true", )
-    args = parser.parse_args()
-    args = train_util.read_config_from_file(args, parser)
-    trainer = NetworkTrainer()
-    trainer.train(args)
+import ast
+def arg_as_list(arg):
+    v = ast.literal_eval(arg)
+    if type(v) is not list:
+        raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
+    return v
+parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
+parser.add_argument("--normal_training", action="store_true", )
+args = parser.parse_args()
+args = train_util.read_config_from_file(args, parser)
+trainer = NetworkTrainer()
+trainer.train(args)
