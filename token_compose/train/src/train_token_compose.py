@@ -37,8 +37,11 @@ from data_utils import DatasetPreprocess
 logger = get_logger(__name__, log_level="INFO")
 
 def main(args):
+
+    print(f' step 1. checking train layer ls')
     train_layers_ls = [f"down_{res}" for res in args.train_down] + \
         [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
+    print(f' - train_layers_ls: {train_layers_ls}')
     
     logging_dir = os.path.join(args.output_dir, args.logging_dir)
 

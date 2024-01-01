@@ -2,7 +2,7 @@
 # dreamyou070
 # qkrtndus0701?!
 # cd ./Lora/OODLora/lora/
-# srun -p suma_a6000 -q big_qos --job-name=token_compose --gres=gpu:2 --time=48:00:00 --pty bash -i
+# srun -p suma_a6000 -q big_qos --job-name=token_compose2 --gres=gpu:2 --time=48:00:00 --pty bash -i
 # conda activate venv_lora
 
 
