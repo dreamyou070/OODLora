@@ -568,8 +568,8 @@ class NetworkTrainer:
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
                                     if len(test_indexs) > 0 :
 
-                                        print(f'sum of normal_mask_res : {torch.sum(normal_mask_res)}')
-                                        print(f'sum of anormal_mask_res : {torch.sum(anormal_mask_res)}')
+                                        #print(f'sum of normal_mask_res : {torch.sum(normal_mask_res)}')
+                                        #print(f'sum of anormal_mask_res : {torch.sum(anormal_mask_res)}')
 
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
 
@@ -594,7 +594,6 @@ class NetworkTrainer:
                                                 normal_answers.append(1-position_info)
 
                                             elif position_info[1] == 1: # anormal_pixel
-                                                print(f'when anormal...')
                                                 anormal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
                                                 anormal_pairs.append(anormal_score_pair)
                                                 anormal_answers.append(1 - position_info)
