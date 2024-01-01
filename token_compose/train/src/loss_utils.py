@@ -112,6 +112,7 @@ def get_grounding_loss_by_layer(_gt_seg_list,
     avg_attn_map = torch.stack(avg_attn_map_ls, dim=0) # head, res, res, 1
     avg_attn_map = avg_attn_map.sum(0) / avg_attn_map.shape[0] # res,res,1
     avg_attn_map = avg_attn_map.unsqueeze(0) # 1, rse,res,1
+    print(f'avg_attn_map.shape: {avg_attn_map.shape}')
     bce_loss_func = nn.BCELoss()
     pixel_loss = 0.0
     for i in range(len(word_token_idx_ls)):
@@ -119,8 +120,12 @@ def get_grounding_loss_by_layer(_gt_seg_list,
         # token idx
         word_cross_attn_ls = []
         for token_idx in word_token_idx_ls[i]:
-            print(f'{i} : token_idx = {token_idx}')
-            word_cross_attn_ls.append(avg_attn_map[..., token_idx])
+            # 2
+            # 9
+            # 5
+            word_map = avg_attn_map[..., token_idx]
+            print(f'word_map.shape: {word_map.shape}')
+            word_cross_attn_ls.append(word_map)
         word_cross_attn_ls = torch.stack(word_cross_attn_ls, dim=0).sum(dim=0)
 
         pixel_loss += bce_loss_func(word_cross_attn_ls, gt_seg_list[i])
