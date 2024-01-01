@@ -547,16 +547,13 @@ class NetworkTrainer:
 
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
 
-                                    normal_mask_ = normal_mask_res[i, :, :] # """ background is zero """
-                                    normal_mask_ = normal_mask_.repeat(8, 1, 1) # [h, res, res]
-                                    print(f'normal_mask_.shape (8, res,res) : {normal_mask_.shape}')
-                                    anormal_mask_ = anormal_mask_res[i, :, :] # """ background is zero """
-                                    anormal_mask_ = anormal_mask_.repeat(8, 1, 1) # [h, res, res]
+                                    normal_mask_ = normal_mask_res[i, :, :].repeat(8, 1, 1) # [h, res, res] # """ background is zero """
+                                    anormal_mask_ = anormal_mask_res[i, :, :].repeat(8, 1, 1) # [h, res, res]
 
                                     normal_total_score = normal_score_map_i.reshape(b, -1).sum(dim=-1)
                                     anormal_total_score = anormal_score_map_i.reshape(b, -1).sum(dim=-1) # [head, res*res]
 
-                                    normal_pos_normal_score = (normal_mask_ * normal_score_map_i).reshape(b, -1).sum(dim=-1) # [8, res,res] * [8, res,res]
+                                    normal_pos_normal_score =     (normal_mask_ * normal_score_map_i).reshape(b, -1).sum(dim=-1) # [8, res,res] * [8, res,res]
                                     anormal_pos_anormal_score = (anormal_mask_ * anormal_score_map_i).reshape(b, -1).sum(dim=-1)
 
                                     normal_activation_value = normal_pos_normal_score / normal_total_score
@@ -565,7 +562,6 @@ class NetworkTrainer:
                                     if len(test_indexs) > 0 :
 
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
-
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
                                         # binary_aug_tensor = 8,32,321
                                         # img_mask = 8,32,32,1
@@ -575,23 +571,25 @@ class NetworkTrainer:
                                         position_map = torch.cat([normal_mask_.unsqueeze(-1),anormal_mask_.unsqueeze(-1)], dim=-1)
                                         position_map = position_map.view(-1, 2)
 
-                                        score_pairs = []
-                                        normal_pairs, anormal_pairs = [], []
+                                        normal_pairs, anormal_pairs, score_pairs = [], [], []
                                         normal_answers, anormal_answers, answers = [], [], []
 
+                                        normal_num, anormal_num = 0, 0
                                         for i in range(flatten_score_map.shape[0]):
 
                                             position_info = position_map[i]
 
-                                            if position_info[0] == 1 : # normal_pixel
+                                            if position_info[0] == 1 and position_info[1] != 1 : # normal_pixel
                                                 normal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
                                                 normal_pairs.append(normal_score_pair)
                                                 normal_answers.append(1-position_info)
+                                                normal_num += 1
 
-                                            elif position_info[1] == 1: # anormal_pixel
+                                            elif position_info[1] == 1 and position_info[0] != 1: # anormal_pixel
                                                 anormal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
                                                 anormal_pairs.append(anormal_score_pair)
                                                 anormal_answers.append(1 - position_info)
+                                                anormal_num += 1
 
                                             if position_info[0] == 1 or position_info[1] == 1:
                                                 score_pair = flatten_score_map[i] # normal = 0, anormal = 1
@@ -600,6 +598,7 @@ class NetworkTrainer:
                                                 answers.append(answer)
 
                                         if len(normal_pairs) == 0 or len(anormal_pairs) == 0 :
+                                            print(f'normal_num : {normal_num}, anormal_num : {anormal_num}')
                                             print(f'wronge, sum of normal_mask_res : {torch.sum(normal_mask_res)}')
                                             print(f'wronge, sum of anormal_mask_res : {torch.sum(anormal_mask_res)}')
 
