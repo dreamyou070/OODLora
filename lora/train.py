@@ -598,7 +598,7 @@ class NetworkTrainer:
                                                 answers.append(answer)
 
                                         if len(normal_pairs) == 0 or len(anormal_pairs) == 0 :
-                                            print(f'normal_num : {normal_num}, anormal_num : {anormal_num}')
+                                            print(f'normal_num : {normal_num}, anormal_num : {anormal_num} | anormal_mask_ : {anormal_mask_.sum()}')
                                             print(f'wronge, sum of normal_mask_res : {torch.sum(normal_mask_res)}')
                                             print(f'wronge, sum of anormal_mask_res : {torch.sum(anormal_mask_res)}')
 
