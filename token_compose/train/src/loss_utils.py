@@ -64,6 +64,7 @@ def get_grounding_loss_by_layer(_gt_seg_list,
     if is_training_sd21:
         # training with sd21, using resolution 768 = 512 * 1.5 (text dimension change)
         res = int(SD14_TO_SD21_RATIO * res)
+
     print(f'in get grounding loss, res : {res}')
 
     gt_seg_list = deepcopy(_gt_seg_list)
