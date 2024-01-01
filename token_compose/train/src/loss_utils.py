@@ -71,7 +71,6 @@ def get_grounding_loss_by_layer(_gt_seg_list,
     # reszie gt seg map to the same size with attn map
     resize_transform = transforms.Resize((res, res))
     noun_num = len(gt_seg_list)
-    print(f'noun_num: {noun_num}')
     for i in range(len(gt_seg_list)):
         gt_seg_list[i] = resize_transform(gt_seg_list[i])
         gt_seg_list[i] = gt_seg_list[i].squeeze(0) # 1, 1, res, res => 1, 1, res(8,16,32,64), res(8,16,32,64)
@@ -95,7 +94,7 @@ def get_grounding_loss_by_layer(_gt_seg_list,
                 # ca map obj shape 8 * 16 * 16
                 ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W) # 1, 8, 8
                 print(f'ca_map_obj.shape (8, 8, 8) : {ca_map_obj.shape}')
-                # why dum on dim -1 ???
+                # why sum on dim -1 ???
                 trg_score =  (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)
                 all_score =  ca_map_obj.reshape(b, -1).sum(dim=-1)
                 activation_value = (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)/ca_map_obj.reshape(b, -1).sum(dim=-1)
