@@ -4,7 +4,6 @@ export CUDA_VISIBLE_DEVICES=1
 
 export MODEL_NAME="CompVis/stable-diffusion-v1-4"
 IMGAE_RESOLUTION=512
-
 # path to training dataset
 export TRAIN_DIR=data/coco_gsam_img
 
