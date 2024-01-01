@@ -525,17 +525,19 @@ class NetworkTrainer:
                             pix_num = normal_score_map.shape[1]
                             res = int(math.sqrt(pix_num))
                             if res in args.cross_map_res :
+                                # ------------------------------ (1) mask ------------------------------ #
                                 from torchvision import transforms
                                 resize_transform = transforms.Resize((res, res))
                                 img_masks_res = (resize_transform(img_masks) == 0.0).float() # background = 1
-                                print(f'img_masks_res (back = 1) = {img_masks_res.shape}')
                                 img_masks_res = (1 - img_masks_res)  # background = 0, foreground = 1
+
                                 binary_map = binary_gt_map_dict[res]
-                                binary_map = binary_map.unsqueeze(0)
+                                binary_map = binary_map.unsqueeze(0) # normal = 0, anormal = 1
 
                                 normal_mask_res = img_masks_res * ((binary_map== 0.0).float()) # [1,1,res,res]
                                 anormal_mask_res = img_masks_res * ((binary_map!= 0.0).float()) # [1,1,res,res]
 
+                                # ------------------------------------------------------------------------ #
                                 normal_score_map_batch = torch.chunk(normal_score_map,  batch_num, dim=0)  # batch*head, pixel_num, 1
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
 
@@ -558,10 +560,9 @@ class NetworkTrainer:
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
                                     if len(test_indexs) > 0 :
                                         """ anormal pixel's normal score"""
-                                        # normal_score_of_anormal_pixel = normal_score_map_i.mean(0) * anormal_mask_res.squeeze()
-
-
+                                        normal_score_of_anormal_pixel = normal_score_map_i.mean(0) * anormal_mask_res.squeeze()
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
+                                        print(f'anormal_loss (8) : {anormal_loss.shape}')
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
 
                                         bce_loss_func = nn.BCELoss()
