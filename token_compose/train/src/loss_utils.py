@@ -92,18 +92,22 @@ def get_grounding_loss_by_layer(_gt_seg_list,
         # len is 3 or 1
         b, H, W, j = attn_map.shape
         print(f'attn_map.shape (1, 8, 8, 77) : {attn_map.shape}')
-        import time
-        time.sleep(1000)
         for i in range(len(word_token_idx_ls)): # [[word1 token_idx1, word1 token_idx2, ...], [word2 token_idx1, word2 token_idx2, ...]]
             obj_loss = 0.0
             single_word_idx_ls = word_token_idx_ls[i] #[token_idx1, token_idx2, ...]
             mask = gt_seg_list[i]
             for obj_position in single_word_idx_ls:
                 # ca map obj shape 8 * 16 * 16
-                ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W)
-
-
+                ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W) # 1, 8, 8
+                print(f'ca_map_obj.shape (1, 8, 8) : {ca_map_obj.shape}')
+                # why dum on dim -1 ???
+                trg_score =  (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)
+                all_score =  ca_map_obj.reshape(b, -1).sum(dim=-1)
                 activation_value = (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)/ca_map_obj.reshape(b, -1).sum(dim=-1)
+                print(f'all_score : {all_score} | trg_score : {trg_score} | activation_value : {activation_value}')
+
+                import time
+                time.sleep(1000)
 
                 obj_loss += (1.0 - torch.mean(activation_value)) ** 2
 
