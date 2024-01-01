@@ -588,7 +588,7 @@ class NetworkTrainer:
 
                                             elif position_info[1] == 1: # anormal_pixel
                                                 anormal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
-                                                anormal_pos.append(anormal_score_pair)
+                                                anormal_pairs.append(anormal_score_pair)
                                                 anormal_answers.append(1 - position_info)
 
                                             if position_info[0] == 1 or position_info[1] == 1:
