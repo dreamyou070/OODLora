@@ -603,7 +603,7 @@ class NetworkTrainer:
                                                   f'| anormal_mask_ : {anormal_mask_.sum()} | anormal_mask_res : {anormal_mask_res.sum()} '
                                                   f'| binary_map_res : {binary_map_res.sum()} '
                                                   f'| binary_map : {binary_map.sum()} '
-                                                  f'| binary_map : {binary_map.shape} '')
+                                                  f'| binary_map : {binary_map.shape} ')
                                             print(f'wronge, sum of normal_mask_res : {torch.sum(normal_mask_res)}')
                                             print(f'wronge, sum of anormal_mask_res : {torch.sum(anormal_mask_res)}')
 
