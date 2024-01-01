@@ -107,9 +107,9 @@ def get_grounding_loss_by_layer(_gt_seg_list,
     # input_attn_map_list ?
     for i in range(len(input_attn_map_ls)):
         # len is 1 or 3
-        org_map = input_attn_map_ls[i]
-        print(f'org_map.shape (head, res*res, 77) : {org_map.shape}')
+        org_map = input_attn_map_ls[i] # head, res, res, 77
         map = input_attn_map_ls[i].reshape(-1, res, res, input_attn_map_ls[i].shape[-1]).mean(0)
+        print(f'map.shape (res, res, 77) : {map.shape}')
 
         avg_attn_map_ls.append(map)
         # [head, res,res,c]
