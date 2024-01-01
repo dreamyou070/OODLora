@@ -578,35 +578,42 @@ class NetworkTrainer:
                                         score_pairs = []
                                         anormal_pos = []
                                         normal_pairs, anormal_pairs = [], []
-                                        answers = []
+                                        normal_answers, anormal_answers, answers = [], [], []
                                         for i in range(flatten_score_map.shape[0]):
                                             position_info = position_map[i]
                                             if position_info[0] == 1 : # normal_pixel
                                                 normal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
-                                                normal_pairs.append(1-position_info)
+                                                normal_pairs.append(normal_score_pair)
+                                                normal_answers.append(1-position_info)
 
                                             elif position_info[1] == 1: # anormal_pixel
                                                 anormal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
-                                                anormal_pos.append(1-position_info)
+                                                anormal_pos.append(anormal_score_pair)
+                                                anormal_answers.append(1 - position_info)
 
                                             if position_info[0] == 1 or position_info[1] == 1:
                                                 score_pair = flatten_score_map[i] # normal = 0, anormal = 1
                                                 answer = 1-position_info
                                                 score_pairs.append(score_pair)
                                                 answers.append(answer)
+
                                         score_pairs = torch.stack(score_pairs)
-                                        anormal_pos = torch.stack(anormal_pos)
-                                        answers = torch.stack(answers)
                                         normal_pairs = torch.stack(normal_pairs)
                                         anormal_pairs = torch.stack(anormal_pairs)
+
+                                        answers = torch.stack(answers)
+                                        normal_answers = torch.stack(normal_answers)
+                                        anormal_answers = torch.stack(anormal_answers)
+
+
 
                                         cross_ent_loss = torch.nn.BCELoss()(score_pairs, answers)
                                         cross_loss += cross_ent_loss.mean()
 
                                         normal_cross_loss = torch.nn.BCELoss()(torch.stack(normal_pairs),
-                                                                               normal_pairs.long().to(accelerator.device))
+                                                                               normal_answers.long().to(accelerator.device))
                                         anormal_cross_loss = torch.nn.BCELoss()(torch.stack(anormal_pairs),
-                                                                                anormal_pairs.long().to(accelerator.device))
+                                                                                anormal_answers.long().to(accelerator.device))
 
                                         log_loss["loss/normal_cross_loss"] = normal_cross_loss.mean().item()
                                         log_loss["loss/anormal_cross_loss"] = anormal_cross_loss.mean().item()
