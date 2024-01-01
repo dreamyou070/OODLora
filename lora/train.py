@@ -722,9 +722,7 @@ class NetworkTrainer:
                     loss_list[step] = current_loss
                 loss_total += current_loss
                 avr_loss = loss_total / len(loss_list)
-                if is_main_process:
-                    loss_dict[global_step] = avr_loss
-
+                
                 logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
                 progress_bar.set_postfix(**logs)
 
@@ -778,10 +776,7 @@ class NetworkTrainer:
             with open(gradient_save_dir, 'wb') as fw:
                 pickle.dump(gradient_dict, fw)
 
-            print("loss recording")
-            loss_save_dir = os.path.join(record_save_dir, "loss.pickle")
-            with open(loss_save_dir, 'wb') as fw:
-                pickle.dump(loss_dict, fw)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
