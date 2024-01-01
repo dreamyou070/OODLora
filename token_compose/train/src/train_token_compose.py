@@ -38,24 +38,24 @@ logger = get_logger(__name__, log_level="INFO")
 
 def main(args):
 
-    print(f' step 1. checking train layer ls')
+    print(f'\n step 1. checking train layer ls')
     train_layers_ls = [f"down_{res}" for res in args.train_down] + \
         [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
     print(f' - train_layers_ls: {train_layers_ls}')
 
-    print(f' step 2. make accelerate')
+    print(f'\n step 2. make accelerate')
     logging_dir = os.path.join(args.output_dir, args.logging_dir)
     accelerator_project_config = ProjectConfiguration(project_dir=args.output_dir,logging_dir=logging_dir)
     mixed_precision = None
     accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps,
                               mixed_precision=mixed_precision,log_with=args.report_to,project_config=accelerator_project_config,)
 
-    print(f' step 3. log on every process with the configuration for debugging.')
+    print(f'\n step 3. log on every process with the configuration for debugging.')
     logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
                         datefmt="%m/%d/%Y %H:%M:%S",level=logging.INFO,)
     logger.info(accelerator.state, main_process_only=False)
 
-    print(f' step 4. resume or not')
+    print(f'\n step 4. resume or not')
     # change output dir first
     if args.resume_from_checkpoint:
         # change the output dir manually
@@ -63,7 +63,7 @@ def main(args):
         args.output_dir = f"{args.output_dir}-resume-{resume_ckpt_number}"
         logger.info(f"change output dir to {args.output_dir}")
 
-    print(f' step 5. set logging level (only main warning, other error)')
+    print(f'\n step 5. set logging level (only main warning, other error)')
     # level : ALL < DEBUG < INFO < WARN < ERROR < FATAL < OFF (logging just higher level)
     # log level warning : warn, error, fatal
     # log level info : info, warn, error, fatal
@@ -77,12 +77,12 @@ def main(args):
         transformers.utils.logging.set_verbosity_error()
         diffusers.utils.logging.set_verbosity_error()
 
-    print(f' step 6. make output dir')
+    print(f'\n step 6. make output dir')
     if accelerator.is_main_process:
         if args.output_dir is not None:
             os.makedirs(args.output_dir, exist_ok=True)
 
-    print(f' step 7. models')
+    print(f'\n step 7. models')
     noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
     tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer")
     text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
@@ -125,13 +125,13 @@ def main(args):
             model.load_state_dict(load_model.state_dict())
             del load_model
 
-    print(f' step 8. save or load state pre hook')
+    print(f'\n step 8. save or load state pre hook')
     print(f' (8.1) save state pre hook')
     accelerator.register_save_state_pre_hook(save_model_hook)
     print(f' (8.2) load state pre hook')
     accelerator.register_load_state_pre_hook(load_model_hook)
 
-    print(f' step 9. unet training mode')
+    print(f'\n step 9. unet training mode')
     if args.gradient_checkpointing:
         unet.enable_gradient_checkpointing()
     print(f' (9.1) trainable param and optimizer')
@@ -146,31 +146,29 @@ def main(args):
                                  num_warmup_steps=args.lr_warmup_steps * accelerator.num_processes,
                                  num_training_steps=args.max_train_steps * accelerator.num_processes,)
 
-    print(f' step 10. training dataset')
+    print(f'\n step 10. training dataset')
     train_transforms = transforms.Compose([transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
             transforms.CenterCrop(args.resolution),transforms.ToTensor(),transforms.Normalize([0.5], [0.5]),])
 
     attn_transforms = transforms.Compose([transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
                                           transforms.CenterCrop(args.resolution),transforms.ToTensor(),])
     data_dir = args.train_data_dir
-    dataset_preprocess = DatasetPreprocess(
-        caption_column=args.caption_column,
-        image_column=args.image_column,
-        train_transforms=train_transforms,
-        attn_transforms=attn_transforms,
-        tokenizer=tokenizer,
-        train_data_dir=data_dir,
-    )
-
     with accelerator.main_process_first():
         logger.info(f"train data dir: {os.path.basename(args.train_data_dir)}")
+        dataset = load_dataset("imagefolder",
+                               data_dir=data_dir,
+                               cache_dir=args.cache_dir,)
+        train_section = dataset['train']
+    """    
+    dataset_preprocess = DatasetPreprocess(caption_column=args.caption_column,
+                                           image_column=args.image_column,
+                                           train_transforms=train_transforms,
+                                           attn_transforms=attn_transforms,
+                                           tokenizer=tokenizer,
+                                           train_data_dir=data_dir,)
 
-        dataset = load_dataset(
-            "imagefolder",
-            data_dir=data_dir,
-            cache_dir=args.cache_dir,
-        )
-        train_dataset = dataset_preprocess.preprocess(dataset["train"])
+    
+    train_dataset = dataset_preprocess.preprocess(dataset["train"])
 
     # DataLoaders creation:
     train_dataloader = torch.utils.data.DataLoader(
@@ -450,7 +448,7 @@ def main(args):
     accelerator.wait_for_everyone()
 
     accelerator.end_training()
-
+    """
 if __name__ == "__main__":
 
     # put all arg parse here
@@ -459,16 +457,10 @@ if __name__ == "__main__":
         default="CompVis/stable-diffusion-v1-4",
         choices=["CompVis/stable-diffusion-v1-4","stabilityai/stable-diffusion-2-1"],
         help="Path to pretrained model or model identifier from huggingface.co/models.",)
-    parser.add_argument(
-        "--train_data_dir",
-        type=str,
-        required=True,
+    parser.add_argument("--train_data_dir",type=str,required=True,
         help=(
             "A folder containing the training data. Folder contents must follow the structure described in"
-            " https://huggingface.co/docs/datasets/image_dataset#imagefolder. In particular, a `metadata.jsonl` file"
-        ),
-    )
-
+            " https://huggingface.co/docs/datasets/image_dataset#imagefolder. In particular, a `metadata.jsonl` file"),)
     parser.add_argument(
         "--output_dir",
         type=str,
@@ -476,12 +468,9 @@ if __name__ == "__main__":
         help="The output directory where the model predictions and checkpoints will be written.",
     )
 
-    parser.add_argument(
-        "--cache_dir",
-        type=str,
-        default=None,
-        help="The directory where the downloaded models and datasets will be stored.",
-    )
+    parser.add_argument("--cache_dir",type=str,
+                        default=None,
+                        help="The directory where the downloaded models and datasets will be stored.",)
 
     parser.add_argument(
         "--resolution",
@@ -623,7 +612,6 @@ if __name__ == "__main__":
     parser.add_argument('--train_up', nargs='+', type=int, help='use which res layers in U-Net up', default=[])
 
     parser.add_argument("--pixel_loss_scale", type=float, required=True)
-
     parser.add_argument("--caption_column", type=str, default="text")
     parser.add_argument("--image_column", type=str, default="image")
 

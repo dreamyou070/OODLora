@@ -6,15 +6,19 @@ from PIL import Image
 import os
 
 class DatasetPreprocess:
-    def __init__(self, caption_column, image_column, train_transforms, attn_transforms, tokenizer, train_data_dir, segment_dir_origin_path="seg", segment_dir_relative_path="../coco_gsam_seg"):
+    def __init__(self,
+                 caption_column,
+                 image_column,
+                 train_transforms,
+                 attn_transforms,
+                 tokenizer,
+                 train_data_dir,
+                 segment_dir_origin_path="seg", segment_dir_relative_path="../coco_gsam_seg"):
         self.caption_column = caption_column
         self.image_column = image_column
-
         self.train_transforms = train_transforms
         self.attn_transforms = attn_transforms
-
         self.tokenizer = tokenizer
-
         self.train_data_dir = train_data_dir
         self.segment_dir_origin_path = segment_dir_origin_path
         self.segment_dir_relative_path = segment_dir_relative_path
@@ -25,12 +29,10 @@ class DatasetPreprocess:
             if isinstance(caption, str):
                 captions.append(caption)
             else:
-                raise ValueError(
-                    f"Caption column `{self.caption_column}` should contain either strings or lists of strings."
-                )
-        inputs = self.tokenizer(
-            captions, max_length = self.tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
-        )
+                raise ValueError(f"Caption column `{self.caption_column}` should contain either strings or lists of strings.")
+        inputs = self.tokenizer(captions,
+                                max_length = self.tokenizer.model_max_length,
+                                padding="max_length", truncation=True, return_tensors="pt")
         return inputs.input_ids
 
     def data_preprocess_train(self, examples):
