@@ -725,12 +725,7 @@ class NetworkTrainer:
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
                 if args.logging_dir is not None:
-                    if args.heatmap_loss:
-                        logs = self.generate_step_logs(args, current_loss, avr_loss,
-                                                       lr_scheduler, keys_scaled, mean_norm, maximum_norm,
-                                                       task_loss, None)
-                    else:
-                        logs = self.generate_step_logs(args, current_loss, avr_loss,
+                    logs = self.generate_step_logs(args, current_loss, avr_loss,
                                                        lr_scheduler, keys_scaled, mean_norm, maximum_norm,
                                                        task_loss)
                     accelerator.log(logs, step=global_step)
