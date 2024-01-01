@@ -534,8 +534,8 @@ class NetworkTrainer:
 
                                 img_masks_res = (1 -(resize_transform(img_masks) == 0.0).float())  # background = 0, foreground = 1
                                 binary_map_res = (1-(resize_transform(binary_map) == 0.0).float()) # normal = 0, anormal = 1
-                                normal_mask_res = img_masks_res*(1-binary_map_res) # [1,1,res,res]
-                                anormal_mask_res =img_masks_res*binary_map_res     # [1,1,res,res]
+                                normal_mask_res = img_masks_res * (1-binary_map_res) # [1,1,res,res]
+                                anormal_mask_res = img_masks_res * binary_map_res     # [1,1,res,res]
 
                                 normal_score_map_batch = torch.chunk(normal_score_map,  batch_num, dim=0)  # batch*head, pixel_num, 1
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
@@ -560,6 +560,7 @@ class NetworkTrainer:
                                     anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
                                     if len(test_indexs) > 0 :
+                                        print(f'test_indexs : {test_indexs}')
 
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
@@ -598,7 +599,11 @@ class NetworkTrainer:
                                                 answers.append(answer)
 
                                         if len(normal_pairs) == 0 or len(anormal_pairs) == 0 :
-                                            print(f'normal_num : {normal_num}, anormal_num : {anormal_num} | anormal_mask_ : {anormal_mask_.sum()} | anormal_mask_res : {anormal_mask_res.sum()} | binary_map_res : {binary_map_res.sum()}')
+                                            print(f'normal_num : {normal_num}, anormal_num : {anormal_num} '
+                                                  f'| anormal_mask_ : {anormal_mask_.sum()} | anormal_mask_res : {anormal_mask_res.sum()} '
+                                                  f'| binary_map_res : {binary_map_res.sum()} '
+                                                  f'| binary_map : {binary_map.sum()} '
+                                                  f'| binary_map : {binary_map.shape} '')
                                             print(f'wronge, sum of normal_mask_res : {torch.sum(normal_mask_res)}')
                                             print(f'wronge, sum of anormal_mask_res : {torch.sum(anormal_mask_res)}')
 
