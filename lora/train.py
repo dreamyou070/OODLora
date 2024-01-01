@@ -518,6 +518,12 @@ class NetworkTrainer:
                         img_masks = batch["img_masks"].to(accelerator.device)      # [Batch, 1, 512, 512], foreground = white = 1, background = black = 0
                         binary_map = batch['anormal_masks'].to(accelerator.device) # [Batch, 1, 512, 512], normal = black = 0, anormal = white = 1
                         batch_num = img_masks.shape[0]
+                        print(f'binary_map : {binary_map.shape}')
+                        from torchvision import transforms
+                        resize_transform = transforms.Resize((8,8))
+                        small_binary_map = resize_transform(binary_map)
+                        print(f'small_binary_map : {small_binary_map.shape}')
+                        print(f'sum(small_binary_map) : {torch.sum(small_binary_map)}')
                         original_anormal_position = torch.sum(torch.where(binary_map == 1, 1, 0))
                         print(f'original, anormal position : {original_anormal_position}')
 
