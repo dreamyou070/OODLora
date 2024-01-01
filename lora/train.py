@@ -516,7 +516,7 @@ class NetworkTrainer:
                         attention_storer.reset()
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
                         img_masks = batch["img_masks"].to(accelerator.device)      # [Batch, 1, 512, 512], foreground = white = 1, background = black = 0
-                        binary_gt_map_list =  batch["anormal_masks"]
+                        binary_gt_map_dict =  batch["anormal_masks"]
                         batch_num = img_masks.shape[0]
 
                         for layer in attn_dict.keys():
@@ -533,7 +533,8 @@ class NetworkTrainer:
                                 resize_transform = transforms.Resize((res, res))
                                 img_masks_res = (1 -(resize_transform(img_masks) == 0.0).float())  # background = 0, foreground = 1
 
-                                binary_map = binary_gt_map_list[res]
+                                binary_map = binary_gt_map_dict[batch_num] [res]
+                                print(f'len of binary_gt_map_dict: {len(binary_gt_map_dict)}')
                                 normal_mask_res = img_masks_res * ((binary_map== 0.0).float()) # [1,1,res,res]
                                 anormal_mask_res = img_masks_res * ((binary_map!= 0.0).float()) # [1,1,res,res]
 
