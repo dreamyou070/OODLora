@@ -56,11 +56,15 @@ def get_word_idx(text: str, tgt_word, tokenizer):
     return tgt_word_tokens_idx_ls
 
 # get attn loss by resolution
-def get_grounding_loss_by_layer(_gt_seg_list, word_token_idx_ls, res, 
-                                input_attn_map_ls, is_training_sd21):
+def get_grounding_loss_by_layer(_gt_seg_list,
+                                word_token_idx_ls,
+                                res,                # 64,32,16,8
+                                input_attn_map_ls,
+                                is_training_sd21):
     if is_training_sd21:
-        # training with sd21, using resolution 768 = 512 * 1.5
+        # training with sd21, using resolution 768 = 512 * 1.5 (text dimension change)
         res = int(SD14_TO_SD21_RATIO * res)
+    print(f'in get grounding loss, res : {res}')
 
     gt_seg_list = deepcopy(_gt_seg_list)
 
