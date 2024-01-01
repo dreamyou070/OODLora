@@ -517,8 +517,11 @@ class NetworkTrainer:
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
                         img_masks = batch["img_masks"].to(accelerator.device)      # [Batch, 1, 512, 512], foreground = white = 1, background = black = 0
                         binary_map = batch['anormal_masks'].to(accelerator.device) # [Batch, 1, 512, 512], normal = black = 0, anormal = white = 1
-
                         batch_num = img_masks.shape[0]
+
+                                                 # [Batch, 1, 512, 512], normal = white = 1, anormal = black = 0
+                        original_anormal_position = torch.sum(torch.where(binary_map == 1, 1, 0))
+                        print(f'original, anormal position : {original_anormal_position}')
 
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
