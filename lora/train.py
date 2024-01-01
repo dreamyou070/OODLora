@@ -636,6 +636,8 @@ class NetworkTrainer:
                                                                     tokenizers,
                                                                     text_encoders,
                                                                     weight_dtype)
+                        if args.truncate_pad :
+                            text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
 
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
@@ -828,6 +830,9 @@ if __name__ == "__main__":
     parser.add_argument("--valid_data_dir", type=str)
     parser.add_argument("--task_loss_weight", type=float, default=0.5)
     parser.add_argument("--anormal_training", action = 'store_true')
+    parser.add_argument("--truncate_pad", action='store_true')
+    parser.add_argument("--truncate_length", type=int, default=3)
+
 
     import ast
     def arg_as_list(arg):
