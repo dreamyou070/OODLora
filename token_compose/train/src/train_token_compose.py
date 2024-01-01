@@ -192,14 +192,8 @@ def main(args):
         if args.resume_from_checkpoint:
             resume_ckpt_number = args.resume_from_checkpoint.split("-")[-1]
             args.tracker_run_name = f"{args.tracker_run_name}-resume-{resume_ckpt_number}"
-        init_kwargs = {
-            "wandb" : {
-                "name" : args.tracker_run_name
-            }
-        }
-        accelerator.init_trackers(project_name=args.tracker_project_name,
-                                  config=tracker_config,
-                                  init_kwargs=init_kwargs)
+        init_kwargs = {"wandb" : {"name" : args.tracker_run_name}}
+        accelerator.init_trackers(project_name=args.tracker_project_name,config=tracker_config,init_kwargs=init_kwargs)
 
     print(f'\n step 12. train!')
     total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
@@ -247,7 +241,6 @@ def main(args):
         train_loss = 0.0
         for step, batch in enumerate(train_dataloader):
 
-
             # we reset controller twice because we use grad_checkpointing, which will have additional forward during the backward process
             controller.reset()
 
@@ -260,12 +253,11 @@ def main(args):
             with accelerator.accumulate(unet):
                 # Convert images to latent space
                 latents = vae.encode(batch["pixel_values"].to(weight_dtype)).latent_dist.sample()
-                #latents = torch.randn(1,4,64,64).to(weight_dtype).to(accelerator.device)
                 latents = latents * vae.config.scaling_factor
 
                 # Sample noise that we'll add to the latents
                 noise = torch.randn_like(latents)
-                
+
                 bsz = latents.shape[0]
                 # Sample a random timestep for each image
                 max_timestep = noise_scheduler.config.num_train_timesteps
@@ -290,7 +282,9 @@ def main(args):
                 # Predict the noise residual and compute loss
                 model_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
 
+                # ---------------------------------------------------------------------------------------------------- #
                 prompts = batch["text"]
+                print(f'prompts : {prompts}')
                 assert len(prompts) == 1, "only support batch size 1"
 
                 postprocess_seg_ls = batch["postprocess_seg_ls"]

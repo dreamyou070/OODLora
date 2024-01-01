@@ -501,23 +501,23 @@ class NetworkTrainer:
                     log_loss = {}
 
                     # -------------------------------------------------- (1) attention loss -------------------------------------------------- #
+
                     total_loss = 0
                     with torch.set_grad_enabled(train_text_encoder):
                         """ text = CLS bad good EOS """
                         text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
                         text_encoder_conds = text_encoder_conds[:,:4,:] # add one pad token (EOS token)
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
-
                     with accelerator.autocast():
                         self.call_unet(args, accelerator, unet, noisy_latents, timesteps, text_encoder_conds,
                                        batch, weight_dtype, trg_indexs, test_indexs)
                         attn_dict = attention_storer.step_store
                         attention_storer.reset()
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
-                        normal_position_normal_score, anormal_position_anormal_score = 0, 0
                         img_masks = batch["img_masks"].to(accelerator.device)                    # [Batch, Res, Res], foreground = white = 1, background = black = 0
                         binary_map = batch['anormal_masks'].to(accelerator.device)#.unsqueeze(-1)  # [Batch, Res, Res, 1]
                         batch_num = img_masks.shape[0]
+                        print(f'batch_num: {batch_num}')
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
                             normal_score_map, anormal_score_map = torch.chunk(attn_score, 2, dim=-1)       # [batch*head, pixel_num, 1]
