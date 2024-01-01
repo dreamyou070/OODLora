@@ -611,7 +611,7 @@ class NetworkTrainer:
 
                         # attn_loss = normal_loss.mean() + anormal_loss.mean()+ cross_loss.mean()
                         # attn_loss = cross_loss.mean()
-                        attn_loss = anormal_loss.mean() + cross_loss.mean()
+                        attn_loss = normal_loss.mean() + anormal_loss.mean() + cross_loss.mean()
                     total_loss += attn_loss
 
                     # ---------------------------------------------------------------------------------------------------------------------
