@@ -543,6 +543,7 @@ class NetworkTrainer:
 
                                 img_masks_res = (resize_transform(img_masks) == 0.0).float() # background = 0, foreground = 1
                                 binary_map_res = (resize_transform(binary_map) == 0.0).float() # normal = 0, anormal = 1
+                                print(f'after binarize, binary_map_res : {binary_map_res}')
                                 img_masks_res = 1-img_masks_res
                                 binary_map_res = 1-binary_map_res
 
