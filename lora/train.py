@@ -500,7 +500,6 @@ class NetworkTrainer:
                     test_indexs = [index for index, i in enumerate(train_class_list) if i != 1]
                     trg_indexs = batch["trg_indexs_list"]
                     log_loss = {}
-
                     # -------------------------------------------------- (1) attention loss -------------------------------------------------- #
 
                     total_loss = 0
@@ -518,7 +517,6 @@ class NetworkTrainer:
                         img_masks = batch["img_masks"].to(accelerator.device)      # [Batch, 1, 512, 512], foreground = white = 1, background = black = 0
                         binary_gt_map_dict =  batch["anormal_masks"][0]
                         batch_num = img_masks.shape[0]
-
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
                             normal_score_map, anormal_score_map = torch.chunk(attn_score, 2, dim=-1)       # [batch*head, pixel_num, 1]
@@ -528,14 +526,11 @@ class NetworkTrainer:
                             pix_num = normal_score_map.shape[1]
                             res = int(math.sqrt(pix_num))
                             if res in args.cross_map_res :
-
                                 from torchvision import transforms
                                 resize_transform = transforms.Resize((res, res))
                                 img_masks_res = (1 -(resize_transform(img_masks) == 0.0).float())  # background = 0, foreground = 1
-
                                 binary_map = binary_gt_map_dict[res]
                                 binary_map = binary_map.unsqueeze(0)
-                                print(f'binary_map.shape: {binary_map.shape}')
 
                                 normal_mask_res = img_masks_res * ((binary_map== 0.0).float()) # [1,1,res,res]
                                 anormal_mask_res = img_masks_res * ((binary_map!= 0.0).float()) # [1,1,res,res]
@@ -563,7 +558,6 @@ class NetworkTrainer:
                                     anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
                                     if len(test_indexs) > 0 :
-                                        print(f'test_indexs : {test_indexs}')
 
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
@@ -600,14 +594,6 @@ class NetworkTrainer:
                                                 answer = 1-position_info
                                                 score_pairs.append(score_pair)
                                                 answers.append(answer)
-
-                                        if len(normal_pairs) == 0 or len(anormal_pairs) == 0 :
-                                            print(f'normal_num : {normal_num}, anormal_num : {anormal_num} '
-                                                  f'| anormal_mask_ : {anormal_mask_.sum()} | anormal_mask_res : {anormal_mask_res.sum()} '
-                                                  f'| binary_gt_map : {binary_map.sum()} '
-                                                  f'| binary_gt_map : {binary_map.shape} ')
-                                            print(f'wronge, sum of normal_mask_res : {torch.sum(normal_mask_res)}')
-                                            print(f'wronge, sum of anormal_mask_res : {torch.sum(anormal_mask_res)}')
 
                                         normal_pairs = torch.stack(normal_pairs)
                                         anormal_pairs = torch.stack(anormal_pairs)
