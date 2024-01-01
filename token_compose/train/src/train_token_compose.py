@@ -288,6 +288,7 @@ def main(args):
                 assert len(prompts) == 1, "only support batch size 1"
 
                 postprocess_seg_ls = batch["postprocess_seg_ls"]
+                print(f'postprocess_seg_ls : {postprocess_seg_ls}')
 
                 word_token_idx_ls = [] # postion of token in text
                 gt_seg_ls = []
@@ -295,10 +296,9 @@ def main(args):
                     # item: [[[words], attn_gt], [[words], attn_gt], ...]
                     # words = "teddy bear" or "surfboard" or, ....
                     words_indices = []
-
                     words = item[0][0]
                     words = words.lower()
-
+                    print(f'words : {words}')
                     words_indices = get_word_idx(prompts[0], words, tokenizer)
 
                     word_token_idx_ls.append(words_indices)
