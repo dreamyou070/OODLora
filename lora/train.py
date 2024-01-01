@@ -536,21 +536,20 @@ class NetworkTrainer:
                                 binary_map_res = (1-(resize_transform(binary_map) == 0.0).float()) # normal = 0, anormal = 1
                                 normal_mask_res = img_masks_res*(1-binary_map_res) # [1,1,res,res]
                                 anormal_mask_res =img_masks_res*binary_map_res     # [1,1,res,res]
-                                print(f'before chunking, normap_score_map : {normal_score_map.shape}')
-                                normal_score_map_batch = torch.chunk(normal_score_map,  batch_num, dim=0) # batch, head, pixel_num, 1
+
+                                normal_score_map_batch = torch.chunk(normal_score_map,  batch_num, dim=0)  # batch*head, pixel_num, 1
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
 
                                 for i in range(batch_num):
-                                    normal_score_map_i = normal_score_map_batch[i]
-                                    print(f'after chunking, normap_score_map : {normal_score_map_i.shape}')
-                                    normal_score_map_i =normal_score_map_i.reshape(8, res, res, -1).squeeze(-1)   # [h, res, res, 1]
-                                    anormal_score_map_i = anormal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1) # [h, res, res, 1]
+                                    normal_score_map_i =normal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1)    # [h, res, res]
+                                    anormal_score_map_i = anormal_score_map_batch[i].reshape(8, res, res, -1).squeeze(-1) # [h, res, res]
                                     b, H, W, = normal_score_map_i.shape
 
                                     # -------------------------------------------------- (1-1) normal loss -------------------------------------------------- #
 
                                     normal_mask_ = normal_mask_res[i, :, :] # """ background is zero """
                                     normal_mask_ = normal_mask_.repeat(8, 1, 1) # [h, res, res]
+                                    print(f'normal_mask_.shape (8, res,res) : {normal_mask_.shape}')
                                     anormal_mask_ = anormal_mask_res[i, :, :] # """ background is zero """
                                     anormal_mask_ = anormal_mask_.repeat(8, 1, 1) # [h, res, res]
 
