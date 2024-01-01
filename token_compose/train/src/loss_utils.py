@@ -70,16 +70,18 @@ def get_grounding_loss_by_layer(_gt_seg_list,
 
     # reszie gt seg map to the same size with attn map
     resize_transform = transforms.Resize((res, res))
-
+    noun_num = len(gt_seg_list)
+    print(f'noun_num: {noun_num}')
     for i in range(len(gt_seg_list)):
-        print(f'before resizing, gt_seg_list[{i}] shape: {gt_seg_list[i].shape}')
+        #print(f'before resizing, gt_seg_list[{i}] shape: {gt_seg_list[i].shape}')
         gt_seg_list[i] = resize_transform(gt_seg_list[i])
-        print(f'after resizing, gt_seg_list[{i}] shape: {gt_seg_list[i].shape}')
-        gt_seg_list[i] = gt_seg_list[i].squeeze(0) # 1, 1, res, res => 1, res, res
-        import time
-        time.sleep(1000)
+        #print(f'after resizing, gt_seg_list[{i}] shape: {gt_seg_list[i].shape}')
+        gt_seg_list[i] = gt_seg_list[i].squeeze(0) # 1, 1, res, res => 1, 1, res(8,16,32,64), res(8,16,32,64)
         # add binary
+        binary = (gt_seg_list[i] > 0.0).float()
+        print(f'binary (true, false, if black false, if true trg object) : {binary}')
         gt_seg_list[i] = (gt_seg_list[i] > 0.0).float()
+
 
 
     ################### token loss start ###################
@@ -87,15 +89,19 @@ def get_grounding_loss_by_layer(_gt_seg_list,
     # https://github.com/silent-chen/layout-guidance/blob/08b687470f911c7f57937012bdf55194836d693e/utils.py#L27
     token_loss = 0.0
     for attn_map in input_attn_map_ls:
+        # len is 3 or 1
         b, H, W, j = attn_map.shape
+        print(f'attn_map.shape (1, 8, 8, 77) : {attn_map.shape}')
+        import time
+        time.sleep(1000)
         for i in range(len(word_token_idx_ls)): # [[word1 token_idx1, word1 token_idx2, ...], [word2 token_idx1, word2 token_idx2, ...]]
             obj_loss = 0.0
             single_word_idx_ls = word_token_idx_ls[i] #[token_idx1, token_idx2, ...]
             mask = gt_seg_list[i]
-
             for obj_position in single_word_idx_ls:
                 # ca map obj shape 8 * 16 * 16
                 ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W)
+
 
                 activation_value = (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)/ca_map_obj.reshape(b, -1).sum(dim=-1)
 
