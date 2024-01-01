@@ -1072,10 +1072,6 @@ class BaseDataset(torch.utils.data.Dataset):
                 anormal_mask = anormal_mask / anormal_mask.max()
             anormal_masks.append(anormal_mask)
 
-            anormal_mask = np.array(Image.open(anormal_mask_dir).convert('L').resize((512, 512), Image.BICUBIC), np.uint8)
-            anormal_mask = attn_transforms(anormal_mask)
-
-
             caption = str(class_name.split('_')[-1]).strip()
 
             subset = self.image_to_subset[image_key]
