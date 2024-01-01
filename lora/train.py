@@ -522,7 +522,6 @@ class NetworkTrainer:
 
                         batch_num = img_masks.shape[0]
 
-
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
                             normal_score_map, anormal_score_map = torch.chunk(attn_score, 2, dim=-1)       # [batch*head, pixel_num, 1]
@@ -537,8 +536,7 @@ class NetworkTrainer:
                                 resize_transform = transforms.Resize((res, res))
 
                                 normal_mask_res = (resize_transform(normal_mask)  > 0.0).float()
-                                anormal_mask_res =(resize_transform(anormal_mask) > 0.0).float()
-                                print(f'normal position num : {torch.sum(normal_mask_res)}, anormal position num : {torch.sum(anormal_mask_res)}')
+                                anormal_mask_res =(resize_transform(anormal_mask) > 0.0).float() #
 
                                 normal_score_map_batch = torch.chunk(normal_score_map,  batch_num, dim=0) # batch, head, pixel_num, 1
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
@@ -558,20 +556,15 @@ class NetworkTrainer:
 
                                     normal_total_score = normal_score_map_i.reshape(b, -1).sum(dim=-1)
                                     anormal_total_score = anormal_score_map_i.reshape(b, -1).sum(dim=-1) # [head, res*res]
-                                    print(f'anormal total score : {anormal_total_score.shape} | {anormal_total_score.sum()}')
 
                                     normal_pos_normal_score = (normal_mask_ * normal_score_map_i).reshape(b, -1).sum(dim=-1) # [8, res,res] * [8, res,res]
                                     anormal_pos_anormal_score = (anormal_mask_ * anormal_score_map_i).reshape(b, -1).sum(dim=-1)
-                                    print(f'anormal pos anormal score : {anormal_pos_anormal_score.shape} | {anormal_pos_anormal_score.sum()}')
-                                    
+
                                     normal_activation_value = normal_pos_normal_score / normal_total_score
                                     anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
                                     if len(test_indexs) > 0 :
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
-                                        print(f'total anormal score : {anormal_total_score.sum()}')
-                                        #print(f'number of anormal pixel : {}')
-                                        print(f'current anormal loss : {(1.0 - torch.mean(anormal_activation_value)) ** 2}')
 
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
                                         # binary_aug_tensor = 8,32,321
@@ -584,9 +577,17 @@ class NetworkTrainer:
 
                                         score_pairs = []
                                         anormal_pos = []
-
+                                        normal_pairs, anormal_pairs = [], []
                                         for i in range(flatten_score_map.shape[0]):
                                             position_info = position_map[i]
+                                            if position_info[0] == 1 : # normal_pixel
+                                                normal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
+                                                normal_pairs.append(normal_score_pair)
+
+                                            elif position_info[1] == 1: # anormal_pixel
+                                                anormal_score_pair = flatten_score_map[i] # normal = 0, anormal = 1
+                                                anormal_pos.append(position_info[1])
+
                                             if position_info[0] == 1 or position_info[1] == 1:
                                                 score_pair = flatten_score_map[i] # normal = 0, anormal = 1
                                                 anormal_pos.append(position_info[0])
@@ -595,6 +596,12 @@ class NetworkTrainer:
                                         anormal_pos = torch.stack(anormal_pos)
                                         cross_ent_loss = cross_entropy_loss(score_pairs, anormal_pos.long())
                                         cross_loss += cross_ent_loss.mean()
+
+                                        normal_cross_loss = cross_entropy_loss(torch.stack(normal_pairs), torch.ones(len(normal_pairs)).long())
+                                        anormal_cross_loss = cross_entropy_loss(torch.stack(anormal_pairs), torch.zeros(len(anormal_pairs)).long())
+                                        log_loss["loss/normal_cross_loss"] = normal_cross_loss.mean().item()
+                                        log_loss["loss/anormal_cross_loss"] = anormal_cross_loss.mean().item()
+
 
                                     #normal_position_normal_score +=
                         log_loss["loss/normal_pixel_reverse_normal_loss"] = normal_loss.mean().item()
