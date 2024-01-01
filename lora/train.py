@@ -562,7 +562,7 @@ class NetworkTrainer:
                                         """ anormal pixel's normal score"""
                                         normal_score_of_anormal_pixel = normal_score_map_i.mean(0) * anormal_mask_res.squeeze()
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
-                                        print(f'anormal_loss (8) : {anormal_loss.shape}')
+                                        #print(f'anormal_loss (8) : {anormal_loss.shape}')
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
 
                                         bce_loss_func = nn.BCELoss()
@@ -605,7 +605,8 @@ class NetworkTrainer:
                     total_loss += task_loss.mean()
 
                     # ------------------------------------------------------------------------------------
-                    accelerator.backward(total_loss)
+                    accelerator.backward(task_loss)
+                    #accelerator.backward(total_loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
                         accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
