@@ -517,8 +517,7 @@ class NetworkTrainer:
                         normal_loss, anormal_loss, cross_loss = 0, 0, 0
                         img_masks = batch["img_masks"].to(accelerator.device)      # [Batch, 1, 512, 512], foreground = white = 1, background = black = 0
                         binary_map = batch['anormal_masks'].to(accelerator.device) # [Batch, 1, 512, 512], normal = black = 0, anormal = white = 1
-                        normal_mask = img_masks * (1-binary_map)                   # [Batch, 1, 512, 512], normal = white = 1, anormal = black = 0
-                        anormal_mask = img_masks * binary_map                       # [Batch, 1, 512, 512], normal = black = 0, anormal = white = 1
+
 
                         batch_num = img_masks.shape[0]
 
@@ -535,8 +534,12 @@ class NetworkTrainer:
                                 from torchvision import transforms
                                 resize_transform = transforms.Resize((res, res))
 
-                                normal_mask_res = (resize_transform(normal_mask)  > 0.0).float()
-                                anormal_mask_res =(resize_transform(anormal_mask) > 0.0).float() #
+                                img_masks_res = (resize_transform(img_masks) > 0.0).float() # background = 0, foreground = 1
+                                binary_map_res = (resize_transform(binary_map) > 0.0).float() # normal = 0, anormal = 1
+
+                                normal_mask_res = (img_masks_res*(1-binary_map_res)> 0.0).float()
+                                anormal_mask_res =(img_masks_res*binary_map_res> 0.0).float() #
+
 
                                 normal_score_map_batch = torch.chunk(normal_score_map,  batch_num, dim=0) # batch, head, pixel_num, 1
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
@@ -564,6 +567,10 @@ class NetworkTrainer:
                                     anormal_activation_value = anormal_pos_anormal_score / anormal_total_score
                                     normal_loss += (1.0 - torch.mean(normal_activation_value)) ** 2
                                     if len(test_indexs) > 0 :
+
+                                        print(f'sum of normal_mask_res : {torch.sum(normal_mask_res)}')
+                                        print(f'sum of anormal_mask_res : {torch.sum(anormal_mask_res)}')
+                                        
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
 
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
