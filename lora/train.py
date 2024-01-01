@@ -522,7 +522,7 @@ class NetworkTrainer:
                         anormal_mask = img_masks * binary_map                       # [Batch, 1, 512, 512], normal = black = 0, anormal = white = 1
 
                         batch_num = img_masks.shape[0]
-                        background = torch.sum(1 - img_masks)
+
 
                         for layer in attn_dict.keys():
                             attn_score = attn_dict[layer][0]                                               # [batch*head, pixel_num, 2]
@@ -538,7 +538,8 @@ class NetworkTrainer:
                                 resize_transform = transforms.Resize((res, res))
 
                                 normal_mask_res = (resize_transform(normal_mask)  > 0.0).float()
-                                anormal_mask_res = (resize_transform(anormal_mask)> 0.0).float()
+                                anormal_mask_res =(resize_transform(anormal_mask) > 0.0).float()
+                                print(f'normal position num : {torch.sum(normal_mask_res)}, anormal position num : {torch.sum(anormal_mask_res)}')
 
                                 normal_score_map_batch = torch.chunk(normal_score_map,  batch_num, dim=0) # batch, head, pixel_num, 1
                                 anormal_score_map_batch = torch.chunk(anormal_score_map, batch_num, dim=0) # batch*head, pixel_num, 1
@@ -567,6 +568,8 @@ class NetworkTrainer:
                                     print(f'current normal loss : {(1.0 - torch.mean(normal_activation_value)) ** 2}')
                                     if len(test_indexs) > 0 :
                                         anormal_loss += (1.0 - torch.mean(anormal_activation_value)) ** 2
+                                        print(f'total anormal score : {anormal_total_score.sum()}')
+                                        print(f'number of anormal pixel : {}')
                                         print(f'current anormal loss : {(1.0 - torch.mean(anormal_activation_value)) ** 2}')
 
                                         # -------------------------------------------------- (2-1) normal and anormal position ------------------------------------ #
