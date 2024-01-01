@@ -1066,10 +1066,11 @@ class BaseDataset(torch.utils.data.Dataset):
             img_masks.append(mask_img)
 
             # (2.2) anormal mask """ normal is zero, anormal is white """
-            anormal_mask_64 = transforms.ToTensor(Image.open(anormal_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
-            anormal_mask_32 = transforms.ToTensor(Image.open(anormal_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
-            anormal_mask_16 = transforms.ToTensor(Image.open(anormal_mask_dir).convert('L').resize((16, 16), Image.BICUBIC))
-            anormal_mask_8 = transforms.ToTensor(Image.open(anormal_mask_dir).convert('L').resize((8, 8), Image.BICUBIC))
+
+            anormal_mask_64 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
+            anormal_mask_32 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
+            anormal_mask_16 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((16, 16), Image.BICUBIC))
+            anormal_mask_8 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((8, 8), Image.BICUBIC))
             #if anormal_mask.max() > 0:
             #    anormal_mask = anormal_mask / anormal_mask.max()
             anormal_mask_dict = {64 : anormal_mask_64,
