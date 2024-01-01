@@ -667,6 +667,7 @@ class NetworkTrainer:
                             activation = (score_map * mask).sum(dim=-1)
                             total_score = (score_map ).sum(dim=-1)
                             activation_loss = (1- (activation / total_score))**2 # 8, res*res
+                            print('activation_loss', activation_loss.shape)
                             activation_loss = activation_loss.sum(dim=1).mean()
                             attn_loss += activation_loss
                         if is_main_process:
