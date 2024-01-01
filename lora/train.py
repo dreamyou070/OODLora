@@ -528,7 +528,7 @@ class NetworkTrainer:
                                 from torchvision import transforms
                                 resize_transform = transforms.Resize((res, res))
                                 img_masks_res = (resize_transform(img_masks) == 0.0).float() # background = 1
-                                print(f'img_masks_res (back = 1) = {img_masks_res}')
+                                print(f'img_masks_res (back = 1) = {img_masks_res.shape}')
                                 img_masks_res = (1 - img_masks_res)  # background = 0, foreground = 1
                                 binary_map = binary_gt_map_dict[res]
                                 binary_map = binary_map.unsqueeze(0)
