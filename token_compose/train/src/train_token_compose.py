@@ -226,7 +226,6 @@ def main(args):
     # Potentially load in the weights and states from a previous save
     if args.resume_from_checkpoint:
         resume_path = args.resume_from_checkpoint
-
         accelerator.logger.info(f"Resuming from checkpoint {resume_path}")
         accelerator.load_state(resume_path)
         global_step = int(resume_path.split("-")[-1])
@@ -246,7 +245,8 @@ def main(args):
     for epoch in range(first_epoch, args.num_train_epochs):
         unet.train()
         train_loss = 0.0
-        for step, batch in enumerate(train_dataloader):
+        #for step, batch in enumerate(train_dataloader):
+        for step in range(10) :
 
             # we reset controller twice because we use grad_checkpointing, which will have additional forward during the backward process
             controller.reset()
@@ -259,7 +259,8 @@ def main(args):
 
             with accelerator.accumulate(unet):
                 # Convert images to latent space
-                latents = vae.encode(batch["pixel_values"].to(weight_dtype)).latent_dist.sample()
+                # latents = vae.encode(batch["pixel_values"].to(weight_dtype)).latent_dist.sample()
+                latents = torch.randn(1,4,64,64).to(weight_dtype).to(accelerator.device)
                 latents = latents * vae.config.scaling_factor
 
                 # Sample noise that we'll add to the latents

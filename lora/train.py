@@ -564,13 +564,18 @@ class NetworkTrainer:
                                     anormal_position = binary_aug_tensor.to(dtype=weight_dtype) * img_mask.to(dtype=weight_dtype)
                                     anormal_position_pixel_num = anormal_position.sum() / 8
 
-                                    # normal pixel's anormal score
-                                    # normal map total score
-                                    # normal_loss += (normal_position.to(anormal_score_map.device) * anormal_score_map).mean()  # [b, res, res, 1]
-                                    anormal_loss += ((anormal_position.to(anormal_score_map.device) * normal_score_map) / (anormal_score_map)).mean()  # [b, res, res, 1]
-                                    #normal_position_normal_score += (normal_position.to(anormal_score_map.device) * normal_score_map).mean()  # [b, res, res, 1]
-                                    #anormal_position_anormal_score += (anormal_position.to(anormal_score_map.device) * anormal_score_map).mean()  # [b, res, res, 1]
 
+                                    # normal pixel's anormal score
+                                    normal_map_total_score = normal_map_total_score = normal_score_map.mean(0).squeeze() # [res,res]
+                                    normal_pixel_normal_score = (normal_position.to(anormal_score_map.device) * normal_score_map).mean()  # [b, res, res, 1]
+                                    normal_loss = (1-normal_pixel_normal_score/normal_map_total_score) ** 2
+
+                                    anormal_map_total_score = anormal_score_map.mean(0).squeeze() # [res,res]
+                                    anormal_pixel_anormal_score = (anormal_position.to(anormal_score_map.device) * anormal_score_map).mean()  # [b, res, res, 1]
+                                    anormal_loss = (1-anormal_pixel_anormal_score/anormal_map_total_score) ** 2
+
+                                    normal_loss += normal_loss.mean()  # [b, res, res, 1]
+                                    anormal_loss += anormal_loss.mean()  # [b, res, res, 1]
 
                                     score_map = torch.cat([normal_score_map, anormal_score_map], dim=-1).softmax(dim=-1)  #
                                     flatten_score_map = score_map.view(-1, 2)
