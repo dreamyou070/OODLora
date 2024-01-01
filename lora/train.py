@@ -565,8 +565,8 @@ class NetworkTrainer:
                                     anormal_position_pixel_num = anormal_position.sum() / 8
 
 
-                                    # normal pixel's anormal score
-                                    normal_map_total_score = normal_map_total_score = normal_score_map.mean(0).squeeze() # [res,res]
+                                    # normal pixel's normal score should be high
+                                    normal_map_total_score = normal_score_map.mean(0).squeeze() # [res,res]
                                     normal_pixel_normal_score = (normal_position.to(anormal_score_map.device) * normal_score_map).mean()  # [b, res, res, 1]
                                     normal_loss = (1-normal_pixel_normal_score/normal_map_total_score) ** 2
 
@@ -593,16 +593,19 @@ class NetworkTrainer:
                                     anormal_pos = torch.stack(anormal_pos)
                                     cross_ent_loss = cross_entropy_loss(score_pairs, anormal_pos.long())
                                     cross_loss += cross_ent_loss.mean()
-                        log_loss["loss/anormal_pixel_normal_score"] = normal_loss.mean().item()
-                        log_loss["loss/normal_pixel_anormal_score"] = anormal_loss.mean().item()
-                        log_loss["loss/normal_pixel_normal_score"] = normal_position_normal_score.mean().item()
-                        log_loss["loss/anormal_pixel_anormal_score"] = anormal_position_anormal_score.mean().item()
+
+                                    #normal_position_normal_score +=
+                        log_loss["loss/normal_pixel_reverse_normal_score"] = normal_loss.mean().item()
+                        log_loss["loss/anormal_pixel_reverse_anormal_score"] = anormal_loss.mean().item()
+                        #log_loss["loss/normal_pixel_normal_score"] = normal_position_normal_score.mean().item()
+                        #log_loss["loss/anormal_pixel_anormal_score"] = anormal_position_anormal_score.mean().item()
                         log_loss["loss/cross_entropy_loss"] = cross_loss.mean().item()
 
-                        record = {"anormal_pixel_normal_score": normal_loss.mean().item(),
-                                  "normal_pixel_anormal_score": anormal_loss.mean().item(),
-                                  "normal_pixel_normal_score": normal_position_normal_score.mean().item(),
-                                  "anormal_pixel_anormal_score": anormal_position_anormal_score.mean().item(),}
+                        record = {"normal_pixel_reverse_normal_score": normal_loss.mean().item(),
+                                  "anormal_pixel_reverse_anormal_score": anormal_loss.mean().item(),
+                                  #"normal_pixel_normal_score": normal_position_normal_score.mean().item(),
+                                  #"anormal_pixel_anormal_score": anormal_position_anormal_score.mean().item(),
+                                  }
                         with open(record_file, 'a') as f:
                             f.write(json.dumps(record) + '\n')
 
