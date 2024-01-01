@@ -664,7 +664,11 @@ class NetworkTrainer:
                             img_masks = resize_transform(batch["img_masks"]) # [1,1,res,res], back = 0, fore = 1
                             anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0) # [1,1,res,res] anomal = 1
                             mask = (img_masks * anormal_mask).squeeze() # res,res
+                            mask = torch.stack([mask.flatten() for i in range(8)], dim=0)
                             print(f'mask.shape : {mask.shape}')
+                            activation = (score_map * mask).sum(dim=-1)
+                            total_score = (score_map ).sum(dim=-1)
+                            activation_loss = (1- (activation / total_score))**2
 
                             #trigger_score =
                             import time
