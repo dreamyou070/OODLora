@@ -708,7 +708,6 @@ class NetworkTrainer:
 
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
-                print(f'log : {logs}')
                 if args.logging_dir is not None:
                     logs = self.generate_step_logs(logs, lr_scheduler)
                     accelerator.log(logs, step=global_step)
