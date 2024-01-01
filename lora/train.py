@@ -176,6 +176,7 @@ class NetworkTrainer:
 
     def get_text_cond(self, args, accelerator, batch, tokenizers, text_encoders, weight_dtype):
         input_ids = batch["input_ids"].to(accelerator.device)  # batch, torch_num, sen_len
+        print(f'input_ids: {input_ids}')
         encoder_hidden_states = train_util.get_hidden_states(args, input_ids,
                                                              tokenizers[0], text_encoders[0],
                                                              weight_dtype)
@@ -716,11 +717,7 @@ class NetworkTrainer:
                 if global_step >= args.max_train_steps:
                     break
             if args.logging_dir is not None:
-                if args.heatmap_loss:
-                    logs = {"loss/epoch": loss_total / len(loss_list),
-                            "loss/task_loss": loss.item(),}
-                else:
-                    logs = {"loss/epoch": loss_total / len(loss_list), }
+                logs = {"loss/epoch": loss_total / len(loss_list), }
                 accelerator.log(logs, step=epoch + 1)
             accelerator.wait_for_everyone()
             # 指定エポックごとにモデルを保存
