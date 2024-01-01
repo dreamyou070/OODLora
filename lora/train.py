@@ -657,13 +657,16 @@ class NetworkTrainer:
 
                         for layer_name in attn_dict.keys() :
                             score_map = attn_dict[layer_name][0]
+                            print(f'score_map.shape : {score_map.shape}')
                             res = int(score_map.shape[1] ** 0.5)
                             from torchvision import transforms
                             resize_transform = transforms.Resize((res, res))
-                            img_masks = resize_transform(batch["img_masks"])
-                            anormal_mask = batch["anormal_masks"][0][res]
-                            print(f'img_masks.shape : {img_masks.shape}')
-                            print(f'anormal_mask.shape : {anormal_mask.shape}')
+                            img_masks = resize_transform(batch["img_masks"]) # [1,1,res,res], back = 0, fore = 1
+                            anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0) # [1,1,res,res] anomal = 1
+                            mask = (img_masks * anormal_mask).squeeze() # res,res
+                            print(f'mask.shape : {mask.shape}')
+
+                            #trigger_score =
                             import time
                             time.sleep(1000)
 
