@@ -223,7 +223,7 @@ def main(args) :
 
     parent = os.path.split(args.network_weights)[0]
     folder = os.path.split(parent)[-1]
-    args.output_dir = os.path.join(parent, f'{folder}/pixel_crossattention_bland_inference')
+    args.output_dir = os.path.join(parent, f'{folder}/crossattention_map_check')
 
     print(f' \n step 1. setting')
     if args.process_title:
@@ -252,6 +252,10 @@ def main(args) :
         model_epoch = int(model_name.split('-')[-1])
     else:
         model_epoch = 'last'
+
+    output_dir = os.path.join(output_dir, f'lora_{model_epoch}')
+    os.makedirs(output_dir, exist_ok=True)
+    print(f'final output dir : {output_dir}')
 
     print(f' \n step 2. make stable diffusion model')
     device = accelerator.device
@@ -290,7 +294,7 @@ def main(args) :
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
-    prompt = 'hole crack'
+    prompt = 'hole crack contamination good'
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = torch.chunk(context, 2)
 
@@ -363,7 +367,7 @@ def main(args) :
                                 maps.append(ca_map_obj)
                         maps = torch.cat(maps, dim=0)
                         map_obj = maps.sum(dim=0).cpu().numpy()
-                        Image.fromarray(map_obj).save(os.path.join(trg_img_output_dir, f'{name}_{train_layer}_{trg_concept}_attn_map{ext}'))
+                        Image.fromarray(map_obj).save(os.path.join(trg_img_output_dir, f'map_with_{trg_concept}_on_{train_layer}{ext}'))
 
 
 
@@ -406,29 +410,10 @@ def main(args) :
                     break
 
 
-    trg_resolutions = args.cross_map_res
-    title = ''
-    for res in trg_resolutions:
-        title += f'_{res}'
-    print(f'title : {title}')
 
-    output_dir = os.path.join(output_dir,f'lora_{model_epoch}_final_noising_{args.final_noising_time}_num_ddim_steps_{args.num_ddim_steps}_'
-                                         f'cross_res{title}_'
-                                         f'res_{args.pixel_mask_res}_'
-                                         f'pixel_mask_pixel_thred_{args.pixel_thred}_'
-                                         f'inner_iter_{args.inner_iteration}_'
-                                         f'mask_thredhold_{args.mask_thredhold}')
-    os.makedirs(output_dir, exist_ok=True)
-    print(f'final output dir : {output_dir}')
 
-    print(f' (2.4) scheduler')
-    scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
-    scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
-                              beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
-    scheduler.set_timesteps(args.num_ddim_steps)
-    inference_times = scheduler.timesteps
 
-    
+
 
 
 

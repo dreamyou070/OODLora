@@ -15,11 +15,13 @@ def init_prompt(tokenizer, text_encoder, device, prompt: str):
                              padding="max_length", max_length=tokenizer.model_max_length,
                              return_tensors="pt")
     uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
+
     text_input = tokenizer([prompt],
                            padding="max_length",
                            max_length=tokenizer.model_max_length,
                            truncation=True,
                            return_tensors="pt",)
+    print(f'prompt : {prompt}, text_input : {text_input}')
     text_embeddings = text_encoder(text_input.input_ids.to(device))[0]
     context = torch.cat([uncond_embeddings, text_embeddings])
     return context
