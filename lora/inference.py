@@ -305,7 +305,6 @@ def main(args) :
     test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/bad')
     test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/corrected')
     classes = os.listdir(test_img_folder)
-    prompt_list = ['cls'] + prompt_list
     for class_name in classes:
         if 'bad' not in class_name:
             class_base_folder = os.path.join(output_dir, class_name)
@@ -355,10 +354,9 @@ def main(args) :
                         for attn_map in input_attn_map_ls:
                             maps = [] # down 2, mid 1, up 3
                             # len is 3 or 1
-                            b, H, W, j = attn_map.shape # head, height, width, 77
+                            #b, H, W, j = attn_map.shape # head, height, width, 77
+                            b, H, W, j = attn_map[:, :, :, 1:5].softmax(dim=-1)
                             word_map_dict = {}
-
-
                             for obj_position, trg_concept in enumerate(prompt_list) :
                                 ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W)  # 8, 8, 8
                                 if trg_concept not in word_map_dict.keys():
