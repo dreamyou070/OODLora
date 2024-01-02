@@ -16,10 +16,114 @@ import shutil
 from attention_store import AttentionStore
 import torch.nn as nn
 from utils.model_utils import call_unet
+from transformers import CLIPTextModel, CLIPTokenizer
+from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
+
+
+def register_attention_control(unet_model, controller):
+    def ca_forward(self, place_in_unet):
+        to_out = self.to_out
+        if type(to_out) is torch.nn.modules.container.ModuleList:
+            to_out = self.to_out[0]
+        else:
+            to_out = self.to_out
+
+        def forward(hidden_states, context=None, attention_mask=None, temb=None, ):
+            is_cross = context is not None
+
+            residual = hidden_states
+
+            if self.spatial_norm is not None:
+                hidden_states = self.spatial_norm(hidden_states, temb)
+
+            input_ndim = hidden_states.ndim
+
+            if input_ndim == 4:
+                batch_size, channel, height, width = hidden_states.shape
+                hidden_states = hidden_states.view(batch_size, channel, height * width).transpose(1, 2)
+
+            batch_size, sequence_length, _ = (hidden_states.shape if context is None else context.shape)
+            attention_mask = self.prepare_attention_mask(attention_mask, sequence_length, batch_size)
+
+            if self.group_norm is not None:
+                hidden_states = self.group_norm(hidden_states.transpose(1, 2)).transpose(1, 2)
+
+            query = self.to_q(hidden_states)
+
+            if context is None:
+                encoder_hidden_states = hidden_states
+            elif self.norm_cross:
+                encoder_hidden_states = self.norm_encoder_hidden_states(context)
+
+            key = self.to_k(encoder_hidden_states)
+            value = self.to_v(encoder_hidden_states)
+
+            query = self.head_to_batch_dim(query)
+            key = self.head_to_batch_dim(key)
+            value = self.head_to_batch_dim(value)
+
+            attention_probs = self.get_attention_scores(query, key, attention_mask)
+
+            attention_probs = controller(attention_probs, is_cross, place_in_unet)
+
+            hidden_states = torch.bmm(attention_probs, value)
+            hidden_states = self.batch_to_head_dim(hidden_states)
+
+            # linear proj
+            hidden_states = to_out(hidden_states)
+            # all drop out in diffusers are 0.0
+            # so we here ignore dropout
+
+            if input_ndim == 4:
+                hidden_states = hidden_states.transpose(-1, -2).reshape(batch_size, channel, height, width)
+
+            if self.residual_connection:
+                hidden_states = hidden_states + residual
+
+            hidden_states = hidden_states / self.rescale_output_factor
+
+            return hidden_states
+
+        return forward
+
+    assert controller is not None, "controller must be specified"
+
+    def register_recr(net_, count, place_in_unet):
+        if net_.__class__.__name__ == 'Attention':
+            net_.forward = ca_forward(net_, place_in_unet)
+            return count + 1
+        elif hasattr(net_, 'children'):
+            for net__ in net_.children():
+                count = register_recr(net__, count, place_in_unet)
+        return count
+
+    down_count = 0
+    up_count = 0
+    mid_count = 0
+
+    cross_att_count = 0
+    sub_nets = unet_model.named_children()
+    for net in sub_nets:
+
+        if "down" in net[0]:
+            down_temp = register_recr(net[1], 0, "down")
+            cross_att_count += down_temp
+            down_count += down_temp
+        elif "up" in net[0]:
+            up_temp = register_recr(net[1], 0, "up")
+            cross_att_count += up_temp
+            up_count += up_temp
+        elif "mid" in net[0]:
+            mid_temp = register_recr(net[1], 0, "mid")
+            cross_att_count += mid_temp
+            mid_count += mid_temp
+
+    controller.num_att_layers = cross_att_count
+
 
 def register_attention_control(unet: nn.Module, controller: AttentionStore,  mask_thredhold: float = 1):  # if mask_threshold is 1, use itself
 
@@ -149,17 +253,17 @@ def main(args) :
 
     print(f' \n step 2. make stable diffusion model')
     device = accelerator.device
-    print(f' (2.1) tokenizer')
-    tokenizer = train_util.load_tokenizer(args)
-    print(f' (2.2) SD')
-    invers_text_encoder, vae, invers_unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype,device,
-                                                                                                        unet_use_linear_projection_in_v2=False, )
-    invers_text_encoders = invers_text_encoder if isinstance(invers_text_encoder, list) else [invers_text_encoder]
-    text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
-                                                                                          unet_use_linear_projection_in_v2=False, )
-    text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-    vae.to(accelerator.device, dtype=vae_dtype)
 
+    noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
+    tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer")
+    text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
+    vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae")
+    unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
+
+    inverse_text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
+    inverse_unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
+
+    """
     trg_resolutions = args.cross_map_res
     title = ''
     for res in trg_resolutions:
@@ -318,7 +422,7 @@ def main(args) :
                         st_noise_latent = org_latent_dict[args.final_noising_time]
 
                         time_steps.reverse()
-                        """
+                        
                         recon_loop(args,
                                    org_latent_dict,
                                    start_latent=st_noise_latent,
@@ -331,9 +435,9 @@ def main(args) :
                                    base_folder_dir=trg_img_output_dir,
                                    controller=controller,
                                    name=name,weight_dtype=weight_dtype)
-                        """
+                        
                 break
-
+    """
 
 
 if __name__ == "__main__":

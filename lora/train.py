@@ -276,6 +276,7 @@ class NetworkTrainer:
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
         print(f' (5.1) base model')
+
         model_version, enc_text_encoder, enc_vae, enc_unet = self.load_target_model(args, weight_dtype, accelerator)
         model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
