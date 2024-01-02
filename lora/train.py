@@ -655,20 +655,22 @@ class NetworkTrainer:
                         attention_storer.reset()
 
                         attn_loss = 0
-                        for layer_name in attn_dict.keys() :
+                        for i, layer_name in enumerate(attn_dict.keys()) :
                             score_map = attn_dict[layer_name][0] # 8, res*res
                             res = int(score_map.shape[1] ** 0.5)
                             from torchvision import transforms
                             resize_transform = transforms.Resize((res, res))
-                            img_masks = resize_transform(batch["img_masks"]) # [1,1,res,res], back = 0, fore = 1
+                            #img_masks = resize_transform(batch["img_masks"]) # [1,1,res,res], back = 0, fore = 1
                             anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0) # [1,1,res,res] anomal = 1
-                            mask = (img_masks * anormal_mask).squeeze() # res,res
+                            #mask = (img_masks * anormal_mask).squeeze() # res,res
+                            mask = anormal_mask.squeeze()  # res,res
                             mask = torch.stack([mask.flatten() for i in range(8)], dim=0) # 8, res*res
                             activation = (score_map * mask).sum(dim=-1)
                             total_score = (score_map ).sum(dim=-1)
                             activation_loss = (1- (activation / total_score))**2 # 8, res*res
                             activation_loss = activation_loss.mean()
                             attn_loss += activation_loss
+                        attn_loss = attn_loss / (i+1)
                         if is_main_process:
                             loss_dict["attn_loss"] = attn_loss.item()
 
@@ -683,7 +685,7 @@ class NetworkTrainer:
                     loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
                     if is_main_process:
                         loss_dict["task_loss"] = loss.item()
-                    total_loss = loss + attn_loss
+                    total_loss = loss + attn_loss / i
                     accelerator.backward(total_loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
