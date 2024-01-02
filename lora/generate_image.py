@@ -325,7 +325,9 @@ def main(args) :
                                        feature_extractor = None,)
     with torch.no_grad():
         pipeline.to(accelerator.device, weight_dtype)
-    images = pipeline(prompt = 'crack').images
+    images = pipeline(prompt = 'crack',
+                      guidance_scale = 8.5,
+                      negative_prompt = 'low quality, worst quality, bad anatomy,bad composition, poor, low effort').images
     #image = (images / 2 + 0.5).clamp(0, 1)
     #image = image.cpu().permute(0, 2, 3, 1).numpy()
     #image = numpy_to_pil(image)
