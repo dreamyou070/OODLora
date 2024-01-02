@@ -122,6 +122,7 @@ def main(args) :
         else:
             model_epoch = 'last'
         save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_prompt_{args.prompt}')
+        os.makedirs(save_dir, exist_ok=True)    
 
         print(f' \n step 2. make stable diffusion model')
         device = accelerator.device
