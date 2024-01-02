@@ -110,96 +110,98 @@ def main(args) :
 
     print(f" (1.3) save dir")
     weights = os.listdir(args.network_weights)
+    parent, _ = os.path.split(args.network_weights)
+    output_dir = os.path.join(parent, 'image_generating')
+
     for weight in weights:
         weight_dir = os.path.join(args.network_weights, weight)
-
         model_name = os.path.splitext(weight)[0]
         if 'last' not in model_name:
             model_epoch = int(model_name.split('-')[-1])
         else:
             model_epoch = 'last'
 
-        save_dir = os.path.join(args.output_dir, f'lora_epoch_{model_epoch}')
+        save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}')
 
-    print(f' \n step 2. make stable diffusion model')
-    device = accelerator.device
-    print(f' (2.1) tokenizer')
-    tokenizer = train_util.load_tokenizer(args)
-    print(f' (2.2) SD')
-    invers_text_encoder, vae, invers_unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype,device,
-                                                                                                        unet_use_linear_projection_in_v2=False, )
-    invers_text_encoders = invers_text_encoder if isinstance(invers_text_encoder, list) else [invers_text_encoder]
-    text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
-                                                                                          unet_use_linear_projection_in_v2=False, )
-    text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-    vae.to(accelerator.device, dtype=vae_dtype)
+        print(f' \n step 2. make stable diffusion model')
+        device = accelerator.device
+        print(f' (2.1) tokenizer')
+        tokenizer = train_util.load_tokenizer(args)
+        print(f' (2.2) SD')
+        invers_text_encoder, vae, invers_unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype,device,
+                                                                                                            unet_use_linear_projection_in_v2=False, )
+        invers_text_encoders = invers_text_encoder if isinstance(invers_text_encoder, list) else [invers_text_encoder]
+        text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
+                                                                                              unet_use_linear_projection_in_v2=False, )
+        text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
+        vae.to(accelerator.device, dtype=vae_dtype)
 
 
-    print(f' (2.4) scheduler')
-    scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
-    scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
-                              beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
-    scheduler.set_timesteps(args.num_ddim_steps)
-    inference_times = scheduler.timesteps
+        print(f' (2.4) scheduler')
+        scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
+        scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
+                                  beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
+        scheduler.set_timesteps(args.num_ddim_steps)
+        inference_times = scheduler.timesteps
 
-    print(f' (2.4.+) model to accelerator device')
-    if len(invers_text_encoders) > 1:
-        invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device),invers_text_encoders[1].to(device)
-        invers_text_encoder = [invers_t_enc1, invers_t_enc2]
-        del invers_t_enc1, invers_t_enc2
-        unet, t_enc1, t_enc2 = unet.to(device), text_encoders[0].to(device), text_encoders[1].to(device)
-        text_encoder = [t_enc1, t_enc2]
-        del t_enc1, t_enc2
-    else:
-        invers_unet, invers_text_encoder = invers_unet.to(device), invers_text_encoder.to(device)
-        unet, text_encoder = unet.to(device), text_encoder.to(device)
+        print(f' (2.4.+) model to accelerator device')
+        if len(invers_text_encoders) > 1:
+            invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device),invers_text_encoders[1].to(device)
+            invers_text_encoder = [invers_t_enc1, invers_t_enc2]
+            del invers_t_enc1, invers_t_enc2
+            unet, t_enc1, t_enc2 = unet.to(device), text_encoders[0].to(device), text_encoders[1].to(device)
+            text_encoder = [t_enc1, t_enc2]
+            del t_enc1, t_enc2
+        else:
+            invers_unet, invers_text_encoder = invers_unet.to(device), invers_text_encoder.to(device)
+            unet, text_encoder = unet.to(device), text_encoder.to(device)
 
-    print(f' (2.5) network')
-    sys.path.append(os.path.dirname(__file__))
-    network_module = importlib.import_module(args.network_module)
-    print(f' (2.5.1) merging weights')
-    net_kwargs = {}
-    if args.network_args is not None:
-        for net_arg in args.network_args:
-            key, value = net_arg.split("=")
-            net_kwargs[key] = value
-    print(f' (2.5.2) make network')
-    if args.dim_from_weights:
-        network, _ = network_module.create_network_from_weights(1, weight_dir, vae, text_encoder, unet,
-                                                                **net_kwargs)
-    else:
-        network = network_module.create_network(1.0,args.network_dim, args.network_alpha, vae, text_encoder, unet,
-                                                neuron_dropout=args.network_dropout, **net_kwargs, )
-    print(f' (2.5.3) apply trained state dict')
-    network.apply_to(text_encoder, unet, True, True)
-    info = network.load_weights(weight_dir)
-    network.to(device)
-    controller = AttentionStore()
-    register_attention_control(unet, controller)
+        print(f' (2.5) network')
+        sys.path.append(os.path.dirname(__file__))
+        network_module = importlib.import_module(args.network_module)
+        print(f' (2.5.1) merging weights')
+        net_kwargs = {}
+        if args.network_args is not None:
+            for net_arg in args.network_args:
+                key, value = net_arg.split("=")
+                net_kwargs[key] = value
+        print(f' (2.5.2) make network')
+        if args.dim_from_weights:
+            network, _ = network_module.create_network_from_weights(1, weight_dir, vae, text_encoder, unet,
+                                                                    **net_kwargs)
+        else:
+            network = network_module.create_network(1.0,args.network_dim, args.network_alpha, vae, text_encoder, unet,
+                                                    neuron_dropout=args.network_dropout, **net_kwargs, )
+        print(f' (2.5.3) apply trained state dict')
+        network.apply_to(text_encoder, unet, True, True)
+        info = network.load_weights(weight_dir)
+        network.to(device)
+        controller = AttentionStore()
+        register_attention_control(unet, controller)
 
-    print(f' \n step 3. ground-truth image preparing')
-    print(f' (3.1) prompt condition')
-    prompt = args.prompt
-    context = init_prompt(tokenizer, text_encoder, device, prompt)
+        print(f' \n step 3. ground-truth image preparing')
+        print(f' (3.1) prompt condition')
+        prompt = args.prompt
+        context = init_prompt(tokenizer, text_encoder, device, prompt)
 
-    print(f' (3.2) train images')
-    from utils.scheduling_utils import prev_step
-    from utils.image_utils import latent2image
-    # inference_times = [100,80, ... 0]
-    latent = torch.randn(1,4,64,64)
-    for i, t in enumerate(inference_times):
-        prev_time = int(inference_times[i + 1])
-        with torch.no_grad():
-            input_latent = torch.cat([latent,latent], dim=0)
-            input_cond = context
-            noise_pred = call_unet(unet, input_latent, t, input_cond, None, None)
-            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-            noise_pred = noise_pred_uncond + 8.5 * (noise_pred_text - noise_pred_uncond)
-            latent = prev_step(noise_pred, t, latent, scheduler)
-            pil_img = Image.fromarray(latent2image(latent, vae, return_type='np'))
-            pil_img.save(os.path.join(save_dir, f'gen_{t}.png'))
-    #pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-    #pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
+        print(f' (3.2) train images')
+        from utils.scheduling_utils import prev_step
+        from utils.image_utils import latent2image
+        # inference_times = [100,80, ... 0]
+        latent = torch.randn(1,4,64,64)
+        for i, t in enumerate(inference_times):
+            prev_time = int(inference_times[i + 1])
+            with torch.no_grad():
+                input_latent = torch.cat([latent,latent], dim=0)
+                input_cond = context
+                noise_pred = call_unet(unet, input_latent, t, input_cond, None, None)
+                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                noise_pred = noise_pred_uncond + 8.5 * (noise_pred_text - noise_pred_uncond)
+                latent = prev_step(noise_pred, t, latent, scheduler)
+                pil_img = Image.fromarray(latent2image(latent, vae, return_type='np'))
+                pil_img.save(os.path.join(save_dir, f'gen_{t}.png'))
+        #pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
+        #pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
 
 
 if __name__ == "__main__":
