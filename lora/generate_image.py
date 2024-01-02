@@ -321,7 +321,8 @@ def main(args) :
                             tokenizer = tokenizer,
                             unet = unet,
                             scheduler = ddim_scheduler,
-                            safety_checker = None,)
+                            safety_checker = None,
+                                       feature_extractor = None,)
 
     pipeline.to(accelerator.device, weight_dtype)
     images = pipeline(prompt = 'crack').images
