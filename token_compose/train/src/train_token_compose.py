@@ -286,9 +286,7 @@ def main(args):
                 prompts = batch["text"]
                 print(f'prompts : {prompts}')
                 assert len(prompts) == 1, "only support batch size 1"
-
                 postprocess_seg_ls = batch["postprocess_seg_ls"]
-
                 word_token_idx_ls = [] # postion of token in text
                 gt_seg_ls = []
                 for item in postprocess_seg_ls:
@@ -298,11 +296,9 @@ def main(args):
                     words = item[0][0]
                     words = words.lower() # only noun
                     words_indices = get_word_idx(prompts[0], words, tokenizer)
-
                     word_token_idx_ls.append(words_indices)
                     seg_gt = item[1] # seg_gt: torch.Size([1, 1, 512, 512]) --> image from ground sam mask
                     gt_seg_ls.append(seg_gt)
-
                 # calculate loss (get all attention maps of special token)
                 attn_dict = get_cross_attn_map_from_unet(attention_store=controller,
                                                          is_training_sd21=is_training_sd21)

@@ -123,9 +123,9 @@ def register_attention_control(unet_model, controller):
     controller.num_att_layers = cross_att_count
 
 def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32, 16, 8], poses=["down", "mid", "up"]):
-    attention_maps = attention_store.get_average_attention()
 
-    print("attention_maps", attention_maps.keys())
+    #attention_maps = attention_store.get_average_attention()
+    attention_maps = attention_store.step_store
     attn_dict = {}
     for pos in poses:
         for res in reses:
@@ -136,7 +136,7 @@ def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32,
                     temp_list.append(cross_maps)
             # if such resolution exists
             if len(temp_list) > 0:
-                attn_dict[f"{pos}_{res}"] = temp_list
+                attn_dict[f"{pos}_{res}"] = temp_list # length 1 or 3
     return attn_dict
 """
 def get_grounding_loss_by_layer(_gt_seg_list,
@@ -341,10 +341,8 @@ def main(args) :
                     model_pred = unet(sample=org_vae_latent,
                                       timestep=0,
                                       encoder_hidden_states=input_context).sample
-                    attn_dict = controller.step_store
-                    print(f'attn_dict : {attn_dict}')
-
-                    attn_dict = get_cross_attn_map_from_unet(attention_store=controller,)
+                    attn_dict = get_cross_attn_map_from_unet(attention_store=controller,) # length 1 or 2 or 3
+                    print(f'attn_dict : {attn_dict.keys()}')
 
 
 
