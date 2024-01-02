@@ -360,7 +360,9 @@ def main(args) :
                                 ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W)  # 8, 8, 8
                                 maps.append(ca_map_obj)
                         maps = torch.cat(maps, dim=0)
-                        map_obj = maps.sum(dim=0).cpu().detach().numpy()
+                        print(f'maps shape : {maps.shape}')
+                        map_obj = maps.sum(dim=0).cpu().detach().numpy() * 255
+                        map_obj = map_obj.astype(np.uint8)
                         Image.fromarray(map_obj).save(os.path.join(trg_img_output_dir, f'map_with_{trg_concept}_on_{train_layer}{ext}'))
 
 
