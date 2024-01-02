@@ -264,7 +264,7 @@ def main(args) :
                                 noise_pred = call_unet(unet, latent, t, con[:,:2,:], [[1]], None)
                                 attn_stores = controller.step_store
                                 for layer_name in attn_stores :
-                                    attns = attn_stores[layer_name][0]
+                                    attn = attn_stores[layer_name][0]
                                     res = int(attn.shape[1] ** 0.5)
                                     cls_score, trigger_score = torch.chunk(noise_pred, 2, dim=-11)
                                     h = cls_score.shape[0]
