@@ -258,7 +258,7 @@ def main(args) :
                                 attn_stores = controller.step_store
                                 for layer_name in attn_stores :
                                     attn = attn_stores[layer_name][0].squeeze() # head, pix_num
-                                    cls_score, trigger_score = torch.chunk(attn, dim=-1)
+                                    cls_score, trigger_score = attn.chunk(2, dim=-1)
                                     res = int(attn.shape[1] ** 0.5)
                                     h = cls_score.shape[0]
                                     cls_score, trigger_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1)
