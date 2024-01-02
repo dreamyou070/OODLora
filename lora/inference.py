@@ -266,7 +266,7 @@ def main(args) :
                                 for layer_name in attn_stores :
                                     attn = attn_stores[layer_name][0]
                                     res = int(attn.shape[1] ** 0.5)
-                                    cls_score, trigger_score = torch.chunk(noise_pred, 2, dim=-1)
+                                    cls_score, trigger_score = torch.chunk(attn, 2, dim=-1)
                                     h = cls_score.shape[0]
                                     cls_score, trigger_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1)
                                     cls_score, trigger_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res)
