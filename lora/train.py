@@ -700,6 +700,8 @@ class NetworkTrainer:
                             loss = loss + args.anormal_weight * attn_loss
 
                             if is_main_process:
+                                print(f'anormal_attn_loss : {anormal_attn_loss.item()}')
+                                print(f'normal_attn_loss : {normal_attn_loss.item()}')
                                 loss_dict["loss/anormal_activation_loss"] = anormal_attn_loss.item()
                                 loss_dict["loss/normal_activation_loss"] = normal_attn_loss.item()
 
