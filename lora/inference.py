@@ -66,6 +66,7 @@ def register_attention_control(unet_model, controller):
 
             attention_probs = self.get_attention_scores(query, key, attention_mask)
 
+            print(f'storing attention score')
             attention_probs = controller.save(attention_probs, is_cross, place_in_unet)
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -341,7 +342,7 @@ def main(args) :
                                       timestep=0,
                                       encoder_hidden_states=input_context).sample
                     attn_dict = get_cross_attn_map_from_unet(attention_store=controller,)
-                    
+
                     train_layers_ls = [f"down_{res}" for res in args.train_down] + \
                                       [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
                     print(f'train_layers_ls : {train_layers_ls}')
