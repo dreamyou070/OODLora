@@ -51,8 +51,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention:
-                trg_map = attention_probs[:, :, 0]
-                controller.store(trg_map, layer_name)
+
+                controller.store(attention_probs, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -264,16 +264,22 @@ def main(args) :
                                 noise_pred = call_unet(unet, latent, t, con[:,:2,:], [[1]], None)
                                 attn_stores = controller.step_store
                                 for layer_name in attn_stores :
-                                    attn_list = attn_stores[layer_name][0].squeeze(0) # head, pix_num (0~1 scores)
-                                    res = int(attn_list.shape[1] ** 0.5)
-                                    h = attn_list.shape[0]
-                                    attn = attn_list.unsqueeze(-1)
-                                    attn = attn.reshape(h, res, res)
-                                    attn = attn.mean(dim=0)
-                                    attn_pil = Image.fromarray(np.array(attn.detach().cpu()).astype(np.uint8) * 255).resize((512, 512), Image.BILINEAR)
-                                    dir = os.path.join(trg_img_output_dir,
-                                                       f'{name}_attn_{layer_name}_{t}.png')
-                                    attn_pil.save(dir)
+                                    attns = attn_stores[layer_name][0]
+                                    res = int(attn.shape[1] ** 0.5)
+                                    cls_score, trigger_score = torch.chunk(noise_pred, 2, dim=-11)
+                                    h = cls_score.shape[0]
+                                    cls_score, trigger_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1)
+                                    cls_score, trigger_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res)
+                                    cls_score, trigger_score = cls_score.mean(dim=0), trigger_score.mean(dim=0)
+
+                                    cls_score_pil = Image.fromarray(np.array(cls_score.detach().cpu()).astype(np.uint8) * 255).resize((512, 512), Image.BILINEAR)
+                                    trigger_score_pil = Image.fromarray(np.array(trigger_score.detach().cpu()).astype(np.uint8) * 255).resize((512, 512), Image.BILINEAR)
+                                    cls_dir = os.path.join(trg_img_output_dir,
+                                                       f'cls_{name}_attn_{layer_name}_{t}.png')
+                                    cls_score_pil.save(cls_dir)
+                                    trigger_dir = os.path.join(trg_img_output_dir,
+                                                       f'trigger_{name}_attn_{layer_name}_{t}.png')
+                                    trigger_score_pil.save(trigger_dir)
                                 controller.reset()
 
 
