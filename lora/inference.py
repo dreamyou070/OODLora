@@ -342,23 +342,28 @@ def main(args) :
                                       timestep=0,
                                       encoder_hidden_states=input_context).sample
                     attn_dict = get_cross_attn_map_from_unet(attention_store=controller,) # length 1 or 2 or 3
-                    
+                    controller.reset()
                     train_layers_ls = [f"down_{res}" for res in args.train_down] + \
                                       [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
-                    
                     for train_layer in train_layers_ls:
                         layer_res = int(train_layer.split("_")[1]) # 64, 32, 16, 8
                         input_attn_map_ls = attn_dict[train_layer] #
                         for attn_map in input_attn_map_ls:
+                            maps = []
+                            print(f'len of attn_map : {len(input_attn_map_ls)}')
                             # len is 3 or 1
                             b, H, W, j = attn_map.shape # head, height, width, 77
-                            token_index_list = [1]
+                            token_index_list = [1, 2]
                             for obj_position in token_index_list :
-                                # ca map obj shape 8 * 16 * 16
+                                if obj_position == 1 :
+                                    trg_concept = 'hole'
+                                else :
+                                    trg_concept = 'crack'
                                 ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W)  # 8, 8, 8
-                                #trg_score = (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)
-                                all_score = ca_map_obj.reshape(b, -1).sum(dim=-1)
-                                print(f'layer_res : {layer_res}, ca_map_obj : {ca_map_obj.shape}, all_score : {all_score.shape}')
+                                maps.append(ca_map_obj)
+                        maps = torch.cat(maps, dim=0)
+                        map_obj = maps.sum(dim=0).cpu().numpy()
+                        Image.fromarray(map_obj).save(os.path.join(trg_img_output_dir, f'{name}_{train_layer}_{trg_concept}_attn_map{ext}'))
 
 
 
