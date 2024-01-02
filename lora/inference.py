@@ -364,7 +364,7 @@ def main(args) :
                                 word_map_dict[trg_concept].append(ca_map_obj)
                         for concept in word_map_dict.keys():
                             maps = torch.cat(word_map_dict[concept], dim=0) # head*
-                            print(f'maps : {maps.shape}')
+                            print(f'maps (before aug): {maps}')
                             map_obj = maps.mean(dim=0).cpu().detach().numpy() * 255
                             print(f'concept : {concept}, map_obj : {map_obj}')
                             map_obj = map_obj.astype(np.uint8)
