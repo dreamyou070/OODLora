@@ -326,7 +326,7 @@ def main(args) :
 
                 print(f' (2.3.1) inversion')
                 with torch.no_grad():
-                    org_img = load_image(test_img_dir, 64, 64)
+                    org_img = load_image(test_img_dir, 512, 512)
                     org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
 
                 with torch.no_grad():
