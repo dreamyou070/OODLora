@@ -285,7 +285,7 @@ def main(args) :
     network.to(accelerator.device, dtype=weight_dtype)
 
     controller = AttentionStore()
-    register_attention_control(unet, controller)
+    #register_attention_control(unet, controller)
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
