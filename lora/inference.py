@@ -50,9 +50,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                 if attention_scores.shape[0] == 8 :
                     cls_map = attention_probs[:, :, 0].unsqueeze(-1)
-                    #crack_map = attention_probs[:, :, 2].unsqueeze(-1)  # head, pixel_num, 1
                     hole_map = attention_probs[:, :, 1].unsqueeze(-1)
-                    maps = torch.cat([cls_map, hole_map], dim=-1)
+                    crack_map = attention_probs[:, :, 2].unsqueeze(-1)  # head, pixel_num, 1
+
+                    maps = torch.cat([cls_map, hole_map, crack_map], dim=-1)
                     controller.store(maps, layer_name)
 
                 else :
@@ -219,7 +220,7 @@ def main(args) :
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
-    prompt = 'hole'
+    prompt = 'hole crack'
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = torch.chunk(context, 2)
 
@@ -232,7 +233,7 @@ def main(args) :
     classes = os.listdir(test_img_folder)
 
     for class_name in classes:
-        if 'hole' in class_name:
+        if 'bad' in class_name:
             class_base_folder = os.path.join(output_dir, class_name)
             os.makedirs(class_base_folder, exist_ok=True)
 
@@ -272,8 +273,8 @@ def main(args) :
                     controller.reset()
                     for layer in attn_store_dict.keys():
                         attn_map = attn_store_dict[layer][0]
-                        cls_map, hole_map = torch.chunk(attn_map, 2, dim=-1)
-                        cls_map, hole_map = cls_map.squeeze(), hole_map.squeeze()
+                        cls_map, hole_map, crack_map = torch.chunk(attn_map, 3, dim=-1)
+                        cls_map, hole_map, crack_map = cls_map.squeeze(), hole_map.squeeze(), crack_map.squeeze()
                         res = int(cls_map.shape[1] ** 0.5)
                         print(f'layer : {layer}, trigger word map shape : {attn_map.shape}')
 
@@ -285,6 +286,11 @@ def main(args) :
                         hole_pil = Image.fromarray((np.array(hole_map.cpu().detach()) * 255).astype(np.uint8)).resize(
                             (512, 512))
                         hole_pil.save(os.path.join(trg_img_output_dir, f'hole_{class_name}_{name}_{layer}_attn_map.png'))
+
+                        crack_map = crack_map.sum(0).unsqueeze(0).reshape(res, res)
+                        crack_pil = Image.fromarray((np.array(crack_map.cpu().detach()) * 255).astype(np.uint8)).resize(
+                            (512, 512))
+                        crack_pil.save(os.path.join(trg_img_output_dir, f'crack_{class_name}_{name}_{layer}_attn_map.png'))
 
                         # head==8, pix_num, 1
 
