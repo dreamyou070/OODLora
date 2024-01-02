@@ -272,18 +272,20 @@ def main(args) :
                                     cls_score, trigger_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res)
                                     cls_score, trigger_score = cls_score.mean(dim=0), trigger_score.mean(dim=0)
 
-                                    cls_np = np.array(cls_score.detach().cpu()).astype(np.uint8) * 255
+                                    cls_np = np.array((cls_score.detach().cpu()) * 255).astype(np.uint8) 
                                     print(f'cls_np : {cls_np}')
                                     cls_score_pil = Image.fromarray(cls_np.resize((512, 512), Image.BILINEAR))
                                     cls_dir = os.path.join(trg_img_output_dir,
                                                            f'cls_{name}_attn_{layer_name}_{t}.png')
                                     cls_score_pil.save(cls_dir)
 
-                                    trigger_score_pil = Image.fromarray(np.array(trigger_score.detach().cpu()).astype(np.uint8) * 255).resize((512, 512), Image.BILINEAR)
-
+                                    trigger_np = np.array(trigger_score.detach().cpu()).astype(np.uint8) * 255
+                                    print(f'trigger_np : {trigger_np}')
+                                    trigger_score_pil = Image.fromarray(trigger_np.resize((512, 512), Image.BILINEAR))
                                     trigger_dir = os.path.join(trg_img_output_dir,
-                                                       f'trigger_{name}_attn_{layer_name}_{t}.png')
+                                                              f'trigger_{name}_attn_{layer_name}_{t}.png')
                                     trigger_score_pil.save(trigger_dir)
+
                                 controller.reset()
 
 
