@@ -314,16 +314,18 @@ def main(args) :
     print(f' (3.3) test images')
     ddim_scheduler = DDIMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
     ddim_scheduler.set_timesteps(50)
-    latent = torch.randn(1,4,64,64).to(accelerator.device, weight_dtype)
-    for t in ddim_scheduler.timesteps:
-        with torch.no_grad():
-            # 1. predict noise model_output
-            model_output = unet(latent, t, con).sample
-            controller.reset()
-            latent = ddim_scheduler.step(model_output, t, latent, eta=0.0,
-                                         use_clipped_model_output=None,).prev_sample
+    from stable_diffusion import StableDiffusionPipeline
 
-    image = (latent / 2 + 0.5).clamp(0, 1)
+    pipeline = StableDiffusionPipeline(vae = vae,
+                            text_encoder = text_encoder,
+                            tokenizer = tokenizer,
+                            unet = unet,
+                            scheduler = ddim_scheduler,
+                            safety_checker = None,)
+
+    pipeline.to(accelerator.device, weight_dtype)
+    images = pipeline(prompt = 'crack').images
+    image = (images / 2 + 0.5).clamp(0, 1)
     image = image.cpu().permute(0, 2, 3, 1).numpy()
     image = numpy_to_pil(image)
     dir = os.path.join(output_dir, f'crack_gen.png')
