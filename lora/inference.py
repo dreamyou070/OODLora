@@ -264,13 +264,12 @@ def main(args) :
                                 noise_pred = call_unet(unet, latent, t, con[:,:2,:], [[1]], None)
                                 attn_stores = controller.step_store
                                 for layer_name in attn_stores :
-                                    attn_list = attn_stores[layer_name][0].squeeze(0)
+                                    attn_list = attn_stores[layer_name][0].squeeze(0) # head, pix_num (0~1 scores)
                                     res = int(attn_list.shape[1] ** 0.5)
                                     h = attn_list.shape[0]
                                     attn = attn_list.unsqueeze(-1)
                                     attn = attn.reshape(h, res, res)
-                                    attn = attn.sum(dim=0)
-                                    attn = attn / attn.max()
+                                    attn = attn.mean(dim=0)
                                     attn_pil = Image.fromarray(np.array(attn.detach().cpu()).astype(np.uint8) * 255).resize((512, 512), Image.BILINEAR)
                                     dir = os.path.join(trg_img_output_dir,
                                                        f'{name}_attn_{layer_name}_{t}.png')
