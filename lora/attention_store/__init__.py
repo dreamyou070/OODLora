@@ -40,13 +40,6 @@ class AttentionStore :
             #self.step_store[layer_name] = self.step_store[layer_name] + attn
         return attn
 
-    def save(self, word_heat_map, layer_name):
-        if layer_name not in self.heatmap_store.keys() :
-            self.heatmap_store[layer_name] = []
-            self.heatmap_store[layer_name].append(word_heat_map)
-        else :
-            self.heatmap_store[layer_name].append(word_heat_map)
-
 
     def cross_key_caching(self, key_value, layer_name):
         if layer_name not in self.cross_key_store.keys() :
@@ -70,7 +63,7 @@ class AttentionStore :
             self.self_key_store[layer_name].append(key_value)
             self.self_value_store[layer_name].append(value_value)
 
-    def forward(self, attn, is_cross: bool, place_in_unet: str):
+    def save(self, attn, is_cross: bool, place_in_unet: str):
         key = f"{place_in_unet}_{'cross' if is_cross else 'self'}"
         self.step_store[key].append(attn.clone())
         return attn
