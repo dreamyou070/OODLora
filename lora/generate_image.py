@@ -121,7 +121,7 @@ def main(args) :
             model_epoch = int(model_name.split('-')[-1])
         else:
             model_epoch = 'last'
-        save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_prompt_{args.prompt}')
+        save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_prompt_{args.prompt}_guidance_scale_{args.guidance_scale}')
         os.makedirs(save_dir, exist_ok=True)
 
         print(f' \n step 2. make stable diffusion model')
@@ -197,7 +197,7 @@ def main(args) :
                 input_cond = context
                 noise_pred = call_unet(unet, input_latent, t, input_cond, None, None)
                 noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + 8.5 * (noise_pred_text - noise_pred_uncond)
+                noise_pred = noise_pred_uncond + args.guidance_scale * (noise_pred_text - noise_pred_uncond)
                 latent = prev_step(noise_pred, t, latent.to(accelerator.device, weight_dtype), scheduler)
                 pil_img = Image.fromarray(latent2image(latent, vae, return_type='np'))
                 pil_img.save(os.path.join(save_dir, f'gen_{t}.png'))
@@ -245,5 +245,6 @@ if __name__ == "__main__":
     parser.add_argument("--unet_only_inference_times", type=int, default = 30)
     parser.add_argument("--student_pretrained_dir", type=str)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
+    parser.add_argument("--guidance_scale", type=float, default=8.5)
     args = parser.parse_args()
     main(args)
