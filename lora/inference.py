@@ -328,7 +328,7 @@ def main(args) :
                                 next_time = inf_time[i + 1]
                                 if next_time <= args.final_noising_time:
                                     latent_dict[int(t)] = latent
-                                    from utils.model_utils import call_unet, next_step
+                                    from utils.model_utils import call_unet
                                     noise_pred = call_unet(unet, latent, t, con, [[1]], None)
                                     map_dict = controller.step_store
                                     for layer in map_dict.keys():
