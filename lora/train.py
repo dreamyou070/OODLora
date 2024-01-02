@@ -46,7 +46,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None and ('up' in layer_name or 'mid' in layer_name) :
-                trg_map = attention_probs[:, :,1]
+                trg_map = attention_probs[:, :, 1:3]
                 controller.store(trg_map, layer_name)
                 """
                 batch, pix_num, _ = query.shape
@@ -640,7 +640,6 @@ class NetworkTrainer:
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
                                                                                                        latents)
-                    # Predict the noise residual
                     with accelerator.autocast():
                         # -----------------------------------------------------------------------------------------------------------------------
                         noise_pred = self.call_unet(args,
@@ -651,29 +650,6 @@ class NetworkTrainer:
                                                     text_encoder_conds,
                                                     batch,
                                                     weight_dtype, 1, None)
-                        # -----------------------------------------------------------------------------------------------------------------------
-                        attn_dict = attention_storer.step_store
-                        attention_storer.reset()
-                        if args.use_attn_loss :
-                            attn_loss = 0
-                            for i, layer_name in enumerate(attn_dict.keys()) :
-                                score_map = attn_dict[layer_name][0] # 8, res*res
-                                res = int(score_map.shape[1] ** 0.5)
-                                from torchvision import transforms
-                                resize_transform = transforms.Resize((res, res))
-                                #img_masks = resize_transform(batch["img_masks"]) # [1,1,res,res], back = 0, fore = 1
-                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0) # [1,1,res,res] anomal = 1
-                                #mask = (img_masks * anormal_mask).squeeze() # res,res
-                                mask = anormal_mask.squeeze()  # res,res
-                                mask = torch.stack([mask.flatten() for i in range(8)], dim=0) # 8, res*res
-                                activation = (score_map * mask).sum(dim=-1)
-                                total_score = (score_map ).sum(dim=-1)
-                                activation_loss = (1- (activation / total_score))**2 # 8, res*res
-                                activation_loss = activation_loss.mean()
-                                attn_loss += activation_loss
-                            attn_loss = attn_loss / (i+1)
-                            if is_main_process:
-                                loss_dict["attn_loss"] = attn_loss.item()
 
                     if args.v_parameterization:
                         target = noise_scheduler.get_velocity(latents, noise, timesteps)
@@ -683,17 +659,59 @@ class NetworkTrainer:
                     loss = loss.mean([1, 2, 3])
                     loss_weights = batch["loss_weights"]  # 各sampleごとのweight
                     loss = loss * loss_weights
-                    loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                    task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                    loss = task_loss
+
+                    print(f'batch["train_class_list"] : {batch["train_class_list"]}')
+                    if batch['train_class_list'][0] != 0 :
+                        attention_storer.reset()
+
+                    if batch["train_class_list"][0] == 0 :
+                        # -----------------------------------------------------------------------------------------------------------------------
+                        attn_dict = attention_storer.step_store
+                        attention_storer.reset()
+                        if args.use_attn_loss :
+                            attn_loss = 0
+                            anormal_attn_loss, normal_attn_loss = 0,0
+                            for i, layer_name in enumerate(attn_dict.keys()) :
+                                score_map = attn_dict[layer_name][0] # 8, res*res
+                                normal_map, anormal_map = score_map.chunk(2, dim = -1)
+                                res = int(score_map.shape[1] ** 0.5)
+                                #from torchvision import transforms
+
+                                # ------------------------------------------------------------------------------------------------
+                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0) # [1,1,res,res] anomal = 1
+                                mask = anormal_mask.squeeze()  # res,res
+                                mask = torch.stack([mask.flatten() for i in range(8)], dim=0) # 8, res*res
+
+                                activation  = (anormal_map * mask).sum(dim=-1)
+                                total_score = (anormal_map).sum(dim=-1)
+                                activation_loss = (1- (activation / total_score))**2 # 8, res*res
+
+                                normal_activation = (normal_map * mask).sum(dim=-1)
+                                total_normal_score = (normal_map).sum(dim=-1)
+                                normal_activation_loss = (normal_activation/total_normal_score)
+
+                                anormal_attn_loss += activation_loss.mean()
+                                normal_attn_loss += normal_activation_loss.mean()
+
+                            attn_loss = (anormal_attn_loss + normal_attn_loss) / (i+1)
+
+                            loss = loss + args.anormal_weight * attn_loss
+
+                            if is_main_process:
+                                loss_dict["loss/anormal_activation_loss"] = anormal_attn_loss.item()
+                                loss_dict["loss/normal_activation_loss"] = normal_attn_loss.item()
+
                     if is_main_process:
-                        loss_dict["task_loss"] = loss.item()
-                    if args.use_attn_loss:
-                        total_loss = loss + attn_loss / i
-                    else :
-                        total_loss = loss
-                    accelerator.backward(total_loss)
+                        loss_dict["task_loss"] = task_loss.item()
+
+                    accelerator.backward(loss)
+
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
                         accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
+
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
@@ -856,6 +874,7 @@ if __name__ == "__main__":
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
+    parser.add_argument('--anormal_weight', type = float, default = 1.0)
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
     parser.add_argument("--normal_training", action="store_true", )
     args = parser.parse_args()
