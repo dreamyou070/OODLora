@@ -1,8 +1,8 @@
 import torch
 
-probs = torch.randn((8, 32*32,77))
-crack = probs[:, :, 0].unsqueeze(-1)
-hole = probs[:, :, 1].unsqueeze(-1)
-print(crack.shape)
-maps = torch.cat([crack, hole], dim=-1)
-print(maps.shape)
+
+a = torch.tensor([[1,2,3,4],
+              [4,5,6,7]])
+a_sum = torch.sum(a, dim=0)/a.shape[0]
+# 5, 7, 9, 11
+print(a_sum)

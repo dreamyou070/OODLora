@@ -274,22 +274,20 @@ def main(args) :
                     for layer in attn_store_dict.keys():
                         attn_map = attn_store_dict[layer][0]
                         cls_map, hole_map, crack_map = torch.chunk(attn_map, 3, dim=-1)
-                        cls_map, hole_map, crack_map = cls_map.squeeze(), hole_map.squeeze(), crack_map.squeeze()
+                        cls_map, hole_map, crack_map = cls_map.squeeze(), hole_map.squeeze(), crack_map.squeeze() # head, res*res
                         res = int(cls_map.shape[1] ** 0.5)
                         print(f'layer : {layer}, trigger word map shape : {attn_map.shape}')
 
-                        cls_map = cls_map.sum(0).unsqueeze(0).reshape(res, res)
+                        cls_map = (torch.sum(cls_map, dim=0) / cls_map.shape[0]).unsqueeze(0).reshape(res, res)
                         cls_pil = Image.fromarray((np.array(cls_map.cpu().detach()) * 255).astype(np.uint8)).resize((512,512))
                         cls_pil.save(os.path.join(trg_img_output_dir, f'cls_{class_name}_{name}_{layer}_attn_map.png'))
 
-                        hole_map = hole_map.sum(0).unsqueeze(0).reshape(res, res)
-                        hole_pil = Image.fromarray((np.array(hole_map.cpu().detach()) * 255).astype(np.uint8)).resize(
-                            (512, 512))
+                        hole_map = (torch.sum(hole_map, dim=0) / hole_map.shape[0]).unsqueeze(0).reshape(res, res)
+                        hole_pil = Image.fromarray((np.array(hole_map.cpu().detach()) * 255).astype(np.uint8)).resize((512, 512))
                         hole_pil.save(os.path.join(trg_img_output_dir, f'hole_{class_name}_{name}_{layer}_attn_map.png'))
 
-                        crack_map = crack_map.sum(0).unsqueeze(0).reshape(res, res)
-                        crack_pil = Image.fromarray((np.array(crack_map.cpu().detach()) * 255).astype(np.uint8)).resize(
-                            (512, 512))
+                        crack_map = (torch.sum(crack_map, dim=0) / crack_map.shape[0]).unsqueeze(0).reshape(res, res)
+                        crack_pil = Image.fromarray((np.array(crack_map.cpu().detach()) * 255).astype(np.uint8)).resize((512, 512))
                         crack_pil.save(os.path.join(trg_img_output_dir, f'crack_{class_name}_{name}_{layer}_attn_map.png'))
 
                         # head==8, pix_num, 1
