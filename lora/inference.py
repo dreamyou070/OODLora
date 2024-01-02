@@ -1,6 +1,5 @@
 import argparse
 from accelerate.utils import set_seed
-from diffusers import AutoencoderKL
 import os
 import random
 import library.train_util as train_util
@@ -16,6 +15,7 @@ from utils.model_utils import get_state_dict, init_prompt
 import shutil
 from attention_store import AttentionStore
 import torch.nn as nn
+from utils.model_utils import call_unet
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -50,14 +50,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                 if attention_scores.shape[0] == 8 :
                     cls_map = attention_probs[:, :, 0]
-                    good_map = attention_probs[:, :, 1]  # head, pixel_num, 1
-
-                    position_map = torch.where(cls_map < good_map, 1, 0)  # only good pixel -> bakground # head, pixel_num, 1
-                    if int(position_map.shape[1] ** 0.5) in args.cross_map_res :
-                        print(f'cls_map : {cls_map.shape}, good_map : {good_map.shape}')
-
-                        controller.store(torch.cat([cls_map, good_map], dim=--1),layer_name)
-                        controller.store(position_map, layer_name)
+                    trigger_map = attention_probs[:, :, 1]  # head, pixel_num, 1
+                    controller.store(trigger_map, layer_name)
 
                 else :
                     if layer_name in mask.keys() :
@@ -223,15 +217,9 @@ def main(args) :
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
-    good_bad_prompt = 'good bad'
-    good_bad_context = init_prompt(tokenizer, text_encoder, device, good_bad_prompt)
-    good_bad_con = torch.chunk(good_bad_context, 2)[-1]
-    good_prompt = 'good'
-    good_context = init_prompt(tokenizer, text_encoder, device, good_prompt)
-    good_con = torch.chunk(good_context, 2)[-1]
-
-    good_bad_con,good_con = good_bad_con[:, :3, :], good_con[:, :3, :]
-    context = torch.cat([good_bad_con, good_con], dim=0)
+    prompt = 'crack hole'
+    context = init_prompt(tokenizer, text_encoder, device, prompt)
+    uncon, con = torch.chunk(context, 2)
 
     print(f' (3.2) train images')
     trg_h, trg_w = args.resolution
@@ -274,37 +262,58 @@ def main(args) :
                 with torch.no_grad():
                     org_vae_latent  = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
 
-                with torch.no_grad():
+                if args.org_latent_attn_map_check :
+                    input_latent = org_vae_latent
+                    input_context = con
+                    noise_pred = call_unet(unet, input_latent, 0, input_context, [[1]], None)
+                    attn_store_dict = controller.step_store
+                    for layer in attn_store_dict.keys():
+                        trigger_attn_map = attn_store_dict[layer][0]
+                        h, p, c = trigger_attn_map.shape
+                        res = int(p ** 0.5)
+                        print(f'layer : {layer}, trigger word map shape : {trigger_attn_map.shape}')
 
-                    inf_time = inference_times.tolist()
-                    inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
-                    print(f'inf_time : {inf_time}')
-                    org_latent_dict, time_steps, pil_images = ddim_loop(args,
-                                                                        latent=org_vae_latent,
-                                                                        context=inv_c,
-                                                                        inference_times=inf_time,
-                                                                        scheduler=scheduler,
-                                                                        unet=invers_unet,
-                                                                        vae=vae,
-                                                                        final_time=args.final_noising_time,
-                                                                        base_folder_dir=trg_img_output_dir,
-                                                                        name=name)
-                    noising_times = org_latent_dict.keys()
-                    print(f'noiseing_times : {noising_times}')
-                    st_noise_latent = org_latent_dict[args.final_noising_time]
-                    time_steps.reverse()
-                    recon_loop(args,
-                               org_latent_dict,
-                               start_latent=st_noise_latent,
-                               gt_pil = gt_pil,
-                               context=context,
-                               inference_times= time_steps,
-                               scheduler=scheduler,
-                               unet=unet,
-                               vae=vae,
-                               base_folder_dir=trg_img_output_dir,
-                               controller=controller,
-                               name=name,weight_dtype=weight_dtype)
+                        # head==8, pix_num, 1
+
+
+
+
+                else :
+                    with torch.no_grad():
+                        inf_time = inference_times.tolist()
+                        inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                        print(f'inf_time : {inf_time}')
+                        org_latent_dict, time_steps, pil_images = ddim_loop(args,
+                                                                            latent=org_vae_latent,
+                                                                            context=inv_c,
+                                                                            inference_times=inf_time,
+                                                                            scheduler=scheduler,
+                                                                            unet=invers_unet,
+                                                                            vae=vae,
+                                                                            final_time=args.final_noising_time,
+                                                                            base_folder_dir=trg_img_output_dir,
+                                                                            name=name)
+                        noising_times = org_latent_dict.keys()
+                        print(f'noiseing_times : {noising_times}')
+                        st_noise_latent = org_latent_dict[args.final_noising_time]
+
+                        time_steps.reverse()
+                        """
+                        recon_loop(args,
+                                   org_latent_dict,
+                                   start_latent=st_noise_latent,
+                                   gt_pil = gt_pil,
+                                   context=context,
+                                   inference_times= time_steps,
+                                   scheduler=scheduler,
+                                   unet=unet,
+                                   vae=vae,
+                                   base_folder_dir=trg_img_output_dir,
+                                   controller=controller,
+                                   name=name,weight_dtype=weight_dtype)
+                        """
+                    break
+
 
 
 if __name__ == "__main__":
@@ -349,8 +358,7 @@ if __name__ == "__main__":
     parser.add_argument("--pixel_mask_res", type=float, default=0.1)
     parser.add_argument("--pixel_thred", type=float, default=0.1)
     parser.add_argument("--inner_iteration", type=int, default=10)
-
-
+    parser.add_argument("--org_latent_attn_map_check", action = 'store_true')
     parser.add_argument("--other_token_preserving", action = 'store_true')
     import ast
     def arg_as_list(arg):
