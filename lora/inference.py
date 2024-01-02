@@ -138,7 +138,7 @@ def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32,
             if len(temp_list) > 0:
                 attn_dict[f"{pos}_{res}"] = temp_list # length 1 or 3
     return attn_dict
-"""
+
 def get_grounding_loss_by_layer(_gt_seg_list,
                                 word_token_idx_ls,
                                 res,                # 64,32,16,8
@@ -218,7 +218,7 @@ def get_grounding_loss_by_layer(_gt_seg_list,
         "token_loss" : token_loss,
         "pixel_loss": pixel_loss,
     }
-"""
+
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0]
@@ -342,20 +342,23 @@ def main(args) :
                                       timestep=0,
                                       encoder_hidden_states=input_context).sample
                     attn_dict = get_cross_attn_map_from_unet(attention_store=controller,) # length 1 or 2 or 3
-                    print(f'attn_dict : {attn_dict.keys()}')
-
-
-
+                    
                     train_layers_ls = [f"down_{res}" for res in args.train_down] + \
                                       [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
-                    print(f'train_layers_ls : {train_layers_ls}')
+                    
                     for train_layer in train_layers_ls:
-                        layer_res = int(train_layer.split("_")[1])
-
-                        #attn_loss_dict = get_grounding_loss_by_layer(_gt_seg_list=gt_seg_ls,
-                        #                                             word_token_idx_ls=word_token_idx_ls,
-                        #                                             res=layer_res,  # 64,32,16,8
-                        #                                             input_attn_map_ls=attn_dict[train_layer],)
+                        layer_res = int(train_layer.split("_")[1]) # 64, 32, 16, 8
+                        input_attn_map_ls = attn_dict[train_layer] #
+                        for attn_map in input_attn_map_ls:
+                            # len is 3 or 1
+                            b, H, W, j = attn_map.shape # head, height, width, 77
+                            token_index_list = [1]
+                            for obj_position in token_index_list :
+                                # ca map obj shape 8 * 16 * 16
+                                ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W)  # 8, 8, 8
+                                #trg_score = (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)
+                                all_score = ca_map_obj.reshape(b, -1).sum(dim=-1)
+                                print(f'layer_res : {layer_res}, ca_map_obj : {ca_map_obj.shape}, all_score : {all_score.shape}')
 
 
 
@@ -397,7 +400,7 @@ def main(args) :
                     """
                     break
 
-    """
+
     trg_resolutions = args.cross_map_res
     title = ''
     for res in trg_resolutions:
@@ -421,7 +424,7 @@ def main(args) :
     inference_times = scheduler.timesteps
 
     
-    """
+
 
 
 if __name__ == "__main__":
