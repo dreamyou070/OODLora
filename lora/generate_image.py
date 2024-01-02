@@ -326,12 +326,12 @@ def main(args) :
     with torch.no_grad():
         pipeline.to(accelerator.device, weight_dtype)
     images = pipeline(prompt = 'crack').images
-    image = (images / 2 + 0.5).clamp(0, 1)
-    image = image.cpu().permute(0, 2, 3, 1).numpy()
-    image = numpy_to_pil(image)
+    #image = (images / 2 + 0.5).clamp(0, 1)
+    #image = image.cpu().permute(0, 2, 3, 1).numpy()
+    #image = numpy_to_pil(image)
     dir = os.path.join(output_dir, f'crack_gen.png')
     print(dir)
-    image[0].save(dir)
+    images[0].save(dir)
 
 
 
