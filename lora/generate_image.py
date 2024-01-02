@@ -197,7 +197,7 @@ def main(args) :
                 noise_pred = call_unet(unet, input_latent, t, input_cond, None, None)
                 noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                 noise_pred = noise_pred_uncond + 8.5 * (noise_pred_text - noise_pred_uncond)
-                latent = prev_step(noise_pred, t, latent, scheduler)
+                latent = prev_step(noise_pred, t, latent.to(accelerator.device, weight_dtype), scheduler)
                 pil_img = Image.fromarray(latent2image(latent, vae, return_type='np'))
                 pil_img.save(os.path.join(save_dir, f'gen_{t}.png'))
         #pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
