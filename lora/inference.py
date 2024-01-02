@@ -263,6 +263,18 @@ def main(args) :
     inverse_text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
     inverse_unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
 
+    print(f' \n step 3. make lora model')
+    sys.path.append(os.path.dirname(__file__))
+    network_module = importlib.import_module(args.network_module)
+    net_kwargs = {}
+    network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae, text_encoder, unet,
+                                            neuron_dropout=args.network_dropout, **net_kwargs, )
+    print(f' (2.5.3) apply trained state dict')
+    network.apply_to(text_encoder, unet, True, True)
+    if args.network_weights is not None:
+        info = network.load_weights(args.network_weights)
+    network.to(device)
+
     """
     trg_resolutions = args.cross_map_res
     title = ''
@@ -287,38 +299,8 @@ def main(args) :
     inference_times = scheduler.timesteps
 
     print(f' (2.4.+) model to accelerator device')
-    if len(invers_text_encoders) > 1:
-        invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device),invers_text_encoders[1].to(device)
-        invers_text_encoder = [invers_t_enc1, invers_t_enc2]
-        del invers_t_enc1, invers_t_enc2
-        unet, t_enc1, t_enc2 = unet.to(device), text_encoders[0].to(device), text_encoders[1].to(device)
-        text_encoder = [t_enc1, t_enc2]
-        del t_enc1, t_enc2
-    else:
-        invers_unet, invers_text_encoder = invers_unet.to(device), invers_text_encoder.to(device)
-        unet, text_encoder = unet.to(device), text_encoder.to(device)
-
-    print(f' (2.5) network')
-    sys.path.append(os.path.dirname(__file__))
-    network_module = importlib.import_module(args.network_module)
-    print(f' (2.5.1) merging weights')
-    net_kwargs = {}
-    if args.network_args is not None:
-        for net_arg in args.network_args:
-            key, value = net_arg.split("=")
-            net_kwargs[key] = value
-    print(f' (2.5.2) make network')
-    if args.dim_from_weights:
-        network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
-                                                                **net_kwargs)
-    else:
-        network = network_module.create_network(1.0,args.network_dim, args.network_alpha, vae, text_encoder, unet,
-                                                neuron_dropout=args.network_dropout, **net_kwargs, )
-    print(f' (2.5.3) apply trained state dict')
-    network.apply_to(text_encoder, unet, True, True)
-    if args.network_weights is not None:
-        info = network.load_weights(args.network_weights)
-    network.to(device)
+    
+    
     controller = AttentionStore()
     register_attention_control(unet, controller, mask_thredhold=args.mask_thredhold)
 
