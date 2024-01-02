@@ -269,10 +269,10 @@ def main(args) :
                     attn_store_dict = controller.step_store
                     controller.reset()
                     for layer in attn_store_dict.keys():
-                        trigger_attn_map = attn_store_dict[layer][0]
-                        h, p = trigger_attn_map.shape
+                        attn_map = attn_store_dict[layer][0]
+                        h, p = attn_map.shape
                         res = int(p ** 0.5)
-                        print(f'layer : {layer}, trigger word map shape : {trigger_attn_map.shape}')
+                        print(f'layer : {layer}, trigger word map shape : {attn_map.shape}')
                         pix_num = attn_map.shape[1]
                         res = int(pix_num ** 0.5)
                         attn_map = attn_map.sum(0).unsqueeze(0)
