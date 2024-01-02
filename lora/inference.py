@@ -65,8 +65,6 @@ def register_attention_control(unet_model, controller):
             value = self.head_to_batch_dim(value)
 
             attention_probs = self.get_attention_scores(query, key, attention_mask)
-
-            print(f'storing attention score')
             attention_probs = controller.save(attention_probs, is_cross, place_in_unet)
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -295,6 +293,8 @@ def main(args) :
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
     prompt = 'hole crack contamination good'
+    prompt_list = prompt.split(' ')
+    word_list = [i+1 for i in range(len(prompt_list))]
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = torch.chunk(context, 2)
 
@@ -353,20 +353,14 @@ def main(args) :
                         layer_res = int(train_layer.split("_")[1]) # 64, 32, 16, 8
                         input_attn_map_ls = attn_dict[train_layer] #
                         for attn_map in input_attn_map_ls:
-                            maps = []
-                            print(f'len of attn_map : {len(input_attn_map_ls)}')
+                            maps = [] # down 2, mid 1, up 3
                             # len is 3 or 1
                             b, H, W, j = attn_map.shape # head, height, width, 77
-                            token_index_list = [1, 2]
-                            for obj_position in token_index_list :
-                                if obj_position == 1 :
-                                    trg_concept = 'hole'
-                                else :
-                                    trg_concept = 'crack'
+                            for obj_position, trg_concept in zip(word_list, prompt_list) :
                                 ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W)  # 8, 8, 8
                                 maps.append(ca_map_obj)
                         maps = torch.cat(maps, dim=0)
-                        map_obj = maps.sum(dim=0).cpu().numpy()
+                        map_obj = maps.sum(dim=0).cpu().detach().numpy()
                         Image.fromarray(map_obj).save(os.path.join(trg_img_output_dir, f'map_with_{trg_concept}_on_{train_layer}{ext}'))
 
 
