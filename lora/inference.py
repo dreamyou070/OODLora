@@ -332,14 +332,21 @@ def main(args) :
                                     from utils.model_utils import call_unet
                                     noise_pred = call_unet(unet, latent, t, con, [[1]], None)
                                     map_dict = controller.step_store
+                                    score_map_dict = {}
                                     for layer in map_dict.keys():
                                         score_map = map_dict[layer][0] # head, pixel_num
                                         res = int(score_map.shape[1] ** 0.5)
+                                        if res not in score_map_dict.keys() :
+                                            score_map_dict[res] = []
+                                        score_map_dict[res].append(score_map)
+                                    for res in score_map_dict.keys():
+                                        # head*num, pixel_num
+                                        score_map = torch.cat(score_map_dict[res], dim=0)
                                         score_map = score_map.sum(dim=0).unsqueeze(0) # pixel_num
                                         score_map = score_map / score_map.max()
                                         score_map = score_map.reshape(res, res)
                                         score_map = score_map.cpu().numpy() * 255
-                                        save_dir = os.path.join(trg_img_output_dir, f'{name}_time_0_layer{layer}{ext}')
+                                        save_dir = os.path.join(trg_img_output_dir, f'{name}_time_0_res{res}{ext}')
                                         Image.fromarray(score_map.astype(np.uint8)).resize((512,512), Image.Resampling.BILINEAR).save(save_dir)
                                     controller.reset()
 
