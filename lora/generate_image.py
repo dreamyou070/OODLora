@@ -112,6 +112,7 @@ def main(args) :
     weights = os.listdir(args.network_weights)
     parent, _ = os.path.split(args.network_weights)
     output_dir = os.path.join(parent, 'image_generating')
+    os.makedirs(output_dir, exist_ok=True)
 
     for weight in weights:
         weight_dir = os.path.join(args.network_weights, weight)
@@ -120,8 +121,7 @@ def main(args) :
             model_epoch = int(model_name.split('-')[-1])
         else:
             model_epoch = 'last'
-
-        save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}')
+        save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_prompt_{args.prompt}')
 
         print(f' \n step 2. make stable diffusion model')
         device = accelerator.device
@@ -192,7 +192,7 @@ def main(args) :
         for i, t in enumerate(inference_times):
             prev_time = int(inference_times[i + 1])
             with torch.no_grad():
-                input_latent = torch.cat([latent,latent], dim=0)
+                input_latent = torch.cat([latent,latent], dim=0).to(accelerator.device, weight_dtype)
                 input_cond = context
                 noise_pred = call_unet(unet, input_latent, t, input_cond, None, None)
                 noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
