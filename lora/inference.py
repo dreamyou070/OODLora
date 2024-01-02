@@ -214,74 +214,68 @@ def main(args) :
     classes = os.listdir(test_img_folder)
 
     for class_name in classes:
-        if 'hole' in class_name:
-            class_base_folder = os.path.join(output_dir, class_name)
-            os.makedirs(class_base_folder, exist_ok=True)
-            image_folder = os.path.join(test_img_folder, class_name)
-            mask_folder = os.path.join(test_mask_folder, class_name)
-            invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
-            inv_unc, inv_c = invers_context.chunk(2)
-            test_images = os.listdir(image_folder)
+        if '_' in class_name:
+            trg_prompt = class_name.split('_')[-1]
+        else:
+            trg_prompt = class_name
+        class_base_folder = os.path.join(output_dir, class_name)
+        os.makedirs(class_base_folder, exist_ok=True)
+        image_folder = os.path.join(test_img_folder, class_name)
+        mask_folder = os.path.join(test_mask_folder, class_name)
+        invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
+        inv_unc, inv_c = invers_context.chunk(2)
+        test_images = os.listdir(image_folder)
 
-            for j, test_image in enumerate(test_images):
+        for j, test_image in enumerate(test_images):
 
-                name, ext = os.path.splitext(test_image)
-                trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
-                os.makedirs(trg_img_output_dir, exist_ok=True)
-                print(f'img will be on {trg_img_output_dir}')
+            name, ext = os.path.splitext(test_image)
+            trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
+            os.makedirs(trg_img_output_dir, exist_ok=True)
+            print(f'img will be on {trg_img_output_dir}')
 
-                test_img_dir = os.path.join(image_folder, test_image)
-                shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
+            test_img_dir = os.path.join(image_folder, test_image)
+            shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
 
-                mask_img_dir = os.path.join(mask_folder, test_image)
-                shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
-                mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
-                mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
-                gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
+            mask_img_dir = os.path.join(mask_folder, test_image)
+            shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+            mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+            mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
+            gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
 
-                print(f' (2.3.1) inversion')
+            print(f' (2.3.1) inversion')
+            with torch.no_grad():
+                org_img = load_image(test_img_dir, 512, 512)
+                org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+
+            with torch.no_grad():
+                inf_time = inference_times.tolist()
+                inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                latent_dict = {}
+                latent = org_vae_latent
                 with torch.no_grad():
-                    org_img = load_image(test_img_dir, 512, 512)
-                    org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-
-                with torch.no_grad():
-                    inf_time = inference_times.tolist()
-                    inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
-                    latent_dict = {}
-                    latent = org_vae_latent
-                    with torch.no_grad():
-                        for i, t in enumerate(inf_time[:-1]):
-                            if i == 0 :
-                                next_time = inf_time[i + 1]
-                                if next_time <= args.final_noising_time:
-                                    latent_dict[int(t)] = latent
-                                    from utils.model_utils import call_unet
-                                    noise_pred = call_unet(unet, latent, t, con, [[1]], None)
-                                    map_dict = controller.step_store
-                                    score_map_dict = {}
-                                    for layer in map_dict.keys():
-                                        score_map = map_dict[layer][0] # head, pixel_num
-                                        score_map = score_map.sum(dim=0).unsqueeze(0)
-                                        res = int(score_map.shape[1] ** 0.5)
-                                        if res not in score_map_dict.keys() and 'down' not in layer:
-                                            score_map_dict[res] = []
-
-                                        score_map_dict[res].append(score_map)
-                                    for res in score_map_dict.keys():
-                                        score_map = torch.cat(score_map_dict[res], dim=0)
-                                        score_map = score_map / score_map.max()
-                                        score_map = score_map.reshape(res, res)
-                                        score_map = score_map.cpu().numpy() * 255
-                                        save_dir = os.path.join(trg_img_output_dir, f'{name}_time_0_{res}{ext}')
-                                        Image.fromarray(score_map.astype(np.uint8)).resize((512,512), Image.Resampling.BILINEAR).save(save_dir)
-                                    score_map = score_map / score_map.max()
-                                    #score_map = score_map.reshape(res, res)
-                                    #score_map = score_map.cpu().numpy() * 255
-                                    #save_dir = os.path.join(trg_img_output_dir, f'{name}_time_0_{layer}{ext}')
-                                    #Image.fromarray(score_map.astype(np.uint8)).resize((512,512), Image.Resampling.BILINEAR).save(save_dir)
-                                    controller.reset()
-
-
+                    for i, t in enumerate(inf_time[:-1]):
+                        if i == 0 :
+                            next_time = inf_time[i + 1]
+                            if next_time <= args.final_noising_time:
+                                latent_dict[int(t)] = latent
+                                from utils.model_utils import call_unet
+                                context = init_prompt(tokenizer, text_encoder, device, trg_prompt)
+                                uncon, con = torch.chunk(context, 2)
+                                noise_pred = call_unet(unet, latent, t, con, [[1]], None)
+                                attn_stores = controller.step_store
+                                for layer_name in attn_stores :
+                                    attn_list = attn_stores[layer_name][0].squeeze(0)
+                                    res = int(attn_list.shape[1] ** 0.5)
+                                    h = attn_list.shape[0]
+                                    attn = attn.unsqueeze(-1)
+                                    attn = attn.reshape(h, res, res)
+                                    attn = attn.sum(dim=0)
+                                    attn = attn / attn.max()
+                                    attn_pil = Image.fromarray(np.array(attn).astype(np.uint8) * 255).resize((512, 512), Image.BILINEAR)
+                                    dir = os.path.join(trg_img_output_dir,
+                                                       f'{name}_attn_{layer_name}_{t}.png')
+                                    attn_pil.save(dir)
+                                controller.reset()
 
 
 

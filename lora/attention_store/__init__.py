@@ -68,6 +68,12 @@ class AttentionStore :
         self.step_store[key].append(attn.clone())
         return attn
 
+    def between_steps(self):
+        assert len(self.attention_store) == 0
+
+        self.attention_store = self.step_store
+        self.step_store = self.get_empty_store()
+
     def get_average_attention(self):
         average_attention = {key: [item / self.cur_step for item in self.attention_store[key]] for key in self.attention_store}
         return average_attention
