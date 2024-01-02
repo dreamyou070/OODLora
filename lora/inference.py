@@ -50,8 +50,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                 if attention_scores.shape[0] == 8 :
                     cls_map = attention_probs[:, :, 0]
-                    crack_map = attention_probs[:, :, 1].unsqueeze(-1)  # head, pixel_num, 1
-                    hole_map = attention_probs[:, :, 2].unsqueeze(-1)
+                    crack_map = attention_probs[:, :, 2].unsqueeze(-1)  # head, pixel_num, 1
+                    hole_map = attention_probs[:, :, 1].unsqueeze(-1)
                     maps = torch.cat([crack_map, hole_map], dim=-1)
                     controller.store(maps, layer_name)
 
@@ -219,7 +219,7 @@ def main(args) :
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
-    prompt = 'crack hole'
+    prompt = 'hole crack'
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = torch.chunk(context, 2)
 
