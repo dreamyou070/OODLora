@@ -36,15 +36,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             key = self.to_k(context)
             value = self.to_v(context)
 
-            if is_cross_attention:
-                attention_scores = torch.baddbmm(
-                    torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                                device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
-                attention_probs_ = attention_scores.softmax(dim=-1)
-                print(f'attention_probs_ shape: {attention_probs_.shape}')
-                attention_probs_ = attention_probs_.to(value.dtype)
-                trg_map = attention_probs_[:, :, 1]
-                controller.store(trg_map, layer_name)
+
 
 
             query = self.reshape_heads_to_batch_dim(query)
@@ -58,6 +50,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
+            if is_cross_attention:
+                trg_map = attention_probs[:, :, 1]
+                controller.store(trg_map, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -265,7 +260,8 @@ def main(args) :
                                     map_dict = controller.step_store
                                     score_map_dict = {}
                                     for layer in map_dict.keys():
-                                        score_map = map_dict[layer][0] # 1, pixel_num
+                                        score_map = map_dict[layer][0] # head, pixel_num
+                                        score_map = score_map.sum(dim=0)
                                         res = int(score_map.shape[1] ** 0.5)
                                         score_map = score_map / score_map.max()
                                         score_map = score_map.reshape(res, res)
