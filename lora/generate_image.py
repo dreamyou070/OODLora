@@ -314,7 +314,7 @@ def main(args) :
     print(f' (3.3) test images')
     ddim_scheduler = DDIMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
     ddim_scheduler.set_timesteps(50)
-    from stable_diffusion import StableDiffusionPipeline
+    from diffusers import StableDiffusionPipeline
 
     pipeline = StableDiffusionPipeline(vae = vae,
                             text_encoder = text_encoder,
