@@ -314,7 +314,7 @@ def main(args) :
     print(f' (3.3) test images')
     ddim_scheduler = DDIMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
     ddim_scheduler.set_timesteps(50)
-    latent = torch.randn(1,4,64,64)
+    latent = torch.randn(1,4,64,64).to(accelerator.device, weight_dtype)
     for t in ddim_scheduler.timesteps:
         # 1. predict noise model_output
         model_output = unet(latent, t, con).sample
