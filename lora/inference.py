@@ -35,10 +35,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
-
-
-
-
             query = self.reshape_heads_to_batch_dim(query)
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
@@ -52,7 +48,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention:
 
-                controller.store(attention_probs, layer_name)
+                controller.store(attention_probs[:,:,:2], layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -201,8 +197,7 @@ def main(args) :
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
-    prompt = 'hole'
-    context = init_prompt(tokenizer, text_encoder, device, prompt)
+    context = init_prompt(tokenizer, text_encoder, device, args.prompt)
     uncon, con = torch.chunk(context, 2)
 
     print(f' (3.2) train images')
@@ -259,14 +254,12 @@ def main(args) :
                             if next_time <= args.final_noising_time:
                                 latent_dict[int(t)] = latent
                                 from utils.model_utils import call_unet
-                                context = init_prompt(tokenizer, text_encoder, device, trg_prompt)
-                                uncon, con = torch.chunk(context, 2)
-                                noise_pred = call_unet(unet, latent, t, con[:,:2,:], [[1]], None)
+                                noise_pred = call_unet(unet, latent, t, con, [[1]], None)
                                 attn_stores = controller.step_store
                                 for layer_name in attn_stores :
-                                    attn = attn_stores[layer_name][0]
+                                    attn = attn_stores[layer_name][0].squeeze() # head, pix_num
+                                    cls_score, trigger_score = torch.chunk(attn, dim=-1)
                                     res = int(attn.shape[1] ** 0.5)
-                                    cls_score, trigger_score = torch.chunk(attn, 2, dim=-1)
                                     h = cls_score.shape[0]
                                     cls_score, trigger_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1)
                                     cls_score, trigger_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res)
@@ -282,10 +275,10 @@ def main(args) :
                                     cls_score_pil.save(cls_dir)
 
                                     trigger_np = np.array((trigger_score.detach().cpu()) * 255).astype(np.uint8)
-                                    print(f'trigger_np : {trigger_np}')
+                                    print(f'trigger (good) np : {trigger_np}')
                                     trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
                                     trigger_dir = os.path.join(trg_img_output_dir,
-                                                                f'normalized_trigger_{name}_attn_{layer_name}_{t}.png')
+                                                                f'normalized_good_attn_{layer_name}_{t}.png')
                                     trigger_score_pil.save(trigger_dir)
 
                                 controller.reset()
