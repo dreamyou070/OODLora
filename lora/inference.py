@@ -267,7 +267,7 @@ def main(args) :
                                     attn_list = attn_stores[layer_name][0].squeeze(0)
                                     res = int(attn_list.shape[1] ** 0.5)
                                     h = attn_list.shape[0]
-                                    attn = attn.unsqueeze(-1)
+                                    attn = attn_list.unsqueeze(-1)
                                     attn = attn.reshape(h, res, res)
                                     attn = attn.sum(dim=0)
                                     attn = attn / attn.max()
