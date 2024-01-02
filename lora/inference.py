@@ -326,7 +326,7 @@ def main(args) :
                         for i, t in enumerate(inf_time[:-1]):
                             if i == 0 :
                                 next_time = inf_time[i + 1]
-                                if next_time <= args.final_time:
+                                if next_time <= args.final_noising_time:
                                     latent_dict[int(t)] = latent
                                     from utils.model_utils import call_unet, next_step
                                     noise_pred = call_unet(unet, latent, t, con, [[1]], None)
