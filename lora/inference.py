@@ -290,6 +290,9 @@ def main(args) :
                         crack_pil = Image.fromarray((np.array(crack_map.cpu().detach()) * 255).astype(np.uint8)).resize((512, 512))
                         crack_pil.save(os.path.join(trg_img_output_dir, f'crack_{class_name}_{name}_{layer}_attn_map.png'))
 
+                        total_map = (cls_map + hole_map + crack_map)
+                        print(f'total_map : {total_map}')
+
                         # head==8, pix_num, 1
 
 
