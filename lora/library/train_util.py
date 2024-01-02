@@ -1054,16 +1054,16 @@ class BaseDataset(torch.utils.data.Dataset):
             parent, name = os.path.split(absolute_path)      # parent = 120_good , name = 000.png
             super_parent, class_name = os.path.split(parent) # class_name = 120_good
             super_super_parent, change = os.path.split(super_parent) # dir = 120
-            img_mask_dir = os.path.join(super_super_parent, 'bad_sam', class_name, name)
+            #img_mask_dir = os.path.join(super_super_parent, 'bad_sam', class_name, name)
             anormal_mask_dir = os.path.join(super_super_parent, 'corrected', class_name, name)
 
             # (2.1) img mask """ background is zero """
-            mask_img = Image.open(img_mask_dir).convert('L').resize((512, 512), Image.BICUBIC)
-            mask_img = attn_transforms(mask_img)
+            #mask_img = Image.open(img_mask_dir).convert('L').resize((512, 512), Image.BICUBIC)
+            #mask_img = attn_transforms(mask_img)
             # normalize to [0, 1]
             #if mask_img.max() > 0:
             #    mask_img = mask_img / mask_img.max()
-            img_masks.append(mask_img)
+            #img_masks.append(mask_img)
 
             # (2.2) anormal mask """ normal is zero, anormal is white """
 
@@ -1272,14 +1272,14 @@ class BaseDataset(torch.utils.data.Dataset):
 
         if images[0] is not None:
             images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
-            img_masks = torch.stack(img_masks).to(memory_format=torch.contiguous_format).float()
+            #img_masks = torch.stack(img_masks).to(memory_format=torch.contiguous_format).float()
             #anormal_masks = torch.stack(anormal_masks).to(memory_format=torch.contiguous_format).float()
 
         else:
             images = None
             mask_imgs = None
 
-        example["img_masks"] = img_masks
+        #example["img_masks"] = img_masks
         example["anormal_masks"] = anormal_masks
         example["mask_dirs"] = mask_dirs
         example["trg_indexs_list"] = trg_indexs_list  ##########################################################
