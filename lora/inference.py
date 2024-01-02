@@ -336,10 +336,11 @@ def main(args) :
                                         score_map = map_dict[layer][0] # head, pixel_num
                                         res = int(score_map.shape[1] ** 0.5)
                                         score_map = score_map.sum(dim=0).unsqueeze(0) # pixel_num
+                                        score_map = score_map / score_map.max()
                                         score_map = score_map.reshape(res, res)
                                         score_map = score_map.cpu().numpy() * 255
                                         save_dir = os.path.join(trg_img_output_dir, f'{name}_time_0_layer{layer}{ext}')
-                                        Image.fromarray(score_map.astype(np.uint8)).save(save_dir)
+                                        Image.fromarray(score_map.astype(np.uint8)).resize(512,512).save(save_dir)
                                     controller.reset()
 
 
