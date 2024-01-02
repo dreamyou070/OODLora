@@ -332,14 +332,17 @@ def main(args) :
                                     from utils.model_utils import call_unet
                                     noise_pred = call_unet(unet, latent, t, con, [[1]], None)
                                     map_dict = controller.step_store
+                                    print(f'map_dict : {map_dict.keys()}')
                                     for layer in map_dict.keys():
-                                        score_map = map_dict[layer][0] # head, pixel_num
+                                        score_map = map_dict[layer]#[0] # head, pixel_num
+                                        print(f'score_map : {len(score_map)}')
                                         res = int(score_map.shape[1] ** 0.5)
                                         score_map = score_map.sum(dim=0).unsqueeze(0) # pixel_num
                                         score_map = score_map.reshape(res, res)
                                         score_map = score_map.cpu().numpy() * 255
                                         save_dir = os.path.join(class_base_folder, f'{name}_time_0_layer{layer}{ext}')
                                         Image.fromarray(score_map.astype(np.uint8)).save(save_dir)
+                                    controller.reset()
 
 
 
