@@ -267,11 +267,19 @@ def main(args) :
                     input_context = con
                     noise_pred = call_unet(unet, input_latent, 0, input_context, [[1]], None)
                     attn_store_dict = controller.step_store
+                    controller.reset()
                     for layer in attn_store_dict.keys():
                         trigger_attn_map = attn_store_dict[layer][0]
                         h, p = trigger_attn_map.shape
                         res = int(p ** 0.5)
                         print(f'layer : {layer}, trigger word map shape : {trigger_attn_map.shape}')
+                        pix_num = attn_map.shape[1]
+                        res = int(pix_num ** 0.5)
+                        attn_map = attn_map.sum(0).unsqueeze(0)
+                        attn_map = attn_map.reshape(res, res)
+                        attn_map_np = (np.array(attn_map) * 255).astype(np.uint8)
+                        pil = Image.fromarray(attn_map_np).resize((512,512))
+                        pil.save(os.path.join(trg_img_output_dir, f'{class_name}_{name}_{layer}_attn_map.png'))
 
                         # head==8, pix_num, 1
 
@@ -312,7 +320,7 @@ def main(args) :
                                    controller=controller,
                                    name=name,weight_dtype=weight_dtype)
                         """
-                    break
+                break
 
 
 
