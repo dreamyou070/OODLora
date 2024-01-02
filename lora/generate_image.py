@@ -121,8 +121,7 @@ def main(args) :
             model_epoch = int(model_name.split('-')[-1])
         else:
             model_epoch = 'last'
-        save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_prompt_{args.prompt}_guidance_scale_{args.guidance_scale}')
-        os.makedirs(save_dir, exist_ok=True)
+
 
         print(f' \n step 2. make stable diffusion model')
         device = accelerator.device
@@ -182,27 +181,29 @@ def main(args) :
 
         print(f' \n step 3. ground-truth image preparing')
         print(f' (3.1) prompt condition')
-        prompt = args.prompt
-        context = init_prompt(tokenizer, text_encoder, device, prompt)
-
-        print(f' (3.2) train images')
-        from utils.scheduling_utils import prev_step
-        from utils.image_utils import latent2image
-        # inference_times = [100,80, ... 0]
-        latent = torch.randn(1,4,64,64)
-        for i, t in enumerate(inference_times[:-1]):
-            prev_time = int(inference_times[i + 1])
-            with torch.no_grad():
-                input_latent = torch.cat([latent,latent], dim=0).to(accelerator.device, weight_dtype)
-                input_cond = context
-                noise_pred = call_unet(unet, input_latent, t, input_cond, None, None)
-                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + args.guidance_scale * (noise_pred_text - noise_pred_uncond)
-                latent = prev_step(noise_pred, t, latent.to(accelerator.device, weight_dtype), scheduler)
-                pil_img = Image.fromarray(latent2image(latent, vae, return_type='np'))
-                pil_img.save(os.path.join(save_dir, f'gen_{t}.png'))
-        pil_img = Image.fromarray(latent2image(latent, vae, return_type='np'))
-        pil_img.save(os.path.join(save_dir, f'gen_{prev_time}.png'))
+        prompts = ['hole','crack','contamination']
+        for p in prompts:
+            save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_prompt_{p}_guidance_scale_{args.guidance_scale}')
+            os.makedirs(save_dir, exist_ok=True)
+            context = init_prompt(tokenizer, text_encoder, device, p)
+            print(f' (3.2) train images')
+            from utils.scheduling_utils import prev_step
+            from utils.image_utils import latent2image
+            # inference_times = [100,80, ... 0]
+            latent = torch.randn(1,4,64,64)
+            for i, t in enumerate(inference_times[:-1]):
+                prev_time = int(inference_times[i + 1])
+                with torch.no_grad():
+                    input_latent = torch.cat([latent,latent], dim=0).to(accelerator.device, weight_dtype)
+                    input_cond = context
+                    noise_pred = call_unet(unet, input_latent, t, input_cond, None, None)
+                    noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                    noise_pred = noise_pred_uncond + args.guidance_scale * (noise_pred_text - noise_pred_uncond)
+                    latent = prev_step(noise_pred, t, latent.to(accelerator.device, weight_dtype), scheduler)
+                    pil_img = Image.fromarray(latent2image(latent, vae, return_type='np'))
+                    #pil_img.save(os.path.join(save_dir, f'gen_{t}.png'))
+            pil_img = Image.fromarray(latent2image(latent, vae, return_type='np'))
+            pil_img.save(os.path.join(save_dir, f'gen_{prev_time}.png'))
 
 
 if __name__ == "__main__":

@@ -265,8 +265,8 @@ def main(args) :
                                         res = int(score_map.shape[1] ** 0.5)
                                         if res not in score_map_dict.keys() and 'down' not in layer:
                                             score_map_dict[res] = []
-                                        if 'down' not in layer:
-                                            score_map_dict[res].append(score_map)
+
+                                        score_map_dict[res].append(score_map)
                                     for res in score_map_dict.keys():
                                         score_map = torch.cat(score_map_dict[res], dim=0)
                                         score_map = score_map / score_map.max()
