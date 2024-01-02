@@ -222,7 +222,6 @@ def main(args) :
     parent = os.path.split(args.network_weights)[0]
     folder = os.path.split(parent)[-1]
     args.output_dir = os.path.join(parent, f'{folder}/crossattention_map_check')
-    print(f'args.output_dir: {args.output_dir}')
 
     print(f' \n step 1. setting')
     if args.process_title:
@@ -365,7 +364,9 @@ def main(args) :
                                 word_map_dict[trg_concept].append(ca_map_obj)
                         for concept in word_map_dict.keys():
                             maps = torch.cat(word_map_dict[concept], dim=0) # head*
-                            map_obj = maps.sum(dim=0).cpu().detach().numpy() * 255
+                            print(f'maps : {maps.shape}')
+                            map_obj = maps.mean(dim=0).cpu().detach().numpy() * 255
+                            print(f'concept : {concept}, map_obj : {map_obj}')
                             map_obj = map_obj.astype(np.uint8)
                             Image.fromarray(map_obj).save(os.path.join(trg_img_output_dir, f'map_with_{concept}_on_{train_layer}{ext}'))
 
