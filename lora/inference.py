@@ -49,7 +49,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             if is_cross_attention and trg_indexs_list is not None:
 
                 if attention_scores.shape[0] == 8 :
-                    cls_map = attention_probs[:, :, 0]
+                    cls_map = attention_probs[:, :, 0].unsqueeze(-1)
                     #crack_map = attention_probs[:, :, 2].unsqueeze(-1)  # head, pixel_num, 1
                     hole_map = attention_probs[:, :, 1].unsqueeze(-1)
                     maps = torch.cat([cls_map, hole_map], dim=-1)
