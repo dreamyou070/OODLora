@@ -222,6 +222,7 @@ def main(args) :
     parent = os.path.split(args.network_weights)[0]
     folder = os.path.split(parent)[-1]
     args.output_dir = os.path.join(parent, f'{folder}/crossattention_map_check')
+    print(f'args.output_dir: {args.output_dir}')
 
     print(f' \n step 1. setting')
     if args.process_title:
@@ -356,14 +357,17 @@ def main(args) :
                             maps = [] # down 2, mid 1, up 3
                             # len is 3 or 1
                             b, H, W, j = attn_map.shape # head, height, width, 77
+                            word_map_dict = {}
                             for obj_position, trg_concept in zip(word_list, prompt_list) :
                                 ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W)  # 8, 8, 8
-                                maps.append(ca_map_obj)
-                        maps = torch.cat(maps, dim=0)
-                        print(f'maps shape : {maps.shape}')
-                        map_obj = maps.sum(dim=0).cpu().detach().numpy() * 255
-                        map_obj = map_obj.astype(np.uint8)
-                        Image.fromarray(map_obj).save(os.path.join(trg_img_output_dir, f'map_with_{trg_concept}_on_{train_layer}{ext}'))
+                                if trg_concept not in word_map_dict.keys():
+                                    word_map_dict[trg_concept] = []
+                                word_map_dict[trg_concept].append(ca_map_obj)
+                        for concept in word_map_dict.keys():
+                            maps = torch.cat(word_map_dict[concept], dim=0) # head*
+                            map_obj = maps.sum(dim=0).cpu().detach().numpy() * 255
+                            map_obj = map_obj.astype(np.uint8)
+                            Image.fromarray(map_obj).save(os.path.join(trg_img_output_dir, f'map_with_{concept}_on_{train_layer}{ext}'))
 
 
 
