@@ -296,10 +296,25 @@ def main(args) :
     print(f' (3.2) train images')
     trg_h, trg_w = args.resolution
 
+    def numpy_to_pil(images):
+        """
+        Convert a numpy image or a batch of images to a PIL image.
+        """
+        if images.ndim == 3:
+            images = images[None, ...]
+        images = (images * 255).round().astype("uint8")
+        if images.shape[-1] == 1:
+            # special case for grayscale (single channel) images
+            pil_images = [Image.fromarray(image.squeeze(), mode="L") for image in images]
+        else:
+            pil_images = [Image.fromarray(image) for image in images]
+
+        return pil_images
+
     print(f' (3.3) test images')
     ddim_scheduler = DDIMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
     ddim_scheduler.set_timesteps(50)
-    for t in ddim_scheduler.progress_bar(ddim_scheduler.timesteps):
+    for t in ddim_scheduler.timesteps:
         # 1. predict noise model_output
         model_output = unet(image, t, con).sample
         image = ddim_scheduler(model_output, t, image, eta=0.0,
@@ -307,7 +322,7 @@ def main(args) :
 
     image = (image / 2 + 0.5).clamp(0, 1)
     image = image.cpu().permute(0, 2, 3, 1).numpy()
-    image = ddim_scheduler.numpy_to_pil(image)
+    image = numpy_to_pil(image)
 
 
 
