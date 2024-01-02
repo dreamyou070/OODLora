@@ -122,7 +122,7 @@ def main(args) :
         else:
             model_epoch = 'last'
         save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_prompt_{args.prompt}')
-        os.makedirs(save_dir, exist_ok=True)    
+        os.makedirs(save_dir, exist_ok=True)
 
         print(f' \n step 2. make stable diffusion model')
         device = accelerator.device
@@ -190,7 +190,7 @@ def main(args) :
         from utils.image_utils import latent2image
         # inference_times = [100,80, ... 0]
         latent = torch.randn(1,4,64,64)
-        for i, t in enumerate(inference_times):
+        for i, t in enumerate(inference_times[:-1]):
             prev_time = int(inference_times[i + 1])
             with torch.no_grad():
                 input_latent = torch.cat([latent,latent], dim=0).to(accelerator.device, weight_dtype)
@@ -201,8 +201,8 @@ def main(args) :
                 latent = prev_step(noise_pred, t, latent.to(accelerator.device, weight_dtype), scheduler)
                 pil_img = Image.fromarray(latent2image(latent, vae, return_type='np'))
                 pil_img.save(os.path.join(save_dir, f'gen_{t}.png'))
-        #pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-        #pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
+        pil_img = Image.fromarray(latent2image(latent, vae, return_type='np'))
+        pil_img.save(os.path.join(save_dir, f'gen_{prev_time}.png'))
 
 
 if __name__ == "__main__":
