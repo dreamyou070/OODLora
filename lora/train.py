@@ -662,7 +662,7 @@ class NetworkTrainer:
                     task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
                     loss = task_loss
 
-                    print(f'batch["train_class_list"] : {batch["train_class_list"]}')
+                    #print(f'batch["train_class_list"] : {batch["train_class_list"]}')
                     if batch['train_class_list'][0] != 0 :
                         attention_storer.reset()
 
