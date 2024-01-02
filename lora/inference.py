@@ -47,7 +47,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
-                print(f'registering attn map')
                 trg_probs = attention_probs[:,:,1]
                 controller.store(trg_probs,layer_name)
             hidden_states = torch.bmm(attention_probs, value)
@@ -332,10 +331,8 @@ def main(args) :
                                     from utils.model_utils import call_unet
                                     noise_pred = call_unet(unet, latent, t, con, [[1]], None)
                                     map_dict = controller.step_store
-                                    print(f'map_dict : {map_dict.keys()}')
                                     for layer in map_dict.keys():
-                                        score_map = map_dict[layer]#[0] # head, pixel_num
-                                        print(f'score_map : {len(score_map)}')
+                                        score_map = map_dict[layer][0] # head, pixel_num
                                         res = int(score_map.shape[1] ** 0.5)
                                         score_map = score_map.sum(dim=0).unsqueeze(0) # pixel_num
                                         score_map = score_map.reshape(res, res)
