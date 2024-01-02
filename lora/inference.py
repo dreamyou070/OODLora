@@ -233,7 +233,7 @@ def main(args) :
     classes = os.listdir(test_img_folder)
 
     for class_name in classes:
-        if 'bad' in class_name:
+        if 'bad' not in class_name:
             class_base_folder = os.path.join(output_dir, class_name)
             os.makedirs(class_base_folder, exist_ok=True)
 
