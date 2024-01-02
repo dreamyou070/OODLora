@@ -23,7 +23,8 @@ except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
 
 
-def register_attention_control(unet: nn.Module, controller: AttentionStore,  mask_threshold: float = 1):  # if mask_threshold is 1, use itself
+def register_attention_control(unet: nn.Module, controller: AttentionStore,
+                               mask_threshold: float = 1):  # if mask_threshold is 1, use itself
 
     def ca_forward(self, layer_name):
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
@@ -31,7 +32,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             if context is not None:
                 is_cross_attention = True
             query = self.to_q(hidden_states)
-            print(f'query : {query.shape}')
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
@@ -47,11 +47,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
-            if is_cross_attention and trg_indexs_list is not None:
-                # 8, pix_num, 77
-                print(f'attention_probs.shape: {attention_probs.shape}')
-                trg_probs = attention_probs[:,:,1]
-                controller.store(trg_probs,layer_name)
+            if is_cross_attention and trg_indexs_list is not None :
+                trg_map = attention_probs[:, :, 1]
+                controller.store(trg_map, layer_name)
+
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -78,6 +77,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
+
 
 def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32, 16, 8], poses=["down", "mid", "up"]):
 
