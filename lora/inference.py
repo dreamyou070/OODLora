@@ -272,7 +272,7 @@ def main(args) :
                     controller.reset()
                     for layer in attn_store_dict.keys():
                         attn_map = attn_store_dict[layer][0]
-                        crack_map, hole_map = torch.chuk(attn_map, 2, dim=-1)
+                        crack_map, hole_map = torch.chunk(attn_map, 2, dim=-1)
                         crack_map, hole_map = crack_map.squeeze(), hole_map.squeeze()
                         res = int(crack_map.shape[1] ** 0.5)
                         print(f'layer : {layer}, trigger word map shape : {attn_map.shape}')
