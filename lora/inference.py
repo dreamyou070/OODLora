@@ -297,6 +297,7 @@ def main(args) :
             invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
             inv_unc, inv_c = invers_context.chunk(2)
             test_images = os.listdir(image_folder)
+
             for j, test_image in enumerate(test_images):
 
                 name, ext = os.path.splitext(test_image)
@@ -337,7 +338,7 @@ def main(args) :
                                         score_map = score_map.sum(dim=0).unsqueeze(0) # pixel_num
                                         score_map = score_map.reshape(res, res)
                                         score_map = score_map.cpu().numpy() * 255
-                                        save_dir = os.path.join(class_base_folder, f'{name}_time_0_layer{layer}{ext}')
+                                        save_dir = os.path.join(trg_img_output_dir, f'{name}_time_0_layer{layer}{ext}')
                                         Image.fromarray(score_map.astype(np.uint8)).save(save_dir)
                                     controller.reset()
 
