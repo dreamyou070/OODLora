@@ -316,15 +316,17 @@ def main(args) :
     ddim_scheduler.set_timesteps(50)
     latent = torch.randn(1,4,64,64).to(accelerator.device, weight_dtype)
     for t in ddim_scheduler.timesteps:
+        print(f't : {t}')
         # 1. predict noise model_output
         model_output = unet(latent, t, con).sample
+        controller.reset()
         latent = ddim_scheduler.step(model_output, t, latent, eta=0.0,
                                      use_clipped_model_output=None,).prev_sample
 
     image = (latent / 2 + 0.5).clamp(0, 1)
     image = image.cpu().permute(0, 2, 3, 1).numpy()
     image = numpy_to_pil(image)
-    image[0].save(os.path.join(output_dir, f'latent.png'))
+    image[0].save(os.path.join(output_dir, f'crack_gen.png'))
 
 
 
