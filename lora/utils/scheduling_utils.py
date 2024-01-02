@@ -105,12 +105,9 @@ def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, fina
         if next_time <= final_time :
             latent_dict[int(t)] = latent
             time_steps.append(t)
-            noise_pred = call_unet(unet, latent, t, cond_embeddings, None, None)
+            noise_pred = call_unet(unet, latent, t, cond_embeddings, [[1]], None)
             latent = next_step(noise_pred, int(t), latent, scheduler)
-            #np_img = latent2image(latent, vae, return_type='np')
-            #pil_img = Image.fromarray(np_img)
-            #pil_images.append(pil_img)
-            #pil_img.save(os.path.join(base_folder_dir, f'{name}_noising_{next_time}.png'))
+
         else :
             print(f'final_time : {final_time}')
             time_steps.append(final_time)

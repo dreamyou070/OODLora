@@ -23,101 +23,57 @@ except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
 
 
-def register_attention_control(unet_model, controller):
-    def ca_forward(self, place_in_unet):
-        to_out = self.to_out
-        if type(to_out) is torch.nn.modules.container.ModuleList:
-            to_out = self.to_out[0]
-        else:
-            to_out = self.to_out
+def register_attention_control(unet: nn.Module, controller: AttentionStore,  mask_threshold: float = 1):  # if mask_threshold is 1, use itself
 
-        def forward(hidden_states, encoder_hidden_states=None, attention_mask=None, temb=None, ):
-            is_cross = encoder_hidden_states is not None
-
-            residual = hidden_states
-
-            if self.spatial_norm is not None:
-                hidden_states = self.spatial_norm(hidden_states, temb)
-
-            input_ndim = hidden_states.ndim
-
-            if input_ndim == 4:
-                batch_size, channel, height, width = hidden_states.shape
-                hidden_states = hidden_states.view(batch_size, channel, height * width).transpose(1, 2)
-
-            batch_size, sequence_length, _ = (hidden_states.shape if encoder_hidden_states is None else encoder_hidden_states.shape)
-            attention_mask = self.prepare_attention_mask(attention_mask, sequence_length, batch_size)
-
-            if self.group_norm is not None:
-                hidden_states = self.group_norm(hidden_states.transpose(1, 2)).transpose(1, 2)
+    def ca_forward(self, layer_name):
+        def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
+            is_cross_attention = False
+            if context is not None:
+                is_cross_attention = True
             query = self.to_q(hidden_states)
+            context = context if context is not None else hidden_states
+            key = self.to_k(context)
+            value = self.to_v(context)
 
-            if encoder_hidden_states is None:
-                encoder_hidden_states = hidden_states
-            elif self.norm_cross:
-                encoder_hidden_states = self.norm_encoder_hidden_states(encoder_hidden_states)
-
-            key = self.to_k(encoder_hidden_states)
-            value = self.to_v(encoder_hidden_states)
-
-            query = self.head_to_batch_dim(query)
-            key = self.head_to_batch_dim(key)
-            value = self.head_to_batch_dim(value)
-
-            attention_probs = self.get_attention_scores(query, key, attention_mask)
-            attention_probs = controller.save(attention_probs, is_cross, place_in_unet)
-
+            query = self.reshape_heads_to_batch_dim(query)
+            key = self.reshape_heads_to_batch_dim(key)
+            value = self.reshape_heads_to_batch_dim(value)
+            if self.upcast_attention:
+                query = query.float()
+                key = key.float()
+            attention_scores = torch.baddbmm(
+                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                            device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            attention_probs = attention_scores.softmax(dim=-1)
+            attention_probs = attention_probs.to(value.dtype)
+            if is_cross_attention and trg_indexs_list is not None:
+                trg_probs = attention_probs[:,:,1]
+                controller.store(trg_probs,layer_name)
             hidden_states = torch.bmm(attention_probs, value)
-            hidden_states = self.batch_to_head_dim(hidden_states)
-
-            # linear proj
-            hidden_states = to_out(hidden_states)
-            # all drop out in diffusers are 0.0
-            # so we here ignore dropout
-
-            if input_ndim == 4:
-                hidden_states = hidden_states.transpose(-1, -2).reshape(batch_size, channel, height, width)
-
-            if self.residual_connection:
-                hidden_states = hidden_states + residual
-
-            hidden_states = hidden_states / self.rescale_output_factor
-
+            hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
+            hidden_states = self.to_out[0](hidden_states)
             return hidden_states
 
         return forward
 
-    assert controller is not None, "controller must be specified"
-
-    def register_recr(net_, count, place_in_unet):
-        if net_.__class__.__name__ == 'Attention':
-            net_.forward = ca_forward(net_, place_in_unet)
+    def register_recr(net_, count, layer_name):
+        if net_.__class__.__name__ == 'CrossAttention':
+            net_.forward = ca_forward(net_, layer_name)
             return count + 1
         elif hasattr(net_, 'children'):
-            for net__ in net_.children():
-                count = register_recr(net__, count, place_in_unet)
+            for name__, net__ in net_.named_children():
+                full_name = f'{layer_name}_{name__}'
+                count = register_recr(net__, count, full_name)
         return count
 
-    down_count = 0
-    up_count = 0
-    mid_count = 0
-
     cross_att_count = 0
-    sub_nets = unet_model.named_children()
-    for net in sub_nets:
-
+    for net in unet.named_children():
         if "down" in net[0]:
-            down_temp = register_recr(net[1], 0, "down")
-            cross_att_count += down_temp
-            down_count += down_temp
+            cross_att_count += register_recr(net[1], 0, net[0])
         elif "up" in net[0]:
-            up_temp = register_recr(net[1], 0, "up")
-            cross_att_count += up_temp
-            up_count += up_temp
+            cross_att_count += register_recr(net[1], 0, net[0])
         elif "mid" in net[0]:
-            mid_temp = register_recr(net[1], 0, "mid")
-            cross_att_count += mid_temp
-            mid_count += mid_temp
+            cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
 
 def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32, 16, 8], poses=["down", "mid", "up"]):
@@ -217,6 +173,8 @@ def get_grounding_loss_by_layer(_gt_seg_list,
         "pixel_loss": pixel_loss,
     }
 
+
+
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0]
@@ -257,15 +215,25 @@ def main(args) :
 
     print(f' \n step 2. make stable diffusion model')
     device = accelerator.device
+    print(f' (2.1) tokenizer')
+    tokenizer = train_util.load_tokenizer(args)
+    print(f' (2.2) SD')
+    invers_text_encoder, vae, invers_unet, load_stable_diffusion_format = train_util._load_target_model(args,
+                                                                                                        weight_dtype,
+                                                                                                        device,
+                                                                                                        unet_use_linear_projection_in_v2=False, )
+    invers_text_encoders = invers_text_encoder if isinstance(invers_text_encoder, list) else [invers_text_encoder]
+    text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
+                                                                                          unet_use_linear_projection_in_v2=False, )
+    text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
+    vae.to(accelerator.device, dtype=vae_dtype)
 
-    scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
-    tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer")
-    text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
-    vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae")
-    unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
-
-    invers_text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
-    invers_unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
+    print(f' (2.4) scheduler')
+    scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
+    scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
+                              beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
+    scheduler.set_timesteps(args.num_ddim_steps)
+    inference_times = scheduler.timesteps
 
     print(f' \n step 3. make lora model')
     sys.path.append(os.path.dirname(__file__))
@@ -280,21 +248,13 @@ def main(args) :
     network.to(device)
 
     print(f' (2.4.+) model to accelerator device')
-    vae.to(accelerator.device, dtype=weight_dtype)
-    text_encoder.to(accelerator.device, dtype=weight_dtype)
-    unet.to(accelerator.device, dtype=weight_dtype)
-    invers_text_encoder.to(accelerator.device, dtype=weight_dtype)
-    invers_unet.to(accelerator.device, dtype=weight_dtype)
-    network.to(accelerator.device, dtype=weight_dtype)
-
     controller = AttentionStore()
-    register_attention_control(unet, controller)
+    #register_attention_control(unet, controller)
+    register_attention_control(invers_unet, controller)
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
-    prompt = 'hole crack contamination good'
-    prompt_list = prompt.split(' ')
-    word_list = [i+1 for i in range(len(prompt_list))]
+    prompt = 'hole'
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = torch.chunk(context, 2)
 
@@ -305,18 +265,16 @@ def main(args) :
     test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/bad')
     test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/corrected')
     classes = os.listdir(test_img_folder)
+
     for class_name in classes:
-        if 'bad' not in class_name:
+        if 'hole' in class_name:
             class_base_folder = os.path.join(output_dir, class_name)
             os.makedirs(class_base_folder, exist_ok=True)
-
             image_folder = os.path.join(test_img_folder, class_name)
             mask_folder = os.path.join(test_mask_folder, class_name)
-
             invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
             inv_unc, inv_c = invers_context.chunk(2)
             test_images = os.listdir(image_folder)
-
             for j, test_image in enumerate(test_images):
 
                 name, ext = os.path.splitext(test_image)
@@ -333,87 +291,119 @@ def main(args) :
                 gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
 
                 print(f' (2.3.1) inversion')
-                image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+                with torch.no_grad():
+                    org_img = load_image(test_img_dir, 64, 64)
+                    org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
 
                 with torch.no_grad():
-                    org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
-
-                if args.org_latent_attn_map_check:
-                    input_latent = org_vae_latent
-                    input_context = con
-                    model_pred = unet(sample=org_vae_latent,
-                                      timestep=0,
-                                      encoder_hidden_states=input_context).sample
-                    attn_dict = get_cross_attn_map_from_unet(attention_store=controller,) # length 1 or 2 or 3
-                    controller.reset()
-                    train_layers_ls = [f"down_{res}" for res in args.train_down] + \
-                                      [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
-                    for train_layer in train_layers_ls:
-                        layer_res = int(train_layer.split("_")[1]) # 64, 32, 16, 8
-                        input_attn_map_ls = attn_dict[train_layer] #
-                        for attn_map in input_attn_map_ls:
-                            maps = [] # down 2, mid 1, up 3
-                            # len is 3 or 1
-                            attn_map = attn_map[:, :, :, 1:5].softmax(dim=-1)
-                            b, H, W, j = attn_map.shape  # head, height, width, 77
-                            word_map_dict = {}
-                            for obj_position, trg_concept in enumerate(prompt_list) :
-                                ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W)  # 8, 8, 8
-                                if trg_concept not in word_map_dict.keys():
-                                    word_map_dict[trg_concept] = []
-                                word_map_dict[trg_concept].append(ca_map_obj)
-                        for concept in word_map_dict.keys():
-                            maps = torch.cat(word_map_dict[concept], dim=0) # head*
-                            map_obj = maps.mean(dim=0).cpu().detach().numpy() * 255
-                            print(f'concept : {concept}, map_obj : {map_obj}')
-                            map_obj = map_obj.astype(np.uint8)
-                            Image.fromarray(map_obj).save(os.path.join(trg_img_output_dir, f'map_with_{concept}_on_{train_layer}{ext}'))
-
-
-
-
-                else:
-                    """
+                    inf_time = inference_times.tolist()
+                    inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                    latent_dict = {}
+                    latent = org_vae_latent
                     with torch.no_grad():
-                        inf_time = inference_times.tolist()
-                        inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
-                        print(f'inf_time : {inf_time}')
-                        org_latent_dict, time_steps, pil_images = ddim_loop(args,
-                                                                            latent=org_vae_latent,
-                                                                            context=inv_c,
-                                                                            inference_times=inf_time,
-                                                                            scheduler=scheduler,
-                                                                            unet=invers_unet,
-                                                                            vae=vae,
-                                                                            final_time=args.final_noising_time,
-                                                                            base_folder_dir=trg_img_output_dir,
-                                                                            name=name)
-                        noising_times = org_latent_dict.keys()
-                        print(f'noiseing_times : {noising_times}')
-                        st_noise_latent = org_latent_dict[args.final_noising_time]
+                        for i, t in enumerate(inf_time[:-1]):
+                            if i == 0 :
+                                next_time = inf_time[i + 1]
+                                if next_time <= args.final_time:
+                                    latent_dict[int(t)] = latent
+                                    from utils.model_utils import call_unet, next_step
+                                    noise_pred = call_unet(unet, latent, t, con, [[1]], None)
+                                    map_dict = controller.step_store
+                                    for layer in map_dict.keys():
+                                        score_map = map_dict[layer][0] # head, pixel_num
+                                        res = int(score_map.shape[1] ** 0.5)
+                                        score_map = score_map.sum(dim=0).unsqueeze(0) # pixel_num
+                                        score_map = score_map.reshape(res, res)
+                                        score_map = score_map.cpu().numpy() * 255
+                                        save_dir = os.path.join(class_base_folder, f'{name}_time_0_layer{layer}{ext}')
+                                        Image.fromarray(score_map.astype(np.uint8)).save(save_dir)
 
-                        time_steps.reverse()
 
-                        recon_loop(args,
-                                   org_latent_dict,
-                                   start_latent=st_noise_latent,
-                                   gt_pil=gt_pil,
-                                   context=context,
-                                   inference_times=time_steps,
-                                   scheduler=scheduler,
-                                   unet=unet,
-                                   vae=vae,
-                                   base_folder_dir=trg_img_output_dir,
-                                   controller=controller,
-                                   name=name, weight_dtype=weight_dtype)
+
+
+
+
+
+
+
                     """
-                    break
+                    @torch.no_grad()
+                    def recon_loop_infer(args, z_latent_dict, start_latent, gt_pil, context, inference_times, scheduler,
+                                         unet, vae, base_folder_dir, controller, name, weight_dtype):
+                        original_latent = z_latent_dict[0]
+                        if context.shape[0] == 2:
+                            z_con, x_con = context.chunk(2)
+                        else:
+                            good_con = context
+                        noise_pred = call_unet(unet, original_latent, 0, z_con, [[1]], None)
+                        map_dict = controller.step_store
+                        controller.reset()
+                        cls_score_list, good_score_list, bad_score_list = [], [], []
+                        mask_dict = {}
+                        for layer in map_dict.keys():
+                            position_map = map_dict[layer][1]
+                            mask_dict[layer] = position_map
+                            scores = map_dict[layer][0]
+                            cls_score, good_score = scores.chunk(2, dim=-1)
+                            # head, pix_num, 1
+                            cls_score_list.append(cls_score)
+                            good_score_list.append(good_score)
+                        cls_score = torch.cat(cls_score_list, dim=0).float().mean(dim=0).squeeze().reshape(
+                            int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res]
+                        good_score = torch.cat(good_score_list, dim=0).float().mean(dim=0).squeeze().reshape(
+                            int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res
+                        mask_latent = torch.where(cls_score < good_score + 0.1, 1, 0)  # [16,16]
+                        print(f'cls_score : {cls_score}')
+                        print(f'good_score : {good_score}')
+                        print(f'mask latent : {mask_latent}')
+                        import time
+                        time.sleep(100)
+                        mask_img = mask_latent.cpu().numpy().astype(np.uint8)  # 1 means bad position
+                        mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
+                        mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(original_latent.device,
+                                                                                          dtype=original_latent.dtype)
+                        Image.fromarray(mask_img * 255).save(os.path.join(base_folder_dir, f'predicted_mask.png'))
 
-
-
-
-
-
+                        # inference_times = [100,80, ... 0]
+                        x_latent = start_latent
+                        x_latent_dict = {}
+                        x_latent_dict[inference_times[0]] = x_latent
+                        for i, t in enumerate(inference_times[:-1]):
+                            prev_time = int(inference_times[i + 1])
+                            with torch.no_grad():
+                                for i in range(args.inner_iteration):
+                                    z_latent = z_latent_dict[t]
+                                    x_latent = x_latent_dict[t]
+                                    input_latent = torch.cat([z_latent, x_latent], dim=0)
+                                    input_cond = torch.cat([good_con, good_con], dim=0)
+                                    trg_indexs_list = [[1]]
+                                    noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list,
+                                                           mask_dict)
+                                    x_latent = x_latent * (1 - mask_latent) + z_latent * (mask_latent)
+                                    # x_latent_dict[t] = x_latent
+                                x_noise_pred = call_unet(unet, x_latent, t, good_con, None, None)
+                                # z_noise_pred, x_noise_pred = noise_pred.chunk(2)
+                                x_latent = prev_step(x_noise_pred, t, x_latent, scheduler)
+                                x_latent_dict[prev_time] = x_latent
+                                pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
+                                pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
+                        pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
+                        pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
+                    
+                        
+                    recon_loop_infer(args,
+                               org_latent_dict,
+                               start_latent=st_noise_latent,
+                               gt_pil=gt_pil,
+                               context=torch.cat([con, con], dim=0),
+                               inference_times=time_steps,
+                               scheduler=scheduler,
+                               unet=unet,
+                               vae=vae,
+                               base_folder_dir=trg_img_output_dir,
+                               controller=controller,
+                               name=name, weight_dtype=weight_dtype)
+                    """
 
 
 
