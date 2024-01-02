@@ -297,7 +297,7 @@ def main(args) :
     trg_h, trg_w = args.resolution
 
     print(f' (3.3) test images')
-    ddim_scheduler = DDIMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="ddim_scheduler")
+    ddim_scheduler = DDIMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
     ddim_scheduler.set_timesteps(50)
     for t in ddim_scheduler.progress_bar(ddim_scheduler.timesteps):
         # 1. predict noise model_output
