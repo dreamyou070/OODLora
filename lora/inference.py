@@ -235,7 +235,29 @@ def main(args) :
     scheduler.set_timesteps(args.num_ddim_steps)
     inference_times = scheduler.timesteps
 
-    print(f' \n step 3. make lora model')
+    print(f' (2.4.+) model to accelerator device')
+    if len(invers_text_encoders) > 1:
+        invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device), \
+        invers_text_encoders[1].to(device)
+        invers_text_encoder = [invers_t_enc1, invers_t_enc2]
+        del invers_t_enc1, invers_t_enc2
+        unet, t_enc1, t_enc2 = unet.to(device), text_encoders[0].to(device), text_encoders[1].to(device)
+        text_encoder = [t_enc1, t_enc2]
+        del t_enc1, t_enc2
+    else:
+        invers_unet, invers_text_encoder = invers_unet.to(device), invers_text_encoder.to(device)
+        unet, text_encoder = unet.to(device), text_encoder.to(device)
+
+    print(f' (2.5) network')
+    sys.path.append(os.path.dirname(__file__))
+    network_module = importlib.import_module(args.network_module)
+    print(f' (2.5.1) merging weights')
+    net_kwargs = {}
+    if args.network_args is not None:
+        for net_arg in args.network_args:
+            key, value = net_arg.split("=")
+            net_kwargs[key] = value
+    print(f' (2.5.2) make network')
     sys.path.append(os.path.dirname(__file__))
     network_module = importlib.import_module(args.network_module)
     net_kwargs = {}
