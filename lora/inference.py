@@ -261,7 +261,7 @@ def main(args) :
                                     score_map_dict = {}
                                     for layer in map_dict.keys():
                                         score_map = map_dict[layer][0] # head, pixel_num
-                                        score_map = score_map.sum(dim=0)
+                                        score_map = score_map.sum(dim=0).unsqueeze(0)
                                         res = int(score_map.shape[1] ** 0.5)
                                         score_map = score_map / score_map.max()
                                         score_map = score_map.reshape(res, res)
