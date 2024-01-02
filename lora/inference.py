@@ -50,9 +50,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                 if attention_scores.shape[0] == 8 :
                     cls_map = attention_probs[:, :, 0]
-                    crack_map = attention_probs[:, :, 2].unsqueeze(-1)  # head, pixel_num, 1
+                    #crack_map = attention_probs[:, :, 2].unsqueeze(-1)  # head, pixel_num, 1
                     hole_map = attention_probs[:, :, 1].unsqueeze(-1)
-                    maps = torch.cat([crack_map, hole_map], dim=-1)
+                    maps = torch.cat([cls_map, hole_map], dim=-1)
                     controller.store(maps, layer_name)
 
                 else :
@@ -219,7 +219,7 @@ def main(args) :
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
-    prompt = 'hole crack'
+    prompt = 'hole'
     context = init_prompt(tokenizer, text_encoder, device, prompt)
     uncon, con = torch.chunk(context, 2)
 
@@ -277,9 +277,9 @@ def main(args) :
                         res = int(crack_map.shape[1] ** 0.5)
                         print(f'layer : {layer}, trigger word map shape : {attn_map.shape}')
 
-                        crack_map = crack_map.sum(0).unsqueeze(0).reshape(res, res)
-                        crack_pil = Image.fromarray((np.array(crack_map.cpu().detach()) * 255).astype(np.uint8)).resize((512,512))
-                        crack_pil.save(os.path.join(trg_img_output_dir, f'crack_{class_name}_{name}_{layer}_attn_map.png'))
+                        #crack_map = crack_map.sum(0).unsqueeze(0).reshape(res, res)
+                        #crack_pil = Image.fromarray((np.array(crack_map.cpu().detach()) * 255).astype(np.uint8)).resize((512,512))
+                        #crack_pil.save(os.path.join(trg_img_output_dir, f'crack_{class_name}_{name}_{layer}_attn_map.png'))
 
                         hole_map = hole_map.sum(0).unsqueeze(0).reshape(res, res)
                         hole_pil = Image.fromarray((np.array(hole_map.cpu().detach()) * 255).astype(np.uint8)).resize(
