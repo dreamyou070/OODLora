@@ -232,7 +232,7 @@ def main(args) :
     classes = os.listdir(test_img_folder)
 
     for class_name in classes:
-        if 'good' not in class_name:
+        if 'hole' not in class_name:
             class_base_folder = os.path.join(output_dir, class_name)
             os.makedirs(class_base_folder, exist_ok=True)
 
@@ -272,14 +272,14 @@ def main(args) :
                     controller.reset()
                     for layer in attn_store_dict.keys():
                         attn_map = attn_store_dict[layer][0]
-                        crack_map, hole_map = torch.chunk(attn_map, 2, dim=-1)
-                        crack_map, hole_map = crack_map.squeeze(), hole_map.squeeze()
-                        res = int(crack_map.shape[1] ** 0.5)
+                        cls_map, hole_map = torch.chunk(attn_map, 2, dim=-1)
+                        cls_map, hole_map = cls_map.squeeze(), hole_map.squeeze()
+                        res = int(cls_map.shape[1] ** 0.5)
                         print(f'layer : {layer}, trigger word map shape : {attn_map.shape}')
 
-                        #crack_map = crack_map.sum(0).unsqueeze(0).reshape(res, res)
-                        #crack_pil = Image.fromarray((np.array(crack_map.cpu().detach()) * 255).astype(np.uint8)).resize((512,512))
-                        #crack_pil.save(os.path.join(trg_img_output_dir, f'crack_{class_name}_{name}_{layer}_attn_map.png'))
+                        cls_map = cls_map.sum(0).unsqueeze(0).reshape(res, res)
+                        cls_pil = Image.fromarray((np.array(cls_map.cpu().detach()) * 255).astype(np.uint8)).resize((512,512))
+                        cls_pil.save(os.path.join(trg_img_output_dir, f'cls_{class_name}_{name}_{layer}_attn_map.png'))
 
                         hole_map = hole_map.sum(0).unsqueeze(0).reshape(res, res)
                         hole_pil = Image.fromarray((np.array(hole_map.cpu().detach()) * 255).astype(np.uint8)).resize(
