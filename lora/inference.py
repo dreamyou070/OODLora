@@ -52,7 +52,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
                     cls_map = attention_probs[:, :, 0]
                     crack_map = attention_probs[:, :, 1].unsqueeze(-1)  # head, pixel_num, 1
                     hole_map = attention_probs[:, :, 2].unsqueeze(-1)
-                    maps = torch.cat([cls_map, crack_map, hole_map], dim=-1)
+                    maps = torch.cat([crack_map, hole_map], dim=-1)
                     controller.store(maps, layer_name)
 
                 else :
