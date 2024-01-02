@@ -261,7 +261,7 @@ def main(args) :
                                 from utils.model_utils import call_unet
                                 context = init_prompt(tokenizer, text_encoder, device, trg_prompt)
                                 uncon, con = torch.chunk(context, 2)
-                                noise_pred = call_unet(unet, latent, t, con, [[1]], None)
+                                noise_pred = call_unet(unet, latent, t, con[:,:2,:], [[1]], None)
                                 attn_stores = controller.step_store
                                 for layer_name in attn_stores :
                                     attn_list = attn_stores[layer_name][0].squeeze(0)
