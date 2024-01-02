@@ -699,8 +699,8 @@ class NetworkTrainer:
                             loss = loss + args.anormal_weight * attn_loss
 
                             if is_main_process:
-                                loss_dict["loss/anormal_activation_loss"] = anormal_attn_loss.item()
-                                loss_dict["loss/normal_activation_loss"] = normal_attn_loss.item()
+                                loss_dict["loss/anormal_pixel_on_anormal"] = anormal_attn_loss.item()
+                                loss_dict["loss/anormal_pixel_on_normal"] = normal_attn_loss.item()
 
                     if is_main_process:
                         loss_dict["task_loss"] = task_loss.item()
@@ -755,7 +755,6 @@ class NetworkTrainer:
                     #accelerator.log(logs, step=global_step)
                     if is_main_process:
                         logs = self.generate_step_logs(loss_dict, lr_scheduler)
-                        print(f'log fpr wandb : {logs}')
                         wandb.log(logs, step=global_step)
                 if global_step >= args.max_train_steps:
                     break
