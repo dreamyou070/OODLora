@@ -130,7 +130,7 @@ def main(args) :
     else:
         model_epoch = 'last'
 
-    output_dir = os.path.join(output_dir, f'lora_{model_epoch}')
+    output_dir = os.path.join(output_dir, f'unnormalized_map_lora_{model_epoch}')
     os.makedirs(output_dir, exist_ok=True)
     print(f'final output dir : {output_dir}')
 
@@ -264,7 +264,7 @@ def main(args) :
                                     cls_score, trigger_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1)
                                     cls_score, trigger_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res)
                                     cls_score, trigger_score = cls_score.mean(dim=0), trigger_score.mean(dim=0)
-                                    trigger_score = trigger_score / (trigger_score.max())
+                                    #trigger_score = trigger_score / (trigger_score.max())
 
                                     cls_np = np.array((cls_score.detach().cpu()) * 255).astype(np.uint8)
 
@@ -278,7 +278,7 @@ def main(args) :
                                     print(f'trigger (good) np : {trigger_np}')
                                     trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
                                     trigger_dir = os.path.join(trg_img_output_dir,
-                                                                f'normalized_good_attn_{layer_name}_{t}.png')
+                                                                f'good_attn_{layer_name}_{t}.png')
                                     trigger_score_pil.save(trigger_dir)
 
                                 controller.reset()
