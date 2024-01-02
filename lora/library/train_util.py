@@ -1160,6 +1160,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 train_class = 1
             else :
                 train_class = 0
+                caption = f'{caption} {class_caption}'
 
             train_class_list.append(train_class)
 
