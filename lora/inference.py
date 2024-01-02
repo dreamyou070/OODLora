@@ -335,6 +335,7 @@ def main(args) :
                                     score_map_dict = {}
                                     for layer in map_dict.keys():
                                         score_map = map_dict[layer][0] # head, pixel_num
+                                        print(f'score_map.shape : {score_map.shape}')
                                         res = int(score_map.shape[1] ** 0.5)
                                         print(f'res : {res}')
                                         if res not in score_map_dict.keys() :
