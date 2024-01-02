@@ -277,7 +277,7 @@ def main(args) :
                         res = int(pix_num ** 0.5)
                         attn_map = attn_map.sum(0).unsqueeze(0)
                         attn_map = attn_map.reshape(res, res)
-                        attn_map_np = (np.array(attn_map) * 255).astype(np.uint8)
+                        attn_map_np = (np.array(attn_map.cpu()) * 255).astype(np.uint8)
                         pil = Image.fromarray(attn_map_np).resize((512,512))
                         pil.save(os.path.join(trg_img_output_dir, f'{class_name}_{name}_{layer}_attn_map.png'))
 
