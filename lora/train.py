@@ -755,6 +755,7 @@ class NetworkTrainer:
                     #accelerator.log(logs, step=global_step)
                     if is_main_process:
                         logs = self.generate_step_logs(loss_dict, lr_scheduler)
+                        print(f'log fpr wandb : {logs}')
                         wandb.log(logs, step=global_step)
                 if global_step >= args.max_train_steps:
                     break
