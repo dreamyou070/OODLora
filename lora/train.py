@@ -662,12 +662,10 @@ class NetworkTrainer:
                     task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
                     loss = task_loss
 
-                    print(f'batch["train_class_list"] : {batch["train_class_list"]}')
                     if batch['train_class_list'][0] != 0 :
                         attention_storer.reset()
 
                     if batch["train_class_list"][0] == 0 :
-                        print('test sample')
                         # -----------------------------------------------------------------------------------------------------------------------
                         attn_dict = attention_storer.step_store
                         attention_storer.reset()
@@ -684,8 +682,6 @@ class NetworkTrainer:
                                 anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0) # [1,1,res,res] anomal = 1
                                 mask = anormal_mask.squeeze()  # res,res
                                 mask = torch.stack([mask.flatten() for i in range(8)], dim=0).unsqueeze(-1) # 8, res*res
-                                print(f'mask (8, res, res) : {mask.shape}')
-                                print(f'anormal_map (8, res,res): {anormal_map.shape}')
 
                                 activation = (anormal_map * mask).sum(dim=-1)
                                 total_score = (anormal_map).sum(dim=-1)
@@ -703,8 +699,6 @@ class NetworkTrainer:
                             loss = loss + args.anormal_weight * attn_loss
 
                             if is_main_process:
-                                print(f'anormal_attn_loss : {anormal_attn_loss.item()}')
-                                print(f'normal_attn_loss : {normal_attn_loss.item()}')
                                 loss_dict["loss/anormal_activation_loss"] = anormal_attn_loss.item()
                                 loss_dict["loss/normal_activation_loss"] = normal_attn_loss.item()
 
