@@ -18,7 +18,8 @@ class AttentionStore :
         self.repeat = 0
         self.normal_score_list = []
     def get_empty_store(self):
-        return {}
+        return {"down_cross": [], "mid_cross": [], "up_cross": [],
+                "down_self": [],  "mid_self": [],  "up_self": []}
 
     def save_key_value_states(self, key_value_states, layer_name):
         if layer_name not in self.key_value_states_dict.keys() :
@@ -65,9 +66,6 @@ class AttentionStore :
 
     def save(self, attn, is_cross: bool, place_in_unet: str):
         key = f"{place_in_unet}_{'cross' if is_cross else 'self'}"
-        if key not in self.step_store.keys():
-            self.step_store[key] = []
-            self.step_store[key].append(attn.clone())
         self.step_store[key].append(attn.clone())
         return attn
     def get_average_attention(self):
