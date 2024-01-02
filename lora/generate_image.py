@@ -326,7 +326,9 @@ def main(args) :
     image = (latent / 2 + 0.5).clamp(0, 1)
     image = image.cpu().permute(0, 2, 3, 1).numpy()
     image = numpy_to_pil(image)
-    image[0].save(os.path.join(output_dir, f'crack_gen.png'))
+    dir = os.path.join(output_dir, f'crack_gen.png')
+    print(dir)
+    image[0].save(dir)
 
 
 
