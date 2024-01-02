@@ -357,7 +357,9 @@ def main(args) :
                             # len is 3 or 1
                             b, H, W, j = attn_map.shape # head, height, width, 77
                             word_map_dict = {}
-                            for obj_position, trg_concept in zip(word_list, prompt_list) :
+                            prompt_list = ['cls'] + prompt_list
+
+                            for obj_position, trg_concept in enumerate(prompt_list) :
                                 ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W)  # 8, 8, 8
                                 if trg_concept not in word_map_dict.keys():
                                     word_map_dict[trg_concept] = []
