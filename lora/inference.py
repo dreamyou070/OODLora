@@ -263,11 +263,21 @@ def main(args) :
                                         score_map = map_dict[layer][0] # head, pixel_num
                                         score_map = score_map.sum(dim=0).unsqueeze(0)
                                         res = int(score_map.shape[1] ** 0.5)
+                                        if res not in score_map_dict.keys() and 'down' not in layer:
+                                            score_map_dict[res] = []
+                                        score_map_dict[res].append(score_map)
+                                    for res in score_map_dict.keys():
+                                        score_map = torch.cat(score_map_dict[res], dim=0)
                                         score_map = score_map / score_map.max()
                                         score_map = score_map.reshape(res, res)
                                         score_map = score_map.cpu().numpy() * 255
-                                        save_dir = os.path.join(trg_img_output_dir, f'{name}_time_0_{layer}{ext}')
+                                        save_dir = os.path.join(trg_img_output_dir, f'{name}_time_0_{res}{ext}')
                                         Image.fromarray(score_map.astype(np.uint8)).resize((512,512), Image.Resampling.BILINEAR).save(save_dir)
+                                    score_map = score_map / score_map.max()
+                                    #score_map = score_map.reshape(res, res)
+                                    #score_map = score_map.cpu().numpy() * 255
+                                    #save_dir = os.path.join(trg_img_output_dir, f'{name}_time_0_{layer}{ext}')
+                                    #Image.fromarray(score_map.astype(np.uint8)).resize((512,512), Image.Resampling.BILINEAR).save(save_dir)
                                     controller.reset()
 
 
