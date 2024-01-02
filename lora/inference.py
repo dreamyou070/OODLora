@@ -123,6 +123,8 @@ def register_attention_control(unet_model, controller):
 
 def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32, 16, 8], poses=["down", "mid", "up"]):
     attention_maps = attention_store.get_average_attention()
+
+    print("attention_maps", attention_maps.keys())
     attn_dict = {}
     for pos in poses:
         for res in reses:
@@ -338,8 +340,8 @@ def main(args) :
                     model_pred = unet(sample=org_vae_latent,
                                       timestep=0,
                                       encoder_hidden_states=input_context).sample
-
                     attn_dict = get_cross_attn_map_from_unet(attention_store=controller,)
+                    
                     train_layers_ls = [f"down_{res}" for res in args.train_down] + \
                                       [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
                     print(f'train_layers_ls : {train_layers_ls}')
