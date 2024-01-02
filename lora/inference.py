@@ -31,6 +31,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             if context is not None:
                 is_cross_attention = True
             query = self.to_q(hidden_states)
+            print(f'query : {query.shape}')
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
@@ -47,6 +48,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
+                # 8, pix_num, 77
                 print(f'attention_probs.shape: {attention_probs.shape}')
                 trg_probs = attention_probs[:,:,1]
                 controller.store(trg_probs,layer_name)
