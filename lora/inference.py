@@ -271,8 +271,8 @@ def main(args) :
 
     print(f' (2.4.+) model to accelerator device')
     controller = AttentionStore()
-    #register_attention_control(unet, controller)
-    register_attention_control(invers_unet, controller)
+    register_attention_control(unet, controller)
+    #register_attention_control(invers_unet, controller)
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
