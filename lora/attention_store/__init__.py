@@ -18,8 +18,7 @@ class AttentionStore :
         self.repeat = 0
         self.normal_score_list = []
     def get_empty_store(self):
-        return {"down_cross": [], "mid_cross": [], "up_cross": [],
-                "down_self": [],  "mid_self": [],  "up_self": []}
+        return {}
 
     def save_key_value_states(self, key_value_states, layer_name):
         if layer_name not in self.key_value_states_dict.keys() :
