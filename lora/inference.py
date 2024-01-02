@@ -67,6 +67,7 @@ def register_attention_control(unet_model, controller):
             attention_probs = self.get_attention_scores(query, key, attention_mask)
 
             # *************************************************************************************** #
+            print(f'place_in_unet: {place_in_unet}')
             attention_probs = controller.save(attention_probs, is_cross, place_in_unet)
 
             hidden_states = torch.bmm(attention_probs, value)

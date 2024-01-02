@@ -65,6 +65,9 @@ class AttentionStore :
 
     def save(self, attn, is_cross: bool, place_in_unet: str):
         key = f"{place_in_unet}_{'cross' if is_cross else 'self'}"
+        if key not in self.step_store.keys():
+            self.step_store[key] = []
+            self.step_store[key].append(attn.clone())
         self.step_store[key].append(attn.clone())
         return attn
     def get_average_attention(self):
