@@ -274,7 +274,7 @@ def main(args) :
                                     trigger_score = trigger_score / (trigger_score.max())
 
                                     cls_np = np.array((cls_score.detach().cpu()) * 255).astype(np.uint8)
-                                    print(f'cls_np : {cls_np}')
+
 
                                     cls_score_pil = Image.fromarray(cls_np).resize((512, 512), Image.BILINEAR)
                                     cls_dir = os.path.join(trg_img_output_dir,
@@ -282,6 +282,7 @@ def main(args) :
                                     cls_score_pil.save(cls_dir)
 
                                     trigger_np = np.array((trigger_score.detach().cpu()) * 255).astype(np.uint8)
+                                    print(f'trigger_np : {trigger_np}')
                                     trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
                                     trigger_dir = os.path.join(trg_img_output_dir,
                                                                 f'normalized_trigger_{name}_attn_{layer_name}_{t}.png')
