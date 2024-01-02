@@ -667,6 +667,7 @@ class NetworkTrainer:
                         attention_storer.reset()
 
                     if batch["train_class_list"][0] == 0 :
+                        print('test sample')
                         # -----------------------------------------------------------------------------------------------------------------------
                         attn_dict = attention_storer.step_store
                         attention_storer.reset()
