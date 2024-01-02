@@ -138,9 +138,87 @@ def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32,
             if len(temp_list) > 0:
                 attn_dict[f"{pos}_{res}"] = temp_list
     return attn_dict
+"""
+def get_grounding_loss_by_layer(_gt_seg_list,
+                                word_token_idx_ls,
+                                res,                # 64,32,16,8
+                                input_attn_map_ls,):
+    gt_seg_list = deepcopy(_gt_seg_list)
 
+    # reszie gt seg map to the same size with attn map
+    resize_transform = transforms.Resize((res, res))
+    noun_num = len(gt_seg_list)
+    for i in range(len(gt_seg_list)):
+        gt_seg_list[i] = resize_transform(gt_seg_list[i])
+        gt_seg_list[i] = gt_seg_list[i].squeeze(0) # 1, 1, res, res => 1, 1, res(8,16,32,64), res(8,16,32,64)
+        # add binary
+        binary = (gt_seg_list[i] > 0.0).float() # 1, res, res
+        gt_seg_list[i] = (gt_seg_list[i] > 0.0).float()
 
+    ################### token loss start ###################
+    # Following code is adapted from
+    # https://github.com/silent-chen/layout-guidance/blob/08b687470f911c7f57937012bdf55194836d693e/utils.py#L27
+    token_loss = 0.0
+    for attn_map in input_attn_map_ls:
+        # len is 3 or 1
+        b, H, W, j = attn_map.shape
+        for i in range(len(word_token_idx_ls)): # [[word1 token_idx1, word1 token_idx2, ...], [word2 token_idx1, word2 token_idx2, ...]]
+            obj_loss = 0.0
+            single_word_idx_ls = word_token_idx_ls[i] #[token_idx1, token_idx2, ...]
+            mask = gt_seg_list[i]
+            for obj_position in single_word_idx_ls:
+                # ca map obj shape 8 * 16 * 16
+                ca_map_obj = attn_map[:, :, :, obj_position].reshape(b, H, W) # 1, 8, 8
+                trg_score =  (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)
+                all_score =  ca_map_obj.reshape(b, -1).sum(dim=-1)
+                activation_value = (ca_map_obj * mask).reshape(b, -1).sum(dim=-1)/ca_map_obj.reshape(b, -1).sum(dim=-1)
+                obj_loss += (1.0 - torch.mean(activation_value)) ** 2
+            token_loss += (obj_loss/len(single_word_idx_ls))
+    # normalize with len words
+    token_loss = token_loss / len(word_token_idx_ls)
+    ################## token loss end ##########################
 
+    ################## pixel loss start ######################
+    # average cross attention map on different layers
+    avg_attn_map_ls = []
+    # input_attn_map_list ?
+    for i in range(len(input_attn_map_ls)):
+        # len is 1 or 3
+        org_map = input_attn_map_ls[i] # head, res, res, 77
+        map = input_attn_map_ls[i].reshape(-1, res, res, input_attn_map_ls[i].shape[-1]).mean(0) # res,res,77
+        avg_attn_map_ls.append(map)
+    avg_attn_map = torch.stack(avg_attn_map_ls, dim=0) # [ (8,8,77), (8,8,77)]
+    avg_attn_map = avg_attn_map.sum(0) / avg_attn_map.shape[0] # res,res,77
+    avg_attn_map = avg_attn_map.unsqueeze(0) # 1, rse,res, 77
+
+    bce_loss_func = nn.BCELoss()
+    pixel_loss = 0.0
+    for i in range(len(word_token_idx_ls)):
+
+        # token idx
+        word_cross_attn_ls = []
+        for token_idx in word_token_idx_ls[i]:
+            # 2
+            # 9
+            # 5
+            word_map = avg_attn_map[..., token_idx] # 1, res, res, 1
+            word_cross_attn_ls.append(word_map)
+
+        word_cross_attn_ls = torch.stack(word_cross_attn_ls, dim=0).sum(dim=0) # 1, rse,res
+        print(f'word_cross_attn_ls.shape: {word_cross_attn_ls.shape}')
+        print(f'gt_seg_list[i].shape: {gt_seg_list[i].shape}')
+
+        pixel_loss += bce_loss_func(word_cross_attn_ls, gt_seg_list[i])
+
+    # average with len word_token_idx_ls
+    pixel_loss = pixel_loss / len(word_token_idx_ls)
+    ################## pixel loss end #########################
+
+    return {
+        "token_loss" : token_loss,
+        "pixel_loss": pixel_loss,
+    }
+"""
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0]
@@ -202,7 +280,7 @@ def main(args) :
     print(f' (2.4.+) model to accelerator device')
 
     controller = AttentionStore()
-    register_attention_control(unet, controller, mask_thredhold=args.mask_thredhold)
+    register_attention_control(unet, controller)
 
     print(f' \n step 3. ground-truth image preparing')
     print(f' (3.1) prompt condition')
@@ -256,7 +334,16 @@ def main(args) :
                     input_context = con
                     noise_pred = call_unet(unet, input_latent, 0, input_context, [[1]], None)
                     attn_dict = get_cross_attn_map_from_unet(attention_store=controller,)
-                    
+                    train_layers_ls = [f"down_{res}" for res in args.train_down] + \
+                                      [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
+                    print(f'train_layers_ls : {train_layers_ls}')
+                    for train_layer in train_layers_ls:
+                        layer_res = int(train_layer.split("_")[1])
+
+                        #attn_loss_dict = get_grounding_loss_by_layer(_gt_seg_list=gt_seg_ls,
+                        #                                             word_token_idx_ls=word_token_idx_ls,
+                        #                                             res=layer_res,  # 64,32,16,8
+                        #                                             input_attn_map_ls=attn_dict[train_layer],)
 
 
 
@@ -369,6 +456,9 @@ if __name__ == "__main__":
     parser.add_argument("--inner_iteration", type=int, default=10)
     parser.add_argument("--org_latent_attn_map_check", action = 'store_true')
     parser.add_argument("--other_token_preserving", action = 'store_true')
+    parser.add_argument('--train_down', nargs='+', type=int, help='use which res layers in U-Net down', default=[])
+    parser.add_argument('--train_mid', nargs='+', type=int, help='use which res layers in U-Net mid', default=[8])
+    parser.add_argument('--train_up', nargs='+', type=int, help='use which res layers in U-Net up', default=[16,32,64])
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
