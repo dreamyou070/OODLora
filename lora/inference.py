@@ -271,7 +271,7 @@ def main(args) :
                                     attn = attn.reshape(h, res, res)
                                     attn = attn.sum(dim=0)
                                     attn = attn / attn.max()
-                                    attn_pil = Image.fromarray(np.array(attn).astype(np.uint8) * 255).resize((512, 512), Image.BILINEAR)
+                                    attn_pil = Image.fromarray(np.array(attn.detach().cpu()).astype(np.uint8) * 255).resize((512, 512), Image.BILINEAR)
                                     dir = os.path.join(trg_img_output_dir,
                                                        f'{name}_attn_{layer_name}_{t}.png')
                                     attn_pil.save(dir)
