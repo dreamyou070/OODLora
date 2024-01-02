@@ -47,6 +47,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None:
+                print(f'attention_probs.shape: {attention_probs.shape}')
                 trg_probs = attention_probs[:,:,1]
                 controller.store(trg_probs,layer_name)
             hidden_states = torch.bmm(attention_probs, value)
