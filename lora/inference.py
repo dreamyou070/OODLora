@@ -15,7 +15,6 @@ from utils.model_utils import get_state_dict, init_prompt
 import shutil
 from attention_store import AttentionStore
 import torch.nn as nn
-from utils.model_utils import call_unet
 from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel
 try:
