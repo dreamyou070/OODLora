@@ -269,7 +269,7 @@ def main(args) :
                     attn_store_dict = controller.step_store
                     for layer in attn_store_dict.keys():
                         trigger_attn_map = attn_store_dict[layer][0]
-                        h, p, c = trigger_attn_map.shape
+                        h, p = trigger_attn_map.shape
                         res = int(p ** 0.5)
                         print(f'layer : {layer}, trigger word map shape : {trigger_attn_map.shape}')
 
