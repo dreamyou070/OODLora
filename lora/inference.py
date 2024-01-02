@@ -340,7 +340,7 @@ def main(args) :
                                         score_map = score_map.reshape(res, res)
                                         score_map = score_map.cpu().numpy() * 255
                                         save_dir = os.path.join(trg_img_output_dir, f'{name}_time_0_layer{layer}{ext}')
-                                        Image.fromarray(score_map.astype(np.uint8)).resize(512,512).save(save_dir)
+                                        Image.fromarray(score_map.astype(np.uint8)).resize((512,512), Image.Resampling.BILINEAR).save(save_dir)
                                     controller.reset()
 
 
