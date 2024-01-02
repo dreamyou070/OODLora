@@ -323,8 +323,8 @@ def main(args) :
                             scheduler = ddim_scheduler,
                             safety_checker = None,
                                        feature_extractor = None,)
-
-    pipeline.to(accelerator.device, weight_dtype)
+    with torch.no_grad():
+        pipeline.to(accelerator.device, weight_dtype)
     images = pipeline(prompt = 'crack').images
     image = (images / 2 + 0.5).clamp(0, 1)
     image = image.cpu().permute(0, 2, 3, 1).numpy()
