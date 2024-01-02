@@ -121,101 +121,25 @@ def register_attention_control(unet_model, controller):
             mid_temp = register_recr(net[1], 0, "mid")
             cross_att_count += mid_temp
             mid_count += mid_temp
-
     controller.num_att_layers = cross_att_count
 
 
-def register_attention_control(unet: nn.Module, controller: AttentionStore,  mask_thredhold: float = 1):  # if mask_threshold is 1, use itself
-
-    map_dict = {}
-
-    def ca_forward(self, layer_name):
-        def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
-            is_cross_attention = False
-            if context is not None:
-                is_cross_attention = True
-            query = self.to_q(hidden_states)
-            context = context if context is not None else hidden_states
-            key = self.to_k(context)
-            value = self.to_v(context)
-
-            query = self.reshape_heads_to_batch_dim(query)
-            key = self.reshape_heads_to_batch_dim(key)
-            value = self.reshape_heads_to_batch_dim(value)
-            if self.upcast_attention:
-                query = query.float()
-                key = key.float()
-            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                            device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
-            attention_probs = attention_scores.softmax(dim=-1)
-            attention_probs = attention_probs.to(value.dtype)
-
-            if is_cross_attention and trg_indexs_list is not None:
-
-                if attention_scores.shape[0] == 8 :
-                    cls_map = attention_probs[:, :, 0].unsqueeze(-1)
-                    hole_map = attention_probs[:, :, 1].unsqueeze(-1)
-                    crack_map = attention_probs[:, :, 2].unsqueeze(-1)  # head, pixel_num, 1
-
-                    maps = torch.cat([cls_map, hole_map, crack_map], dim=-1)
-                    controller.store(maps, layer_name)
-
-                else :
-                    if layer_name in mask.keys() :
-                        position_map = mask[layer_name]
-                        print(f'type of positionmap in infer : {type(position_map)}')
-                        background_attention_probs, object_attention_probs = attention_probs.chunk(2, dim=0)
-
-                        batch_num = len(trg_indexs_list)
-
-                        attention_probs_back_batch = torch.chunk(background_attention_probs, batch_num, dim=0)
-                        attention_probs_object_batch = torch.chunk(object_attention_probs, batch_num, dim=0) #  torch.Size([8, 4096, 77])
-
-                        for batch_idx, (attention_probs_back, attention_probs_object) in enumerate(zip(attention_probs_back_batch,attention_probs_object_batch)):
-
-                            pixel_num = attention_probs_back.shape[1] # head, pixel_num, word_num
-                            #map_list = []
-                            res = int(pixel_num ** 0.5)
-                            if res in args.cross_map_res :
-                                query = self.to_q(hidden_states)
-                                query = self.reshape_heads_to_batch_dim(query)
-                                back_query, object_query = query.chunk(2, dim=0)
-                                #map_list.append(position_map)
-                                position_map = position_map.unsqueeze(-1) # head, pixel_num, 1
-                                position_map = position_map.expand(object_query.shape)
-                                object_query = object_query * (1-position_map) + back_query * (position_map)
-                                query = torch.cat([back_query, object_query], dim=0)
-                                attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                                                                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
-                                attention_probs = attention_scores.softmax(dim=-1)
+def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32, 16, 8], poses=["down", "mid", "up"]):
+    attention_maps = attention_store.get_average_attention()
+    attn_dict = {}
+    for pos in poses:
+        for res in reses:
+            temp_list = []
+            for item in attention_maps[f"{pos}_cross"]:
+                if item.shape[1] == res ** 2:
+                    cross_maps = item.reshape(-1, res, res, item.shape[-1])
+                    temp_list.append(cross_maps)
+            # if such resolution exists
+            if len(temp_list) > 0:
+                attn_dict[f"{pos}_{res}"] = temp_list
+    return attn_dict
 
 
-            hidden_states = torch.bmm(attention_probs, value)
-            hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
-            hidden_states = self.to_out[0](hidden_states)
-
-            return hidden_states
-        return forward
-
-    def register_recr(net_, count, layer_name):
-        if net_.__class__.__name__ == 'CrossAttention':
-            net_.forward = ca_forward(net_, layer_name)
-            return count + 1
-        elif hasattr(net_, 'children'):
-            for name__, net__ in net_.named_children():
-                full_name = f'{layer_name}_{name__}'
-                count = register_recr(net__, count, full_name)
-        return count
-
-    cross_att_count = 0
-    for net in unet.named_children():
-        if "down" in net[0]:
-            cross_att_count += register_recr(net[1], 0, net[0])
-        elif "up" in net[0]:
-            cross_att_count += register_recr(net[1], 0, net[0])
-        elif "mid" in net[0]:
-            cross_att_count += register_recr(net[1], 0, net[0])
-    controller.num_att_layers = cross_att_count
 
 def main(args) :
 
@@ -254,14 +178,14 @@ def main(args) :
     print(f' \n step 2. make stable diffusion model')
     device = accelerator.device
 
-    noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
+    scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
     tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer")
     text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
     vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae")
     unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
 
-    inverse_text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
-    inverse_unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
+    invers_text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
+    invers_unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
 
     print(f' \n step 3. make lora model')
     sys.path.append(os.path.dirname(__file__))
@@ -275,32 +199,8 @@ def main(args) :
         info = network.load_weights(args.network_weights)
     network.to(device)
 
-    """
-    trg_resolutions = args.cross_map_res
-    title = ''
-    for res in trg_resolutions:
-        title += f'_{res}'
-    print(f'title : {title}')
-
-    output_dir = os.path.join(output_dir,f'lora_{model_epoch}_final_noising_{args.final_noising_time}_num_ddim_steps_{args.num_ddim_steps}_'
-                                         f'cross_res{title}_'
-                                         f'res_{args.pixel_mask_res}_'
-                                         f'pixel_mask_pixel_thred_{args.pixel_thred}_'
-                                         f'inner_iter_{args.inner_iteration}_'
-                                         f'mask_thredhold_{args.mask_thredhold}')
-    os.makedirs(output_dir, exist_ok=True)
-    print(f'final output dir : {output_dir}')
-
-    print(f' (2.4) scheduler')
-    scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
-    scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
-                              beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
-    scheduler.set_timesteps(args.num_ddim_steps)
-    inference_times = scheduler.timesteps
-
     print(f' (2.4.+) model to accelerator device')
-    
-    
+
     controller = AttentionStore()
     register_attention_control(unet, controller, mask_thredhold=args.mask_thredhold)
 
@@ -349,42 +249,20 @@ def main(args) :
                 image_gt_np = load_image(test_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
 
                 with torch.no_grad():
-                    org_vae_latent  = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
+                    org_vae_latent = image2latent(image_gt_np, vae, device=device, weight_dtype=weight_dtype)
 
-                if args.org_latent_attn_map_check :
+                if args.org_latent_attn_map_check:
                     input_latent = org_vae_latent
                     input_context = con
                     noise_pred = call_unet(unet, input_latent, 0, input_context, [[1]], None)
-                    attn_store_dict = controller.step_store
-                    controller.reset()
-                    for layer in attn_store_dict.keys():
-                        attn_map = attn_store_dict[layer][0]
-                        cls_map, hole_map, crack_map = torch.chunk(attn_map, 3, dim=-1)
-                        cls_map, hole_map, crack_map = cls_map.squeeze(), hole_map.squeeze(), crack_map.squeeze() # head, res*res
-                        res = int(cls_map.shape[1] ** 0.5)
-                        print(f'layer : {layer}, trigger word map shape : {attn_map.shape}')
-
-                        cls_map = (torch.sum(cls_map, dim=0) / cls_map.shape[0]).unsqueeze(0).reshape(res, res)
-                        cls_pil = Image.fromarray((np.array(cls_map.cpu().detach()) * 255).astype(np.uint8)).resize((512,512))
-                        cls_pil.save(os.path.join(trg_img_output_dir, f'cls_{class_name}_{name}_{layer}_attn_map.png'))
-
-                        hole_map = (torch.sum(hole_map, dim=0) / hole_map.shape[0]).unsqueeze(0).reshape(res, res)
-                        hole_pil = Image.fromarray((np.array(hole_map.cpu().detach()) * 255).astype(np.uint8)).resize((512, 512))
-                        hole_pil.save(os.path.join(trg_img_output_dir, f'hole_{class_name}_{name}_{layer}_attn_map.png'))
-
-                        crack_map = (torch.sum(crack_map, dim=0) / crack_map.shape[0]).unsqueeze(0).reshape(res, res)
-                        crack_pil = Image.fromarray((np.array(crack_map.cpu().detach()) * 255).astype(np.uint8)).resize((512, 512))
-                        crack_pil.save(os.path.join(trg_img_output_dir, f'crack_{class_name}_{name}_{layer}_attn_map.png'))
-
-                        total_map = (cls_map + hole_map + crack_map)
-                        print(f'total_map : {total_map}')
-
-                        # head==8, pix_num, 1
+                    attn_dict = get_cross_attn_map_from_unet(attention_store=controller,)
+                    
 
 
 
 
-                else :
+                else:
+                    """
                     with torch.no_grad():
                         inf_time = inference_times.tolist()
                         inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
@@ -404,21 +282,46 @@ def main(args) :
                         st_noise_latent = org_latent_dict[args.final_noising_time]
 
                         time_steps.reverse()
-                        
+
                         recon_loop(args,
                                    org_latent_dict,
                                    start_latent=st_noise_latent,
-                                   gt_pil = gt_pil,
+                                   gt_pil=gt_pil,
                                    context=context,
-                                   inference_times= time_steps,
+                                   inference_times=time_steps,
                                    scheduler=scheduler,
                                    unet=unet,
                                    vae=vae,
                                    base_folder_dir=trg_img_output_dir,
                                    controller=controller,
-                                   name=name,weight_dtype=weight_dtype)
-                        
-                break
+                                   name=name, weight_dtype=weight_dtype)
+                    """
+                    break
+
+    """
+    trg_resolutions = args.cross_map_res
+    title = ''
+    for res in trg_resolutions:
+        title += f'_{res}'
+    print(f'title : {title}')
+
+    output_dir = os.path.join(output_dir,f'lora_{model_epoch}_final_noising_{args.final_noising_time}_num_ddim_steps_{args.num_ddim_steps}_'
+                                         f'cross_res{title}_'
+                                         f'res_{args.pixel_mask_res}_'
+                                         f'pixel_mask_pixel_thred_{args.pixel_thred}_'
+                                         f'inner_iter_{args.inner_iteration}_'
+                                         f'mask_thredhold_{args.mask_thredhold}')
+    os.makedirs(output_dir, exist_ok=True)
+    print(f'final output dir : {output_dir}')
+
+    print(f' (2.4) scheduler')
+    scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
+    scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
+                              beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
+    scheduler.set_timesteps(args.num_ddim_steps)
+    inference_times = scheduler.timesteps
+
+    
     """
 
 

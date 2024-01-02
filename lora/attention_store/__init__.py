@@ -70,31 +70,13 @@ class AttentionStore :
             self.self_key_store[layer_name].append(key_value)
             self.self_value_store[layer_name].append(value_value)
 
-    def cross_query_key_value_caching(self, query_value, key_value, value_value, layer_name):
-        if layer_name not in self.cross_query_store.keys() :
-            self.cross_query_store[layer_name] = []
-            self.cross_key_store[layer_name] = []
-            self.cross_value_store[layer_name] = []
-            self.cross_query_store[layer_name].append(query_value)
-            self.cross_key_store[layer_name].append(key_value)
-            self.cross_value_store[layer_name].append(value_value)
-        else :
-            self.cross_query_store[layer_name].append(query_value)
-            self.cross_key_store[layer_name].append(key_value)
-            self.cross_value_store[layer_name].append(value_value)
-        return query_value, key_value, value_value
-    def cross_key_value_caching(self, key_value, value_value, layer_name):
-
-        if layer_name not in self.cross_key_store.keys() :
-            self.cross_key_store[layer_name] = []
-            self.cross_value_store[layer_name] = []
-            self.cross_key_store[layer_name].append(key_value)
-            self.cross_value_store[layer_name].append(value_value)
-
-        else :
-            self.cross_key_store[layer_name].append(key_value)
-            self.cross_value_store[layer_name].append(value_value)
-        return key_value, value_value
+    def forward(self, attn, is_cross: bool, place_in_unet: str):
+        key = f"{place_in_unet}_{'cross' if is_cross else 'self'}"
+        self.step_store[key].append(attn.clone())
+        return attn
+    def get_average_attention(self):
+        average_attention = {key: [item / self.cur_step for item in self.attention_store[key]] for key in self.attention_store}
+        return average_attention
 
     def reset(self):
         self.cur_step = 0

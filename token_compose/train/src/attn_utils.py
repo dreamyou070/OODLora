@@ -184,9 +184,7 @@ def register_attention_control(unet_model, controller):
 def get_cross_attn_map_from_unet(attention_store: AttentionStore, is_training_sd21, 
                            reses=[64, 32, 16, 8], poses=["down", "mid", "up"]):
     attention_maps = attention_store.get_average_attention()
-
     attn_dict = {}
-
     if is_training_sd21:
         reses = [int(SD14_TO_SD21_RATIO * item) for item in reses]
     
