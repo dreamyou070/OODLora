@@ -338,7 +338,12 @@ def main(args) :
                 if args.org_latent_attn_map_check:
                     input_latent = org_vae_latent
                     input_context = con
-                    model_pred = unet(org_vae_latent, 0, input_context).sample
+                    model_pred = unet(sample=org_vae_latent,
+                                      timestep=0,
+                                      encoder_hidden_states=input_context).sample
+
+
+
                     attn_dict = get_cross_attn_map_from_unet(attention_store=controller,)
                     train_layers_ls = [f"down_{res}" for res in args.train_down] + \
                                       [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
