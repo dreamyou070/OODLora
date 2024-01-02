@@ -50,8 +50,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,  mas
 
                 if attention_scores.shape[0] == 8 :
                     cls_map = attention_probs[:, :, 0]
-                    trigger_map = attention_probs[:, :, 1]  # head, pixel_num, 1
-                    controller.store(trigger_map, layer_name)
+                    crack_map = attention_probs[:, :, 1].unsqueeze(-1)  # head, pixel_num, 1
+                    hole_map = attention_probs[:, :, 2].unsqueeze(-1)
+                    maps = torch.cat([cls_map, crack_map, hole_map], dim=-1)
+                    controller.store(maps, layer_name)
 
                 else :
                     if layer_name in mask.keys() :
@@ -270,16 +272,19 @@ def main(args) :
                     controller.reset()
                     for layer in attn_store_dict.keys():
                         attn_map = attn_store_dict[layer][0]
-                        h, p = attn_map.shape
-                        res = int(p ** 0.5)
+                        crack_map, hole_map = torch.chuk(attn_map, 2, dim=-1)
+                        crack_map, hole_map = crack_map.squeeze(), hole_map.squeeze()
+                        res = int(crack_map.shape[1] ** 0.5)
                         print(f'layer : {layer}, trigger word map shape : {attn_map.shape}')
-                        pix_num = attn_map.shape[1]
-                        res = int(pix_num ** 0.5)
-                        attn_map = attn_map.sum(0).unsqueeze(0)
-                        attn_map = attn_map.reshape(res, res)
-                        attn_map_np = (np.array(attn_map.cpu().detach()) * 255).astype(np.uint8)
-                        pil = Image.fromarray(attn_map_np).resize((512,512))
-                        pil.save(os.path.join(trg_img_output_dir, f'{class_name}_{name}_{layer}_attn_map.png'))
+
+                        crack_map = crack_map.sum(0).unsqueeze(0).reshape(res, res)
+                        crack_pil = Image.fromarray((np.array(crack_map.cpu().detach()) * 255).astype(np.uint8)).resize((512,512))
+                        crack_pil.save(os.path.join(trg_img_output_dir, f'crack_{class_name}_{name}_{layer}_attn_map.png'))
+
+                        hole_map = hole_map.sum(0).unsqueeze(0).reshape(res, res)
+                        hole_pil = Image.fromarray((np.array(hole_map.cpu().detach()) * 255).astype(np.uint8)).resize(
+                            (512, 512))
+                        hole_pil.save(os.path.join(trg_img_output_dir, f'hole_{class_name}_{name}_{layer}_attn_map.png'))
 
                         # head==8, pix_num, 1
 
