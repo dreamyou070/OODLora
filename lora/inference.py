@@ -354,7 +354,8 @@ def main(args) :
                         for attn_map in input_attn_map_ls:
                             maps = [] # down 2, mid 1, up 3
                             # len is 3 or 1
-                            #b, H, W, j = attn_map.shape # head, height, width, 77
+                            b, H, W, j = attn_map.shape # head, height, width, 77
+                            print(f'attn_map.shape : {attn_map.shape}')
                             b, H, W, j = attn_map[:, :, :, 1:5].softmax(dim=-1)
                             word_map_dict = {}
                             for obj_position, trg_concept in enumerate(prompt_list) :
