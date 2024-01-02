@@ -31,8 +31,8 @@ def register_attention_control(unet_model, controller):
         else:
             to_out = self.to_out
 
-        def forward(hidden_states, context=None, attention_mask=None, temb=None, ):
-            is_cross = context is not None
+        def forward(hidden_states, encoder_hidden_states=None, attention_mask=None, temb=None, ):
+            is_cross = encoder_hidden_states is not None
 
             residual = hidden_states
 
@@ -45,7 +45,9 @@ def register_attention_control(unet_model, controller):
                 batch_size, channel, height, width = hidden_states.shape
                 hidden_states = hidden_states.view(batch_size, channel, height * width).transpose(1, 2)
 
-            batch_size, sequence_length, _ = (hidden_states.shape if context is None else context.shape)
+            batch_size, sequence_length, _ = (
+                hidden_states.shape if encoder_hidden_states is None else encoder_hidden_states.shape
+            )
             attention_mask = self.prepare_attention_mask(attention_mask, sequence_length, batch_size)
 
             if self.group_norm is not None:
@@ -53,10 +55,10 @@ def register_attention_control(unet_model, controller):
 
             query = self.to_q(hidden_states)
 
-            if context is None:
+            if encoder_hidden_states is None:
                 encoder_hidden_states = hidden_states
             elif self.norm_cross:
-                encoder_hidden_states = self.norm_encoder_hidden_states(context)
+                encoder_hidden_states = self.norm_encoder_hidden_states(encoder_hidden_states)
 
             key = self.to_k(encoder_hidden_states)
             value = self.to_v(encoder_hidden_states)
@@ -120,8 +122,8 @@ def register_attention_control(unet_model, controller):
             mid_temp = register_recr(net[1], 0, "mid")
             cross_att_count += mid_temp
             mid_count += mid_temp
-    controller.num_att_layers = cross_att_count
 
+    controller.num_att_layers = cross_att_count
 
 def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32, 16, 8], poses=["down", "mid", "up"]):
     attention_maps = attention_store.get_average_attention()
