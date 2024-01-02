@@ -278,6 +278,8 @@ def main(args) :
     network.to(device)
 
     print(f' (2.4.+) model to accelerator device')
+    unet, text_encoder, vae, invers_unet, invers_text_encoder, network = accelerator.prepare(unet, text_encoder, vae,
+                                                                                             invers_unet, invers_text_encoder, network)
 
     controller = AttentionStore()
     register_attention_control(unet, controller)
