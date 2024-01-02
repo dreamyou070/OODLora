@@ -683,7 +683,7 @@ class NetworkTrainer:
                                 # ------------------------------------------------------------------------------------------------
                                 anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0) # [1,1,res,res] anomal = 1
                                 mask = anormal_mask.squeeze()  # res,res
-                                mask = torch.stack([mask.flatten() for i in range(8)], dim=0) # 8, res*res
+                                mask = torch.stack([mask.flatten() for i in range(8)], dim=0).unsqueeze(-1) # 8, res*res
                                 print(f'mask (8, res, res) : {mask.shape}')
                                 print(f'anormal_map (8, res,res): {anormal_map.shape}')
 
