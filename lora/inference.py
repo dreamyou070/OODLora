@@ -341,10 +341,12 @@ def main(args) :
                     model_pred = unet(sample=org_vae_latent,
                                       timestep=0,
                                       encoder_hidden_states=input_context).sample
-                    attn_dict = get_cross_attn_map_from_unet(attention_store=controller,)
-
                     attn_dict = controller.step_store
                     print(f'attn_dict : {attn_dict}')
+
+                    attn_dict = get_cross_attn_map_from_unet(attention_store=controller,)
+
+
 
                     train_layers_ls = [f"down_{res}" for res in args.train_down] + \
                                       [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
