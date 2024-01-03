@@ -262,7 +262,7 @@ def main(args) :
                                     res = int(attn.shape[1] ** 0.5)
                                     h = cls_score.shape[0]
                                     cls_score, trigger_score, pad_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1), pad_score.unsqueeze(-1)
-                                    cls_score, trigger_score pad_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res), pad_score.reshape(h, res, res)
+                                    cls_score, trigger_score, pad_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res), pad_score.reshape(h, res, res)
                                     cls_score, trigger_score, pad_score = cls_score.mean(dim=0), trigger_score.mean(dim=0), pad_score.mean(dim=0)
                                     #trigger_score = trigger_score / (trigger_score.max())
 
@@ -288,7 +288,7 @@ def main(args) :
                                     pad_score_pil.save(pad_dir)
 
                                 controller.reset()
-                                
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
