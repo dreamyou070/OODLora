@@ -99,7 +99,7 @@ def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'crossattention_map_check')
+    args.output_dir = os.path.join(parent, f'normalized_cross_attention_map')
 
     print(f' \n step 1. setting')
     if args.process_title:
@@ -268,23 +268,25 @@ def main(args) :
                                         cls_score, trigger_score, pad_score = cls_score.mean(dim=0), trigger_score.mean(dim=0), pad_score.mean(dim=0)
                                         #trigger_score = trigger_score / (trigger_score.max())
 
-                                        cls_np = np.array((cls_score.detach().cpu()) * 255).astype(np.uint8)
-                                        cls_score_pil = Image.fromarray(cls_np).resize((512, 512), Image.BILINEAR)
-                                        cls_dir = os.path.join(trg_img_output_dir,
-                                                               f'cls_{name}_attn_{layer_name}_{t}.png')
-                                        cls_score_pil.save(cls_dir)
+                                        #cls_np = np.array((cls_score.detach().cpu()) * 255).astype(np.uint8)
+                                        #cls_score_pil = Image.fromarray(cls_np).resize((512, 512), Image.BILINEAR)
+                                        #cls_dir = os.path.join(trg_img_output_dir,
+                                        #                       f'cls_{name}_attn_{layer_name}_{t}.png')
+                                        #cls_score_pil.save(cls_dir)
 
-                                        trigger_np = np.array((trigger_score.detach().cpu()) * 255).astype(np.uint8)
+                                        trigger = trigger_score.detach().cpu()
+                                        trigger = trigger / trigger.max()
+                                        trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
                                         trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
                                         trigger_dir = os.path.join(trg_img_output_dir,
-                                                                    f'good_attn_{layer_name}_{t}.png')
+                                                                    f'normalized_good_attn_{layer_name}_{t}.png')
                                         trigger_score_pil.save(trigger_dir)
 
-                                        pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
-                                        pad_score_pil = Image.fromarray(pad_np).resize((512, 512), Image.BILINEAR)
-                                        pad_dir = os.path.join(trg_img_output_dir,
-                                                                    f'pad_attn_{layer_name}_{t}.png')
-                                        pad_score_pil.save(pad_dir)
+                                        #pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
+                                        #pad_score_pil = Image.fromarray(pad_np).resize((512, 512), Image.BILINEAR)
+                                        #pad_dir = os.path.join(trg_img_output_dir,
+                                        #                            f'pad_attn_{layer_name}_{t}.png')
+                                        #pad_score_pil.save(pad_dir)
 
                                     controller.reset()
 
