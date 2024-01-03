@@ -189,7 +189,7 @@ def main(args) :
         print(f' (2.5.3) apply trained state dict')
         network.apply_to(text_encoder, unet, True, True)
         if args.network_weights is not None:
-            info = network.load_weights(args.network_weights)
+            info = network.load_weights(weight_dir)
         network.to(device)
 
         print(f' (2.4.+) model to accelerator device')
