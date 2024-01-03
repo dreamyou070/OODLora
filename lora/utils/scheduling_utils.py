@@ -65,17 +65,25 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
               scheduler):
     timestep, prev_timestep = timestep, max( timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 0)
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
-    alpha_prod_t_matrix = torch.ones_like(model_output) * alpha_prod_t
-
     alpha_prod_t_prev = scheduler.alphas_cumprod[prev_timestep]
-
-    alpha_prod_t_prev_matrix = torch.ones_like(model_output) * alpha_prod_t_prev
     beta_prod_t = 1 - alpha_prod_t
-    beta_prod_t_matrix = torch.ones_like(model_output) * beta_prod_t
-    prev_original_sample = (sample - beta_prod_t_matrix ** 0.5 * model_output) / alpha_prod_t_matrix ** 0.5
-    prev_sample_direction = (torch.ones_like(model_output) - alpha_prod_t_prev_matrix) ** 0.5 * model_output
-    prev_sample = alpha_prod_t_prev_matrix ** 0.5 * prev_original_sample + prev_sample_direction
+
+    prev_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+
+    prev_sample_direction = (1 - alpha_prod_t_prev) ** 0.5 * model_output
+    prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
+
+
+def normal_kl(mean1, logvar1, mean2, logvar2):
+    return 0.5 * (-1 + logvar2 - logvar1 + torch.exp(logvar1 - logvar2) + ((mean1 - mean2) ** 2) * torch.exp(-logvar2))
+
+def kl_divergence(model_mean, true_mean) :
+
+    kl = normal_kl(true_mean, model_mean)
+    return torch.sum(model_mean * torch.log(model_mean / true_mean) - model_mean + true_mean)
+
+
 
 def pred_x0 (model_output, timestep, sample, scheduler) :
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod

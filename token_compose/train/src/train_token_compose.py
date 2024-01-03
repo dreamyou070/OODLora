@@ -85,6 +85,14 @@ def main(args):
     text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
     vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae")
     unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
+
+    from neteworks.lora import lora
+
+    network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae,
+                                                text_encoder, unet, neuron_dropout=args.network_dropout, **net_kwargs, )
+
+
+
     print(f' (7.1) freeze vae and text_encoder')
     vae.requires_grad_(False)
     text_encoder.requires_grad_(False)
