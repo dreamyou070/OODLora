@@ -51,7 +51,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if is_cross_attention and mask is not None:
                 if layer_name in mask.keys() :
                     mask = mask[layer_name].unsqueeze(-1)
-                    mask = mask.repeat(1, 1, attention_probs.shape[-1])
+                    mask = mask.repeat(1, 1, attention_probs.shape[-1]).to(attention_probs.device)
+                    print(mask.shape)
                     z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0) # head, pix_num, sen_len
                     x_attn_probs = z_attn_probs * mask + x_attn_probs * (1 - mask)
                     attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
@@ -314,7 +315,6 @@ def main(args) :
                     x_latent_dict[0] = x_latent
                     recon_img = latent2image(x_latent, vae, device, weight_dtype)
                     recon_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
