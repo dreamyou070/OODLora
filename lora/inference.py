@@ -132,9 +132,8 @@ def main(args) :
         else:
             model_epoch = 'last'
 
-        output_dir = os.path.join(output_dir, f'unnormalized_map_lora_{model_epoch}')
-        os.makedirs(output_dir, exist_ok=True)
-        print(f'final output dir : {output_dir}')
+        save_dir = os.path.join(output_dir, f'unnormalized_map_lora_{model_epoch}')
+        os.makedirs(save_dir, exist_ok=True)
 
         print(f' \n step 2. make stable diffusion model')
         device = accelerator.device
@@ -215,8 +214,9 @@ def main(args) :
                 trg_prompt = class_name.split('_')[-1]
             else:
                 trg_prompt = class_name
-            class_base_folder = os.path.join(output_dir, class_name)
+            class_base_folder = os.path.join(save_dir, class_name)
             os.makedirs(class_base_folder, exist_ok=True)
+
             image_folder = os.path.join(test_img_folder, class_name)
             mask_folder = os.path.join(test_mask_folder, class_name)
             invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
@@ -228,7 +228,6 @@ def main(args) :
                 name, ext = os.path.splitext(test_image)
                 trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
                 os.makedirs(trg_img_output_dir, exist_ok=True)
-                print(f'img will be on {trg_img_output_dir}')
 
                 test_img_dir = os.path.join(image_folder, test_image)
                 shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
