@@ -208,6 +208,7 @@ def main(args) :
         print(f' (3.1) prompt condition')
         context = init_prompt(tokenizer, text_encoder, device, args.prompt)
         uncon, con = torch.chunk(context, 2)
+        uncon, con = uncon[:, :3,:], con[:, :3,:]
 
         print(f' (3.2) train images')
         trg_h, trg_w = args.resolution
@@ -296,6 +297,7 @@ def main(args) :
                         back_dict[args.final_noising_time] = latent
                         time_steps.append(args.final_noising_time)
                 time_steps.reverse()
+
                 # ------------------------------ generate new latent ------------------------------ #
                 x_latent_dict = {}
                 x_latent_dict[args.final_noising_time] = back_dict[args.final_noising_time]
@@ -305,7 +307,7 @@ def main(args) :
                         z_latent = back_dict[t]
                         x_latent = x_latent_dict[t]
                         input_latent = torch.cat([z_latent, x_latent], dim=0)
-                        input_cont = context
+                        input_cont = torch.cat([uncon, con], dim=0)
                         noise_pred = call_unet(unet, input_latent, t, input_cont, None, mask_dict)
                         controller.reset()
                         z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
