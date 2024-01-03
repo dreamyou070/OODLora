@@ -669,14 +669,14 @@ class NetworkTrainer:
                                 for i in total_score :
                                     assert i != 0, f'layer = {layer_name} | total_score : {total_score}'
 
-                                if batch['train_class_list'][0] == 1 : # original normal sample
+                                if batch['train_class_list'][0] == 1 :
                                     # mask means foreground
                                     #activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
-                                    activation_loss = ( (activation / total_score)) ** 2  # 8, res*res
+                                    activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
                                 else :
                                     # mask means bad point
                                     # total score ... = 0 ??
-                                    activation_loss = (1- (activation / total_score)) ** 2  # 8, res*res
+                                    activation_loss = (activation / total_score) ** 2  # 8, res*res
                                 attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:

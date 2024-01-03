@@ -98,9 +98,8 @@ def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32,
 
 def main(args) :
 
-    parent = os.path.split(args.network_weights)[0]
-    folder = os.path.split(parent)[-1]
-    args.output_dir = os.path.join(parent, f'{folder}/crossattention_map_check')
+    parent = os.path.split(args.network_weights)[0] # unique_folder,
+    args.output_dir = os.path.join(parent, f'crossattention_map_check')
 
     print(f' \n step 1. setting')
     if args.process_title:
@@ -123,171 +122,171 @@ def main(args) :
 
     print(f" (1.3) save dir")
     output_dir = args.output_dir
-    parent, network_dir = os.path.split(args.network_weights)
-    model_name = os.path.splitext(network_dir)[0]
-    if 'last' not in model_name:
-        model_epoch = int(model_name.split('-')[-1])
-    else:
-        model_epoch = 'last'
-
-    output_dir = os.path.join(output_dir, f'unnormalized_map_lora_{model_epoch}')
-    os.makedirs(output_dir, exist_ok=True)
-    print(f'final output dir : {output_dir}')
-
-    print(f' \n step 2. make stable diffusion model')
-    device = accelerator.device
-    print(f' (2.1) tokenizer')
-    tokenizer = train_util.load_tokenizer(args)
-    print(f' (2.2) SD')
-    invers_text_encoder, vae, invers_unet, load_stable_diffusion_format = train_util._load_target_model(args,
-                                                                                                        weight_dtype,
-                                                                                                        device,
-                                                                                                        unet_use_linear_projection_in_v2=False, )
-    invers_text_encoders = invers_text_encoder if isinstance(invers_text_encoder, list) else [invers_text_encoder]
-    text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
-                                                                                          unet_use_linear_projection_in_v2=False, )
-    text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-    vae.to(accelerator.device, dtype=vae_dtype)
-
-    print(f' (2.4) scheduler')
-    scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
-    scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
-                              beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
-    scheduler.set_timesteps(args.num_ddim_steps)
-    inference_times = scheduler.timesteps
-
-    print(f' (2.4.+) model to accelerator device')
-    if len(invers_text_encoders) > 1:
-        invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device), \
-        invers_text_encoders[1].to(device)
-        invers_text_encoder = [invers_t_enc1, invers_t_enc2]
-        del invers_t_enc1, invers_t_enc2
-        unet, t_enc1, t_enc2 = unet.to(device), text_encoders[0].to(device), text_encoders[1].to(device)
-        text_encoder = [t_enc1, t_enc2]
-        del t_enc1, t_enc2
-    else:
-        invers_unet, invers_text_encoder = invers_unet.to(device), invers_text_encoder.to(device)
-        unet, text_encoder = unet.to(device), text_encoder.to(device)
-
-    print(f' (2.5) network')
-    sys.path.append(os.path.dirname(__file__))
-    network_module = importlib.import_module(args.network_module)
-    print(f' (2.5.1) merging weights')
-    net_kwargs = {}
-    if args.network_args is not None:
-        for net_arg in args.network_args:
-            key, value = net_arg.split("=")
-            net_kwargs[key] = value
-    print(f' (2.5.2) make network')
-    sys.path.append(os.path.dirname(__file__))
-    network_module = importlib.import_module(args.network_module)
-    net_kwargs = {}
-    network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae, text_encoder, unet,
-                                            neuron_dropout=args.network_dropout, **net_kwargs, )
-    print(f' (2.5.3) apply trained state dict')
-    network.apply_to(text_encoder, unet, True, True)
-    if args.network_weights is not None:
-        info = network.load_weights(args.network_weights)
-    network.to(device)
-
-    print(f' (2.4.+) model to accelerator device')
-    controller = AttentionStore()
-    register_attention_control(unet, controller)
-    #register_attention_control(invers_unet, controller)
-
-    print(f' \n step 3. ground-truth image preparing')
-    print(f' (3.1) prompt condition')
-    context = init_prompt(tokenizer, text_encoder, device, args.prompt)
-    uncon, con = torch.chunk(context, 2)
-
-    print(f' (3.2) train images')
-    trg_h, trg_w = args.resolution
-
-    print(f' (3.3) test images')
-    test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/bad')
-    test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/corrected')
-    classes = os.listdir(test_img_folder)
-
-    for class_name in classes:
-        if '_' in class_name:
-            trg_prompt = class_name.split('_')[-1]
+    network_weights = os.lsitdir(args.network_weights)
+    for weight in network_weights:
+        weight_dir = os.path.join(args.network_weights, weight)
+        parent, network_dir = os.path.split(weight_dir)
+        model_name = os.path.splitext(network_dir)[0]
+        if 'last' not in model_name:
+            model_epoch = int(model_name.split('-')[-1])
         else:
-            trg_prompt = class_name
-        class_base_folder = os.path.join(output_dir, class_name)
-        os.makedirs(class_base_folder, exist_ok=True)
-        image_folder = os.path.join(test_img_folder, class_name)
-        mask_folder = os.path.join(test_mask_folder, class_name)
-        invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
-        inv_unc, inv_c = invers_context.chunk(2)
-        test_images = os.listdir(image_folder)
+            model_epoch = 'last'
 
-        for j, test_image in enumerate(test_images):
+        output_dir = os.path.join(output_dir, f'unnormalized_map_lora_{model_epoch}')
+        os.makedirs(output_dir, exist_ok=True)
+        print(f'final output dir : {output_dir}')
 
-            name, ext = os.path.splitext(test_image)
-            trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
-            os.makedirs(trg_img_output_dir, exist_ok=True)
-            print(f'img will be on {trg_img_output_dir}')
+        print(f' \n step 2. make stable diffusion model')
+        device = accelerator.device
+        print(f' (2.1) tokenizer')
+        tokenizer = train_util.load_tokenizer(args)
+        print(f' (2.2) SD')
+        invers_text_encoder, vae, invers_unet, load_stable_diffusion_format = train_util._load_target_model(args,
+                                                                                                            weight_dtype,
+                                                                                                            device,
+                                                                                                            unet_use_linear_projection_in_v2=False, )
+        invers_text_encoders = invers_text_encoder if isinstance(invers_text_encoder, list) else [invers_text_encoder]
+        text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
+                                                                                              unet_use_linear_projection_in_v2=False, )
+        text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
+        vae.to(accelerator.device, dtype=vae_dtype)
 
-            test_img_dir = os.path.join(image_folder, test_image)
-            shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
+        print(f' (2.4) scheduler')
+        scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
+        scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
+                                  beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
+        scheduler.set_timesteps(args.num_ddim_steps)
+        inference_times = scheduler.timesteps
 
-            mask_img_dir = os.path.join(mask_folder, test_image)
-            shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
-            mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
-            mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
-            gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
+        print(f' (2.4.+) model to accelerator device')
+        if len(invers_text_encoders) > 1:
+            invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device), \
+            invers_text_encoders[1].to(device)
+            invers_text_encoder = [invers_t_enc1, invers_t_enc2]
+            del invers_t_enc1, invers_t_enc2
+            unet, t_enc1, t_enc2 = unet.to(device), text_encoders[0].to(device), text_encoders[1].to(device)
+            text_encoder = [t_enc1, t_enc2]
+            del t_enc1, t_enc2
+        else:
+            invers_unet, invers_text_encoder = invers_unet.to(device), invers_text_encoder.to(device)
+            unet, text_encoder = unet.to(device), text_encoder.to(device)
 
-            print(f' (2.3.1) inversion')
-            with torch.no_grad():
-                org_img = load_image(test_img_dir, 512, 512)
-                org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+        print(f' (2.5) network')
+        sys.path.append(os.path.dirname(__file__))
+        network_module = importlib.import_module(args.network_module)
+        print(f' (2.5.1) merging weights')
+        net_kwargs = {}
+        if args.network_args is not None:
+            for net_arg in args.network_args:
+                key, value = net_arg.split("=")
+                net_kwargs[key] = value
+        print(f' (2.5.2) make network')
+        sys.path.append(os.path.dirname(__file__))
+        network_module = importlib.import_module(args.network_module)
+        net_kwargs = {}
+        network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae, text_encoder, unet,
+                                                neuron_dropout=args.network_dropout, **net_kwargs, )
+        print(f' (2.5.3) apply trained state dict')
+        network.apply_to(text_encoder, unet, True, True)
+        if args.network_weights is not None:
+            info = network.load_weights(args.network_weights)
+        network.to(device)
 
-            with torch.no_grad():
-                inf_time = inference_times.tolist()
-                inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
-                latent_dict = {}
-                latent = org_vae_latent
+        print(f' (2.4.+) model to accelerator device')
+        controller = AttentionStore()
+        register_attention_control(unet, controller)
+        #register_attention_control(invers_unet, controller)
+
+        print(f' \n step 3. ground-truth image preparing')
+        print(f' (3.1) prompt condition')
+        context = init_prompt(tokenizer, text_encoder, device, args.prompt)
+        uncon, con = torch.chunk(context, 2)
+
+        print(f' (3.2) train images')
+        trg_h, trg_w = args.resolution
+
+        print(f' (3.3) test images')
+        test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/bad')
+        test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/corrected')
+        classes = os.listdir(test_img_folder)
+
+        for class_name in classes:
+            if '_' in class_name:
+                trg_prompt = class_name.split('_')[-1]
+            else:
+                trg_prompt = class_name
+            class_base_folder = os.path.join(output_dir, class_name)
+            os.makedirs(class_base_folder, exist_ok=True)
+            image_folder = os.path.join(test_img_folder, class_name)
+            mask_folder = os.path.join(test_mask_folder, class_name)
+            invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
+            inv_unc, inv_c = invers_context.chunk(2)
+            test_images = os.listdir(image_folder)
+
+            for j, test_image in enumerate(test_images):
+
+                name, ext = os.path.splitext(test_image)
+                trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
+                os.makedirs(trg_img_output_dir, exist_ok=True)
+                print(f'img will be on {trg_img_output_dir}')
+
+                test_img_dir = os.path.join(image_folder, test_image)
+                shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
+
+                mask_img_dir = os.path.join(mask_folder, test_image)
+                shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+                mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+                mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
+                gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
+
+                print(f' (2.3.1) inversion')
                 with torch.no_grad():
-                    for i, t in enumerate(inf_time[:-1]):
-                        if i == 0 :
-                            next_time = inf_time[i + 1]
-                            if next_time <= args.final_noising_time:
-                                latent_dict[int(t)] = latent
-                                from utils.model_utils import call_unet
-                                noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
-                                attn_stores = controller.step_store
-                                for layer_name in attn_stores :
-                                    attn = attn_stores[layer_name][0].squeeze() # head, pix_num
-                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
-                                    res = int(attn.shape[1] ** 0.5)
-                                    h = cls_score.shape[0]
-                                    cls_score, trigger_score, pad_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1), pad_score.unsqueeze(-1)
-                                    cls_score, trigger_score, pad_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res), pad_score.reshape(h, res, res)
-                                    cls_score, trigger_score, pad_score = cls_score.mean(dim=0), trigger_score.mean(dim=0), pad_score.mean(dim=0)
-                                    #trigger_score = trigger_score / (trigger_score.max())
+                    org_img = load_image(test_img_dir, 512, 512)
+                    org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
 
-                                    cls_np = np.array((cls_score.detach().cpu()) * 255).astype(np.uint8)
+                with torch.no_grad():
+                    inf_time = inference_times.tolist()
+                    inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                    latent_dict = {}
+                    latent = org_vae_latent
+                    with torch.no_grad():
+                        for i, t in enumerate(inf_time[:-1]):
+                            if i == 0 :
+                                next_time = inf_time[i + 1]
+                                if next_time <= args.final_noising_time:
+                                    latent_dict[int(t)] = latent
+                                    from utils.model_utils import call_unet
+                                    noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
+                                    attn_stores = controller.step_store
+                                    for layer_name in attn_stores :
+                                        attn = attn_stores[layer_name][0].squeeze() # head, pix_num
+                                        cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
+                                        res = int(attn.shape[1] ** 0.5)
+                                        h = cls_score.shape[0]
+                                        cls_score, trigger_score, pad_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1), pad_score.unsqueeze(-1)
+                                        cls_score, trigger_score, pad_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res), pad_score.reshape(h, res, res)
+                                        cls_score, trigger_score, pad_score = cls_score.mean(dim=0), trigger_score.mean(dim=0), pad_score.mean(dim=0)
+                                        #trigger_score = trigger_score / (trigger_score.max())
 
-                                    cls_score_pil = Image.fromarray(cls_np).resize((512, 512), Image.BILINEAR)
-                                    cls_dir = os.path.join(trg_img_output_dir,
-                                                           f'cls_{name}_attn_{layer_name}_{t}.png')
-                                    cls_score_pil.save(cls_dir)
+                                        cls_np = np.array((cls_score.detach().cpu()) * 255).astype(np.uint8)
+                                        cls_score_pil = Image.fromarray(cls_np).resize((512, 512), Image.BILINEAR)
+                                        cls_dir = os.path.join(trg_img_output_dir,
+                                                               f'cls_{name}_attn_{layer_name}_{t}.png')
+                                        cls_score_pil.save(cls_dir)
 
-                                    trigger_np = np.array((trigger_score.detach().cpu()) * 255).astype(np.uint8)
-                                    print(f'trigger (good) np : {trigger_np}')
-                                    trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
-                                    trigger_dir = os.path.join(trg_img_output_dir,
-                                                                f'good_attn_{layer_name}_{t}.png')
-                                    trigger_score_pil.save(trigger_dir)
+                                        trigger_np = np.array((trigger_score.detach().cpu()) * 255).astype(np.uint8)
+                                        trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
+                                        trigger_dir = os.path.join(trg_img_output_dir,
+                                                                    f'good_attn_{layer_name}_{t}.png')
+                                        trigger_score_pil.save(trigger_dir)
 
-                                    pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
-                                    print(f'pad (bad) np : {pad_np}')
-                                    pad_score_pil = Image.fromarray(pad_np).resize((512, 512), Image.BILINEAR)
-                                    pad_dir = os.path.join(trg_img_output_dir,
-                                                                f'pad_attn_{layer_name}_{t}.png')
-                                    pad_score_pil.save(pad_dir)
+                                        pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
+                                        pad_score_pil = Image.fromarray(pad_np).resize((512, 512), Image.BILINEAR)
+                                        pad_dir = os.path.join(trg_img_output_dir,
+                                                                    f'pad_attn_{layer_name}_{t}.png')
+                                        pad_score_pil.save(pad_dir)
 
-                                controller.reset()
+                                    controller.reset()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
