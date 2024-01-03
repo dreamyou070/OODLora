@@ -108,7 +108,7 @@ def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}')
+    args.output_dir = os.path.join(parent, f'recon_infer/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_unet_thred_{args.mask_thredhold}')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -257,6 +257,7 @@ def main(args) :
                     latent = org_vae_latent
                     with torch.no_grad():
                         mask_dict = {}
+                        mask_dict_avg = {}
                         for i, t in enumerate(inf_time[:-1]):
                             if i == 0 :
                                 next_time = inf_time[i + 1]
@@ -277,9 +278,23 @@ def main(args) :
                                             trigger_score = trigger_score.mean(dim=0)
                                             trigger = trigger_score.detach().cpu() # res, res
                                             trigger = trigger / trigger.max()
+                                            trigger = torch.where(trigger > args.mask_thredhold, 1, 0)
                                             anormal_map = torch.flatten(trigger).unsqueeze(0)
+                                            if res not in mask_dict_avg.keys():
+                                                mask_dict_avg[res] = []
+                                            mask_dict_avg[res].append(anormal_map)
+
                                             anormal_map = anormal_map.repeat(8, 1)
                                             mask_dict[layer_name] = anormal_map
+
+                for res_ in mask_dict_avg.keys():
+                    attn  = torch.cat(mask_dict_avg[res_], dim=0).unsqueeze(-1)
+                    h = attn.shape[0]
+                    attn = attn.reshape(h, res_, res_).mean(dim=0).unsqueeze(0).unsqueeze(0)
+                    attn = attn.repeat(1, 4, 1, 1)
+                    attn = attn / attn.max()
+                    mask_dict_avg[res_] = attn
+
                 # ------------------------------ generate background latent ------------------------------ #
                 from utils.scheduling_utils import next_step
 
@@ -313,6 +328,12 @@ def main(args) :
                         controller.reset()
                         z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
                         x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
+                        # ------------------------------ pixel recon ------------------------------ #
+                        if args.pixel_copy :
+                            if 64 in mask_dict_avg.keys():
+                                m = mask_dict_avg[64]
+                                m = torch.where(m > args.pixel_thredhold, 1, 0)
+                                x_latent = z_latent * m + x_latent * (1 - m)
                         x_latent_dict[prev_time] = x_latent
                     pil_img = Image.fromarray(latent2image(x_latent, vae))
                     pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
@@ -356,8 +377,8 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
     parser.add_argument("--final_noising_time", type=int, default = 250)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
-    parser.add_argument("--pixel_mask_res", type=float, default=0.1)
-    parser.add_argument("--pixel_thred", type=float, default=0.1)
+    parser.add_argument("--pixel_thredhold", type=float, default=0.1)
+    parser.add_argument("--pixel_copy", action = 'store_ture')
     parser.add_argument("--inner_iteration", type=int, default=10)
     parser.add_argument("--org_latent_attn_map_check", action = 'store_true')
     parser.add_argument("--other_token_preserving", action = 'store_true')

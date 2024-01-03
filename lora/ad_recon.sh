@@ -3,5 +3,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_module networks.lora --network_dim 64 --network_alpha 4 --prompt 'good' --sample_sampler ddim \
   --resolution '512,512' --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/bagel --resolution 512,512 --seed 42 \
   --network_weights ../result/MVTec3D-AD_experiment/bagel/lora_training/17_normal_sample_training_res_64_change_to_max/models \
-  --num_ddim_steps 50 --final_noising_time 980 --cross_map_res [64]
+  --num_ddim_steps 50 --final_noising_time 980 --cross_map_res [64] --mask_thredhold 0.5 --pixel_thredhold 0.5
 
