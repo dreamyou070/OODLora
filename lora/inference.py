@@ -270,7 +270,7 @@ def main(args) :
 
                                         if key_name not in attn_dict :
                                             attn_dict[key_name] = []
-                                        attn_dict[key_name].appebd(attn)
+                                        attn_dict[key_name].append(attn)
 
                                     for key_name in attn_dict :
                                         attn_list = attn_dict[key_name]
