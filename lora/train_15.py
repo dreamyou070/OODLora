@@ -654,8 +654,8 @@ class NetworkTrainer:
                                                     text_encoder_conds,
                                                     batch,
                                                     weight_dtype, 1, None)
-                    if batch['loss_weights'][0] == 1 :
 
+                    if batch['train_class_list'][0] == 1 :
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
@@ -668,32 +668,36 @@ class NetworkTrainer:
                         loss = task_loss * args.task_loss_weight
 
 
-                    if args.normal_activation_train :
 
-                        attn_dict = attention_storer.step_store
-                        attention_storer.reset()
-                        if args.use_attn_loss:
-                            attn_loss = 0
-                            for i, layer_name in enumerate(attn_dict.keys()):
-                                score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
-                                res = int(score_map.shape[1] ** 0.5)
-                                # from torchvision import transforms
-                                # ------------------------------------------------------------------------------------------------
-                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                mask = anormal_mask.squeeze()  # res,res
-                                mask = torch.stack([mask.flatten() for i in range(8)], dim=0).unsqueeze(-1)  # 8, res*res
 
-                                activation = (score_map * mask).sum(dim=-1)
-                                total_score = (score_map).sum(dim=-1)
+                    attn_dict = attention_storer.step_store
+                    attention_storer.reset()
+                    if args.use_attn_loss:
+                        attn_loss = 0
+                        for i, layer_name in enumerate(attn_dict.keys()):
+                            score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
+                            res = int(score_map.shape[1] ** 0.5)
+                            anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                            mask = anormal_mask.squeeze()  # res,res
+                            mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
+                            activation = (score_map * mask).sum(dim=-1)
+                            total_score = (score_map).sum(dim=-1)
+                            if batch['train_class_list'][0] == 1 :
                                 activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
-                                attn_loss += activation_loss
-
-                            attn_loss = attn_loss.mean()
-
+                            else :
+                                activation_loss = (activation / total_score) ** 2  # 8, res*res
+                            attn_loss += activation_loss
+                        attn_loss = attn_loss.mean()
+                        if batch['train_class_list'][0] == 1:
                             loss = loss + args.anormal_weight * attn_loss
+                        else :
+                            loss = args.anormal_weight * attn_loss
 
-                            if is_main_process:
-                                loss_dict["loss/normal_activation"] = attn_loss.item()
+                        if is_main_process and batch['train_class_list'][0] == 1 :
+                            loss_dict["loss/normal_activation"] = attn_loss.item()
+                        elif is_main_process and batch['train_class_list'][0] == 0 :
+                            loss_dict["loss/anormal_activation_on_normal"] = attn_loss.item()
+
 
                     if is_main_process:
                         loss_dict["task_loss"] = task_loss.item()
@@ -851,7 +855,7 @@ if __name__ == "__main__":
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
 
     parser.add_argument("--mask_threshold", type=float, default=0.5)
-
+    parser.add_argument("--normal_activation_train", action='store_true')
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
     parser.add_argument("--resume_lora_training", action="store_true", )
     parser.add_argument("--start_epoch", type=int, default=0)
@@ -861,8 +865,9 @@ if __name__ == "__main__":
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--use_attn_loss", action='store_true')
-    parser.add_argument("--normal_activation_train", action='store_true')
     import ast
+
+
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
