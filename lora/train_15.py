@@ -682,9 +682,12 @@ class NetworkTrainer:
                                 mask = anormal_mask.squeeze()  # res,res
                                 mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
                                 activation = (score_map * mask).sum(dim=-1)
-                                total_score = (score_map).sum(dim=-1)
+                                #total_score = (score_map).sum(dim=-1)
+                                total_score = torch.ones_like(activation)
+
                                 for i in total_score :
                                     assert i != 0, f'layer = {layer_name} | total_score : {total_score}'
+
                                 if batch['train_class_list'][0] == 1 :
                                     # mask means foreground
                                     activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
