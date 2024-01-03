@@ -122,7 +122,7 @@ def main(args) :
 
     print(f" (1.3) save dir")
     output_dir = args.output_dir
-    network_weights = os.lsitdir(args.network_weights)
+    network_weights = os.listdir(args.network_weights)
     for weight in network_weights:
         weight_dir = os.path.join(args.network_weights, weight)
         parent, network_dir = os.path.split(weight_dir)
