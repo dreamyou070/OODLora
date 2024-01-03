@@ -47,6 +47,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None and ('up' in layer_name or 'mid' in layer_name):
+                # training only mid or up now ...
+                # 64 가 굉장히 큰 의미가 있는 듯 한데...
                 trg_map = attention_probs[:, :, 1]
                 controller.store(trg_map, layer_name)
                 """
@@ -681,7 +683,9 @@ class NetworkTrainer:
                                 anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                 mask = anormal_mask.squeeze()  # res,res
                                 mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
+
                                 activation = (score_map * mask).sum(dim=-1)
+
                                 #total_score = (score_map).sum(dim=-1)
                                 total_score = torch.ones_like(activation)
 

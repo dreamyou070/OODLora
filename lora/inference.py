@@ -48,7 +48,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention:
 
-                controller.store(attention_probs[:,:,:2], layer_name)
+                controller.store(attention_probs[:,:,:3], layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -254,21 +254,20 @@ def main(args) :
                             if next_time <= args.final_noising_time:
                                 latent_dict[int(t)] = latent
                                 from utils.model_utils import call_unet
-                                noise_pred = call_unet(unet, latent, t, con[:,:2,:], [[1]], None)
+                                noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
                                 attn_stores = controller.step_store
                                 for layer_name in attn_stores :
                                     attn = attn_stores[layer_name][0].squeeze() # head, pix_num
-                                    cls_score, trigger_score = attn.chunk(2, dim=-1)
+                                    cls_score, trigger_score, pad_socre = attn.chunk(3, dim=-1)
                                     res = int(attn.shape[1] ** 0.5)
                                     h = cls_score.shape[0]
-                                    cls_score, trigger_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1)
-                                    cls_score, trigger_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res)
-                                    cls_score, trigger_score = cls_score.mean(dim=0), trigger_score.mean(dim=0)
+                                    cls_score, trigger_score, pad_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1), pad_score.unsqueeze(-1)
+                                    cls_score, trigger_score pad_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res), pad_score.reshape(h, res, res)
+                                    cls_score, trigger_score, pad_score = cls_score.mean(dim=0), trigger_score.mean(dim=0), pad_score.mean(dim=0)
                                     #trigger_score = trigger_score / (trigger_score.max())
 
                                     cls_np = np.array((cls_score.detach().cpu()) * 255).astype(np.uint8)
-
-
+                                    
                                     cls_score_pil = Image.fromarray(cls_np).resize((512, 512), Image.BILINEAR)
                                     cls_dir = os.path.join(trg_img_output_dir,
                                                            f'cls_{name}_attn_{layer_name}_{t}.png')
@@ -280,6 +279,13 @@ def main(args) :
                                     trigger_dir = os.path.join(trg_img_output_dir,
                                                                 f'good_attn_{layer_name}_{t}.png')
                                     trigger_score_pil.save(trigger_dir)
+
+                                    pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
+                                    print(f'pad (bad) np : {pad_np}')
+                                    pad_score_pil = Image.fromarray(pad_np).resize((512, 512), Image.BILINEAR)
+                                    pad_dir = os.path.join(trg_img_output_dir,
+                                                                f'pad_attn_{layer_name}_{t}.png')
+                                    pad_score_pil.save(pad_dir)
 
                                 controller.reset()
 
