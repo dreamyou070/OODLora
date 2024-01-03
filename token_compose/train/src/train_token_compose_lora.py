@@ -172,6 +172,11 @@ if __name__ == "__main__":
         action="store_true",
         help="use Lion optimizer (requires lion-pytorch) / Lionオプティマイザを使う（ lion-pytorch のインストールが必要）",
     )
+    parser.add_argument(
+        "--optimizer_args",
+        type=str,
+        default=None,nargs="*",
+        help='additional arguments for optimizer (like "weight_decay=0.01 betas=0.9,0.999 ...") / オプティマイザの追加引数（例： "weight_decay=0.01 betas=0.9,0.999 ..."）',)
     parser.add_argument("--cache_dir", type=str,
                         default=None,
                         help="The directory where the downloaded models and datasets will be stored.", )
