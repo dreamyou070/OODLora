@@ -685,6 +685,7 @@ class NetworkTrainer:
                                 #print(f'mask (8, res*res, 1) : {mask.shape}')
                                 activation = (score_map * mask).sum(dim=-1)
                                 total_score = (score_map).sum(dim=-1)
+                                print(f'layer = {layer_name} | total_score : {total_score}')
                                 activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
                                 attn_loss += activation_loss
 
