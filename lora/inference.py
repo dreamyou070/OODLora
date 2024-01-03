@@ -254,7 +254,7 @@ def main(args) :
                             if next_time <= args.final_noising_time:
                                 latent_dict[int(t)] = latent
                                 from utils.model_utils import call_unet
-                                noise_pred = call_unet(unet, latent, t, con, [[1]], None)
+                                noise_pred = call_unet(unet, latent, t, con[:,:2,:], [[1]], None)
                                 attn_stores = controller.step_store
                                 for layer_name in attn_stores :
                                     attn = attn_stores[layer_name][0].squeeze() # head, pix_num
