@@ -106,7 +106,7 @@ def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}}')
+    args.output_dir = os.path.join(parent, f'recon_infer/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -139,8 +139,7 @@ def main(args) :
             model_epoch = int(model_name.split('-')[-1])
         else:
             model_epoch = 'last'
-
-        save_dir = output_dir
+        save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}')
         os.makedirs(save_dir, exist_ok=True)
 
         print(f' \n step 2. make stable diffusion model')
