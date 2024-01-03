@@ -267,7 +267,7 @@ def main(args) :
                                     #trigger_score = trigger_score / (trigger_score.max())
 
                                     cls_np = np.array((cls_score.detach().cpu()) * 255).astype(np.uint8)
-                                    
+
                                     cls_score_pil = Image.fromarray(cls_np).resize((512, 512), Image.BILINEAR)
                                     cls_dir = os.path.join(trg_img_output_dir,
                                                            f'cls_{name}_attn_{layer_name}_{t}.png')
@@ -288,94 +288,7 @@ def main(args) :
                                     pad_score_pil.save(pad_dir)
 
                                 controller.reset()
-
-
-
-
-
-
-
-                    """
-                    @torch.no_grad()
-                    def recon_loop_infer(args, z_latent_dict, start_latent, gt_pil, context, inference_times, scheduler,
-                                         unet, vae, base_folder_dir, controller, name, weight_dtype):
-                        original_latent = z_latent_dict[0]
-                        if context.shape[0] == 2:
-                            z_con, x_con = context.chunk(2)
-                        else:
-                            good_con = context
-                        noise_pred = call_unet(unet, original_latent, 0, z_con, [[1]], None)
-                        map_dict = controller.step_store
-                        controller.reset()
-                        cls_score_list, good_score_list, bad_score_list = [], [], []
-                        mask_dict = {}
-                        for layer in map_dict.keys():
-                            position_map = map_dict[layer][1]
-                            mask_dict[layer] = position_map
-                            scores = map_dict[layer][0]
-                            cls_score, good_score = scores.chunk(2, dim=-1)
-                            # head, pix_num, 1
-                            cls_score_list.append(cls_score)
-                            good_score_list.append(good_score)
-                        cls_score = torch.cat(cls_score_list, dim=0).float().mean(dim=0).squeeze().reshape(
-                            int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res]
-                        good_score = torch.cat(good_score_list, dim=0).float().mean(dim=0).squeeze().reshape(
-                            int(args.cross_map_res[0]), int(args.cross_map_res[0]))  # [res*res
-                        mask_latent = torch.where(cls_score < good_score + 0.1, 1, 0)  # [16,16]
-                        print(f'cls_score : {cls_score}')
-                        print(f'good_score : {good_score}')
-                        print(f'mask latent : {mask_latent}')
-                        import time
-                        time.sleep(100)
-                        mask_img = mask_latent.cpu().numpy().astype(np.uint8)  # 1 means bad position
-                        mask_img = np.array(Image.fromarray(mask_img).resize((64, 64)))
-                        mask_latent = torch.tensor(mask_img).unsqueeze(0).unsqueeze(0).to(original_latent.device,
-                                                                                          dtype=original_latent.dtype)
-                        Image.fromarray(mask_img * 255).save(os.path.join(base_folder_dir, f'predicted_mask.png'))
-
-                        # inference_times = [100,80, ... 0]
-                        x_latent = start_latent
-                        x_latent_dict = {}
-                        x_latent_dict[inference_times[0]] = x_latent
-                        for i, t in enumerate(inference_times[:-1]):
-                            prev_time = int(inference_times[i + 1])
-                            with torch.no_grad():
-                                for i in range(args.inner_iteration):
-                                    z_latent = z_latent_dict[t]
-                                    x_latent = x_latent_dict[t]
-                                    input_latent = torch.cat([z_latent, x_latent], dim=0)
-                                    input_cond = torch.cat([good_con, good_con], dim=0)
-                                    trg_indexs_list = [[1]]
-                                    noise_pred = call_unet(unet, input_latent, t, input_cond, trg_indexs_list,
-                                                           mask_dict)
-                                    x_latent = x_latent * (1 - mask_latent) + z_latent * (mask_latent)
-                                    # x_latent_dict[t] = x_latent
-                                x_noise_pred = call_unet(unet, x_latent, t, good_con, None, None)
-                                # z_noise_pred, x_noise_pred = noise_pred.chunk(2)
-                                x_latent = prev_step(x_noise_pred, t, x_latent, scheduler)
-                                x_latent_dict[prev_time] = x_latent
-                                pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-                                pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{t}.png'))
-                        pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-                        pil_img.save(os.path.join(base_folder_dir, f'{name}_recon_{prev_time}.png'))
-                    
-                        
-                    recon_loop_infer(args,
-                               org_latent_dict,
-                               start_latent=st_noise_latent,
-                               gt_pil=gt_pil,
-                               context=torch.cat([con, con], dim=0),
-                               inference_times=time_steps,
-                               scheduler=scheduler,
-                               unet=unet,
-                               vae=vae,
-                               base_folder_dir=trg_img_output_dir,
-                               controller=controller,
-                               name=name, weight_dtype=weight_dtype)
-                    """
-
-
-
+                                
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
