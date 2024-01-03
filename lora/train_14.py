@@ -850,7 +850,7 @@ if __name__ == "__main__":
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
 
     parser.add_argument("--mask_threshold", type=float, default=0.5)
-
+    parser.add_argument("--normal_activation_train", action='store_true')
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
     parser.add_argument("--resume_lora_training", action="store_true", )
     parser.add_argument("--start_epoch", type=int, default=0)
