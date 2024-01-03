@@ -106,7 +106,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Simple example of a training script.")
     parser.add_argument("--pretrained_model_name_or_path", type=str,
                         default="CompVis/stable-diffusion-v1-4",
-                        choices=["CompVis/stable-diffusion-v1-4", "stabilityai/stable-diffusion-2-1"],
+                        #choices=["CompVis/stable-diffusion-v1-4", "stabilityai/stable-diffusion-2-1"],
                         help="Path to pretrained model or model identifier from huggingface.co/models.", )
     parser.add_argument("--train_data_dir", type=str, required=True,
                         help=(
