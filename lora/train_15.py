@@ -51,27 +51,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 # 64 가 굉장히 큰 의미가 있는 듯 한데...
                 trg_map = attention_probs[:, :, 1]
                 controller.store(trg_map, layer_name)
-                """
-                batch, pix_num, _ = query.shape
-                res = int(pix_num) ** 0.5
-                if res in args.cross_map_res :
-                    batch_num = len(trg_indexs_list)
-                    attention_probs_batch = torch.chunk(attention_probs, batch_num, dim=0)
-                    attn_list = []
 
-                    for batch_idx, attn_probs in enumerate(attention_probs_batch):
-
-                        #batch_trg_index = trg_indexs_list[batch_idx]  # two times
-                        good_map = attn_probs[:,:,1]
-                        bad_map = attn_probs[:,:,2]
-                        if good_map.dim() == 2 :
-                            good_map = good_map.unsqueeze(-1)
-                            bad_map = bad_map.unsqueeze(-1)
-                        attn_score_map = torch.cat([good_map, bad_map], dim=-1)
-                        attn_list.append(attn_score_map)
-                    batch_attn_map = torch.cat(attn_list, dim=0)
-                    controller.store(batch_attn_map, layer_name)
-                """
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -669,9 +649,6 @@ class NetworkTrainer:
                         task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
                         loss = task_loss * args.task_loss_weight
 
-
-
-
                     attn_dict = attention_storer.step_store
                     attention_storer.reset()
                     if args.use_attn_loss:
@@ -692,13 +669,14 @@ class NetworkTrainer:
                                 for i in total_score :
                                     assert i != 0, f'layer = {layer_name} | total_score : {total_score}'
 
-                                if batch['train_class_list'][0] == 1 :
+                                if batch['train_class_list'][0] == 1 : # original normal sample
                                     # mask means foreground
-                                    activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+                                    #activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+                                    activation_loss = ( (activation / total_score)) ** 2  # 8, res*res
                                 else :
                                     # mask means bad point
                                     # total score ... = 0 ??
-                                    activation_loss = (activation / total_score) ** 2  # 8, res*res
+                                    activation_loss = (1- (activation / total_score)) ** 2  # 8, res*res
                                 attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:
