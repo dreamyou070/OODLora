@@ -30,7 +30,9 @@ from attn_utils import AttentionStore
 from attn_utils import register_attention_control, get_cross_attn_map_from_unet
 from loss_utils import get_grounding_loss_by_layer, get_word_idx
 from data_utils import DatasetPreprocess
-
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+from networks.lora import create_network
 logger = get_logger(__name__, log_level="INFO")
 
 
@@ -87,10 +89,7 @@ def main(args):
     vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae")
     unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
 
-    import sys
-    import os
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-    from networks.lora import create_network
+
     net_kwargs = {}
     network = create_network(1.0, args.network_dim,
                              args.network_alpha,
