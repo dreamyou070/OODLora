@@ -157,6 +157,21 @@ if __name__ == "__main__":
     parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")
     parser.add_argument("--text_encoder_lr", type=float, default=None,
                         help="learning rate for Text Encoder / Text Encoderの学習率")
+    parser.add_argument("--optimizer_type",
+        type=str,default="",
+        help="Optimizer to use / オプティマイザの種類: AdamW (default), AdamW8bit, PagedAdamW8bit, PagedAdamW32bit, Lion8bit, PagedLion8bit, Lion, SGDNesterov, SGDNesterov8bit, DAdaptation(DAdaptAdamPreprint), DAdaptAdaGrad, DAdaptAdam, DAdaptAdan, DAdaptAdanIP, DAdaptLion, DAdaptSGD, AdaFactor",
+    )
+    # backward compatibility
+    parser.add_argument(
+        "--use_8bit_adam",
+        action="store_true",
+        help="use 8bit AdamW optimizer (requires bitsandbytes) / 8bit Adamオプティマイザを使う（bitsandbytesのインストールが必要）",
+    )
+    parser.add_argument(
+        "--use_lion_optimizer",
+        action="store_true",
+        help="use Lion optimizer (requires lion-pytorch) / Lionオプティマイザを使う（ lion-pytorch のインストールが必要）",
+    )
     parser.add_argument("--cache_dir", type=str,
                         default=None,
                         help="The directory where the downloaded models and datasets will be stored.", )
