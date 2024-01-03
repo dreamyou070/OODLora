@@ -100,6 +100,8 @@ def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
     args.output_dir = os.path.join(parent, f'per_res_normalized_cross_attention_map')
+    org_output_dir = os.path.join(parent, f'normalized_cross_attention_map')
+    os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
     if args.process_title:
@@ -132,8 +134,11 @@ def main(args) :
         else:
             model_epoch = 'last'
 
+
         save_dir = os.path.join(output_dir, f'unnormalized_map_lora_{model_epoch}')
         os.makedirs(save_dir, exist_ok=True)
+        org_save_dir = os.path.join(org_output_dir, f'unnormalized_map_lora_{model_epoch}')
+        os.makedirs(org_save_dir, exist_ok=True)
 
         print(f' \n step 2. make stable diffusion model')
         device = accelerator.device
@@ -216,6 +221,8 @@ def main(args) :
                 trg_prompt = class_name
             class_base_folder = os.path.join(save_dir, class_name)
             os.makedirs(class_base_folder, exist_ok=True)
+            org_class_base_folder = os.path.join(org_save_dir, class_name)
+            os.makedirs(org_class_base_folder, exist_ok=True)
 
             image_folder = os.path.join(test_img_folder, class_name)
             mask_folder = os.path.join(test_mask_folder, class_name)
@@ -228,12 +235,17 @@ def main(args) :
                 name, ext = os.path.splitext(test_image)
                 trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
                 os.makedirs(trg_img_output_dir, exist_ok=True)
+                org_trg_img_output_dir = os.path.join(org_class_base_folder, f'{name}')
+                os.makedirs(org_trg_img_output_dir, exist_ok=True)
 
                 test_img_dir = os.path.join(image_folder, test_image)
                 shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
+                shutil.copy(test_img_dir, os.path.join(org_trg_img_output_dir, test_image))
 
                 mask_img_dir = os.path.join(mask_folder, test_image)
                 shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+                shutil.copy(mask_img_dir, os.path.join(org_trg_img_output_dir, f'{name}_mask{ext}'))
+
                 mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
                 mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
                 gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
@@ -261,6 +273,19 @@ def main(args) :
                                     for layer_name in attn_stores :
                                         attn = attn_stores[layer_name][0].squeeze() # head, pix_num
                                         res = int(attn.shape[1] ** 0.5)
+                                        cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
+                                        h = cls_score.shape[0]
+                                        trigger_score = trigger_score.unsqueeze(-1)
+                                        trigger_score = trigger_score.reshape(h, res, res)
+                                        trigger_score = trigger_score.mean(dim=0)
+                                        trigger = trigger_score.detach().cpu()
+                                        trigger = trigger / trigger.max()
+                                        trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
+                                        trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
+                                        trigger_dir = os.path.join(org_trg_img_output_dir,
+                                                                   f'normalized_good_attn_{layer_name}.png')
+                                        trigger_score_pil.save(trigger_dir)
+
                                         if 'down' in layer_name :
                                             key_name = f'down_{res}'
                                         elif 'up' in layer_name :
@@ -271,6 +296,7 @@ def main(args) :
                                         if key_name not in attn_dict :
                                             attn_dict[key_name] = []
                                         attn_dict[key_name].append(attn)
+
 
                                     for key_name in attn_dict :
                                         attn_list = attn_dict[key_name]
