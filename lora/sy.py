@@ -2,6 +2,6 @@ import torch
 
 
 
-score_map = torch.randn((8, 32*32))
-score_per_heard = score_map.sum(dim=-1)
-print(score_per_heard.shape)
+mask = torch.randn((32,32))
+mask = torch.stack([mask.flatten() for i in range(8)], dim=0).unsqueeze(-1) # 8, 32*32, 1
+print(mask.shape)
