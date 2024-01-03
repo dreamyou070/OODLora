@@ -88,6 +88,7 @@ def main(args):
     unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
 
     import sys
+    import os
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
     from networks.lora import create_network
     net_kwargs = {}
@@ -115,9 +116,9 @@ if __name__ == "__main__":
         "--output_dir",
         type=str,
         required=True,
-        help="The output directory where the model predictions and checkpoints will be written.",
-    )
-
+        help="The output directory where the model predictions and checkpoints will be written.",)
+    parser.add_argument("--network_dim",type=int, default=64)
+    parser.add_argument("--network_alpha", type=int, default=4)
     parser.add_argument("--cache_dir", type=str,
                         default=None,
                         help="The directory where the downloaded models and datasets will be stored.", )

@@ -40,6 +40,7 @@ python train_token_compose_lora.py \
   --gradient_accumulation_steps $GRADIENT_ACCUMMULATION_STEPS \
   --gradient_checkpointing \
   --max_train_steps=$MAX_TRAINING_STEPS \
+  --network_dim 64 --network_alpha 4 \
   --learning_rate $LEARNING_RATE \
   --max_grad_norm=1 \
   --lr_scheduler="constant" --lr_warmup_steps=0 \
