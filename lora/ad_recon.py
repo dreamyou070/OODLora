@@ -313,8 +313,8 @@ def main(args) :
                         z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
                         x_latent = next_step(x_noise_pred, int(t), x_latent, scheduler)
                         x_latent_dict[prev_time] = x_latent
-                    recon_img = latent2image(x_latent, vae, device, weight_dtype)
-                    recon_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
+                    pil_img = Image.fromarray(latent2image(x_latent, vae))
+                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
