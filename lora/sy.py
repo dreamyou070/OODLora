@@ -2,6 +2,7 @@ import torch
 
 
 
-mask = torch.randn((32,32))
-mask = torch.stack([mask.flatten() for i in range(8)], dim=0).unsqueeze(-1) # 8, 32*32, 1
-print(mask.shape)
+
+sample = torch.tensor(0.0, 1.3,3.4])
+for i in sample :
+    assert i != 0, 'wrong..'
