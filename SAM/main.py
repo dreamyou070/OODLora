@@ -18,11 +18,11 @@ def main(args):
     for cat in cats:
         if cat == 'bagel' :
             cat_dir = os.path.join(base_folder, f'{cat}/train_ex/bad')
-            save_cat_dir = os.path.join(base_folder, f'{cat}/train_ex/bad_sam')
+            save_cat_dir = os.path.join(base_folder, f'{cat}/train_ex/bad_sam_2')
             os.makedirs(save_cat_dir, exist_ok=True)
             folders = os.listdir(cat_dir)
             for folder in folders:
-                if 'good' not in folder :
+                if 'good' in folder :
                     save_folder_dir = os.path.join(save_cat_dir, folder)
                     os.makedirs(save_folder_dir, exist_ok=True)
 

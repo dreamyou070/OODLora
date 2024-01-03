@@ -39,9 +39,11 @@ logger = get_logger(__name__, log_level="INFO")
 
 
 def main(args):
+
     print(f'\n step 1. checking train layer ls')
     train_layers_ls = [f"down_{res}" for res in args.train_down] + \
                       [f"mid_{res}" for res in args.train_mid] + [f"up_{res}" for res in args.train_up]
+
     print(f' - train_layers_ls: {train_layers_ls}')
 
     print(f'\n step 2. make accelerate')
@@ -110,13 +112,13 @@ def main(args):
         text_encoder.gradient_checkpointing_enable()
         network.enable_gradient_checkpointing()  # may have no effect
 
-    print(f'\n step 6. optimizer')
-
+    print(f'\n step 8. optimizer')
     try:
         trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
     except:
         trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
     optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
+
 
 
 
