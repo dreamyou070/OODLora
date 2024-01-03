@@ -1,8 +1,7 @@
 import torch
 
 
-
-
-sample = torch.tensor(0.0, 1.3,3.4])
-for i in sample :
-    assert i != 0, 'wrong..'
+a = torch.randn(8, 32, 3)
+attn_list = [a,a]
+aa = torch.cat(attn_list, dim=0)
+print(aa.shape)

@@ -99,7 +99,7 @@ def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'normalized_cross_attention_map')
+    args.output_dir = os.path.join(parent, f'per_res_normalized_cross_attention_map')
 
     print(f' \n step 1. setting')
     if args.process_title:
@@ -257,8 +257,25 @@ def main(args) :
                                     from utils.model_utils import call_unet
                                     noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
                                     attn_stores = controller.step_store
+                                    attn_dict = {}
                                     for layer_name in attn_stores :
                                         attn = attn_stores[layer_name][0].squeeze() # head, pix_num
+                                        res = int(attn.shape[1] ** 0.5)
+                                        if 'down' in layer_name :
+                                            key_name = f'down_{res}'
+                                        elif 'up' in layer_name :
+                                            key_name = f'up_{res}'
+                                        else :
+                                            key_name = f'mid_{res}'
+
+                                        if key_name not in attn_dict :
+                                            attn_dict[key_name] = []
+                                        attn_dict[key_name].appebd(attn)
+
+                                    for key_name in attn_dict :
+                                        attn_list = attn_dict[key_name]
+                                        attn = torch.cat(attn_list, dim=0)
+
                                         cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
                                         res = int(attn.shape[1] ** 0.5)
                                         h = cls_score.shape[0]
@@ -278,7 +295,7 @@ def main(args) :
                                         trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
                                         trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
                                         trigger_dir = os.path.join(trg_img_output_dir,
-                                                                    f'normalized_good_attn_{layer_name}_{t}.png')
+                                                                    f'normalized_good_attn_{key_name}.png')
                                         trigger_score_pil.save(trigger_dir)
 
                                         #pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
