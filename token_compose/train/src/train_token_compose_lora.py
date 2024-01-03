@@ -116,8 +116,23 @@ if __name__ == "__main__":
         type=str,
         required=True,
         help="The output directory where the model predictions and checkpoints will be written.",)
-    parser.add_argument("--network_dim",type=int, default=64)
-    parser.add_argument("--network_alpha", type=int, default=4)
+    parser.add_argument("--network_weights", type=str, default=None,
+                        help="pretrained weights for network / 学習するネットワークの初期重み")
+    parser.add_argument("--network_module", type=str, default=None,
+                        help="network module to train / 学習対象のネットワークのモジュール")
+    parser.add_argument("--network_dim", type=int, default=None,
+                        help="network dimensions (depends on each network) / モジュールの次元数（ネットワークにより定義は異なります）")
+    parser.add_argument("--network_alpha", type=float, default=1,
+                        help="alpha for LoRA weight scaling, default 1 (same as network_dim for same behavior as old version)", )
+    parser.add_argument("--network_dropout", type=float, default=None,
+                        help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
+    parser.add_argument("--network_args", type=str, default=None, nargs="*",
+                        help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
+    # step 4. training
+    
+    parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")
+    parser.add_argument("--text_encoder_lr", type=float, default=None,
+                        help="learning rate for Text Encoder / Text Encoderの学習率")
     parser.add_argument("--cache_dir", type=str,
                         default=None,
                         help="The directory where the downloaded models and datasets will be stored.", )
