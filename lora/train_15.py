@@ -682,10 +682,15 @@ class NetworkTrainer:
                             mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
                             activation = (score_map * mask).sum(dim=-1)
                             total_score = (score_map).sum(dim=-1)
+                            if total_score.mean() == 0:
+                                print(f'Wrong, total score is 0')
                             if batch['train_class_list'][0] == 1 :
-                                activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+                                # mask means foreground
+                                activation_loss = (1 - (activation.mean() / total_score.mean())) ** 2  # 8, res*res
                             else :
-                                activation_loss = (activation / total_score) ** 2  # 8, res*res
+                                # mask means bad point
+                                # total score ... = 0 ??
+                                activation_loss = (activation.mean() / total_score.mean()) ** 2  # 8, res*res
                             attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:
