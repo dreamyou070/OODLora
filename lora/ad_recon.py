@@ -16,6 +16,7 @@ import shutil
 from attention_store import AttentionStore
 import torch.nn as nn
 from utils.image_utils import latent2image
+from utils.scheduling_utils import prev_step
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -311,7 +312,7 @@ def main(args) :
                         noise_pred = call_unet(unet, input_latent, t, input_cont, None, mask_dict)
                         controller.reset()
                         z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
-                        x_latent = next_step(x_noise_pred, int(t), x_latent, scheduler)
+                        x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
                         x_latent_dict[prev_time] = x_latent
                     pil_img = Image.fromarray(latent2image(x_latent, vae))
                     pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
