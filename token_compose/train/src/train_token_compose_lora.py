@@ -136,6 +136,10 @@ if __name__ == "__main__":
         type=str,
         required=True,
         help="The output directory where the model predictions and checkpoints will be written.",)
+    parser.add_argument("--network_train_unet_only", action="store_true",
+                        help="only training U-Net part / U-Net関連部分のみ学習する")
+    parser.add_argument("--network_train_text_encoder_only", action="store_true",
+                        help="only training Text Encoder part / Text Encoder関連部分のみ学習する")
     parser.add_argument("--network_weights", type=str, default=None,
                         help="pretrained weights for network / 学習するネットワークの初期重み")
     parser.add_argument("--network_module", type=str, default=None,
