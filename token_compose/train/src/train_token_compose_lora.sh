@@ -31,7 +31,7 @@ mkdir -p $OUTPUT_DIR
 
 # train!
 python train_token_compose_lora.py \
-  --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5 \
+  --pretrained_model_name_or_path ../../../../../pretrained_stable_diffusion/stable-diffusion-v1-5 \
   --train_data_dir=$TRAIN_DIR \
   --report_to="wandb" \
   --train_batch_size=1 \
