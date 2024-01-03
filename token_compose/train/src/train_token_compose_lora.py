@@ -33,6 +33,8 @@ from data_utils import DatasetPreprocess
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 from networks.lora import create_network
+from utils import train_util
+
 logger = get_logger(__name__, log_level="INFO")
 
 
@@ -82,14 +84,12 @@ def main(args):
         if args.output_dir is not None:
             os.makedirs(args.output_dir, exist_ok=True)
 
-    print(f'\n step 7. models')
+    print(f'\n step 7. models and lora model')
     noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
     tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer")
     text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
     vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae")
     unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
-
-
     net_kwargs = {}
     network = create_network(1.0, args.network_dim,
                              args.network_alpha,
@@ -97,6 +97,26 @@ def main(args):
                              text_encoder,
                              unet,
                              neuron_dropout=args.network_dropout, **net_kwargs, )
+    print(' (7.1) lora with unet and text encoder')
+    train_unet = not args.network_train_text_encoder_only
+    train_text_encoder = not args.network_train_unet_only
+    network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
+    print(' (7.2) lora resume?')
+    if args.network_weights is not None:
+        info = network.load_weights(args.network_weights)
+        accelerator.print(f"load network weights from {args.network_weights}: {info}")
+    if args.gradient_checkpointing:
+        unet.enable_gradient_checkpointing()
+        text_encoder.gradient_checkpointing_enable()
+        network.enable_gradient_checkpointing()  # may have no effect
+
+    print(f'\n step 6. optimizer')
+
+    try:
+        trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
+    except:
+        trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+    optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
 
 
@@ -129,7 +149,7 @@ if __name__ == "__main__":
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
     # step 4. training
-    
+
     parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")
     parser.add_argument("--text_encoder_lr", type=float, default=None,
                         help="learning rate for Text Encoder / Text Encoderの学習率")
