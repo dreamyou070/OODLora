@@ -325,6 +325,12 @@ def main(args) :
                             if args.pixel_copy :
                                 if 64 in mask_dict_avg.keys():
                                     m = mask_dict_avg[64].to(z_latent.device)
+
+                                    pixel_save_mask = m.squeee() # 4, res, res
+                                    pixel_save_mask_np = pixel_save_mask.permute(1, 2, 0).cpu().numpy()
+                                    pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
+                                    Image.fromarray(pixel_mask_img).save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
+
                                     #m = torch.where(m > args.pixel_thredhold, 1, 0)
                                     #print(f'pixel mask : {m.sum()}')
                                     x_latent = z_latent * m + x_latent * (1 - m)
