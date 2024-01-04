@@ -671,22 +671,19 @@ class NetworkTrainer:
                     if args.use_attn_loss:
                         attn_loss = 0
                         for i, layer_name in enumerate(attn_dict.keys()):
-                            score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
+                            score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res, 2
                             res = int(score_map.shape[1] ** 0.5)
                             if res in args.cross_map_res:
-                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
-                                    0)  # [1,1,res,res], foreground = 1
+                                print(f'trg res : {res} | score_map (8, 1024, 2) : {score_map.shape}')
+                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)
+                                print(f'anormal_mask shape (32,32) : {anormal_mask.shape}')
                                 mask = anormal_mask.squeeze()  # res,res
-                                mask = torch.stack([mask.flatten() for i in range(8)],
-                                                   dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
-
+                                print(f'mask shape (1,32,32) : {mask.shape}')
+                                mask = torch.stack([mask.flatten() for i in range(8)], dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
+                                print(f'mask shape (8, 32*32=1024) : {mask.shape}')
+                                print(f'score_map shape : {score_map.shape}')
                                 activation = (score_map * mask).sum(dim=-1)
-
-                                # total_score = (score_map).sum(dim=-1)
                                 total_score = torch.ones_like(activation)
-
-                                for i in total_score:
-                                    assert i != 0, f'layer = {layer_name} | total_score : {total_score}'
 
                                 if batch['train_class_list'][0] == 1:
                                     # mask means foreground
