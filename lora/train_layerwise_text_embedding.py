@@ -840,8 +840,8 @@ class NetworkTrainer:
                     # ------------ text embedding recording ------------ #
                     embeddings_save_dir = os.path.join(args.output_dir, 'text_embedding')
                     os.makedirs(embeddings_save_dir, exist_ok=True)
-                    training_text_embeddings_save_dir = os.path.join(embeddings_save_dir, f'training_text_embeddings_{epoch}.pt')
 
+                    training_text_embeddings_save_dir = os.path.join(embeddings_save_dir, f'training_text_embeddings-{str(epoch+1).zfill(6)}.safetensors')
                     torch.save(training_text_embeddings, training_text_embeddings_save_dir)
 
 
@@ -1019,6 +1019,9 @@ class NetworkTrainer:
             print("model saved.")
             ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
             save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
+            training_text_embeddings_save_dir = os.path.join(embeddings_save_dir,
+                                                             f'training_text_embeddings-last.safetensors')
+            torch.save(training_text_embeddings, training_text_embeddings_save_dir)
 
             print("gradient recording")
             gradient_save_dir = os.path.join(record_save_dir, "gradient_norm.pickle")
