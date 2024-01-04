@@ -652,7 +652,7 @@ class NetworkTrainer:
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
-                    with torch.set_grad_enabled(train_text_encoder):
+                    #with torch.set_grad_enabled(train_text_encoder):
                         #text_encoder_conds = self.get_text_cond(args,
                         #                                        accelerator,
                         #                                        batch,
