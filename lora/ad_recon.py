@@ -284,7 +284,7 @@ def main(args) :
                         #attn = attn.unsqueeze(0)
                         attn = attn.reshape(h, res_, res_).float().mean(dim=0).unsqueeze(0).unsqueeze(0)
                         attn = attn.repeat(1, 4, 1, 1)
-                        print(f'pixel level mask : {attn}')
+                        #print(f'pixel level mask : {attn}')
                         #attn = attn / attn.max()
                         mask_dict_avg[res_] = attn
 
