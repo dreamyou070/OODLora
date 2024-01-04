@@ -631,8 +631,7 @@ class NetworkTrainer:
 
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
-                                                                                                       latents)
-                    with accelerator.autocast():
+                                                                                                       latents)                    with accelerator.autocast():
                         # -----------------------------------------------------------------------------------------------------------------------
                         noise_pred = self.call_unet(args,
                                                     accelerator,
