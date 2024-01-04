@@ -272,8 +272,9 @@ def main(args) :
                                     attn_dict = {}
                                     for layer_name in attn_stores :
                                         attn = attn_stores[layer_name][0].squeeze() # head, pix_num
+                                        res = int(attn.shape[1] ** 0.5)
                                         if res in args.cross_map_res :
-                                            res = int(attn.shape[1] ** 0.5)
+
                                             if 'down' in layer_name :
                                                 position = 'down'
                                             elif 'up' in layer_name :
