@@ -329,6 +329,7 @@ def main(args) :
                                     pixel_save_mask = m.squeeze() # 4, res, res
                                     pixel_save_mask_np = pixel_save_mask.permute(1, 2, 0).cpu().numpy()
                                     pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
+                                    print(f'after 255 multiply, pixel mask : {pixel_mask_img}')
                                     pil_img = Image.fromarray(pixel_mask_img).resize((512,512))
                                     pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
 
