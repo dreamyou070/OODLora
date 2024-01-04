@@ -273,6 +273,20 @@ def main(args) :
                                     for layer_name in attn_stores :
                                         attn = attn_stores[layer_name][0].squeeze() # head, pix_num
                                         res = int(attn.shape[1] ** 0.5)
+                                        if 'down' in layer_name :
+                                            position = 'down'
+                                        elif 'up' in layer_name :
+                                            position = 'up'
+                                        else :
+                                            position = 'middle'
+                                        if 'attentions_0' in layer_name :
+                                            part = 'attn_0'
+                                        elif 'attention_1' in layer_name :
+                                            part = 'attn_1'
+                                        else :
+                                            part = 'attn_2'
+                                        title_name = f'{position}_{part}_res_{res}'
+
                                         cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
                                         h = cls_score.shape[0]
                                         trigger_score = trigger_score.unsqueeze(-1)
@@ -283,7 +297,7 @@ def main(args) :
                                         trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
                                         trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
                                         trigger_dir = os.path.join(org_trg_img_output_dir,
-                                                                   f'normalized_good_attn_{layer_name}.png')
+                                                                   f'normalized_good_attn_{layer_name}_res_{res}.png')
                                         trigger_score_pil.save(trigger_dir)
 
                                         if 'down' in layer_name :
@@ -321,7 +335,7 @@ def main(args) :
                                         trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
                                         trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
                                         trigger_dir = os.path.join(trg_img_output_dir,
-                                                                    f'normalized_good_attn_{key_name}.png')
+                                                                    f'normalized_good_{title_name}.png')
                                         trigger_score_pil.save(trigger_dir)
 
                                         #pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
