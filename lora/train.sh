@@ -32,5 +32,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --resolution '512,512' --save_every_n_epochs 1 --sample_every_n_epochs 1 --sample_prompts ../../../MyData/anomaly_detection/inference.txt --max_train_steps 48000 \
   --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/train_ex_15/bad --task_loss_weight 1.0 \
   --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/test_ex/bad --seed 42 --class_caption 'good' --contrastive_eps 0.0 --start_epoch 0 \
-  --output_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/18_normal_sample_training_res_64_32_change_to_max_without_down \
+  --output_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/18_normal_sample_training_res_64_change_to_max_with_down \
   --cross_map_res [64,32] --use_attn_loss --normal_activation_train
