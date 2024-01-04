@@ -6,7 +6,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --network_weights ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_up/models/epoch-000008.safetensors \
   --optimizer_type AdamW --lr_scheduler cosine_with_restarts --lr_warmup_steps 144 \
   --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 \
-  --resolution '512,512' --save_every_n_epochs 1 --sample_every_n_epochs 1 \ 
+  --resolution '512,512' --save_every_n_epochs 1 --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/anomaly_detection/inference.txt --max_train_steps 48000 \
   --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/train_ex_15/bad --task_loss_weight 1.0 \
   --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/test_ex/bad --seed 42 \

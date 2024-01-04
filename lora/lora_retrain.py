@@ -315,8 +315,6 @@ class NetworkTrainer:
             unet_params = unet_lora.parameters()
             print(f'  - {lora_name} ')
 
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -374,7 +372,7 @@ if __name__ == "__main__":
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
 
     parser.add_argument("--mask_threshold", type=float, default=0.5)
-
+    parser.add_argument("--normal_activation_train", action='store_true')
     parser.add_argument("--contrastive_eps", type=float, default=0.00005)
     parser.add_argument("--resume_lora_training", action="store_true", )
     parser.add_argument("--start_epoch", type=int, default=0)
@@ -385,15 +383,12 @@ if __name__ == "__main__":
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--use_attn_loss", action='store_true')
     import ast
-
-
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
-
-
+    parser.add_argument('--trg_position', type = arg_as_list, default = ['down', 'up'])
     parser.add_argument('--anormal_weight', type=float, default=1.0)
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--normal_training", action="store_true", )
