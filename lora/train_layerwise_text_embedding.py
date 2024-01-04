@@ -672,6 +672,10 @@ class NetworkTrainer:
                                                                 text_encoders,
                                                                 weight_dtype)
                         cls_embedding = text_encoder_conds[:,0,:]
+                    if cls_embedding.dim() != 3 :
+                        cls_embedding = cls_embedding.unsqueeze(0)
+                    if cls_embedding.dim() != 3 :
+                        cls_embedding = cls_embedding.unsqueeze(0)
                     training_text_embeddings = training_text_embeddings.to(accelerator.device, dtype = weight_dtype)
                     embedding = torch.cat((cls_embedding, training_text_embeddings), dim=1)
 
