@@ -379,7 +379,7 @@ if __name__ == "__main__":
     parser.add_argument("--final_noising_time", type=int, default = 250)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
     parser.add_argument("--pixel_thredhold", type=float, default=0.1)
-    parser.add_argument("--pixel_copy", action = 'store_ture')
+    parser.add_argument("--pixel_copy", action = 'store_true')
     parser.add_argument("--inner_iteration", type=int, default=10)
     parser.add_argument("--org_latent_attn_map_check", action = 'store_true')
     parser.add_argument("--other_token_preserving", action = 'store_true')
