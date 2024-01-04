@@ -279,14 +279,13 @@ def main(args) :
                                                 trigger_score = trigger_score.mean(dim=0)
                                                 trigger = trigger_score.detach().cpu() # res, res
                                                 trigger = trigger / trigger.max()
-                                                print(f'trigger map : {trigger}')
-                                                print(f'sum after normalizing : {trigger.sum()}')
-                                                trigger = torch.where(trigger > args.mask_thredhold, 1, 0)
+                                                #print(f'trigger map : {trigger}')
+                                                #print(f'min after normalizing : {trigger.min()}')
+                                                trigger = torch.where(trigger > args.mask_thredhold, 1, 0) # only anormal = 0
                                                 anormal_map = torch.flatten(trigger).unsqueeze(0)
                                                 if res not in mask_dict_avg.keys():
                                                     mask_dict_avg[res] = []
                                                 mask_dict_avg[res].append(anormal_map)
-
                                                 anormal_map = anormal_map.repeat(8, 1)
                                                 mask_dict[layer_name] = anormal_map
 
@@ -295,7 +294,8 @@ def main(args) :
                         h = attn.shape[0]
                         attn = attn.reshape(h, res_, res_).float().mean(dim=0).unsqueeze(0).unsqueeze(0)
                         attn = attn.repeat(1, 4, 1, 1)
-                        attn = attn / attn.max()
+                        print(f'pixel level mask : {attn}')
+                        #attn = attn / attn.max()
                         mask_dict_avg[res_] = attn
 
                     # ------------------------------ generate background latent ------------------------------ #
