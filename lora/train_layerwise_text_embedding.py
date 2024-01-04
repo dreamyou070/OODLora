@@ -667,6 +667,8 @@ class NetworkTrainer:
                                                                 text_encoders,
                                                                 weight_dtype)
                         cls_embedding = text_encoder_conds[:,0,:]
+                        print(f'cls_embedding.device : {cls_embedding.device}')
+                        print(f'training_text_embeddings.device : {training_text_embeddings.device}')
                         embedding = torch.cat((cls_embedding, training_text_embeddings), dim=1)
 
                         #print("*** text_encoder_conds", text_encoder_conds.shape)
