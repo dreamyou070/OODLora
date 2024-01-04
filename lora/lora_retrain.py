@@ -314,7 +314,7 @@ class NetworkTrainer:
             lora_name = unet_lora.lora_name
             if 'down_blocks_0' not in lora_name and 'up_blocks_3'not in lora_name :
                 params.extend(unet_lora.parameters())
-        trainable_param = [{"params": params, "lr": args.unet_lr}]
+        trainable_params = [{"params": params, "lr": args.unet_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         print(f' step 7. dataloader')
@@ -708,9 +708,9 @@ class NetworkTrainer:
 
                     accelerator.backward(loss)
 
-                    if accelerator.sync_gradients and args.max_grad_norm != 0.0:
-                        params_to_clip = network.get_trainable_params()
-                        accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
+                    #if accelerator.sync_gradients and args.max_grad_norm != 0.0:
+                    #    params_to_clip = network.get_trainable_params()
+                    #    accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
 
                     optimizer.step()
                     lr_scheduler.step()
