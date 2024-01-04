@@ -335,8 +335,8 @@ def main(args) :
                             if args.pixel_copy :
                                 if 64 in mask_dict_avg.keys():
                                     m = mask_dict_avg[64]
-                                    print(f'final latent copy mask : {m}')
                                     m = torch.where(m > args.pixel_thredhold, 1, 0).to(z_latent.device)
+                                    print(f'pixel mask : {m.sum()}')
                                     x_latent = z_latent * m + x_latent * (1 - m)
                             x_latent_dict[prev_time] = x_latent
                         pil_img = Image.fromarray(latent2image(x_latent, vae))
