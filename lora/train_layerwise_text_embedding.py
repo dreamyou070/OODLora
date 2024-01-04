@@ -658,6 +658,7 @@ class NetworkTrainer:
             loss_dict = {}
 
         for epoch in range(num_train_epochs):
+            """
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
@@ -832,9 +833,162 @@ class NetworkTrainer:
                         remove_model(remove_ckpt_name)
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
+            """
+            #self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
+            #                   text_encoder, unet)
 
-            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
-                               text_encoder, unet)
+            # ------------ image generating ------------ #
+            SCHEDULER_LINEAR_START = 0.00085
+            SCHEDULER_LINEAR_END = 0.0120
+            SCHEDULER_TIMESTEPS = 1000
+            SCHEDLER_SCHEDULE = "scaled_linear"
+            sched_init_args = {}
+            from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
+            from diffusers import DDIMScheduler
+            scheduler = DDIMScheduler(num_train_timesteps=SCHEDULER_TIMESTEPS,
+                                      beta_start=SCHEDULER_LINEAR_START,
+                                      beta_end=SCHEDULER_LINEAR_END,
+                                      beta_schedule=SCHEDLER_SCHEDULE,
+                                      **sched_init_args, )
+            # clip_sample=Trueにする
+            if hasattr(scheduler.config, "clip_sample") and scheduler.config.clip_sample is False:
+                scheduler.config.clip_sample = True
+            pipeline = StableDiffusionLongPromptWeightingPipeline(text_encoder=text_encoder,
+                                                                  vae=vae, unet=unet, tokenizer=tokenizer,
+                                                                  scheduler=scheduler,
+                                                                  safety_checker=None, feature_extractor=None, requires_safety_checker=False,
+                                                                  clip_skip=args.clip_skip, )
+            pipeline.to(accelerator.device)
+            with open(args.sample_prompts, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            prompts = [line.strip() for line in lines if len(line.strip()) > 0 and line[0] != "#"]
+            import re
+            with torch.no_grad():
+                for i, prompt in enumerate(prompts):
+                    prompt_args = prompt.split(" --")
+                    prompt = prompt_args[0]
+                    negative_prompt = None
+                    sample_steps = 30
+                    width = height = 512
+                    scale = 7.5
+                    seed = None
+                    controlnet_image = None
+                    for parg in prompt_args:
+                        try:
+                            m = re.match(r"w (\d+)", parg, re.IGNORECASE)
+                            if m:
+                                width = int(m.group(1))
+                                continue
+                            m = re.match(r"h (\d+)", parg, re.IGNORECASE)
+                            if m:
+                                height = int(m.group(1))
+                                continue
+
+                            m = re.match(r"d (\d+)", parg, re.IGNORECASE)
+                            if m:
+                                seed = int(m.group(1))
+                                continue
+                            m = re.match(r"s (\d+)", parg, re.IGNORECASE)
+                            if m:  # steps
+                                sample_steps = max(1, min(1000, int(m.group(1))))
+                                continue
+                            m = re.match(r"l ([\d\.]+)", parg, re.IGNORECASE)
+                            if m:  # scale
+                                scale = float(m.group(1))
+                                continue
+                            m = re.match(r"n (.+)", parg, re.IGNORECASE)
+                            if m:  # negative prompt
+                                negative_prompt = m.group(1)
+                                continue
+                        except ValueError as ex:
+                            print(f"Exception in parsing / 解析エラー: {parg}")
+                            print(ex)
+                    torch.manual_seed(seed)
+                    torch.cuda.manual_seed(seed)
+                    height = max(64, height - height % 8)  # round to divisible by 8
+                    width = max(64, width - width % 8)  # round to divisible by 8
+                    with accelerator.autocast():
+                        latents = pipeline(prompt=prompt, height=height, width=width, num_inference_steps=sample_steps,
+                                           guidance_scale=scale, negative_prompt=negative_prompt, controlnet=controlnet,
+                                           controlnet_image=controlnet_image, )
+
+                    # 2. Define call parameters
+                    batch_size = 1 if isinstance(prompt, str) else len(prompt)
+                    device = accelerator.device
+                    guidance_scale = 1
+                    do_classifier_free_guidance = guidance_scale > 1.0
+                    # 3. Encode input prompt
+                    text_embeddings = pipeline._encode_prompt(
+                        prompt,
+                        device,
+                        1,
+                        do_classifier_free_guidance,
+                        negative_prompt,
+                        3, )
+                    cls_embedding = text_embeddings[:, 0, :]
+                    if cls_embedding.dim() != 3 :
+                        cls_embedding = cls_embedding.unsqueeze(0)
+                    if cls_embedding.dim() != 3 :
+                        cls_embedding = cls_embedding.unsqueeze(0)
+
+                    embedding = torch.cat((cls_embedding, training_text_embeddings), dim=1)
+
+                    # 4. Preprocess image and mask
+                    image = None
+                    scheduler.set_timesteps(num_inference_steps, device=device)
+                    strength = 0.8
+                    timesteps, num_inference_steps = pipeline.get_timesteps(num_inference_steps, strength, device,  image is None)
+                    latent_timestep = timesteps[:1].repeat(batch_size * 1)
+
+                    # 6. Prepare latent variables
+                    latents, init_latents_orig, noise = pipeline.prepare_latents(
+                        image,
+                        latent_timestep,
+                        batch_size ,
+                        height,
+                        width,
+                        weight_dtype,
+                        device,
+                        None,
+                        latents,)
+
+                    # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
+                    extra_step_kwargs = pipeline.prepare_extra_step_kwargs(None, 0.0)
+
+                    # 8. Denoising loop
+                    for i, t in enumerate(pipeline.progress_bar(timesteps)):
+                        # expand the latents if we are doing classifier free guidance
+                        latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+                        latent_model_input = pipeline.scheduler.scale_model_input(latent_model_input, t)
+                        unet_additional_args = {}
+                        noise_pred = pipeline.unet(latent_model_input, t,
+                                                   encoder_hidden_states=embedding,
+                                               **unet_additional_args).sample
+                        attention_storer.reset()
+
+                        # perform guidance
+                        if do_classifier_free_guidance:
+                            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                            noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+
+                        # compute the previous noisy sample x_t -> x_t-1
+                        latents = pipeline.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+                    image = pipeline.decode_latents(latents.to(pipeline.vae.dtype))
+                    image = pipeline.numpy_to_pil(image)
+                    img_save_dir = os.path.join(args.output_dir, 'sample')
+                    img_filename = f'{prompt}_epoch_{epoch+1}.png'
+                    text_filename = f'{prompt}_epoch_{epoch+1}.txt'
+                    img_dir = os.path.join(img_save_dir, img_filename)
+                    txt_dir = os.path.join(img_save_dir, text_filename)
+                    image.save(img_dir)
+                    with open(txt_dir, 'w') as f:
+                        f.write(prompt)
+                    logging_caption_key = f"prompt : {prompt} seed: {str(seed)}"
+                    wandb.log({logging_caption_key:
+                                   wandb.Image(image, caption=f"prompt: {prompt} (epoch : {epoch})"),})
+            # clear pipeline and cache to reduce vram usage
+            del pipeline
+            torch.cuda.empty_cache()
             attention_storer.reset()
 
         # metadata["ss_epoch"] = str(num_train_epochs)
