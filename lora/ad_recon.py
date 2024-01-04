@@ -273,13 +273,16 @@ def main(args) :
                                                 anormal_map = torch.flatten(trigger).unsqueeze(0)
                                                 if res not in mask_dict_avg.keys():
                                                     mask_dict_avg[res] = []
-                                                mask_dict_avg[res].append(anormal_map)
+                                                mask_dict_avg[res] = anormal_map
+                                                if 'attentions_1' in layer_name :
+                                                    mask_dict_avg[res] = anormal_map # 1, res,res
                                                 anormal_map = anormal_map.repeat(8, 1)
                                                 mask_dict[layer_name] = anormal_map
 
                     for res_ in mask_dict_avg.keys():
                         attn  = torch.cat(mask_dict_avg[res_], dim=0).unsqueeze(-1)
                         h = attn.shape[0]
+                        #attn = attn.unsqueeze(0)
                         attn = attn.reshape(h, res_, res_).float().mean(dim=0).unsqueeze(0).unsqueeze(0)
                         attn = attn.repeat(1, 4, 1, 1)
                         print(f'pixel level mask : {attn}')
@@ -322,9 +325,9 @@ def main(args) :
                             # ------------------------------ pixel recon ------------------------------ #
                             if args.pixel_copy :
                                 if 64 in mask_dict_avg.keys():
-                                    m = mask_dict_avg[64]
-                                    m = torch.where(m > args.pixel_thredhold, 1, 0).to(z_latent.device)
-                                    print(f'pixel mask : {m.sum()}')
+                                    m = mask_dict_avg[64].to(z_latent.device)
+                                    #m = torch.where(m > args.pixel_thredhold, 1, 0)
+                                    #print(f'pixel mask : {m.sum()}')
                                     x_latent = z_latent * m + x_latent * (1 - m)
                             x_latent_dict[prev_time] = x_latent
                         pil_img = Image.fromarray(latent2image(x_latent, vae))
