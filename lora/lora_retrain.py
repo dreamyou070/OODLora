@@ -311,7 +311,7 @@ class NetworkTrainer:
         unet_loras = network.unet_loras
         params = []
         for unet_lora in unet_loras :
-            lora_name = unet_lora.name
+            lora_name = unet_lora.lora_name
             unet_params = unet_lora.parameters()
             print(f'  - {lora_name} ')
 

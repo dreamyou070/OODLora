@@ -12,4 +12,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/bagel/test_ex/bad --seed 42 \
   --class_caption 'good' --start_epoch 0 \
   --output_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_freeze_retrain \
-  --cross_map_res [32] --use_attn_loss --normal_activation_train --trg_position "['up','down]"
+  --cross_map_res [32] --use_attn_loss --normal_activation_train --trg_position "['up','down']"
