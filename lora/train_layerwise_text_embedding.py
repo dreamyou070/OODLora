@@ -980,7 +980,7 @@ class NetworkTrainer:
                     text_filename = f'{prompt}_epoch_{epoch+1}.txt'
                     img_dir = os.path.join(img_save_dir, img_filename)
                     txt_dir = os.path.join(img_save_dir, text_filename)
-                    image.save(img_dir)
+                    image[0].save(img_dir)
                     with open(txt_dir, 'w') as f:
                         f.write(prompt)
                     logging_caption_key = f"prompt : {prompt} seed: {str(seed)}"
