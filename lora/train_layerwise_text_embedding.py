@@ -28,6 +28,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
     def ca_forward(self, layer_name):
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
             is_cross_attention = False
+
             if context is not None:
                 is_cross_attention = True
 
@@ -55,8 +56,17 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 trg_num = trg_num + 1
                 cls_emb = context[:, 0, :]
                 trgger_emb = context[:, trg_num, :]
+                if cls_emb.dim() != 3 :
+                    cls_emb = cls_emb.unsqueeze(0)
+                if cls_emb.dim() != 3 :
+                    cls_emb = cls_emb.unsqueeze(0)
+                if trgger_emb.dim() != 3 :
+                    trgger_emb = trgger_emb.unsqueeze(0)
+                if trgger_emb.dim() != 3 :
+                    trgger_emb = trgger_emb.unsqueeze(0)
+
                 context = torch.cat([cls_emb, trgger_emb], dim=1)
-                print(f'*********** context.shape : {context.shape}')
+                print(f'*********** context.shape (1,2,768)  : {context.shape}')
 
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
@@ -679,7 +689,9 @@ class NetworkTrainer:
                         cls_embedding = cls_embedding.unsqueeze(0)
                     if cls_embedding.dim() != 3 :
                         cls_embedding = cls_embedding.unsqueeze(0)
+
                     training_text_embeddings = training_text_embeddings.to(accelerator.device, dtype = weight_dtype)
+
                     embedding = torch.cat((cls_embedding, training_text_embeddings), dim=1)
 
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
@@ -687,6 +699,7 @@ class NetworkTrainer:
                                                                                                        latents)
                     with accelerator.autocast():
                         # -----------------------------------------------------------------------------------------------------------------------
+                        print(f'before call unet, embedding : {embedding.shape}')
                         noise_pred = self.call_unet(args,
                                                     accelerator,
                                                     unet,
