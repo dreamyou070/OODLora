@@ -287,7 +287,7 @@ def main(args) :
                                             cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
                                             res = int(trigger_score.shape[1] ** 0.5)
                                             h = trigger_score.shape[0]
-                                            trigger_score = trigger_score.unsqueeze(-1),        # head, pix_num, 1
+                                            trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
                                             trigger_score = trigger_score.reshape( h, res, res) # head, res, res
                                             trigger_score = trigger_score.mean(dim=0)           # res, res
                                             trigger = trigger_score / trigger_score.max()
