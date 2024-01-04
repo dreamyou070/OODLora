@@ -297,7 +297,7 @@ def main(args) :
                                         trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
                                         trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
                                         trigger_dir = os.path.join(org_trg_img_output_dir,
-                                                                   f'normalized_good_attn_{layer_name}_res_{res}.png')
+                                                                   f'normalized_good_{title_name}_res_{res}.png')
                                         trigger_score_pil.save(trigger_dir)
 
                                         if 'down' in layer_name :
@@ -335,7 +335,7 @@ def main(args) :
                                         trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
                                         trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
                                         trigger_dir = os.path.join(trg_img_output_dir,
-                                                                    f'normalized_good_{title_name}.png')
+                                                                    f'normalized_good_{key_name}.png')
                                         trigger_score_pil.save(trigger_dir)
 
                                         #pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
