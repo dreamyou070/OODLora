@@ -907,15 +907,15 @@ class NetworkTrainer:
                     torch.cuda.manual_seed(seed)
                     height = max(64, height - height % 8)  # round to divisible by 8
                     width = max(64, width - width % 8)  # round to divisible by 8
+                    guidance_scale, scale = 1, 1
                     with accelerator.autocast():
                         latents = pipeline(prompt=prompt, height=height, width=width, num_inference_steps=sample_steps,
-                                           guidance_scale=scale, negative_prompt=negative_prompt, controlnet=None,
-                                           controlnet_image=None )
+                                           guidance_scale=scale, negative_prompt=negative_prompt, controlnet=None, controlnet_image=None )
 
                     # 2. Define call parameters
                     batch_size = 1 if isinstance(prompt, str) else len(prompt)
                     device = accelerator.device
-                    guidance_scale = 1
+
                     do_classifier_free_guidance = guidance_scale > 1.0
                     # 3. Encode input prompt
                     text_embeddings = pipeline._encode_prompt(
