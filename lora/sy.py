@@ -1,9 +1,9 @@
-import torch
+import torch, ast
 
 
-trigger = torch.randn(64,64)
-anormal_map = torch.flatten(trigger).unsqueeze(0)
-print(f'anormal_map : {anormal_map.shape}')
+def arg_as_list(arg):
+    v = ast.literal_eval(arg)
+    return v
 
-print(f'attn : {attn.shape}')
-
+arg = [32,64]
+print(arg_as_list(arg))

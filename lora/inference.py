@@ -272,44 +272,47 @@ def main(args) :
                                     attn_dict = {}
                                     for layer_name in attn_stores :
                                         attn = attn_stores[layer_name][0].squeeze() # head, pix_num
-                                        res = int(attn.shape[1] ** 0.5)
-                                        if 'down' in layer_name :
-                                            position = 'down'
-                                        elif 'up' in layer_name :
-                                            position = 'up'
-                                        else :
-                                            position = 'middle'
-                                        if 'attentions_0' in layer_name :
-                                            part = 'attn_0'
-                                        elif 'attention_1' in layer_name :
-                                            part = 'attn_1'
-                                        else :
-                                            part = 'attn_2'
-                                        title_name = f'{position}_{part}_res_{res}'
+                                        if res in args.cross_map_res :
+                                            res = int(attn.shape[1] ** 0.5)
+                                            if 'down' in layer_name :
+                                                position = 'down'
+                                            elif 'up' in layer_name :
+                                                position = 'up'
+                                            else :
+                                                position = 'middle'
 
-                                        cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
-                                        h = cls_score.shape[0]
-                                        trigger_score = trigger_score.unsqueeze(-1)
-                                        trigger_score = trigger_score.reshape(h, res, res)
-                                        trigger_score = trigger_score.mean(dim=0)
-                                        trigger = trigger_score.detach().cpu()
-                                        trigger = trigger / trigger.max()
-                                        trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
-                                        trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
-                                        trigger_dir = os.path.join(org_trg_img_output_dir,
-                                                                   f'normalized_good_{title_name}_res_{res}.png')
-                                        trigger_score_pil.save(trigger_dir)
+                                            if 'attentions_0' in layer_name :
+                                                part = 'attn_0'
+                                            elif 'attentions_1' in layer_name :
+                                                part = 'attn_1'
+                                            else :
+                                                part = 'attn_2'
 
-                                        if 'down' in layer_name :
-                                            key_name = f'down_{res}'
-                                        elif 'up' in layer_name :
-                                            key_name = f'up_{res}'
-                                        else :
-                                            key_name = f'mid_{res}'
+                                            title_name = f'{position}_{part}_res_{res}'
 
-                                        if key_name not in attn_dict :
-                                            attn_dict[key_name] = []
-                                        attn_dict[key_name].append(attn)
+                                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
+                                            h = cls_score.shape[0]
+                                            trigger_score = trigger_score.unsqueeze(-1)
+                                            trigger_score = trigger_score.reshape(h, res, res)
+                                            trigger_score = trigger_score.mean(dim=0)
+                                            trigger = trigger_score.detach().cpu()
+                                            trigger = trigger / trigger.max()
+                                            trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
+                                            trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
+                                            trigger_dir = os.path.join(org_trg_img_output_dir,
+                                                                       f'normalized_good_{title_name}_res_{res}.png')
+                                            trigger_score_pil.save(trigger_dir)
+
+                                            if 'down' in layer_name :
+                                                key_name = f'down_{res}'
+                                            elif 'up' in layer_name :
+                                                key_name = f'up_{res}'
+                                            else :
+                                                key_name = f'mid_{res}'
+
+                                            if key_name not in attn_dict :
+                                                attn_dict[key_name] = []
+                                            attn_dict[key_name].append(attn)
 
 
                                     for key_name in attn_dict :
