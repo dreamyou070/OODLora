@@ -290,9 +290,9 @@ def main(args) :
 
                                             title_name = f'{position}_{part}_res_{res}'
 
-                                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
+                                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
                                             h = cls_score.shape[0]
-                                            trigger_score = trigger_score.unsqueeze(-1)
+                                            trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
                                             trigger_score = trigger_score.reshape(h, res, res)
                                             trigger_score = trigger_score.mean(dim=0)
                                             trigger = trigger_score.detach().cpu()
@@ -312,6 +312,7 @@ def main(args) :
 
                                             if key_name not in attn_dict :
                                                 attn_dict[key_name] = []
+
                                             attn_dict[key_name].append(attn)
 
 
@@ -325,13 +326,7 @@ def main(args) :
                                         cls_score, trigger_score, pad_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1), pad_score.unsqueeze(-1)
                                         cls_score, trigger_score, pad_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res), pad_score.reshape(h, res, res)
                                         cls_score, trigger_score, pad_score = cls_score.mean(dim=0), trigger_score.mean(dim=0), pad_score.mean(dim=0)
-                                        #trigger_score = trigger_score / (trigger_score.max())
 
-                                        #cls_np = np.array((cls_score.detach().cpu()) * 255).astype(np.uint8)
-                                        #cls_score_pil = Image.fromarray(cls_np).resize((512, 512), Image.BILINEAR)
-                                        #cls_dir = os.path.join(trg_img_output_dir,
-                                        #                       f'cls_{name}_attn_{layer_name}_{t}.png')
-                                        #cls_score_pil.save(cls_dir)
 
                                         trigger = trigger_score.detach().cpu()
                                         trigger = trigger / trigger.max()
