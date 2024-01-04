@@ -910,7 +910,7 @@ class NetworkTrainer:
                     with accelerator.autocast():
                         latents = pipeline(prompt=prompt, height=height, width=width, num_inference_steps=sample_steps,
                                            guidance_scale=scale, negative_prompt=negative_prompt, controlnet=controlnet,
-                                           controlnet_image=controlnet_image, )
+                                           controlnet_image=None )
 
                     # 2. Define call parameters
                     batch_size = 1 if isinstance(prompt, str) else len(prompt)
