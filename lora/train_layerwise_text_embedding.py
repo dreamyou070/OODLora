@@ -308,6 +308,16 @@ class NetworkTrainer:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
         except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+
+
+        unet_cross_num = 16
+        text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(1, unet_cross_num, 768),
+                                     requires_grad=True)
+        print(f' (6.1) text embeddings')
+        print(f' text_embeddings : {text_embeddings.shape}')
+
+        trainable_params.append({"params": text_embeddings, "lr": args.text_encoder_lr})
+
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         print(f' step 7. dataloader')
@@ -625,6 +635,7 @@ class NetworkTrainer:
                                                                 tokenizers,
                                                                 text_encoders,
                                                                 weight_dtype)
+
                         print("*** text_encoder_conds", text_encoder_conds.shape)
                         if args.truncate_pad:
                             text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
