@@ -259,8 +259,8 @@ def main(args) :
                                         mask_dict_avg_sub = {}
                                         for layer_name in attn_stores:
                                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                                            res = int(attn.shape[1] ** 0.5)
                                             if res in args.cross_map_res:
-                                                res = int(attn.shape[1] ** 0.5)
                                                 if 'down' in layer_name:
                                                     key_name = f'down_{res}'
                                                 elif 'up' in layer_name:
@@ -271,15 +271,14 @@ def main(args) :
                                                     mask_dict_avg_sub[key_name] = []
                                                 mask_dict_avg_sub[key_name].append(attn)
 
-                                                if res in args.cross_map_res :
-                                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
-                                                    h = cls_score.shape[0]
-                                                    trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
-                                                    trigger_score = trigger_score.reshape(h, res, res) # head, res, res
-                                                    trigger_score = trigger_score.mean(dim=0) # res, res
-                                                    trigger = trigger_score / trigger_score.max()
-                                                    anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
-                                                    mask_dict[layer_name] = anormal_map
+                                                cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
+                                                h = cls_score.shape[0]
+                                                trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
+                                                trigger_score = trigger_score.reshape(h, res, res) # head, res, res
+                                                trigger_score = trigger_score.mean(dim=0) # res, res
+                                                trigger = trigger_score / trigger_score.max()
+                                                anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
+                                                mask_dict[layer_name] = anormal_map
 
                                         # attn_dict
                                         for key_name in mask_dict_avg_sub:
