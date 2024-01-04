@@ -291,7 +291,7 @@ def main(args) :
                     for res_ in mask_dict_avg.keys():
                         attn  = torch.cat(mask_dict_avg[res_], dim=0).unsqueeze(-1)
                         h = attn.shape[0]
-                        attn = attn.reshape(h, res_, res_).mean(dim=0).unsqueeze(0).unsqueeze(0)
+                        attn = attn.reshape(h, res_, res_).float().mean(dim=0).unsqueeze(0).unsqueeze(0)
                         attn = attn.repeat(1, 4, 1, 1)
                         attn = attn / attn.max()
                         mask_dict_avg[res_] = attn
