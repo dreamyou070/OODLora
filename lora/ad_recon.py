@@ -57,6 +57,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                     z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0) # head, pix_num, sen_len
                     x_attn_probs = z_attn_probs * mask + x_attn_probs * (1 - mask)
                     attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
+                else :
+                    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0)  # head, pix_num, sen_len
+                    x_attn_probs = z_attn_probs
+                    attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
 
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -87,28 +91,12 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
     controller.num_att_layers = cross_att_count
 
 
-def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32, 16, 8], poses=["down", "mid", "up"]):
-
-    #attention_maps = attention_store.get_average_attention()
-    attention_maps = attention_store.step_store
-    attn_dict = {}
-    for pos in poses:
-        for res in reses:
-            temp_list = []
-            for item in attention_maps[f"{pos}_cross"]:
-                if item.shape[1] == res ** 2:
-                    cross_maps = item.reshape(-1, res, res, item.shape[-1])
-                    temp_list.append(cross_maps)
-            # if such resolution exists
-            if len(temp_list) > 0:
-                attn_dict[f"{pos}_{res}"] = temp_list # length 1 or 3
-    return attn_dict
 
 
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_unet_thred_{args.mask_thredhold}')
+    args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_unet_thred_{args.mask_thredhold}')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -278,10 +266,10 @@ def main(args) :
                                                 trigger_score = trigger_score.reshape(h, res, res)
                                                 trigger_score = trigger_score.mean(dim=0)
                                                 trigger = trigger_score.detach().cpu() # res, res
-                                                trigger = trigger / trigger.max()
+                                                trigger = trigger / trigger.max() # do i have to use binary ... ?
                                                 #print(f'trigger map : {trigger}')
                                                 #print(f'min after normalizing : {trigger.min()}')
-                                                trigger = torch.where(trigger > args.mask_thredhold, 1, 0) # only anormal = 0
+                                                #trigger = torch.where(trigger > args.mask_thredhold, 1, 0) # only anormal = 0
                                                 anormal_map = torch.flatten(trigger).unsqueeze(0)
                                                 if res not in mask_dict_avg.keys():
                                                     mask_dict_avg[res] = []
