@@ -421,6 +421,9 @@ class NetworkTrainer:
         vae.requires_grad_(False)
         vae.eval()
         vae.to(accelerator.device, dtype=vae_dtype)
+        text_encoder.requires_grad_(False)
+        text_encoder.eval()
+        text_encoder.to(accelerator.device, dtype=weight_dtype)
 
         print(f'\n step 7. training preparing')
         if args.full_fp16:
