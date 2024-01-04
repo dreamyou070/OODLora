@@ -915,7 +915,7 @@ class NetworkTrainer:
                     # 2. Define call parameters
                     batch_size = 1 if isinstance(prompt, str) else len(prompt)
                     device = accelerator.device
-
+                    num_inference_steps = sample_steps
                     do_classifier_free_guidance = guidance_scale > 1.0
                     # 3. Encode input prompt
                     text_embeddings = pipeline._encode_prompt(
