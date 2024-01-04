@@ -312,9 +312,14 @@ class NetworkTrainer:
         params = []
         for unet_lora in unet_loras :
             lora_name = unet_lora.lora_name
-            if 'down_blocks_0' not in lora_name and 'up_blocks_3'not in lora_name :
+            if 'up_blocks_3' not in lora_name :
                 params.extend(unet_lora.parameters())
-        trainable_params = [{"params": params, "lr": args.unet_lr}]
+        #text_encoder_params = []
+        #for text_encoder_lora in text_encoder_loras :
+        #    lora_name = text_encoder_lora.lora_name
+        #    if 'down_blocks_0' not in lora_name and 'up_blocks_3'not in lora_name :
+        #        params.extend(text_encoder_lora.parameters())
+        trainable_params = [{"params": params, "lr": args.unet_lr},]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
         train_unet = True
         train_text_encoder = False
@@ -630,6 +635,7 @@ class NetworkTrainer:
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
+                    #with torch.set_grad_enabled(train_text_encoder):
                     with torch.no_grad():
                         text_encoder_conds = self.get_text_cond(args,
                                                                 accelerator,

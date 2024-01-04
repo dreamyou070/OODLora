@@ -289,7 +289,7 @@ def main(args) :
                                             else :
                                                 part = 'attn_2'
 
-                                            title_name = f'{position}_{part}_res_{res}'
+                                            title_name = f'res_{res}_{position}_{part}'
 
                                             cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
                                             h = cls_score.shape[0]
