@@ -696,8 +696,6 @@ class NetworkTrainer:
                                                                                                        noise_scheduler,
                                                                                                        latents)
                     with accelerator.autocast():
-                        # -----------------------------------------------------------------------------------------------------------------------
-                        print(f'before call unet, embedding : {embedding.shape}')
                         noise_pred = self.call_unet(args,
                                                     accelerator,
                                                     unet,
