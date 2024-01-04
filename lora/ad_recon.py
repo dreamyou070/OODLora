@@ -279,6 +279,7 @@ def main(args) :
                                                 trigger_score = trigger_score.mean(dim=0)
                                                 trigger = trigger_score.detach().cpu() # res, res
                                                 trigger = trigger / trigger.max()
+                                                print(f'trigger map : {trigger}')
                                                 trigger = torch.where(trigger > args.mask_thredhold, 1, 0)
                                                 anormal_map = torch.flatten(trigger).unsqueeze(0)
                                                 if res not in mask_dict_avg.keys():
