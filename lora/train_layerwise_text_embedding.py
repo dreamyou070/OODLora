@@ -398,10 +398,13 @@ class NetworkTrainer:
                 enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
                 enc_text_encoders = [enc_text_encoder]
         elif train_unet:
+            print(f'accelerate training text embeddings')
 
             unet, network, optimizer, train_dataloader, lr_scheduler, training_text_embeddings = accelerator.prepare(
                 unet, network, optimizer, train_dataloader, lr_scheduler, training_text_embeddings)
             enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
+
+
         elif train_text_encoder:
             if len(text_encoders) > 1:
                 t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
@@ -669,11 +672,8 @@ class NetworkTrainer:
                                                                 text_encoders,
                                                                 weight_dtype)
                         cls_embedding = text_encoder_conds[:,0,:]
-                        print(f'cls_embedding.device : {cls_embedding.device}')
-                        print(f'training_text_embeddings.device : {training_text_embeddings.device}')
-                        embedding = torch.cat((cls_embedding, training_text_embeddings), dim=1)
-
-                        #print("*** text_encoder_conds", text_encoder_conds.shape)
+                    training_text_embeddings = training_text_embeddings.to(accelerator.device, dtype = weight_dtype)
+                    embedding = torch.cat((cls_embedding, training_text_embeddings), dim=1)
 
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
