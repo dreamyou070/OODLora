@@ -930,7 +930,7 @@ class NetworkTrainer:
                         cls_embedding = cls_embedding.unsqueeze(0)
                     if cls_embedding.dim() != 3 :
                         cls_embedding = cls_embedding.unsqueeze(0)
-
+                    training_text_embeddings = training_text_embeddings.to(accelerator.device, dtype=weight_dtype)
                     embedding = torch.cat((cls_embedding, training_text_embeddings), dim=1)
 
                     # 4. Preprocess image and mask
