@@ -56,6 +56,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 cls_emb = context[:, 0, :]
                 trgger_emb = context[:, trg_num, :]
                 context = torch.cat([cls_emb, trgger_emb], dim=1)
+                print(f'*********** context.shape : {context.shape}')
 
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
@@ -320,6 +321,8 @@ class NetworkTrainer:
         train_text_encoder = not args.network_train_unet_only
         print(f' train_unet : {train_unet} | train_text_encoder : {train_text_encoder}')
         network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
+
+        print(f'network.text_encoder_loras : {network.text_encoder_loras}')
         print(' (5.4) lora resume?')
         if args.network_weights is not None:
             info = network.load_weights(args.network_weights)
