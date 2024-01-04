@@ -943,7 +943,8 @@ class NetworkTrainer:
                             cls_embedding = cls_embedding.unsqueeze(0)
                         if cls_embedding.dim() != 3 :
                             cls_embedding = cls_embedding.unsqueeze(0)
-                        other_embedding = other_embedding.squeeze(0)
+                        if other_embedding.dim() != 3 :
+                            other_embedding = other_embedding.unsqueeze(0)
                         training_text_embeddings = training_text_embeddings.to(accelerator.device, dtype=weight_dtype)
                         embedding = torch.cat((cls_embedding, training_text_embeddings, other_embedding), dim=1)
 
