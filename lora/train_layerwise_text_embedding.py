@@ -31,28 +31,31 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if context is not None:
                 is_cross_attention = True
 
-            if 'mid' in layer_name :
-                trg_num = 6
-            else :
-                if 'down' in layer_name :
-                    position_num = 0
-                    if 'blocks_0' in layer_name : block_num = 0
-                    elif 'blocks_1' in layer_name : block_num = 2
-                    elif 'blocks_2' in layer_name : block_num = 4
+                if 'mid' in layer_name :
+                    trg_num = 6
+                else :
+                    if 'down' in layer_name :
+                        position_num = 0
+                        if 'blocks_0' in layer_name : block_num = 0
+                        elif 'blocks_1' in layer_name : block_num = 2
+                        elif 'blocks_2' in layer_name : block_num = 4
 
-                    if 'attentions_0' in layer_name : attention_num = 0
-                    elif 'attentions_1' in layer_name : attention_num = 1
-                elif 'up' in layer_name :
-                    position_num = 7
-                    if 'blocks_1' in layer_name : block_num = 0
-                    elif 'blocks_2' in layer_name : block_num = 3
-                    elif 'blocks_3' in layer_name : block_num = 6
+                        if 'attentions_0' in layer_name : attention_num = 0
+                        elif 'attentions_1' in layer_name : attention_num = 1
+                    elif 'up' in layer_name :
+                        position_num = 7
+                        if 'blocks_1' in layer_name : block_num = 0
+                        elif 'blocks_2' in layer_name : block_num = 3
+                        elif 'blocks_3' in layer_name : block_num = 6
 
-                    if 'attentions_0' in layer_name : attention_num = 0
-                    elif 'attentions_1' in layer_name : attention_num = 1
-                    elif 'attentions_2' in layer_name: attention_num = 2
-                trg_num = position_num + block_num + attention_num
-                context = context[:,trg_num, :]
+                        if 'attentions_0' in layer_name : attention_num = 0
+                        elif 'attentions_1' in layer_name : attention_num = 1
+                        elif 'attentions_2' in layer_name: attention_num = 2
+                    trg_num = position_num + block_num + attention_num
+                trg_num = trg_num + 1
+                cls_emb = context[:, 0, :]
+                trgger_emb = context[:, trg_num, :]
+                context = torch.cat([cls_emb, trgger_emb], dim=1)
 
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
@@ -78,7 +81,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 elif 'mid' in layer_name :
                     position = 'mid'
                 if position in args.trg_position :
-                    trg_map = attention_probs[:, :, 0]
+                    trg_map = attention_probs[:, :, 1]
                     controller.store(trg_map, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -652,13 +655,15 @@ class NetworkTrainer:
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
-                    #with torch.set_grad_enabled(train_text_encoder):
-                        #text_encoder_conds = self.get_text_cond(args,
-                        #                                        accelerator,
-                        #                                        batch,
-                        #                                        tokenizers,
-                        #                                        text_encoders,
-                        #                                        weight_dtype)
+                    with torch.no_grad():
+                        text_encoder_conds = self.get_text_cond(args,
+                                                                accelerator,
+                                                                batch,
+                                                                tokenizers,
+                                                                text_encoders,
+                                                                weight_dtype)
+                        cls_embedding = text_encoder_conds[:,0,:]
+                        embedding = torch.cat((cls_embedding, training_text_embeddings), dim=1)
 
                         #print("*** text_encoder_conds", text_encoder_conds.shape)
 
@@ -672,7 +677,7 @@ class NetworkTrainer:
                                                     unet,
                                                     noisy_latents,
                                                     timesteps,
-                                                    training_text_embeddings,
+                                                    embedding,
                                                     batch,
                                                     weight_dtype, 1, None)
 
