@@ -909,7 +909,7 @@ class NetworkTrainer:
                     width = max(64, width - width % 8)  # round to divisible by 8
                     with accelerator.autocast():
                         latents = pipeline(prompt=prompt, height=height, width=width, num_inference_steps=sample_steps,
-                                           guidance_scale=scale, negative_prompt=negative_prompt, controlnet=controlnet,
+                                           guidance_scale=scale, negative_prompt=negative_prompt, controlnet=None,
                                            controlnet_image=None )
 
                     # 2. Define call parameters
