@@ -316,6 +316,8 @@ class NetworkTrainer:
                 params.extend(unet_lora.parameters())
         trainable_params = [{"params": params, "lr": args.unet_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
+        train_unet = True
+        train_text_encoder = False
 
         print(f' step 7. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
