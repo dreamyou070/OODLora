@@ -985,7 +985,7 @@ class NetworkTrainer:
                         f.write(prompt)
                     logging_caption_key = f"prompt : {prompt} seed: {str(seed)}"
                     wandb.log({logging_caption_key:
-                                   wandb.Image(image, caption=f"prompt: {prompt} (epoch : {epoch})"),})
+                                   wandb.Image(image[0], caption=f"prompt: {prompt} (epoch : {epoch})"),})
             # clear pipeline and cache to reduce vram usage
             del pipeline
             torch.cuda.empty_cache()
