@@ -47,7 +47,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None and ('up' in layer_name or 'mid' in layer_name):
-                trg_map = attention_probs[:, :, 1:3]
+                trg_map = attention_probs[:, :, 1]
                 controller.store(trg_map, layer_name)
                 """
                 batch, pix_num, _ = query.shape
@@ -671,27 +671,19 @@ class NetworkTrainer:
                     if args.use_attn_loss:
                         attn_loss = 0
                         for i, layer_name in enumerate(attn_dict.keys()):
-                            score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res, 2
+                            score_map = attn_dict[layer_name][0].squeeze()                     # 8, res*res
                             res = int(score_map.shape[1] ** 0.5)
                             if res in args.cross_map_res:
-                                print(f'trg res : {res} | score_map (8, 1024, 2) : {score_map.shape}')
-                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)
-                                print(f'anormal_mask shape (32,32) : {anormal_mask.shape}')
-                                mask = anormal_mask.squeeze()  # res,res
-                                print(f'mask shape (1,32,32) : {mask.shape}')
-                                mask = torch.stack([mask.flatten() for i in range(8)], dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
-                                print(f'mask shape (8, 32*32=1024) : {mask.shape}')
-                                print(f'score_map shape : {score_map.shape}')
-                                activation = (score_map * mask).sum(dim=-1)
+                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)     # 1,1,res,res
+                                mask = anormal_mask.squeeze()                                  # res,res
+                                mask = torch.stack([mask.flatten() for i in range(8)], dim=0)  # 8, 1024
+                                activation = (score_map * mask).sum(dim=-1)                    # 8, 1024
                                 total_score = torch.ones_like(activation)
-
-                                if batch['train_class_list'][0] == 1:
+                                if batch['train_class_list'][0] == 1:                          # normal sample
                                     # mask means foreground
                                     # activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
                                     activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
                                 else:
-                                    # mask means bad point
-                                    # total score ... = 0 ??
                                     activation_loss = (activation / total_score) ** 2  # 8, res*res
                                 attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
