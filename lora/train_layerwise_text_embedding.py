@@ -397,8 +397,8 @@ class NetworkTrainer:
                 enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
                 enc_text_encoders = [enc_text_encoder]
         elif train_unet:
-            unet, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                unet, network, optimizer, train_dataloader, lr_scheduler)
+            unet, network, optimizer, train_dataloader, lr_scheduler, training_text_embeddings = accelerator.prepare(
+                unet, network, optimizer, train_dataloader, lr_scheduler, training_text_embeddings)
             enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
         elif train_text_encoder:
             if len(text_encoders) > 1:
@@ -449,6 +449,10 @@ class NetworkTrainer:
         vae.requires_grad_(False)
         vae.eval()
         vae.to(accelerator.device, dtype=vae_dtype)
+
+        text_encoder.requires_grad_(False)
+        text_encoder.eval()
+        text_encoder.to(accelerator.device, dtype=weight_dtype)
 
         print(f'\n step 7. training preparing')
         if args.full_fp16:
