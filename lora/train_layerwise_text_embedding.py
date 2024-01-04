@@ -55,6 +55,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                     trg_num = position_num + block_num + attention_num
                 trg_num = trg_num + 1
                 cls_emb = context[:, 0, :]
+                other_emb = context[:, 17:, :]
                 trgger_emb = context[:, trg_num, :]
                 if cls_emb.dim() != 3 :
                     cls_emb = cls_emb.unsqueeze(0)
@@ -64,7 +65,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                     trgger_emb = trgger_emb.unsqueeze(0)
                 if trgger_emb.dim() != 3 :
                     trgger_emb = trgger_emb.unsqueeze(0)
-                context = torch.cat([cls_emb, trgger_emb], dim=1)
+                context = torch.cat([cls_emb, trgger_emb, other_emb], dim=1)
 
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
@@ -688,10 +689,10 @@ class NetworkTrainer:
                         cls_embedding = cls_embedding.unsqueeze(0)
                     if cls_embedding.dim() != 3 :
                         cls_embedding = cls_embedding.unsqueeze(0)
+                    other_embeddings = text_embeddings[:, 2:, :]
 
                     training_text_embeddings = training_text_embeddings.to(accelerator.device, dtype = weight_dtype)
-
-                    embedding = torch.cat((cls_embedding, training_text_embeddings), dim=1)
+                    embedding = torch.cat((cls_embedding, training_text_embeddings, other_embeddings), dim=1)
 
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
@@ -927,12 +928,14 @@ class NetworkTrainer:
                             negative_prompt,
                             3, )
                         cls_embedding = text_embeddings[:, 0, :]
+                        other_embedding = text_embeddings[:, 2:, :]
                         if cls_embedding.dim() != 3 :
                             cls_embedding = cls_embedding.unsqueeze(0)
                         if cls_embedding.dim() != 3 :
                             cls_embedding = cls_embedding.unsqueeze(0)
+                        other_embedding = other_embedding.squeeze(0)
                         training_text_embeddings = training_text_embeddings.to(accelerator.device, dtype=weight_dtype)
-                        embedding = torch.cat((cls_embedding, training_text_embeddings), dim=1)
+                        embedding = torch.cat((cls_embedding, training_text_embeddings, other_embedding), dim=1)
 
                         # 4. Preprocess image and mask
                         image = None
