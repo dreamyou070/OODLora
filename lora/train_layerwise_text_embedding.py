@@ -30,6 +30,30 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             is_cross_attention = False
             if context is not None:
                 is_cross_attention = True
+
+            if 'mid' in layer_name :
+                trg_num = 6
+            else :
+                if 'down' in layer_name :
+                    position_num = 0
+                    if 'blocks_0' in layer_name : block_num = 0
+                    elif 'blocks_1' in layer_name : block_num = 2
+                    elif 'blocks_2' in layer_name : block_num = 4
+
+                    if 'attentions_0' in layer_name : attention_num = 0
+                    elif 'attentions_1' in layer_name : attention_num = 1
+                elif 'up' in layer_name :
+                    position_num = 7
+                    if 'blocks_1' in layer_name : block_num = 0
+                    elif 'blocks_2' in layer_name : block_num = 3
+                    elif 'blocks_3' in layer_name : block_num = 6
+
+                    if 'attentions_0' in layer_name : attention_num = 0
+                    elif 'attentions_1' in layer_name : attention_num = 1
+                    elif 'attentions_2' in layer_name: attention_num = 2
+                trg_num = position_num + block_num + attention_num
+                context = context[:,trg_num, :]
+
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
             key = self.to_k(context)
@@ -54,7 +78,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 elif 'mid' in layer_name :
                     position = 'mid'
                 if position in args.trg_position :
-                    trg_map = attention_probs[:, :, 1]
+                    trg_map = attention_probs[:, :, 0]
                     controller.store(trg_map, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -311,12 +335,12 @@ class NetworkTrainer:
 
 
         unet_cross_num = 16
-        text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(1, unet_cross_num, 768),
+        training_text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(1, unet_cross_num, 768),
                                      requires_grad=True)
         print(f' (6.1) text embeddings')
-        print(f' text_embeddings : {text_embeddings.shape}')
+        print(f' text_embeddings : {training_text_embeddings.shape}')
 
-        trainable_params.append({"params": text_embeddings, "lr": args.text_encoder_lr})
+        trainable_params.append({"params": training_text_embeddings, "lr": args.text_encoder_lr})
 
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
@@ -629,16 +653,14 @@ class NetworkTrainer:
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
                     with torch.set_grad_enabled(train_text_encoder):
-                        text_encoder_conds = self.get_text_cond(args,
-                                                                accelerator,
-                                                                batch,
-                                                                tokenizers,
-                                                                text_encoders,
-                                                                weight_dtype)
+                        #text_encoder_conds = self.get_text_cond(args,
+                        #                                        accelerator,
+                        #                                        batch,
+                        #                                        tokenizers,
+                        #                                        text_encoders,
+                        #                                        weight_dtype)
 
-                        print("*** text_encoder_conds", text_encoder_conds.shape)
-                        if args.truncate_pad:
-                            text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
+                        #print("*** text_encoder_conds", text_encoder_conds.shape)
 
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
@@ -650,7 +672,7 @@ class NetworkTrainer:
                                                     unet,
                                                     noisy_latents,
                                                     timesteps,
-                                                    text_encoder_conds,
+                                                    training_text_embeddings,
                                                     batch,
                                                     weight_dtype, 1, None)
 
