@@ -273,14 +273,13 @@ def main(args) :
                                                 anormal_map = torch.flatten(trigger).unsqueeze(0)
                                                 if res not in mask_dict_avg.keys():
                                                     mask_dict_avg[res] = []
-                                                mask_dict_avg[res] = anormal_map
-                                                if 'attentions_1' in layer_name :
-                                                    mask_dict_avg[res] = anormal_map # 1, res,res
+                                                mask_dict_avg[res].append(anormal_map) # anormal_map = [res,res]
+
                                                 anormal_map = anormal_map.repeat(8, 1)
                                                 mask_dict[layer_name] = anormal_map
 
                     for res_ in mask_dict_avg.keys():
-                        attn  = torch.cat(mask_dict_avg[res_], dim=0).unsqueeze(-1)
+                        attn  = torch.cat(mask_dict_avg[res_], dim=0).unsqueeze(-1) # 3, res,res
                         h = attn.shape[0]
                         #attn = attn.unsqueeze(0)
                         attn = attn.reshape(h, res_, res_).float().mean(dim=0).unsqueeze(0).unsqueeze(0)
