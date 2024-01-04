@@ -977,6 +977,7 @@ class NetworkTrainer:
                         image = pipeline.decode_latents(latents.to(pipeline.vae.dtype))
                         image = pipeline.numpy_to_pil(image)
                         img_save_dir = os.path.join(args.output_dir, 'sample')
+                        os.makedirs(img_save_dir, exist_ok=True)
                         img_filename = f'{prompt}_epoch_{epoch+1}.png'
                         text_filename = f'{prompt}_epoch_{epoch+1}.txt'
                         img_dir = os.path.join(img_save_dir, img_filename)
