@@ -318,6 +318,7 @@ class NetworkTrainer:
         print(' (5.3) lora with unet and text encoder')
         train_unet = not args.network_train_text_encoder_only
         train_text_encoder = not args.network_train_unet_only
+        print(f' train_unet : {train_unet} | train_text_encoder : {train_text_encoder}')
         network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
         print(' (5.4) lora resume?')
         if args.network_weights is not None:
@@ -397,6 +398,7 @@ class NetworkTrainer:
                 enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
                 enc_text_encoders = [enc_text_encoder]
         elif train_unet:
+
             unet, network, optimizer, train_dataloader, lr_scheduler, training_text_embeddings = accelerator.prepare(
                 unet, network, optimizer, train_dataloader, lr_scheduler, training_text_embeddings)
             enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
@@ -421,8 +423,8 @@ class NetworkTrainer:
             enc_unet.to(accelerator.device,
                         dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
         else:
-            network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(network, optimizer,
-                                                                                     train_dataloader, lr_scheduler)
+            network, optimizer, train_dataloader, lr_scheduler, training_text_embeddings = accelerator.prepare(network, optimizer,
+                                                                                     train_dataloader, lr_scheduler, training_text_embeddings)
         text_encoders = train_util.transform_models_if_DDP(text_encoders)
         unet, network = train_util.transform_models_if_DDP([unet, network])
         enc_text_encoders = train_util.transform_models_if_DDP(enc_text_encoders)
