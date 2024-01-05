@@ -185,7 +185,7 @@ def main(args) :
 
         if 'epoch-000006.safetensors' in weight :
             save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}')
-            print(f'save_dir : {save_dir}')
+            print(f'*********************** save_dir : {save_dir}')
             os.makedirs(save_dir, exist_ok=True)
 
             print(f' \n step 2. make stable diffusion model')
@@ -239,7 +239,7 @@ def main(args) :
             network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae, text_encoder, unet,
                                                     neuron_dropout=args.network_dropout, **net_kwargs, )
             print(f' (2.5.3) apply trained state dict')
-            network.apply_to(text_encoder, unet, False, True)
+            network.apply_to(text_encoder, unet, apply_text_encoder=False, apply_unet=True)
             if args.network_weights is not None:
                 info = network.load_weights(weight_dir)
             network.to(device)
