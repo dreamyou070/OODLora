@@ -58,14 +58,16 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 cls_emb = context[:, 0, :]
                 other_emb = context[:, 17:, :]
                 trgger_emb = context[:, trg_num, :]
-                if cls_emb.dim() != 3 :
+                if cls_emb.dim() == 1 :
                     cls_emb = cls_emb.unsqueeze(0)
-                if cls_emb.dim() != 3 :
                     cls_emb = cls_emb.unsqueeze(0)
-                if trgger_emb.dim() != 3 :
+                if cls_emb.dim() != 2 :
+                    cls_emb = cls_emb.unsqueeze(1)
+                if trgger_emb.dim() == 3 :
                     trgger_emb = trgger_emb.unsqueeze(0)
-                if trgger_emb.dim() != 3 :
                     trgger_emb = trgger_emb.unsqueeze(0)
+                if trgger_emb.dim() == 2 :
+                    trgger_emb = trgger_emb.unsqueeze(1)
                 context = torch.cat([cls_emb, trgger_emb, other_emb], dim=1)
 
             query = self.to_q(hidden_states)
