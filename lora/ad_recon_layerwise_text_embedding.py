@@ -187,7 +187,7 @@ def main(args) :
 
         if 'epoch-000006.safetensors' in weight :
             if args.res_64_change:
-                save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_res_64_change')
+                save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_res_64_change_change_back_step')
             else :
                 save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}')
             os.makedirs(save_dir, exist_ok=True)
@@ -381,26 +381,20 @@ def main(args) :
                             with torch.no_grad() :
                                 time_steps = []
                                 with torch.no_grad():
-                                    for i, t in enumerate(inf_time[:-1]):
+                                    for i, t in enumerate(inf_time):
                                         time_steps.append(t)
-                                        next_time = inf_time[i + 1]
-                                        if next_time <= args.final_noising_time:
-                                            back_dict[int(t)] = latent
-                                            time_steps.append(t)
-                                            noise_pred = call_unet(unet, latent, t, inv_c, None, None)
-                                            latent = next_step(noise_pred, int(t), latent, scheduler)
-                                if args.final_noising_time not in back_dict.keys():
-                                    back_dict[args.final_noising_time] = latent
-                                    time_steps.append(args.final_noising_time)
+                                        back_dict[int(t)] = latent
+                                        time_steps.append(t)
+                                        noise_pred = call_unet(unet, latent, t, inv_c, None, None)
+                                        latent = next_step(noise_pred, int(t), latent, scheduler)
                             time_steps.reverse()
 
                             # ------------------------------ generate new latent ------------------------------ #
                             x_latent_dict = {}
-                            x_latent_dict[args.final_noising_time] = back_dict[args.final_noising_time]
                             with torch.no_grad():
                                 for j, t in enumerate(time_steps[:-1]):
                                     prev_time = time_steps[j + 1]
-                                    z_latent = back_dict[t]
+                                    z_latent = back_dict[prev_time]
                                     x_latent = x_latent_dict[t]
                                     input_latent = torch.cat([z_latent, x_latent], dim=0)
                                     #
