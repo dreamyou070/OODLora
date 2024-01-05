@@ -150,6 +150,8 @@ def main(args) :
     args.output_dir = os.path.join(parent, f'per_res_normalized_cross_attention_map')
     org_output_dir = os.path.join(parent, f'normalized_cross_attention_map')
     os.makedirs(args.output_dir, exist_ok=True)
+    record_output_dir = os.path.join(args.output_dir, 'record')
+    os.makedirs(record_output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
     if args.process_title:
@@ -197,6 +199,11 @@ def main(args) :
         os.makedirs(save_dir, exist_ok=True)
         org_save_dir = os.path.join(org_output_dir, f'unnormalized_map_lora_{model_epoch}')
         os.makedirs(org_save_dir, exist_ok=True)
+
+        record_output_dir_lora = os.path.join(record_output_dir, f'lora_{model_epoch}')
+        os.makedirs(record_output_dir_lora, exist_ok=True)
+
+
 
         print(f' \n step 2. make stable diffusion model')
         device = accelerator.device
@@ -273,7 +280,7 @@ def main(args) :
         test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/bad')
         test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/corrected')
         classes = os.listdir(test_img_folder)
-
+        records = []
         for class_name in classes:
             if '_' in class_name:
                 trg_prompt = class_name.split('_')[-1]
@@ -340,6 +347,7 @@ def main(args) :
                                     noise_pred = call_unet(unet, latent, t, embedding, [[1]], None)
                                     attn_stores = controller.step_store
                                     attn_dict = {}
+                                    score_dict = {}
                                     for layer_name in attn_stores :
                                         attn = attn_stores[layer_name][0].squeeze() # head, pix_num
                                         res = int(attn.shape[1] ** 0.5)
@@ -385,9 +393,8 @@ def main(args) :
                                                 mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
                                                 mask_np = np.array(mask_img, np.uint8)
                                                 mask_np = np.where(mask_np > 100, 1, 0)  # [res,res]
-                                                print(f'[first] trigger_np : {trigger_np.shape} | masp_np : {mask_np.shape}')
-                                                """ find best model, that makes lowest score """
                                                 trigger_score = (trigger_np) * (mask_np)
+                                                score_dict[title_name] = trigger_score
                                                 # ------------------------------------------------------------------------------------------------ #
 
                                                 trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
@@ -427,26 +434,31 @@ def main(args) :
                                         mask_img = Image.open(mask_img_dir).convert("L").resize((res, res),Image.BICUBIC)
                                         mask_np = np.array(mask_img, np.uint8)
                                         mask_np = np.where(mask_np > 100, 1, 0)  # [res,res]
-                                        print(f'[second] trigger_np : {trigger_np.shape} | masp_np : {mask_np.shape}')
-                                        """ find best model, that makes lowest score """
                                         trigger_score = (trigger_np) * (mask_np)
+                                        score_dict[key_name] = trigger_score
                                         # ------------------------------------------------------------------------------------------------ #
-
-
-
                                         trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
                                         trigger_dir = os.path.join(trg_img_output_dir,
                                                                     f'normalized_good_{key_name}.png')
                                         trigger_score_pil.save(trigger_dir)
-
                                         #pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
                                         #pad_score_pil = Image.fromarray(pad_np).resize((512, 512), Image.BILINEAR)
                                         #pad_dir = os.path.join(trg_img_output_dir,
                                         #                            f'pad_attn_{layer_name}_{t}.png')
                                         #pad_score_pil.save(pad_dir)
-
                                     controller.reset()
 
+                # ----------------------------------------------------------------------------------------------------- #
+                record = f'{trg_prompt} | {test_image} '
+                for k in score_dict.keys() :
+                    trigger_score = score_dict[k]
+                    record += f'| {k}={trigger_score.sum().item()} '
+                records.append(record.strip())
+        record_txt_dir = os.path.join(record_output_dir_lora, f'score_epoch_{model_epoch}.txt')
+        with open(record_txt_dir, 'w') as f :
+            for line in records :
+                f.write(f'{line}\n')
+                
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
