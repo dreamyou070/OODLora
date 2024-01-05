@@ -843,7 +843,7 @@ class NetworkTrainer:
                     os.makedirs(embeddings_save_dir, exist_ok=True)
 
                     training_text_embeddings_save_dir = os.path.join(embeddings_save_dir, f'training_text_embeddings-{str(epoch+1).zfill(6)}.safetensors')
-                    torch.save(training_text_embeddings.cpu().detach(), training_text_embeddings_save_dir)
+                    torch.save(accelerator.unwrap_model(training_text_embeddings).cpu().detach(), training_text_embeddings_save_dir)
 
 
             #self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
