@@ -12,7 +12,7 @@ for file in files :
     with open(file_path, 'r') as f :
         content = f.readlines()
     for line_ in content :
-        first_elem = ['epoch', 'class_name', 'img_name,']
+        first_elem = ['epoch', 'class_name', 'img_name']
         elem = [epoch_info]
         line = line_.strip()
         line_list = line.split(' | ')
