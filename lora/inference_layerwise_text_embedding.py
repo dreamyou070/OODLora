@@ -200,8 +200,7 @@ def main(args) :
         org_save_dir = os.path.join(org_output_dir, f'unnormalized_map_lora_{model_epoch}')
         os.makedirs(org_save_dir, exist_ok=True)
 
-        record_output_dir_lora = os.path.join(record_output_dir, f'lora_{model_epoch}')
-        os.makedirs(record_output_dir_lora, exist_ok=True)
+
 
 
 
@@ -452,7 +451,7 @@ def main(args) :
                     trigger_score = score_dict[k]
                     record += f'| {k}={trigger_score.sum().item()} '
                 records.append(record.strip())
-        record_txt_dir = os.path.join(record_output_dir_lora, f'score_epoch_{model_epoch}.txt')
+        record_txt_dir = os.path.join(record_output_dir, f'score_epoch_{model_epoch}.txt')
         with open(record_txt_dir, 'w') as f :
             for line in records :
                 f.write(f'{line}\n')
