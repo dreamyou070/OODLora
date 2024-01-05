@@ -244,7 +244,7 @@ def main(args) :
                 info = network.load_weights(weight_dir)
             network.to(device)
             text_embedding = torch.load(text_embedding_dir, map_location=torch.device('cpu'))
-            text_embedding.to(device, weight_dtype)
+            text_embedding = text_embedding.to(device, weight_dtype)
 
             print(f' (2.4.+) model to accelerator device')
             controller = AttentionStore()
