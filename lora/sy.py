@@ -8,16 +8,14 @@ for file in files :
     file_name, file_ext = os.path.splitext(file)
     epoch_info = file_name.split('_')[-1]
     elems = []
-    first_elem = ['epoch', 'class_name', 'img_name,']
-    elem = [epoch_info]
     file_path = os.path.join(record_dir, file)
     with open(file_path, 'r') as f :
         content = f.readlines()
-
     for line_ in content :
+        first_elem = ['epoch', 'class_name', 'img_name,']
+        elem = [epoch_info]
         line = line_.strip()
         line_list = line.split(' | ')
-
         class_name = line_list[0].strip()
         img_name = line_list[1].strip()
         elem.append(class_name)
