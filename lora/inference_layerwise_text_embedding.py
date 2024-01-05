@@ -327,7 +327,6 @@ def main(args) :
                                 if next_time <= args.final_noising_time:
                                     latent_dict[int(t)] = latent
                                     from utils.model_utils import call_unet
-                                    #text_embedding = text_embedding.to(device)
 
                                     cls_embedding = con[:,0,:]
                                     if cls_embedding.dim() != 3:
