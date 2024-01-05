@@ -177,7 +177,7 @@ def main(args) :
         model_name = os.path.splitext(network_dir)[0]
         if 'last' not in model_name:
             model_epoch = int(model_name.split('-')[-1])
-            lora_epoch = str(model_name.split('-')[-2])
+            lora_epoch = str(model_name.split('-')[-1])
         else:
             model_epoch = 'last'
             lora_epoch = 'last'
