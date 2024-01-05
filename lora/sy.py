@@ -12,7 +12,9 @@ for file in files :
     with open(file_path, 'r') as f :
         content = f.readlines()[0]
     content = content.split('\n')
+    print(content)
     for line in content :
+
         line_list = line.split(' | ')
         class_name = line_list[0].strip()
         img_name = line_list[1].strip()
