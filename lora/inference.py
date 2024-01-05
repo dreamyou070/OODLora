@@ -309,25 +309,18 @@ def main(args) :
                                             key_name = f'up_{res}'
                                         else :
                                             key_name = f'mid_{res}'
-
                                         if key_name not in attn_dict :
                                             attn_dict[key_name] = []
-
                                         attn_dict[key_name].append(attn)
-
-
                                 for key_name in attn_dict :
                                     attn_list = attn_dict[key_name]
                                     attn = torch.cat(attn_list, dim=0)
-
                                     cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
                                     res = int(attn.shape[1] ** 0.5)
                                     h = cls_score.shape[0]
                                     cls_score, trigger_score, pad_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1), pad_score.unsqueeze(-1)
                                     cls_score, trigger_score, pad_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res), pad_score.reshape(h, res, res)
                                     cls_score, trigger_score, pad_score = cls_score.mean(dim=0), trigger_score.mean(dim=0), pad_score.mean(dim=0)
-
-
                                     trigger = trigger_score.detach().cpu()
                                     trigger = trigger / trigger.max()
                                     trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
@@ -335,13 +328,6 @@ def main(args) :
                                     trigger_dir = os.path.join(trg_img_output_dir,
                                                                 f'normalized_good_{key_name}.png')
                                     trigger_score_pil.save(trigger_dir)
-
-                                    #pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
-                                    #pad_score_pil = Image.fromarray(pad_np).resize((512, 512), Image.BILINEAR)
-                                    #pad_dir = os.path.join(trg_img_output_dir,
-                                    #                            f'pad_attn_{layer_name}_{t}.png')
-                                    #pad_score_pil.save(pad_dir)
-
                                 controller.reset()
 
 if __name__ == "__main__":

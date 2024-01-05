@@ -737,27 +737,34 @@ class NetworkTrainer:
                             score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
                             res = int(score_map.shape[1] ** 0.5)
                             if res in args.cross_map_res :
-                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                mask = anormal_mask.squeeze()  # res,res
-                                mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
+                                flag = True
 
-                                activation = (score_map * mask).sum(dim=-1)
+                                if args.detail_64 :
+                                    if res == 64 and 'down' in layer_name :
+                                        flag = False
 
-                                #total_score = (score_map).sum(dim=-1)
-                                total_score = torch.ones_like(activation)
+                                if flag :
+                                    anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                    mask = anormal_mask.squeeze()  # res,res
+                                    mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
 
-                                for i in total_score :
-                                    assert i != 0, f'layer = {layer_name} | total_score : {total_score}'
+                                    activation = (score_map * mask).sum(dim=-1)
 
-                                if batch['train_class_list'][0] == 1 :
-                                    # mask means foreground
-                                    #activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
-                                    activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
-                                else :
-                                    # mask means bad point
-                                    # total score ... = 0 ??
-                                    activation_loss = (activation / total_score) ** 2  # 8, res*res
-                                attn_loss += activation_loss
+                                    #total_score = (score_map).sum(dim=-1)
+                                    total_score = torch.ones_like(activation)
+
+                                    for i in total_score :
+                                        assert i != 0, f'layer = {layer_name} | total_score : {total_score}'
+
+                                    if batch['train_class_list'][0] == 1 :
+                                        # mask means foreground
+                                        #activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+                                        activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+                                    else :
+                                        # mask means bad point
+                                        # total score ... = 0 ??
+                                        activation_loss = (activation / total_score) ** 2  # 8, res*res
+                                    attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:
                             loss = loss + args.anormal_weight * attn_loss
@@ -1123,7 +1130,8 @@ if __name__ == "__main__":
     parser.add_argument('--trg_position', type = arg_as_list, default = ['down', 'up'])
     parser.add_argument('--anormal_weight', type=float, default=1.0)
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
-    parser.add_argument("--normal_training", action="store_true", )
+    parser.add_argument("--detail_64", action="store_true", )
+
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
