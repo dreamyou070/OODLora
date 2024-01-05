@@ -150,7 +150,7 @@ def main(args) :
     args.output_dir = os.path.join(parent, f'per_res_normalized_cross_attention_map')
     org_output_dir = os.path.join(parent, f'normalized_cross_attention_map')
     os.makedirs(args.output_dir, exist_ok=True)
-    record_output_dir = os.path.join(args.output_dir, 'record')
+    record_output_dir = os.path.join(args.output_dir, 'score_record')
     os.makedirs(record_output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -458,7 +458,7 @@ def main(args) :
         with open(record_txt_dir, 'w') as f :
             for line in records :
                 f.write(f'{line}\n')
-                
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting

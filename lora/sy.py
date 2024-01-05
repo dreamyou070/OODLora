@@ -1,12 +1,6 @@
-import torch, ast
+import os
 
-embedding = torch.randn(1,77,768)
-my_embedding = torch.randn(1,16, 768)
-
-cls_embedding = embedding[:,0,:].unsqueeze(0)
-other_embedding = embedding[:,2:,:]
-total_embedding = torch.cat((cls_embedding, my_embedding, other_embedding), dim=1)
-print(total_embedding.shape)
-
-other_embeddding_ = total_embedding[:,17:,:]
-print(other_embeddding_.shape)
+record_dir = r'../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_up_down_text_embedding/per_res_normalized_cross_attention_map/score_record'
+with open(record_dir, 'r') as f :
+    content = f.readlines()
+print(content)
