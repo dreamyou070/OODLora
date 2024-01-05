@@ -370,6 +370,19 @@ def main(args) :
 
                                                 cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
                                                 h = cls_score.shape[0]
+
+                                                cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
+                                                cls_score = cls_score.mean(dim=0)
+                                                cls_score = cls_score.detach().cpu()
+                                                cls = cls_score / cls_score.max()
+                                                cls_np = np.array((cls.cpu()) * 255).astype(np.uint8)
+                                                cls_score_pil = Image.fromarray(cls_np).resize((512, 512),
+                                                                                                       Image.BILINEAR)
+                                                cls_dir = os.path.join(org_trg_img_output_dir,
+                                                                           f'normalized_cls_{title_name}_res_{res}.png')
+                                                cls_score_pil.save(cls_dir)
+
+
                                                 trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
                                                 trigger_score = trigger_score.reshape(h, res, res)
                                                 trigger_score = trigger_score.mean(dim=0)
