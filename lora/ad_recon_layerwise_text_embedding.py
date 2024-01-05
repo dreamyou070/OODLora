@@ -78,9 +78,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                         trgger_emb = trgger_emb.unsqueeze(0)
                     if trgger_emb.dim() != 3:
                         trgger_emb = trgger_emb.unsqueeze(0)
-                    print(f'cls_emb.shape : {cls_emb.shape}')
-                    print(f'trgger_emb.shape : {trgger_emb.shape}')
-                    print(f'other_emb.shape : {other_emb.shape}')
                     context = torch.cat([cls_emb, trgger_emb, other_emb], dim=1)
 
             query = self.to_q(hidden_states)

@@ -1,4 +1,0 @@
-contamination --d 42 --s 30 --n low quality, worst quality, bad anatomy,bad composition, poor, low effort --l 8.5
-good --d 42 --s 30 --n low quality, worst quality, bad anatomy,bad composition, poor, low effort --l 8.5
-crack --d 42 --s 30 --n low quality, worst quality, bad anatomy,bad composition, poor, low effort --l 8.5
-hole --d 42 --s 30 --n low quality, worst quality, bad anatomy,bad composition, poor, low effort --l 8.5
