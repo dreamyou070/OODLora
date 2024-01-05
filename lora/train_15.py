@@ -661,27 +661,28 @@ class NetworkTrainer:
                         for i, layer_name in enumerate(attn_dict.keys()):
                             score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
                             res = int(score_map.shape[1] ** 0.5)
+                            do_mask_loss = False
                             if res in args.cross_map_res :
-                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                mask = anormal_mask.squeeze()  # res,res
-                                mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
 
-                                activation = (score_map * mask).sum(dim=-1)
-
-                                #total_score = (score_map).sum(dim=-1)
-                                total_score = torch.ones_like(activation)
-
-                                for i in total_score :
-                                    assert i != 0, f'layer = {layer_name} | total_score : {total_score}'
-
-                                if batch['train_class_list'][0] == 1 :
-                                    # mask means foreground
-                                    #activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
-                                    activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+                                if res == 64 :
+                                    if 'up' in layer_name :
+                                        do_mask_loss = True
                                 else :
-                                    # mask means bad point
-                                    # total score ... = 0 ??
-                                    activation_loss = (activation / total_score) ** 2  # 8, res*res
+                                    do_mask_loss = True
+                                if do_mask_loss :
+                                    anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                    mask = anormal_mask.squeeze()  # res,res
+                                    mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
+
+                                    activation = (score_map * mask).sum(dim=-1)
+
+                                    #total_score = (score_map).sum(dim=-1)
+                                    total_score = torch.ones_like(activation)
+
+                                    if batch['train_class_list'][0] == 1 :
+                                        activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+                                    else :
+                                        activation_loss = (activation / total_score) ** 2  # 8, res*res
                                 attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:
