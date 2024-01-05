@@ -264,86 +264,85 @@ def main(args) :
                         for i, t in enumerate(inf_time[:-1]):
                             if i == 0 :
                                 next_time = inf_time[i + 1]
-                                if next_time <= args.final_noising_time:
-                                    latent_dict[int(t)] = latent
-                                    from utils.model_utils import call_unet
-                                    noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
-                                    attn_stores = controller.step_store
-                                    attn_dict = {}
-                                    for layer_name in attn_stores :
-                                        attn = attn_stores[layer_name][0].squeeze() # head, pix_num
-                                        res = int(attn.shape[1] ** 0.5)
-                                        if res in args.cross_map_res :
+                                latent_dict[int(t)] = latent
+                                from utils.model_utils import call_unet
+                                noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
+                                attn_stores = controller.step_store
+                                attn_dict = {}
+                                for layer_name in attn_stores :
+                                    attn = attn_stores[layer_name][0].squeeze() # head, pix_num
+                                    res = int(attn.shape[1] ** 0.5)
+                                    if res in args.cross_map_res :
 
-                                            if 'down' in layer_name :
-                                                position = 'down'
-                                            elif 'up' in layer_name :
-                                                position = 'up'
-                                            else :
-                                                position = 'middle'
+                                        if 'down' in layer_name :
+                                            position = 'down'
+                                        elif 'up' in layer_name :
+                                            position = 'up'
+                                        else :
+                                            position = 'middle'
 
-                                            if 'attentions_0' in layer_name :
-                                                part = 'attn_0'
-                                            elif 'attentions_1' in layer_name :
-                                                part = 'attn_1'
-                                            else :
-                                                part = 'attn_2'
+                                        if 'attentions_0' in layer_name :
+                                            part = 'attn_0'
+                                        elif 'attentions_1' in layer_name :
+                                            part = 'attn_1'
+                                        else :
+                                            part = 'attn_2'
 
-                                            title_name = f'res_{res}_{position}_{part}'
+                                        title_name = f'res_{res}_{position}_{part}'
 
-                                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
-                                            h = cls_score.shape[0]
-                                            trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
-                                            trigger_score = trigger_score.reshape(h, res, res)
-                                            trigger_score = trigger_score.mean(dim=0)
-                                            trigger = trigger_score.detach().cpu()
-                                            trigger = trigger / trigger.max()
-                                            trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
-                                            trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
-                                            trigger_dir = os.path.join(org_trg_img_output_dir,
-                                                                       f'normalized_good_{title_name}_res_{res}.png')
-                                            trigger_score_pil.save(trigger_dir)
-
-                                            if 'down' in layer_name :
-                                                key_name = f'down_{res}'
-                                            elif 'up' in layer_name :
-                                                key_name = f'up_{res}'
-                                            else :
-                                                key_name = f'mid_{res}'
-
-                                            if key_name not in attn_dict :
-                                                attn_dict[key_name] = []
-
-                                            attn_dict[key_name].append(attn)
-
-
-                                    for key_name in attn_dict :
-                                        attn_list = attn_dict[key_name]
-                                        attn = torch.cat(attn_list, dim=0)
-
-                                        cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
-                                        res = int(attn.shape[1] ** 0.5)
+                                        cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
                                         h = cls_score.shape[0]
-                                        cls_score, trigger_score, pad_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1), pad_score.unsqueeze(-1)
-                                        cls_score, trigger_score, pad_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res), pad_score.reshape(h, res, res)
-                                        cls_score, trigger_score, pad_score = cls_score.mean(dim=0), trigger_score.mean(dim=0), pad_score.mean(dim=0)
-
-
+                                        trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
+                                        trigger_score = trigger_score.reshape(h, res, res)
+                                        trigger_score = trigger_score.mean(dim=0)
                                         trigger = trigger_score.detach().cpu()
                                         trigger = trigger / trigger.max()
                                         trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
-                                        trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
-                                        trigger_dir = os.path.join(trg_img_output_dir,
-                                                                    f'normalized_good_{key_name}.png')
+                                        trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
+                                        trigger_dir = os.path.join(org_trg_img_output_dir,
+                                                                   f'normalized_good_{title_name}_res_{res}.png')
                                         trigger_score_pil.save(trigger_dir)
 
-                                        #pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
-                                        #pad_score_pil = Image.fromarray(pad_np).resize((512, 512), Image.BILINEAR)
-                                        #pad_dir = os.path.join(trg_img_output_dir,
-                                        #                            f'pad_attn_{layer_name}_{t}.png')
-                                        #pad_score_pil.save(pad_dir)
+                                        if 'down' in layer_name :
+                                            key_name = f'down_{res}'
+                                        elif 'up' in layer_name :
+                                            key_name = f'up_{res}'
+                                        else :
+                                            key_name = f'mid_{res}'
 
-                                    controller.reset()
+                                        if key_name not in attn_dict :
+                                            attn_dict[key_name] = []
+
+                                        attn_dict[key_name].append(attn)
+
+
+                                for key_name in attn_dict :
+                                    attn_list = attn_dict[key_name]
+                                    attn = torch.cat(attn_list, dim=0)
+
+                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
+                                    res = int(attn.shape[1] ** 0.5)
+                                    h = cls_score.shape[0]
+                                    cls_score, trigger_score, pad_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1), pad_score.unsqueeze(-1)
+                                    cls_score, trigger_score, pad_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res), pad_score.reshape(h, res, res)
+                                    cls_score, trigger_score, pad_score = cls_score.mean(dim=0), trigger_score.mean(dim=0), pad_score.mean(dim=0)
+
+
+                                    trigger = trigger_score.detach().cpu()
+                                    trigger = trigger / trigger.max()
+                                    trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
+                                    trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
+                                    trigger_dir = os.path.join(trg_img_output_dir,
+                                                                f'normalized_good_{key_name}.png')
+                                    trigger_score_pil.save(trigger_dir)
+
+                                    #pad_np = np.array((pad_score.detach().cpu()) * 255).astype(np.uint8)
+                                    #pad_score_pil = Image.fromarray(pad_np).resize((512, 512), Image.BILINEAR)
+                                    #pad_dir = os.path.join(trg_img_output_dir,
+                                    #                            f'pad_attn_{layer_name}_{t}.png')
+                                    #pad_score_pil.save(pad_dir)
+
+                                controller.reset()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -382,12 +381,8 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
     parser.add_argument("--scheduler_timesteps", type=int, default=1000)
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
-    parser.add_argument("--final_noising_time", type=int, default = 250)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
-    parser.add_argument("--pixel_mask_res", type=float, default=0.1)
-    parser.add_argument("--pixel_thred", type=float, default=0.1)
     parser.add_argument("--inner_iteration", type=int, default=10)
-    parser.add_argument("--org_latent_attn_map_check", action = 'store_true')
     parser.add_argument("--other_token_preserving", action = 'store_true')
     parser.add_argument('--train_down', nargs='+', type=int, help='use which res layers in U-Net down', default=[])
     parser.add_argument('--train_mid', nargs='+', type=int, help='use which res layers in U-Net mid', default=[8])
