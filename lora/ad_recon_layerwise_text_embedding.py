@@ -185,6 +185,7 @@ def main(args) :
 
         if 'epoch-000006.safetensors' in weight :
             save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}')
+            print(f'save_dir : {save_dir}')
             os.makedirs(save_dir, exist_ok=True)
 
             print(f' \n step 2. make stable diffusion model')
