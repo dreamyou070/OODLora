@@ -9,7 +9,7 @@ for file in files :
     epoch_info = file_name.split('_')[-1]
     elem = [f'{epoch_info},']
     file_path = os.path.join(record_dir, file)
-    with open(record_dir, 'r') as f :
+    with open(file_path, 'r') as f :
         content = f.readlines()[0]
     content = content.split('\n')
     for line in content :
