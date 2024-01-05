@@ -363,7 +363,7 @@ class NetworkTrainer:
             unet, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
                 unet, network, optimizer, train_dataloader, lr_scheduler)
             enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
-            train_text_encoder.to(accelerator.device)
+            text_encoder.to(accelerator.device)
         elif train_text_encoder:
             if len(text_encoders) > 1:
                 t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
