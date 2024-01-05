@@ -11,10 +11,11 @@ for file in files :
     file_path = os.path.join(record_dir, file)
     with open(file_path, 'r') as f :
         content = f.readlines()
-    print(f'len(content) : {len(content)}')
-    content = content.split('\n')
-    print(content)
+
+    #content = content.split('\n')
+    #print(content)
     for line in content :
+        print(line)
 
         line_list = line.split(' | ')
         class_name = line_list[0].strip()
