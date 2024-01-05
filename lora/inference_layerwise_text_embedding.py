@@ -29,8 +29,56 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
     def ca_forward(self, layer_name):
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
             is_cross_attention = False
+
             if context is not None:
                 is_cross_attention = True
+
+                if 'mid' in layer_name:
+                    trg_num = 6
+                else:
+                    if 'down' in layer_name:
+                        position_num = 0
+                        if 'blocks_0' in layer_name:
+                            block_num = 0
+                        elif 'blocks_1' in layer_name:
+                            block_num = 2
+                        elif 'blocks_2' in layer_name:
+                            block_num = 4
+
+                        if 'attentions_0' in layer_name:
+                            attention_num = 0
+                        elif 'attentions_1' in layer_name:
+                            attention_num = 1
+                    elif 'up' in layer_name:
+                        position_num = 7
+                        if 'blocks_1' in layer_name:
+                            block_num = 0
+                        elif 'blocks_2' in layer_name:
+                            block_num = 3
+                        elif 'blocks_3' in layer_name:
+                            block_num = 6
+
+                        if 'attentions_0' in layer_name:
+                            attention_num = 0
+                        elif 'attentions_1' in layer_name:
+                            attention_num = 1
+                        elif 'attentions_2' in layer_name:
+                            attention_num = 2
+                    trg_num = position_num + block_num + attention_num
+                trg_num = trg_num + 1
+                cls_emb = context[:, 0, :]
+                other_emb = context[:, 17:, :]
+                trgger_emb = context[:, trg_num, :]
+                if cls_emb.dim() != 3:
+                    cls_emb = cls_emb.unsqueeze(0)
+                if cls_emb.dim() != 3:
+                    cls_emb = cls_emb.unsqueeze(0)
+                if trgger_emb.dim() != 3:
+                    trgger_emb = trgger_emb.unsqueeze(0)
+                if trgger_emb.dim() != 3:
+                    trgger_emb = trgger_emb.unsqueeze(0)
+                context = torch.cat([cls_emb, trgger_emb, other_emb], dim=1)
+
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
             key = self.to_k(context)
@@ -174,6 +222,7 @@ def main(args) :
 
         print(f' (2.4.+) model to accelerator device')
         if len(invers_text_encoders) > 1:
+
             invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device), \
             invers_text_encoders[1].to(device)
             invers_text_encoder = [invers_t_enc1, invers_t_enc2]
@@ -201,10 +250,11 @@ def main(args) :
         network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae, text_encoder, unet,
                                                 neuron_dropout=args.network_dropout, **net_kwargs, )
         print(f' (2.5.3) apply trained state dict')
-        network.apply_to(text_encoder, unet, True, True)
+        network.apply_to(text_encoder, unet, False, True)
         if args.network_weights is not None:
             info = network.load_weights(weight_dir)
         network.to(device)
+        text_embedding = text_embedding.to(device)
 
         print(f' (2.4.+) model to accelerator device')
         controller = AttentionStore()
@@ -277,7 +327,23 @@ def main(args) :
                                 if next_time <= args.final_noising_time:
                                     latent_dict[int(t)] = latent
                                     from utils.model_utils import call_unet
-                                    noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
+                                    #text_embedding = text_embedding.to(device)
+
+                                    cls_embedding = con[:,0,:]
+                                    if cls_embedding.dim() != 3:
+                                        cls_embedding = cls_embedding.unsqueeze(0)
+                                    if cls_embedding.dim() != 3:
+                                        cls_embedding = cls_embedding.unsqueeze(0)
+                                    other_embedding = con[:, 2:, :]
+                                    if other_embedding.dim() != 3:
+                                        other_embedding = other_embedding.unsqueeze(0)
+                                    embedding = torch.cat((cls_embedding, text_embedding, other_embedding),
+                                                          dim=1)
+
+
+
+
+                                    noise_pred = call_unet(unet, latent, t, embedding, [[1]], None)
                                     attn_stores = controller.step_store
                                     attn_dict = {}
                                     for layer_name in attn_stores :
