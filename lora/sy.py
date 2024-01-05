@@ -10,7 +10,8 @@ for file in files :
     elem = [f'{epoch_info},']
     file_path = os.path.join(record_dir, file)
     with open(file_path, 'r') as f :
-        content = f.readlines()[0]
+        content = f.readlines()
+    print(f'len(content) : {len(content)}')
     content = content.split('\n')
     print(content)
     for line in content :
