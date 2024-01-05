@@ -673,7 +673,7 @@ class NetworkTrainer:
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
-            """
+
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -856,7 +856,7 @@ class NetworkTrainer:
 
             #self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
             #                   text_encoder, unet)
-            """
+
             # ------------ image generating ------------ #
             if is_main_process:
                 print('generating images...')
