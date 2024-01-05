@@ -271,10 +271,10 @@ def main(args) :
             classes = os.listdir(test_img_folder)
 
             for class_name in classes:
-                #if '_' in class_name:
-                #    trg_prompt = class_name.split('_')[-1]
-                #else:
-                #    trg_prompt = class_name
+                if '_' in class_name:
+                    trg_prompt = class_name.split('_')[-1]
+                else:
+                    trg_prompt = class_name
                 if 'contamination' in class_name :
 
                     class_base_folder = os.path.join(save_dir, class_name)
