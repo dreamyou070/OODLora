@@ -856,6 +856,7 @@ class NetworkTrainer:
             """
             # ------------ image generating ------------ #
             if is_main_process:
+                print('generating images...')
                 SCHEDULER_LINEAR_START = 0.00085
                 SCHEDULER_LINEAR_END = 0.0120
                 SCHEDULER_TIMESTEPS = 1000
