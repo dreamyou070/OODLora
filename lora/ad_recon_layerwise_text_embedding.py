@@ -393,7 +393,18 @@ def main(args) :
                             z_latent = back_dict[t]
                             x_latent = x_latent_dict[t]
                             input_latent = torch.cat([z_latent, x_latent], dim=0)
-                            input_cont = torch.cat([uncon, con], dim=0)
+                            #
+                            cls_embedding = con[:, 0, :]
+                            if cls_embedding.dim() != 3:
+                                cls_embedding = cls_embedding.unsqueeze(0)
+                            if cls_embedding.dim() != 3:
+                                cls_embedding = cls_embedding.unsqueeze(0)
+                            other_embedding = con[:, 2:, :]
+                            if other_embedding.dim() != 3:
+                                other_embedding = other_embedding.unsqueeze(0)
+                            embedding = torch.cat((cls_embedding, text_embedding, other_embedding), dim=1)
+                            
+                            input_cont = torch.cat([embedding, embedding], dim=0)
                             noise_pred = call_unet(unet, input_latent, t, input_cont, None, mask_dict)
                             controller.reset()
                             z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
