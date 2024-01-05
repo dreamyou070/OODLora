@@ -1,11 +1,3 @@
-#!/bin/bash
-echo $CUDA_VISIBLE_DEVICES
-echo $SLURM_NODELIST
-echo $SLURM_NODEID
-source ~/.bashrc
-conda activate venv_lora
-ml purge
-ml load cuda/11.0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 50989 inference_layerwise_text_embedding.py \
   --process_title parksooyeon --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
