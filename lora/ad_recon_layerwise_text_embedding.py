@@ -391,6 +391,7 @@ def main(args) :
 
                             # ------------------------------ generate new latent ------------------------------ #
                             x_latent_dict = {}
+                            x_latent_dict[t] = back_dict[t]
                             with torch.no_grad():
                                 for j, t in enumerate(time_steps[:-1]):
                                     prev_time = time_steps[j + 1]
