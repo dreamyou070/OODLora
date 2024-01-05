@@ -189,8 +189,10 @@ def main(args) :
         text_embedding_dir = os.path.join(text_embedding_base_dir, f'training_text_embeddings-{lora_epoch}.pt')
 
         if 'epoch-000006.safetensors' in weight :
-            save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}')
-            print(f'*********************** save_dir : {save_dir}')
+            if args.res_64_change:
+                save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_res_64_change')
+            else :
+                save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}')
             os.makedirs(save_dir, exist_ok=True)
 
             print(f' \n step 2. make stable diffusion model')
@@ -254,7 +256,6 @@ def main(args) :
             print(f' (2.4.+) model to accelerator device')
             controller = AttentionStore()
             register_attention_control(unet, controller)
-            #register_attention_control(invers_unet, controller)
 
             print(f' \n step 3. ground-truth image preparing')
             print(f' (3.1) prompt condition')
@@ -358,6 +359,11 @@ def main(args) :
                                                         pil_img.save(os.path.join(trg_img_output_dir, f'unet_mask_{layer_name}.png'))
                                                         anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
                                                         mask_dict[layer_name] = anormal_map
+                                                if args.res_64_change :
+                                                    for mask_dict_key in mask_dict.keys():
+                                                        if 'down_blocks_0' in mask_dict_key:
+                                                            sub_key_name = mask_dict_key.replace('down_blocks_0', 'up_blocks_3')
+                                                            mask_dict[mask_dict_key] = mask_dict[sub_key_name]
 
                                                 # attn_dict
                                                 for key_name in mask_dict_avg_sub:
@@ -478,12 +484,11 @@ if __name__ == "__main__":
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
     parser.add_argument("--pixel_thredhold", type=float, default=0.1)
     parser.add_argument("--pixel_copy", action = 'store_true')
-    parser.add_argument("--inner_iteration", type=int, default=10)
-    parser.add_argument("--org_latent_attn_map_check", action = 'store_true')
-    parser.add_argument("--other_token_preserving", action = 'store_true')
     parser.add_argument('--train_down', nargs='+', type=int, help='use which res layers in U-Net down', default=[])
     parser.add_argument('--train_mid', nargs='+', type=int, help='use which res layers in U-Net mid', default=[8])
     parser.add_argument('--train_up', nargs='+', type=int, help='use which res layers in U-Net up', default=[16,32,64])
+    parser.add_argument("--res_64_change", action='store_true')
+
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
