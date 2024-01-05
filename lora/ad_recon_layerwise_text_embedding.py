@@ -403,7 +403,7 @@ def main(args) :
                             if other_embedding.dim() != 3:
                                 other_embedding = other_embedding.unsqueeze(0)
                             embedding = torch.cat((cls_embedding, text_embedding, other_embedding), dim=1)
-                            
+
                             input_cont = torch.cat([embedding, embedding], dim=0)
                             noise_pred = call_unet(unet, input_latent, t, input_cont, None, mask_dict)
                             controller.reset()
@@ -416,9 +416,9 @@ def main(args) :
                                     # ----------------------------------------------------------------------
                                     pixel_save_mask_np = pixel_mask.cpu().numpy()
                                     pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
-                                    #print(f'after 255 multiply, pixel mask : {pixel_mask_img}')
-                                    pil_img = Image.fromarray(pixel_mask_img).resize((512, 512))
-                                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
+                                    if i == 0 :
+                                        pil_img = Image.fromarray(pixel_mask_img).resize((512, 512))
+                                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
                                     # ----------------------------------------------------------------------
                                     pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0) # 1, 1, res, res
                                     pixel_mask = pixel_mask.repeat(1, 4, 1, 1) # 1, 4, res, res
