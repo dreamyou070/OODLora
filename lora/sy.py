@@ -1,20 +1,36 @@
 import os
 
-record_dir = r'../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_up_down_text_embedding/per_res_normalized_cross_attention_map/score_record/score_epoch_1.txt'
-with open(record_dir, 'r') as f :
-    content = f.readlines()[0]
-content = content.split('\n')
-for line in content :
-    line_list = line.split(' | ')
-    class_name = line_list[0]
-    img_name = line_list[1]
-    print(f'class_name: {class_name}, img_name: {img_name}')
-    score_list = line_list[2:]
-    for score_elem in score_list :
-        print(score_elem)
-        name = score_elem.split('=')[0]
-        score = score_elem.split('=')[1]
+record_dir = r'../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_up_down_text_embedding/per_res_normalized_cross_attention_map/score_record'
+files = os.listdir(record_dir)
+first_elem = ['epoch','class_name','img_name,']
+elems = []
+for file in files :
+    file_name, file_ext = os.path.splitext(file)
+    epoch_info = file_name.split('_')[-1]
+    elem = [f'{epoch_info},']
+    file_path = os.path.join(record_dir, file)
+    with open(record_dir, 'r') as f :
+        content = f.readlines()[0]
+    content = content.split('\n')
+    for line in content :
+        line_list = line.split(' | ')
+        class_name = line_list[0].strip()
+        img_name = line_list[1].strip()
 
-    break
-
-# combined | 001.png | res_64_down_attn_0=839 | res_64_down_attn_1=1528 | res_32_down_attn_0=3121 | res_32_down_attn_1=3650 | res_32_up_attn_0=2963 | res_32_up_attn_1=3659 | res_32_up_attn_2=3959 | res_64_up_attn_0=14341 | res_64_up_attn_1=12120 | res_64_up_attn_2=8650 | down_64=1329 | down_32=3819 | up_32=3810 | up_64=11452
+        elem.append(f'{class_name},')
+        elem.append(f'{img_name},')
+        score_list = line_list[2:]
+        for score_elem in score_list :
+            name = score_elem.split('=')[0]
+            score = score_elem.split('=')[1]
+            first_elem.append(name)
+            elem.append(score)
+    if first_elem not in elems :
+        elems.append(first_elem)
+    elems.append(elem)
+# ---------------------------------------------- make csv file ---------------------------------------------- #
+csv_file = r'../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_up_down_text_embedding/score.csv'
+with open(csv_file, 'w') as f :
+    for elem in elems :
+        f.write(','.join(elem))
+        f.write('\n')
