@@ -670,7 +670,7 @@ class NetworkTrainer:
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
-
+            """
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -853,7 +853,7 @@ class NetworkTrainer:
 
             #self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
             #                   text_encoder, unet)
-
+            """
             # ------------ image generating ------------ #
             if is_main_process:
                 SCHEDULER_LINEAR_START = 0.00085
@@ -925,7 +925,7 @@ class NetworkTrainer:
                         torch.cuda.manual_seed(seed)
                         height = max(64, height - height % 8)  # round to divisible by 8
                         width = max(64, width - width % 8)  # round to divisible by 8
-                        guidance_scale, scale = 1, 1
+                        guidance_scale = scale
                         with accelerator.autocast():
                             latents = pipeline(prompt=prompt, height=height, width=width, num_inference_steps=sample_steps,
                                                guidance_scale=scale, negative_prompt=negative_prompt, controlnet=None, controlnet_image=None )
@@ -942,18 +942,27 @@ class NetworkTrainer:
                             1,
                             do_classifier_free_guidance,
                             negative_prompt,
-                            3, )
-                        cls_embedding = text_embeddings[:, 0, :]
-                        other_embedding = text_embeddings[:, 2:, :]
+                            3, ) # 2, 77, 768
+                        uncon_text_embeddings, con_text_embeddings = text_embeddings.chunk(2, dim=0)
+                        cls_embedding = con_text_embeddings[:, 0, :]
+                        other_embedding = con_text_embeddings[:, 2:, :]
+                        uncon_cls_embedding = uncon_text_embeddings[:, 0, :]
+                        uncon_other_embedding = uncon_text_embeddings[:, 2:, :]
+                        uncon_trgger_embedding = uncon_text_embeddings[:, 1, :]
                         if cls_embedding.dim() != 3 :
                             cls_embedding = cls_embedding.unsqueeze(0)
+                            uncon_cls_embedding = uncon_cls_embedding.unsqueeze(0)
                         if cls_embedding.dim() != 3 :
                             cls_embedding = cls_embedding.unsqueeze(0)
+                            uncon_cls_embedding = uncon_cls_embedding.unsqueeze(0)
                         if other_embedding.dim() != 3 :
                             other_embedding = other_embedding.unsqueeze(0)
+                            uncon_other_embedding = uncon_other_embedding.unsqueeze(0)
                         training_text_embeddings = training_text_embeddings.to(accelerator.device, dtype=weight_dtype)
-                        embedding = torch.cat((cls_embedding, training_text_embeddings, other_embedding), dim=1)
-
+                        uncon_trigger_embedding = uncon_trigger_embedding.repeat(1,training_text_embeddings.shape[1] ,1)
+                        con_text_embeddings = torch.cat((cls_embedding, training_text_embeddings, other_embedding), dim=1)
+                        uncon_text_embeddings = torch.cat((uncon_cls_embedding, uncon_trigger_embedding, uncon_other_embedding), dim=1)
+                        context = torch.cat([uncon_text_embeddings, con_text_embeddings], dim=0)
                         # 4. Preprocess image and mask
                         image = None
                         scheduler.set_timesteps(num_inference_steps, device=device)
@@ -983,7 +992,7 @@ class NetworkTrainer:
                             latent_model_input = pipeline.scheduler.scale_model_input(latent_model_input, t)
                             unet_additional_args = {}
                             noise_pred = pipeline.unet(latent_model_input, t,
-                                                       encoder_hidden_states=embedding,
+                                                       encoder_hidden_states=context,
                                                    **unet_additional_args).sample
                             attention_storer.reset()
 
