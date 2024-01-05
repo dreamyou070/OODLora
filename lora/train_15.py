@@ -684,7 +684,7 @@ class NetworkTrainer:
                                         activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
                                     else :
                                         activation_loss = (activation / total_score) ** 2  # 8, res*res
-                                attn_loss += activation_loss
+                                    attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:
                             loss = loss + args.anormal_weight * attn_loss
