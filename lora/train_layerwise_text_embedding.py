@@ -357,7 +357,9 @@ class NetworkTrainer:
         print(f' (6.1) text embeddings')
         print(f' text_embeddings : {training_text_embeddings.shape}')
 
-        trainable_params.append({"params": training_text_embeddings, "lr": args.text_encoder_lr})
+        trainable_params.append({"params": training_text_embeddings,
+                                 "lr": args.text_encoder_lr})
+        print(f'len of trainable params : {len(trainable_params)}')
 
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
