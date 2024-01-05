@@ -359,7 +359,9 @@ class NetworkTrainer:
 
         trainable_params.append({"params": training_text_embeddings,
                                  "lr": args.text_encoder_lr})
-        print(f'len of trainable params : {len(trainable_params)}')
+        emb_param_dict = trainable_params[1]
+        emb_param = emb_param_dict['params']
+        print(f'emb_param_dict : {emb_param}')
 
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
