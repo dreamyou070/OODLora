@@ -764,6 +764,8 @@ class NetworkTrainer:
                                         # mask means bad point
                                         # total score ... = 0 ??
                                         activation_loss = (activation / total_score) ** 2  # 8, res*res
+                                    if args.resolution_wise_attn_loss :
+                                        activation_loss = activation_loss / (res*res)
                                     attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:
@@ -1121,6 +1123,9 @@ if __name__ == "__main__":
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--use_attn_loss", action='store_true')
+    parser.add_argument("--resolution_wise_attn_loss", action='store_true')
+
+
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
