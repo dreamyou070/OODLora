@@ -11,16 +11,13 @@ for file in files :
     file_path = os.path.join(record_dir, file)
     with open(file_path, 'r') as f :
         content = f.readlines()
-
     #content = content.split('\n')
     #print(content)
-    for line in content :
-        print(line)
-
+    for line_ in content :
+        line = line_.strip()
         line_list = line.split(' | ')
         class_name = line_list[0].strip()
         img_name = line_list[1].strip()
-
         elem.append(f'{class_name},')
         elem.append(f'{img_name},')
         score_list = line_list[2:]
