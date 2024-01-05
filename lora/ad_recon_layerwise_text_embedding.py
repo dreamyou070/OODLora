@@ -421,7 +421,7 @@ def main(args) :
                                             # ----------------------------------------------------------------------
                                             pixel_save_mask_np = pixel_mask.cpu().numpy()
                                             pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
-                                            if i == 0 :
+                                            if prev_time == 0 :
                                                 pil_img = Image.fromarray(pixel_mask_img).resize((512, 512))
                                                 pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
                                             # ----------------------------------------------------------------------
