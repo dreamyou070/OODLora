@@ -357,40 +357,41 @@ def main(args) :
                                                 position = 'up'
                                             else :
                                                 position = 'middle'
+                                            if position in args.cross_map_position :
 
-                                            if 'attentions_0' in layer_name :
-                                                part = 'attn_0'
-                                            elif 'attentions_1' in layer_name :
-                                                part = 'attn_1'
-                                            else :
-                                                part = 'attn_2'
+                                                if 'attentions_0' in layer_name :
+                                                    part = 'attn_0'
+                                                elif 'attentions_1' in layer_name :
+                                                    part = 'attn_1'
+                                                else :
+                                                    part = 'attn_2'
 
-                                            title_name = f'res_{res}_{position}_{part}'
+                                                title_name = f'res_{res}_{position}_{part}'
 
-                                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
-                                            h = cls_score.shape[0]
-                                            trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
-                                            trigger_score = trigger_score.reshape(h, res, res)
-                                            trigger_score = trigger_score.mean(dim=0)
-                                            trigger = trigger_score.detach().cpu()
-                                            trigger = trigger / trigger.max()
-                                            trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
-                                            trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
-                                            trigger_dir = os.path.join(org_trg_img_output_dir,
-                                                                       f'normalized_good_{title_name}_res_{res}.png')
-                                            trigger_score_pil.save(trigger_dir)
+                                                cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
+                                                h = cls_score.shape[0]
+                                                trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
+                                                trigger_score = trigger_score.reshape(h, res, res)
+                                                trigger_score = trigger_score.mean(dim=0)
+                                                trigger = trigger_score.detach().cpu()
+                                                trigger = trigger / trigger.max()
+                                                trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
+                                                trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
+                                                trigger_dir = os.path.join(org_trg_img_output_dir,
+                                                                           f'normalized_good_{title_name}_res_{res}.png')
+                                                trigger_score_pil.save(trigger_dir)
 
-                                            if 'down' in layer_name :
-                                                key_name = f'down_{res}'
-                                            elif 'up' in layer_name :
-                                                key_name = f'up_{res}'
-                                            else :
-                                                key_name = f'mid_{res}'
+                                                if 'down' in layer_name :
+                                                    key_name = f'down_{res}'
+                                                elif 'up' in layer_name :
+                                                    key_name = f'up_{res}'
+                                                else :
+                                                    key_name = f'mid_{res}'
 
-                                            if key_name not in attn_dict :
-                                                attn_dict[key_name] = []
+                                                if key_name not in attn_dict :
+                                                    attn_dict[key_name] = []
 
-                                            attn_dict[key_name].append(attn)
+                                                attn_dict[key_name].append(attn)
 
 
                                     for key_name in attn_dict :
@@ -475,5 +476,7 @@ if __name__ == "__main__":
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
+    parser.add_argument("--cross_map_position", type=arg_as_list, default=['up','down'])
+
     args = parser.parse_args()
     main(args)
