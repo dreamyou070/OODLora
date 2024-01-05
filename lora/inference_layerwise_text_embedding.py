@@ -141,7 +141,7 @@ def main(args) :
             model_epoch = 'last'
         text_embedding_dir = os.path.join(text_embedding_base_dir, f'training_text_embeddings-{lora_epoch}.safetensors')
         from safetensors.torch import load_file
-        text_embedding = load_file(text_embedding_dir)
+        text_embedding = load_file(text_embedding_dir, device='cpu')
         print(f'saved text embedding shape : {text_embedding.shape}')
 
         save_dir = os.path.join(output_dir, f'unnormalized_map_lora_{model_epoch}')
