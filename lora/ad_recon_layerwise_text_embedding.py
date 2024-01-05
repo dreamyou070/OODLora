@@ -106,10 +106,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                     z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0) # head, pix_num, sen_len
                     x_attn_probs = z_attn_probs * mask + x_attn_probs * (1 - mask)
                     attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
-                else :
-                    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0)  # head, pix_num, sen_len
-                    x_attn_probs = z_attn_probs
-                    attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
+                #else :
+                #    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0)  # head, pix_num, sen_len
+                #    x_attn_probs = z_attn_probs
+                #    attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
 
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -187,7 +187,7 @@ def main(args) :
 
         if 'epoch-000006.safetensors' in weight :
             if args.res_64_change:
-                save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_res_64_change_change_back_step')
+                save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_res_64_change_more_lora')
             else :
                 save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}')
             os.makedirs(save_dir, exist_ok=True)
@@ -432,8 +432,8 @@ def main(args) :
                                             pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
                                             pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
                                     x_latent_dict[prev_time] = x_latent
-                                pil_img = Image.fromarray(latent2image(x_latent, vae))
-                                pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
+                                #pil_img = Image.fromarray(latent2image(x_latent, vae))
+                                #pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
