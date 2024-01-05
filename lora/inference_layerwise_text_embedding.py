@@ -327,7 +327,6 @@ def main(args) :
                                 if next_time <= args.final_noising_time:
                                     latent_dict[int(t)] = latent
                                     from utils.model_utils import call_unet
-
                                     cls_embedding = con[:,0,:]
                                     if cls_embedding.dim() != 3:
                                         cls_embedding = cls_embedding.unsqueeze(0)
@@ -336,11 +335,7 @@ def main(args) :
                                     other_embedding = con[:, 2:, :]
                                     if other_embedding.dim() != 3:
                                         other_embedding = other_embedding.unsqueeze(0)
-                                    embedding = torch.cat((cls_embedding, text_embedding, other_embedding),
-                                                          dim=1)
-
-
-
+                                    embedding = torch.cat((cls_embedding, text_embedding, other_embedding), dim=1)
 
                                     noise_pred = call_unet(unet, latent, t, embedding, [[1]], None)
                                     attn_stores = controller.step_store
@@ -375,12 +370,9 @@ def main(args) :
                                                 cls_score = cls_score.detach().cpu()
                                                 cls = cls_score / cls_score.max()
                                                 cls_np = np.array((cls.cpu()) * 255).astype(np.uint8)
-                                                cls_score_pil = Image.fromarray(cls_np).resize((512, 512),
-                                                                                                       Image.BILINEAR)
-                                                cls_dir = os.path.join(org_trg_img_output_dir,
-                                                                           f'normalized_cls_{title_name}_res_{res}.png')
+                                                cls_score_pil = Image.fromarray(cls_np).resize((512, 512),Image.BILINEAR)
+                                                cls_dir = os.path.join(org_trg_img_output_dir, f'normalized_cls_{title_name}_res_{res}.png')
                                                 cls_score_pil.save(cls_dir)
-
 
                                                 trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
                                                 trigger_score = trigger_score.reshape(h, res, res)
@@ -388,9 +380,17 @@ def main(args) :
                                                 trigger = trigger_score.detach().cpu()
                                                 trigger = trigger / trigger.max()
                                                 trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
+
+                                                # ------------------------------------------------------------------------------------------------ #
+                                                mask_np = load_image(mask_img_dir, res,res)
+                                                mask_np = np.where(mask_np > 100, 1, 0)  # [res,res]
+                                                print(f'trigger_np : {trigger_np.shape} | masp_np : {mask_np.shape}')
+                                                """ find best model, that makes lowest score """
+                                                trigger_score = (trigger_np) * (mask_np)
+
+
                                                 trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
-                                                trigger_dir = os.path.join(org_trg_img_output_dir,
-                                                                           f'normalized_good_{title_name}_res_{res}.png')
+                                                trigger_dir = os.path.join(org_trg_img_output_dir, f'normalized_good_{title_name}_res_{res}.png')
                                                 trigger_score_pil.save(trigger_dir)
 
                                                 if 'down' in layer_name :
