@@ -238,11 +238,12 @@ def main(args) :
             network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae, text_encoder, unet,
                                                     neuron_dropout=args.network_dropout, **net_kwargs, )
             print(f' (2.5.3) apply trained state dict')
-            network.apply_to(text_encoder, unet, True, True)
+            network.apply_to(text_encoder, unet, False, True)
             if args.network_weights is not None:
                 info = network.load_weights(weight_dir)
             network.to(device)
             text_embedding = torch.load(text_embedding_dir, map_location=torch.device('cpu'))
+            text_embedding.to(device, weight_dtype)
 
             print(f' (2.4.+) model to accelerator device')
             controller = AttentionStore()
