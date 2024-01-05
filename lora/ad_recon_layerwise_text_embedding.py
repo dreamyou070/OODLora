@@ -32,54 +32,56 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if context is not None:
                 is_cross_attention = True
 
-                if 'mid' in layer_name:
-                    trg_num = 6
-                else:
-                    if 'down' in layer_name:
-                        position_num = 0
-                        if 'blocks_0' in layer_name:
-                            block_num = 0
-                        elif 'blocks_1' in layer_name:
-                            block_num = 2
-                        elif 'blocks_2' in layer_name:
-                            block_num = 4
+                if trg_indexs_list is not None:
 
-                        if 'attentions_0' in layer_name:
-                            attention_num = 0
-                        elif 'attentions_1' in layer_name:
-                            attention_num = 1
-                    elif 'up' in layer_name:
-                        position_num = 7
-                        if 'blocks_1' in layer_name:
-                            block_num = 0
-                        elif 'blocks_2' in layer_name:
-                            block_num = 3
-                        elif 'blocks_3' in layer_name:
-                            block_num = 6
+                    if 'mid' in layer_name:
+                        trg_num = 6
+                    else:
+                        if 'down' in layer_name:
+                            position_num = 0
+                            if 'blocks_0' in layer_name:
+                                block_num = 0
+                            elif 'blocks_1' in layer_name:
+                                block_num = 2
+                            elif 'blocks_2' in layer_name:
+                                block_num = 4
 
-                        if 'attentions_0' in layer_name:
-                            attention_num = 0
-                        elif 'attentions_1' in layer_name:
-                            attention_num = 1
-                        elif 'attentions_2' in layer_name:
-                            attention_num = 2
-                    trg_num = position_num + block_num + attention_num
-                trg_num = trg_num + 1
-                cls_emb = context[:, 0, :]
-                other_emb = context[:, 17:, :]
-                trgger_emb = context[:, trg_num, :]
-                if cls_emb.dim() != 3:
-                    cls_emb = cls_emb.unsqueeze(0)
-                if cls_emb.dim() != 3:
-                    cls_emb = cls_emb.unsqueeze(0)
-                if trgger_emb.dim() != 3:
-                    trgger_emb = trgger_emb.unsqueeze(0)
-                if trgger_emb.dim() != 3:
-                    trgger_emb = trgger_emb.unsqueeze(0)
-                print(f'cls_emb.shape : {cls_emb.shape}')
-                print(f'trgger_emb.shape : {trgger_emb.shape}')
-                print(f'other_emb.shape : {other_emb.shape}')
-                context = torch.cat([cls_emb, trgger_emb, other_emb], dim=1)
+                            if 'attentions_0' in layer_name:
+                                attention_num = 0
+                            elif 'attentions_1' in layer_name:
+                                attention_num = 1
+                        elif 'up' in layer_name:
+                            position_num = 7
+                            if 'blocks_1' in layer_name:
+                                block_num = 0
+                            elif 'blocks_2' in layer_name:
+                                block_num = 3
+                            elif 'blocks_3' in layer_name:
+                                block_num = 6
+
+                            if 'attentions_0' in layer_name:
+                                attention_num = 0
+                            elif 'attentions_1' in layer_name:
+                                attention_num = 1
+                            elif 'attentions_2' in layer_name:
+                                attention_num = 2
+                        trg_num = position_num + block_num + attention_num
+                    trg_num = trg_num + 1
+                    cls_emb = context[:, 0, :]
+                    other_emb = context[:, 17:, :]
+                    trgger_emb = context[:, trg_num, :]
+                    if cls_emb.dim() != 3:
+                        cls_emb = cls_emb.unsqueeze(0)
+                    if cls_emb.dim() != 3:
+                        cls_emb = cls_emb.unsqueeze(0)
+                    if trgger_emb.dim() != 3:
+                        trgger_emb = trgger_emb.unsqueeze(0)
+                    if trgger_emb.dim() != 3:
+                        trgger_emb = trgger_emb.unsqueeze(0)
+                    print(f'cls_emb.shape : {cls_emb.shape}')
+                    print(f'trgger_emb.shape : {trgger_emb.shape}')
+                    print(f'other_emb.shape : {other_emb.shape}')
+                    context = torch.cat([cls_emb, trgger_emb, other_emb], dim=1)
 
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
