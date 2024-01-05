@@ -382,12 +382,13 @@ def main(args) :
                                                 trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
 
                                                 # ------------------------------------------------------------------------------------------------ #
-                                                mask_np = load_image(mask_img_dir, res,res)
+                                                mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                                                mask_np = np.array(mask_img, np.uint8)
                                                 mask_np = np.where(mask_np > 100, 1, 0)  # [res,res]
-                                                print(f'trigger_np : {trigger_np.shape} | masp_np : {mask_np.shape}')
+                                                print(f'[first] trigger_np : {trigger_np.shape} | masp_np : {mask_np.shape}')
                                                 """ find best model, that makes lowest score """
                                                 trigger_score = (trigger_np) * (mask_np)
-
+                                                # ------------------------------------------------------------------------------------------------ #
 
                                                 trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
                                                 trigger_dir = os.path.join(org_trg_img_output_dir, f'normalized_good_{title_name}_res_{res}.png')
@@ -421,6 +422,18 @@ def main(args) :
                                         trigger = trigger_score.detach().cpu()
                                         trigger = trigger / trigger.max()
                                         trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
+
+                                        # ------------------------------------------------------------------------------------------------ #
+                                        mask_img = Image.open(mask_img_dir).convert("L").resize((res, res),Image.BICUBIC)
+                                        mask_np = np.array(mask_img, np.uint8)
+                                        mask_np = np.where(mask_np > 100, 1, 0)  # [res,res]
+                                        print(f'[second] trigger_np : {trigger_np.shape} | masp_np : {mask_np.shape}')
+                                        """ find best model, that makes lowest score """
+                                        trigger_score = (trigger_np) * (mask_np)
+                                        # ------------------------------------------------------------------------------------------------ #
+
+
+
                                         trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
                                         trigger_dir = os.path.join(trg_img_output_dir,
                                                                     f'normalized_good_{key_name}.png')
