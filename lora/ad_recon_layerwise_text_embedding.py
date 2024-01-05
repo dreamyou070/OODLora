@@ -353,7 +353,7 @@ def main(args) :
                                                         trigger_score = trigger_score.reshape(h, res, res) # head, res, res
                                                         trigger_score = trigger_score.mean(dim=0) # res, res
                                                         trigger = trigger_score / trigger_score.max()      # res, res
-                                                        pil_img = Image.fromarray((trigger.numpy() * 255).astype(np.uint8))
+                                                        pil_img = Image.fromarray((trigger.cpu().numpy() * 255).astype(np.uint8))
                                                         pil_img = pil_img.resize((512, 512), Image.BILINEAR)
                                                         pil_img.save(os.path.join(trg_img_output_dir, f'unet_mask_{layer_name}.png'))
                                                         anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
