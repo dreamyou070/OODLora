@@ -26,6 +26,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
 
     def ca_forward(self, layer_name):
+
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
             is_cross_attention = False
 
@@ -69,7 +70,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
-            key = self.to_k(context)
+            key = self.to_k(context) # batch, sen_len, dim
+            print(f'key.shape (1, 77, new_dim) : {key.shape}')
             value = self.to_v(context)
 
             query = self.reshape_heads_to_batch_dim(query)
