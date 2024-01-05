@@ -272,14 +272,16 @@ def main(args) :
                                 for layer_name in attn_stores :
                                     attn = attn_stores[layer_name][0].squeeze() # head, pix_num
                                     res = int(attn.shape[1] ** 0.5)
-                                    if res in args.cross_map_res :
+                                    if 'down' in layer_name:
+                                        position = 'down'
+                                    elif 'up' in layer_name:
+                                        position = 'up'
+                                    else:
+                                        position = 'middle'
 
-                                        if 'down' in layer_name :
-                                            position = 'down'
-                                        elif 'up' in layer_name :
-                                            position = 'up'
-                                        else :
-                                            position = 'middle'
+                                    if res in args.cross_map_res and position in args.trg_position :
+
+
 
                                         if 'attentions_0' in layer_name :
                                             part = 'attn_0'
@@ -379,6 +381,7 @@ if __name__ == "__main__":
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
+    parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
     args = parser.parse_args()
     main(args)
