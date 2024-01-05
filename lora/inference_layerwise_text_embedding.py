@@ -139,7 +139,7 @@ def main(args) :
         else:
             lora_epoch = 'last'
             model_epoch = 'last'
-        text_embedding_dir = os.path.join(text_embedding_base_dir, f'training_text_embeddings-{lora_epoch}.safetensors')
+        text_embedding_dir = os.path.join(text_embedding_base_dir, f'training_text_embeddings-{lora_epoch}.pt')
         #from safetensors.torch import load_file
         #text_embedding = load_file(text_embedding_dir)#, device='cpu')
         text_embedding = torch.load(text_embedding_dir, map_location=torch.device('cpu'))
