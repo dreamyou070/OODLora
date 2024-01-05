@@ -16,15 +16,11 @@ for file in files :
     for line_ in content :
         line = line_.strip()
         line_list = line.split(' | ')
-        print(line_list)
+
         class_name = line_list[0].strip()
         img_name = line_list[1].strip()
-        print(f'class_name : {class_name}')
-        print(f'img_name : {img_name}')
-        import time
-        time.sleep(1000)
-        elem.append(f'{class_name},')
-        elem.append(f'{img_name},')
+        elem.append(class_name)
+        elem.append(img_name)
         score_list = line_list[2:]
         for score_elem in score_list :
             name = score_elem.split('=')[0]
