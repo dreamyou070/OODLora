@@ -4966,7 +4966,8 @@ def sample_images_common(pipe_class,accelerator,
             width = max(64, width - width % 8)  # round to divisible by 8
             with accelerator.autocast():
                 latents = pipeline(prompt=prompt,height=height,width=width,num_inference_steps=sample_steps,
-                                   guidance_scale=scale,negative_prompt=negative_prompt,controlnet=controlnet,controlnet_image=controlnet_image,)
+                                   guidance_scale=scale,negative_prompt=negative_prompt,
+                                   controlnet=controlnet,controlnet_image=controlnet_image,)
             image = pipeline.latents_to_image(latents)[0]
             if attention_storer :
                 print(f'reset attention_storer')

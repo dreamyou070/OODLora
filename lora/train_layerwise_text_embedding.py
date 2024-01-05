@@ -927,9 +927,6 @@ class NetworkTrainer:
                         height = max(64, height - height % 8)  # round to divisible by 8
                         width = max(64, width - width % 8)  # round to divisible by 8
                         guidance_scale = scale
-                        with accelerator.autocast():
-                            latents = pipeline(prompt=prompt, height=height, width=width, num_inference_steps=sample_steps,
-                                               guidance_scale=scale, negative_prompt=negative_prompt, controlnet=None, controlnet_image=None )
 
                         # 2. Define call parameters
                         batch_size = 1 if isinstance(prompt, str) else len(prompt)
@@ -949,7 +946,8 @@ class NetworkTrainer:
                         other_embedding = con_text_embeddings[:, 2:, :]
                         uncon_cls_embedding = uncon_text_embeddings[:, 0, :]
                         uncon_other_embedding = uncon_text_embeddings[:, 2:, :]
-                        uncon_trgger_embedding = uncon_text_embeddings[:, 1, :]
+                        uncon_trigger_embedding = uncon_text_embeddings[:, 1, :]
+
                         if cls_embedding.dim() != 3 :
                             cls_embedding = cls_embedding.unsqueeze(0)
                             uncon_cls_embedding = uncon_cls_embedding.unsqueeze(0)
@@ -981,7 +979,7 @@ class NetworkTrainer:
                             weight_dtype,
                             device,
                             None,
-                            latents,)
+                            None,)
 
                         # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
                         extra_step_kwargs = pipeline.prepare_extra_step_kwargs(None, 0.0)
