@@ -2,11 +2,13 @@ import os
 
 record_dir = r'../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_up_down_text_embedding/per_res_normalized_cross_attention_map/score_record'
 files = os.listdir(record_dir)
-first_elem = ['epoch','class_name','img_name,']
-elems = []
+
+
 for file in files :
     file_name, file_ext = os.path.splitext(file)
     epoch_info = file_name.split('_')[-1]
+    elems = []
+    first_elem = ['epoch', 'class_name', 'img_name,']
     elem = [epoch_info]
     file_path = os.path.join(record_dir, file)
     with open(file_path, 'r') as f :
@@ -29,9 +31,9 @@ for file in files :
         if first_elem not in elems :
             elems.append(first_elem)
         elems.append(elem)
-# ---------------------------------------------- make csv file ---------------------------------------------- #
-csv_file = r'../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_up_down_text_embedding/score.csv'
-with open(csv_file, 'w') as f :
-    for elem in elems :
-        f.write(','.join(elem))
-        f.write('\n')
+    # ---------------------------------------------- make csv file ---------------------------------------------- #
+    csv_file = f'../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_up_down_text_embedding/score_epoch_{epoch_info}.csv'
+    with open(csv_file, 'w') as f :
+        for elem in elems :
+            f.write(','.join(elem))
+            f.write('\n')
