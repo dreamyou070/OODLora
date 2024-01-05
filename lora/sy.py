@@ -7,12 +7,11 @@ elems = []
 for file in files :
     file_name, file_ext = os.path.splitext(file)
     epoch_info = file_name.split('_')[-1]
-    elem = [f'{epoch_info},']
+    elem = [epoch_info]
     file_path = os.path.join(record_dir, file)
     with open(file_path, 'r') as f :
         content = f.readlines()
-    #content = content.split('\n')
-    #print(content)
+
     for line_ in content :
         line = line_.strip()
         line_list = line.split(' | ')
@@ -27,9 +26,9 @@ for file in files :
             score = score_elem.split('=')[1]
             first_elem.append(name)
             elem.append(score)
-    if first_elem not in elems :
-        elems.append(first_elem)
-    elems.append(elem)
+        if first_elem not in elems :
+            elems.append(first_elem)
+        elems.append(elem)
 # ---------------------------------------------- make csv file ---------------------------------------------- #
 csv_file = r'../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_up_down_text_embedding/score.csv'
 with open(csv_file, 'w') as f :
