@@ -186,7 +186,7 @@ def main(args) :
         text_embedding_dir = os.path.join(text_embedding_base_dir, f'training_text_embeddings-{lora_epoch}.pt')
 
         if 'epoch-000006.safetensors' in weight :
-            if args.res_64_change:
+            if args.detail_64:
                 save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_res_64_change_more_lora')
             else :
                 save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}')
@@ -356,7 +356,7 @@ def main(args) :
                                                         pil_img.save(os.path.join(trg_img_output_dir, f'unet_mask_{layer_name}.png'))
                                                         anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
                                                         mask_dict[layer_name] = anormal_map
-                                                if args.res_64_change :
+                                                if args.detail_64 :
                                                     for mask_dict_key in mask_dict.keys():
                                                         if 'down_blocks_0' in mask_dict_key:
                                                             sub_key_name = mask_dict_key.replace('down_blocks_0', 'up_blocks_3')
@@ -479,7 +479,7 @@ if __name__ == "__main__":
     parser.add_argument('--train_down', nargs='+', type=int, help='use which res layers in U-Net down', default=[])
     parser.add_argument('--train_mid', nargs='+', type=int, help='use which res layers in U-Net mid', default=[8])
     parser.add_argument('--train_up', nargs='+', type=int, help='use which res layers in U-Net up', default=[16,32,64])
-    parser.add_argument("--res_64_change", action='store_true')
+    parser.add_argument("--detail_64", action='store_true')
 
     import ast
     def arg_as_list(arg):

@@ -340,6 +340,10 @@ class NetworkTrainer:
         if args.network_weights is not None:
             info = network.load_weights(args.network_weights)
             accelerator.print(f"load network weights from {args.network_weights}: {info}")
+
+
+
+
         if args.gradient_checkpointing:
             unet.enable_gradient_checkpointing()
             for t_enc in text_encoders:
@@ -357,6 +361,10 @@ class NetworkTrainer:
         unet_cross_num = 16
         training_text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(1, unet_cross_num, 768),
                                      requires_grad=True)
+        if args.pretrained_training_text_embedding_dir is not None:
+            training_text_embeddings = torch.load(args.pretrained_training_text_embedding_dir,
+                                        map_location=torch.device('cpu'))
+
         print(f' (6.1) text embeddings')
         print(f' text_embeddings : {training_text_embeddings.shape}')
 
@@ -667,7 +675,7 @@ class NetworkTrainer:
             gradient_dict = {}
             loss_dict = {}
 
-        for epoch in range(num_train_epochs):
+        for epoch in range(args.start_epoch, num_train_epochs, 1):
 
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
