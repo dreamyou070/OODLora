@@ -55,21 +55,24 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                         elif 'attentions_2' in layer_name: attention_num = 2
                     trg_num = position_num + block_num + attention_num
                 trg_num = trg_num + 1
-                cls_emb = context[:, 0, :]
-                other_emb = context[:, 17:, :]
-                trgger_emb = context[:, trg_num, :]
+                cls_emb = context[0, 0, :]
+                other_emb = context[0, 17:, :]
+                normal_emb, anormal_emb = context[:, trg_num, :].chunk(2, dim=0)
                 if cls_emb.dim() == 1 :
                     cls_emb = cls_emb.unsqueeze(0)
                     cls_emb = cls_emb.unsqueeze(0)
                 if cls_emb.dim() == 2 :
                     cls_emb = cls_emb.unsqueeze(1)
-                if trgger_emb.dim() == 3 :
-                    trgger_emb = trgger_emb.unsqueeze(0)
-                    trgger_emb = trgger_emb.unsqueeze(0)
-                if trgger_emb.dim() == 2 :
-                    trgger_emb = trgger_emb.unsqueeze(1)
+                if normal_emb.dim() == 3 :
+                    normal_emb = normal_emb.unsqueeze(0)
+                    normal_emb = normal_emb.unsqueeze(0)
+                    anormal_emb = anormal_emb.unsqueeze(0)
+                    anormal_emb = anormal_emb.unsqueeze(0)
+                if normal_emb.dim() == 2 :
+                    normal_emb = normal_emb.unsqueeze(1)
+                    anormal_emb = anormal_emb.unsqueeze(1)
 
-                context = torch.cat([cls_emb, trgger_emb, other_emb], dim=1)
+                context = torch.cat([cls_emb, normal_emb, anormal_emb, other_emb], dim=1)
 
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
@@ -359,17 +362,21 @@ class NetworkTrainer:
 
 
         unet_cross_num = 16
-        training_text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(1, unet_cross_num, 768),
+        normal_text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(1, unet_cross_num, 768),
+                                     requires_grad=True)
+        anormal_text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(1, unet_cross_num, 768),
                                      requires_grad=True)
         if args.pretrained_training_text_embedding_dir is not None:
             training_text_embeddings = torch.load(args.pretrained_training_text_embedding_dir,
                                         map_location=torch.device('cpu'))
-
+        training_text_embeddings = torch.cat([normal_text_embeddings, anormal_text_embeddings], dim=0)
         print(f' (6.1) text embeddings')
         print(f' text_embeddings : {training_text_embeddings.shape}')
 
         trainable_params.append({"params": training_text_embeddings,
                                  "lr": args.text_encoder_lr})
+        #trainable_params.append({"params": normal_text_embeddings,
+        #                         "lr": args.text_encoder_lr})
         emb_param_dict = trainable_params[1]
         emb_param = emb_param_dict['params']
         print(f'emb_param_dict : {emb_param}')
@@ -709,7 +716,9 @@ class NetworkTrainer:
                     other_embeddings = text_encoder_conds[:, 2:, :]
 
                     training_text_embeddings = training_text_embeddings.to(accelerator.device, dtype = weight_dtype)
-                    embedding = torch.cat((cls_embedding, training_text_embeddings, other_embeddings), dim=1)
+                    aug_cls_embedding = cls_embedding.repeat(2,1,1)
+                    aug_other_embeddings = other_embeddings.repeat(2,1,1)
+                    embedding = torch.cat((aug_cls_embedding, training_text_embeddings, aug_other_embeddings), dim=1)
 
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
@@ -745,11 +754,9 @@ class NetworkTrainer:
                             res = int(score_map.shape[1] ** 0.5)
                             if res in args.cross_map_res :
                                 flag = True
-
                                 if args.detail_64 :
                                     if res == 64 and 'down' in layer_name :
                                         flag = False
-                                        print(f'layer = {layer_name} | res = {res} | flag = {flag}')
                                 if flag :
                                     anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                     mask = anormal_mask.squeeze()  # res,res

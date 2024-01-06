@@ -47,16 +47,13 @@ def next_step(model_output: Union[torch.FloatTensor, np.ndarray],
               timestep: int,
               sample: Union[torch.FloatTensor, np.ndarray],
               scheduler):
-    timestep, next_timestep = timestep, min( timestep + scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999)
+    timestep, next_timestep = min(timestep - scheduler.config.num_train_timesteps // scheduler.num_inference_steps, 999), timestep
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
-    alpha_prod_t_matrix = torch.ones_like(model_output) * alpha_prod_t
     alpha_prod_t_next = scheduler.alphas_cumprod[next_timestep]
-    alpha_prod_t_next_matrix = torch.ones_like(model_output) * alpha_prod_t_next
     beta_prod_t = 1 - alpha_prod_t
-    beta_prod_t_matrix = torch.ones_like(model_output) * beta_prod_t
-    next_original_sample = (sample - beta_prod_t_matrix ** 0.5 * model_output) / alpha_prod_t_matrix ** 0.5
-    next_sample_direction = (torch.ones_like(model_output) - alpha_prod_t_next_matrix) ** 0.5 * model_output
-    next_sample = alpha_prod_t_next_matrix ** 0.5 * next_original_sample + next_sample_direction
+    next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
+    next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
+    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
 def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
@@ -67,9 +64,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
     alpha_prod_t_prev = scheduler.alphas_cumprod[prev_timestep]
     beta_prod_t = 1 - alpha_prod_t
-
     prev_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
-
     prev_sample_direction = (1 - alpha_prod_t_prev) ** 0.5 * model_output
     prev_sample = alpha_prod_t_prev ** 0.5 * prev_original_sample + prev_sample_direction
     return prev_sample
