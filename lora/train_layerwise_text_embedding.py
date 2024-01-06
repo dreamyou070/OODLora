@@ -362,14 +362,15 @@ class NetworkTrainer:
 
 
         unet_cross_num = 16
-        normal_text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(1, unet_cross_num, 768),
-                                     requires_grad=True)
-        anormal_text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(1, unet_cross_num, 768),
-                                     requires_grad=True)
+        #normal_text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(1, unet_cross_num, 768),
+        #                             requires_grad=True)
+        #anormal_text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(1, unet_cross_num, 768),
+        #                             requires_grad=True)
         if args.pretrained_training_text_embedding_dir is not None:
             training_text_embeddings = torch.load(args.pretrained_training_text_embedding_dir,
                                         map_location=torch.device('cpu'))
-        training_text_embeddings = torch.cat([normal_text_embeddings, anormal_text_embeddings], dim=0)
+        training_text_embeddings = torch.nn.parameter.Parameter(data=torch.randn(2, unet_cross_num, 768),
+                                     requires_grad=True)
         print(f' (6.1) text embeddings')
         print(f' text_embeddings : {training_text_embeddings.shape}')
 
