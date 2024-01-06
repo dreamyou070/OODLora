@@ -1564,6 +1564,8 @@ class UNet2DConditionModel(nn.Module):
         if mid_block_additional_residual is not None:
             sample += mid_block_additional_residual
 
+        print(f'before up start, num of down_block_res_samples : {len(down_block_res_samples)}')
+
         # 5. up
         for i, upsample_block in enumerate(self.up_blocks):
             is_final_block = i == len(self.up_blocks) - 1
