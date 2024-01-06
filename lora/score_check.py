@@ -4,9 +4,9 @@ def main(args) :
 
     parent = os.path.split(args.record_dir)[0]
     record_dir = os.path.join(parent, 'score_record_csv')
+    os.makedirs(record_dir, exist_ok=True)
 
     files = os.listdir(args.record_dir)
-    print(f'files: {files}')
 
     for file in files:
         file_name, file_ext = os.path.splitext(file)
