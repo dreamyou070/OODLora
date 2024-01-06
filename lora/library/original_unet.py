@@ -1249,11 +1249,11 @@ class CrossAttnUpBlock2D(nn.Module):
 
         j = 0
         for resnet, attn in zip(self.resnets, self.attentions):
-            print(f' [up (get res from down) ] {j}')
             # pop res hidden states
             res_hidden_states = res_hidden_states_tuple[-1]
             res_hidden_states_tuple = res_hidden_states_tuple[:-1]
             hidden_states = torch.cat([hidden_states, res_hidden_states], dim=1)
+            print(f' [up (get res from down) ] {j}, shape of hidden states : {hidden_states.shape}')
 
             if self.training and self.gradient_checkpointing:
 
