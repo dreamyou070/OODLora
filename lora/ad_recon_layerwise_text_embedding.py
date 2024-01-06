@@ -428,7 +428,9 @@ def main(args) :
                                     x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
                                     # ------------------------------ pixel recon ------------------------------ #
                                     if args.pixel_copy :
+                                        print(f'keys in mask_dict_avg : {mask_dict_avg.keys()}')
                                         for key in mask_dict_avg.keys():
+                                            up_key = False
                                             if 'up' in key :
                                                 pixel_mask = mask_dict_avg[key].to(z_latent.device)
                                                 # ----------------------------------------------------------------------
@@ -441,14 +443,15 @@ def main(args) :
                                                 pixel_mask =  transforms.ToTensor(pil_img_64)
                                                 if prev_time == 0 :
                                                     pil_img_512.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-
-                                            # ----------------------------------------------------------------------
-                                            pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0) # 1, 1, res, res
-                                            pixel_mask = pixel_mask.repeat(1, 4, 1, 1) # 1, 4, res, res
-                                            x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
-                                            # ------------------------------- latent2img ------------------------------- #
-                                            pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
-                                            pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
+                                                    up_key = True
+                                            if up_key :
+                                                # ----------------------------------------------------------------------
+                                                pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0) # 1, 1, res, res
+                                                pixel_mask = pixel_mask.repeat(1, 4, 1, 1) # 1, 4, res, res
+                                                x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
+                                                # ------------------------------- latent2img ------------------------------- #
+                                    pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
+                                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
                                     x_latent_dict[prev_time] = x_latent
 
 if __name__ == "__main__":
