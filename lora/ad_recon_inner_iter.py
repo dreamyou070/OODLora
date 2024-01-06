@@ -97,7 +97,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/truncate_infer_inv_unet_ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_'
+    args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/start_rendom_noise_ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_'
                                            f'inner_iter_{args.inner_iteration}')
     print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
@@ -311,7 +311,7 @@ def main(args) :
                                 # ------------------------------ reconstruction with background ------------------------------ #
                                 # (4) reconstruction
                                 x_latent_dict = {}
-                                x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
+                                x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape).to(latent.device, dtype=weight_dtype)
                                 if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
                                     pixel_mask = mask_dict_avg['up_64'].to(latent.device)
                                     pixel_save_mask_np = pixel_mask.cpu().numpy()
