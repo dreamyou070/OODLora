@@ -71,6 +71,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 if normal_emb.dim() == 2 :
                     normal_emb = normal_emb.unsqueeze(1)
                     anormal_emb = anormal_emb.unsqueeze(1)
+                if other_emb.dim() == 2 :
+                    other_emb = other_emb.unsqueeze(0)
 
                 context = torch.cat([cls_emb, normal_emb, anormal_emb, other_emb], dim=1)
 
