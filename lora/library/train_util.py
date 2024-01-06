@@ -137,6 +137,7 @@ class ImageInfo:
         self.text_encoder_pool2: Optional[torch.Tensor] = None
         self.mask_dir: Optional[str] = mask_dir
         if self.mask_dir is not None:
+            print(f'self.mask_dir : {self.mask_dir}')
             assert os.path.exists(self.mask_dir), f"mask_dir {self.mask_dir} does not exist"
         self.class_caption:\
             Optional[str] = class_caption

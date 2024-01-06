@@ -38,7 +38,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --seed 42 \
   --class_caption 'good' \
   --start_epoch 0 \
-  --output_dir ../result/MVTec3D-AD_experiment/carrot/lora_training/res_64_up \
+  --output_dir ../result/MVTec3D-AD_experiment/cable_gland/lora_training/res_64_up \
   --cross_map_res [64] --use_attn_loss --normal_activation_train --trg_position "['up']"
 
 
