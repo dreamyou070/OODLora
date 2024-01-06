@@ -98,29 +98,31 @@ def main(args):
                         org_pil_gt_image = Image.open(org_gt_image_path).convert('L').resize((512,512))
 
                         if i in train_index:
-
+                            print(f'anomal to tain')
                             new_rgb_image_path = os.path.join(train_cat_rgb_dir, f'{category}_{img}')
                             new_gt_image_path = os.path.join(train_cat_gt_dir, f'{category}_{img}')
-                            org_pil_rgb_image.save(new_rgb_image_path)
-                            org_pil_gt_image.save(new_gt_image_path)
+
                         else :
                             new_rgb_image_path = os.path.join(test_cat_rgb_dir, f'{category}_{img}')
                             new_gt_image_path = os.path.join(test_cat_gt_dir, f'{category}_{img}')
-                            org_pil_rgb_image.save(new_rgb_image_path)
-                            org_pil_gt_image.save(new_gt_image_path)
+                        org_pil_rgb_image.save(new_rgb_image_path)
+                        org_pil_gt_image.save(new_gt_image_path)
+
                 if 'good' in category :
                     category_dir = os.path.join(test_dir, category)
                     cat_rgb_dir = os.path.join(category_dir, 'rgb')
                     cat_gt_dir = os.path.join(category_dir, 'gt')
                     cat_images = os.listdir(cat_rgb_dir)
 
-                    cat_rgb_test_dir = os.path.join(test_ex_rgb_dir, category)
-                    cat_gt_test_dir = os.path.join(test_ex_gt_dir, category)
+                    test_cat_rgb_dir = os.path.join(test_ex_rgb_dir, category)
+                    test_cat_gt_dir = os.path.join(test_ex_gt_dir, category)
+
                     for cat_image in cat_images :
                         org_rgb_image_path = os.path.join(cat_rgb_dir, cat_image)
                         org_gt_image_path = os.path.join(cat_gt_dir, cat_image)
-                        new_rgb_image_path = os.path.join(cat_rgb_test_dir, cat_image)
-                        new_gt_image_path = os.path.join(cat_gt_test_dir, cat_image)
+                        new_rgb_image_path = os.path.join(test_cat_rgb_dir, cat_image)
+                        new_gt_image_path = os.path.join(test_cat_gt_dir, cat_image)
+
                         Image.open(org_rgb_image_path).resize((512,512)).save(new_rgb_image_path)
                         gt = Image.open(org_gt_image_path).resize((512,512)).convert('L')
                         gt.save(new_gt_image_path)
