@@ -428,14 +428,20 @@ def main(args) :
                                     x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
                                     # ------------------------------ pixel recon ------------------------------ #
                                     if args.pixel_copy :
-                                        if 'up_64' in mask_dict_avg.keys():
-                                            pixel_mask = mask_dict_avg['up_64'].to(z_latent.device)
-                                            # ----------------------------------------------------------------------
-                                            pixel_save_mask_np = pixel_mask.cpu().numpy()
-                                            pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
-                                            if prev_time == 0 :
-                                                pil_img = Image.fromarray(pixel_mask_img).resize((512, 512))
-                                                pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
+                                        for key in mask_dict_avg.keys():
+                                            if 'up' in key :
+                                                pixel_mask = mask_dict_avg[key].to(z_latent.device)
+                                                # ----------------------------------------------------------------------
+                                                pixel_save_mask_np = pixel_mask.cpu().numpy()
+                                                pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
+                                                pil_img_512 = Image.fromarray(pixel_mask_img).resize((512, 512))
+
+                                                pil_img_64 = Image.fromarray(pixel_mask_img).resize((64, 64))
+                                                from torchvision import transforms
+                                                pixel_mask =  transforms.ToTensor(pil_img_64)
+                                                if prev_time == 0 :
+                                                    pil_img_512.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
+
                                             # ----------------------------------------------------------------------
                                             pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0) # 1, 1, res, res
                                             pixel_mask = pixel_mask.repeat(1, 4, 1, 1) # 1, 4, res, res
