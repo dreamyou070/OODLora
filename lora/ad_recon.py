@@ -96,7 +96,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_unet_thred_{args.mask_thredhold}')
+    args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_'
+                                           f'binary_pixel_mask_{args.binary_pixel_mask}')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -338,6 +339,8 @@ def main(args) :
                                     # ----------------------------------------------------------------------
                                     pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0) # 1, 1, res, res
                                     pixel_mask = pixel_mask.repeat(1, 4, 1, 1) # 1, 4, res, res
+                                    if args.binary_pixel_mask :
+                                        pixel_mask = torch.where(pixel_mask < 0.3, 0, pixel_mask)
                                     x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
                             x_latent_dict[prev_time] = x_latent
                         pil_img = Image.fromarray(latent2image(x_latent, vae))
@@ -383,6 +386,7 @@ if __name__ == "__main__":
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
     parser.add_argument("--pixel_thredhold", type=float, default=0.1)
     parser.add_argument("--pixel_copy", action = 'store_true')
+    parser.add_argument("--binary_pixel_mask", action='store_true')
     parser.add_argument("--inner_iteration", type=int, default=10)
     parser.add_argument("--org_latent_attn_map_check", action = 'store_true')
     parser.add_argument("--other_token_preserving", action = 'store_true')
