@@ -311,6 +311,7 @@ def main(args) :
                                 # ------------------------------ reconstruction with background ------------------------------ #
                                 # (4) reconstruction
                                 x_latent_dict = {}
+                                print(f'final timestep : {time_steps[0]}')
                                 x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
                                 if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
                                     pixel_mask = mask_dict_avg['up_64'].to(latent.device)
