@@ -12,13 +12,16 @@ def main(args):
     for cat in cats:
         if cat != 'bagel' :
             cat_folder = os.path.join(base_folder, cat)
-            train_folder = os.path.join(cat_folder, 'train_ex/bad/10_good')
-            corrected_folder = os.path.join(cat_folder, 'train_ex/corrected/10_good')
-            images = os.listdir(train_folder)
-            for image in images:
-                pil = Image.fromarray(np.zeros((512,512)).astype(np.uint8))
-                trg_dir = os.path.join(corrected_folder, image)
-                pil.save(trg_dir)
+            train_folder = os.path.join(cat_folder, 'train')
+            test_folder = os.path.join(cat_folder, 'test')
+            validation_folder = os.path.join(cat_folder, 'validation')
+
+            train_ex_folder = os.path.join(cat_folder, 'train_ex')
+            test_ex_folder = os.path.join(cat_folder, 'test_ex')
+            os.makedirs(train_ex_folder, exist_ok=True)
+            os.makedirs(test_ex_folder, exist_ok=True)
+
+            
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

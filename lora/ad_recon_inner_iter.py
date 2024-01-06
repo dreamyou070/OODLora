@@ -344,6 +344,15 @@ def main(args) :
                                 print(f'pixel_mask : {pixel_mask.shape}')
                                 print(f'max value of pixel_mask : {pixel_mask.max()}')
                                 print(f'min value of pixel_mask : {pixel_mask.min()}')
+
+                                mask_res = pixel_mask.shape[-1]
+                                flatten_mask = torch.flatten(pixel_mask[:,0,:,:].squeeze())
+                                m = torch.nn.Softmax()
+                                flatten_mask = m(flatten_mask)
+                                pixel_mask = flatten_mask.reshape(mask_res,mask_res)
+                                pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)
+                                pixel_mask = pixel_mask.repeat(1, 4, 1, 1)
+
                                 for i in range(args.inner_iteration) :
                                     latent = iter_latent_dict[i]
                                     latent = org_vae_latent * pixel_mask + latent * (1 - pixel_mask)
