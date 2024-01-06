@@ -444,10 +444,8 @@ def main(args) :
                     trigger_score = score_dict[k]
                     record += f'| {k}={trigger_score.sum().item()} '
                 record = record.strip()
-                print(record)
                 records.append(record)
-                import time
-                time.sleep(1000)
+                
         record_txt_dir = os.path.join(record_output_dir, f'score_epoch_{model_epoch}.txt')
         with open(record_txt_dir, 'w') as f :
             for line in records :
