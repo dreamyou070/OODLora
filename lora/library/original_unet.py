@@ -1536,6 +1536,8 @@ class UNet2DConditionModel(nn.Module):
         # 3. down
         # encoder_hidden_states = [4,277,768]
         down_block_res_samples = (sample,)
+        print(f'after conv_in , len of down_block_res_samples : {len(down_block_res_samples)}')
+        i = 0
         for downsample_block in self.down_blocks:
             if downsample_block.has_cross_attention:
                 sample, res_samples = downsample_block(hidden_states=sample,
@@ -1546,6 +1548,8 @@ class UNet2DConditionModel(nn.Module):
             else:
                 sample, res_samples = downsample_block(hidden_states=sample, temb=emb)
             down_block_res_samples += res_samples
+            print(f'after {i}th downblock , len of down_block_res_samples : {len(down_block_res_samples)}')
+            i += 1
 
         # skip connectionにControlNetの出力を追加する
         if down_block_additional_residuals is not None:
