@@ -43,7 +43,7 @@ def main(args) :
 
         new_elem = [['', '', 'total']]
         for k in score_dict.keys():
-            new_elem[0].append(score_dict[k])
+            new_elem[0].append(str(score_dict[k]))
         # ---------------------------------------------- make csv file ---------------------------------------------- #
         with open(os.path.join(record_dir, f'score_epoch_{epoch_info}.csv'), 'w') as f:
             for elem in elems:
