@@ -109,13 +109,17 @@ def main(args):
                         org_pil_gt_image.save(new_gt_image_path)
 
                 if 'good' in category :
+
                     category_dir = os.path.join(test_dir, category)
+
                     cat_rgb_dir = os.path.join(category_dir, 'rgb')
                     cat_gt_dir = os.path.join(category_dir, 'gt')
                     cat_images = os.listdir(cat_rgb_dir)
 
                     test_cat_rgb_dir = os.path.join(test_ex_rgb_dir, category)
                     test_cat_gt_dir = os.path.join(test_ex_gt_dir, category)
+                    os.makedirs(test_cat_rgb_dir, exist_ok=True)
+                    os.makedirs(test_cat_gt_dir, exist_ok=True)
 
                     for cat_image in cat_images :
                         org_rgb_image_path = os.path.join(cat_rgb_dir, cat_image)
