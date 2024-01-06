@@ -350,15 +350,8 @@ def main(args) :
 
                     for i in range(args.inner_iteration) :
                         latent = iter_latent_dict[i]
-                        with torch.no_grad() :
-                            noise_pred = call_unet(unet, latent, 0, con, None, None)
-                            sub_latent = next_step(noise_pred, 0, latent, scheduler)
-                            sub_latent = org_vae_latent * pixel_mask + sub_latent * (1 - pixel_mask)
-                            noise_pred = call_unet(unet, sub_latent,
-                                                   inf_time[1], con, None, None)
-                            latent = prev_step(noise_pred, inf_time[1], sub_latent, scheduler)
-                            latent = org_vae_latent * pixel_mask + latent * (1 - pixel_mask)
-                            iter_latent_dict[i+1] = latent
+                        latent = org_vae_latent * pixel_mask + latent * (1 - pixel_mask)
+                        iter_latent_dict[i+1] = latent
                     with torch.no_grad() :
                         pil_img = Image.fromarray(latent2image(latent, vae))
                         pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
