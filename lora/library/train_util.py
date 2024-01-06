@@ -1054,7 +1054,7 @@ class BaseDataset(torch.utils.data.Dataset):
             parent, name = os.path.split(absolute_path)      # parent = 120_good , name = 000.png
             super_parent, class_name = os.path.split(parent) # class_name = 120_good
             super_super_parent, change = os.path.split(super_parent) # dir = 120
-            anormal_mask_dir = os.path.join(super_super_parent, 'mask', class_name, name)
+            anormal_mask_dir = os.path.join(super_super_parent, 'gt', class_name, name)
 
             anormal_mask_64 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
             anormal_mask_32 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
