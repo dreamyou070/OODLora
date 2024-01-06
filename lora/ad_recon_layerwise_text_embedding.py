@@ -440,7 +440,7 @@ def main(args) :
 
                                                 pil_img_64 = Image.fromarray(pixel_mask_img).resize((64, 64))
                                                 from torchvision import transforms
-                                                pixel_mask =  transforms.ToTensor(pil_img_64)
+                                                pixel_mask =  transforms.ToTensor()(pil_img_64)
                                                 if prev_time == 0 :
                                                     pil_img_512.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
                                                     up_key = True
