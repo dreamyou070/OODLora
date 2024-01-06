@@ -824,7 +824,7 @@ class NetworkTrainer:
                 # ------------------------------------------------------------------------------------------------------
                 # 1) total loss
                 current_loss = loss.detach().item()
-                if epoch == 0:
+                if epoch == args.start_epoch :
                     loss_list.append(current_loss)
                 else:
                     loss_total -= loss_list[step]

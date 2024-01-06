@@ -7,8 +7,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_module networks.lora \
   --network_dim 64 \
   --network_alpha 4 \
-  --network_weights ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_16_up_down_text_embedding/models/models/epoch-000008.safetensors \
-  --pretrained_training_text_embedding_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_16_up_down_text_embedding/text_embedding/models/training_text_embeddings-000008.pt \
+  --network_weights ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_16_up_down_text_embedding/models/epoch-000008.safetensors \
+  --pretrained_training_text_embedding_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_16_up_down_text_embedding/text_embedding/training_text_embeddings-000008.pt \
   --train_batch_size 1  \
   --optimizer_type AdamW \
   --lr_scheduler cosine_with_restarts \
