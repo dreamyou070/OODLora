@@ -16,9 +16,8 @@ def main(args) :
         time.sleep(1000)
         for line_ in content:
             line = line_.strip()
-            print(f'line: {line}')
-            #first_elem = ['epoch', 'class_name', 'img_name']
-            first_elem = ['class_name', 'img_name']
+            first_elem = ['epoch', 'class_name', 'img_name']
+            #first_elem = ['class_name', 'img_name']
             elem = [epoch_info]
             line = line_.strip()
             line_list = line.split(' | ')
@@ -45,6 +44,6 @@ def main(args) :
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
     parser.add_argument('--record_dir', type=str,
-                        default=r'../result/MVTec3D-AD_experiment/bagel/lora_training/res_8_mid_text_embedding/score_record')
+                        default=r'../result/MVTec3D-AD_experiment/bagel/lora_training/res_16_up_down_text_embedding/score_record')
     args = parser.parse_args()
     main(args)

@@ -445,7 +445,7 @@ def main(args) :
                     record += f'| {k}={trigger_score.sum().item()} '
                 record = record.strip()
                 records.append(record)
-                
+
         record_txt_dir = os.path.join(record_output_dir, f'score_epoch_{model_epoch}.txt')
         with open(record_txt_dir, 'w') as f :
             for line in records :
