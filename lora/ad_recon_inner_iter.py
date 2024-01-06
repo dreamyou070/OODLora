@@ -359,7 +359,7 @@ def main(args) :
                             iter_latent_dict[i+1] = latent
                     with torch.no_grad() :
                         pil_img = Image.fromarray(latent2image(latent, vae))
-                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_i{ext}'))
+                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
