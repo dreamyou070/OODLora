@@ -185,7 +185,15 @@ def main(args) :
             lora_epoch = 'last'
         text_embedding_dir = os.path.join(text_embedding_base_dir, f'training_text_embeddings-{lora_epoch}.pt')
 
-        if 'epoch-000006.safetensors' in weight :
+        flag = False
+        if args.recon_only_trg_epoch :
+            if args.trg_epoch in weight :
+                flag = True
+        else :
+            flag = True
+
+        if flag == True :
+
             if args.detail_64:
                 save_dir = os.path.join(output_dir, f'lora_epoch_{model_epoch}_res_64_change_more_lora')
             else :
@@ -432,8 +440,6 @@ def main(args) :
                                             pil_img = Image.fromarray(latent2image(x_latent, vae, return_type='np'))
                                             pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
                                     x_latent_dict[prev_time] = x_latent
-                                #pil_img = Image.fromarray(latent2image(x_latent, vae))
-                                #pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -480,6 +486,8 @@ if __name__ == "__main__":
     parser.add_argument('--train_mid', nargs='+', type=int, help='use which res layers in U-Net mid', default=[8])
     parser.add_argument('--train_up', nargs='+', type=int, help='use which res layers in U-Net up', default=[16,32,64])
     parser.add_argument("--detail_64", action='store_true')
+    parser.add_argument("--recon_only_trg_epoch", action='store_true')
+
 
     import ast
     def arg_as_list(arg):

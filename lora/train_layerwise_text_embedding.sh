@@ -24,7 +24,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --start_epoch 0 \
   --output_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_16_up_down_text_embedding_detail_64 \
   --network_train_unet_only \
-  --max_train_steps 48000 \
+  --max_train_steps 480000 \
   --use_attn_loss \
   --normal_activation_train \
   --cross_map_res [64,32,16] \
