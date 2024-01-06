@@ -428,7 +428,6 @@ def main(args) :
                                     x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
                                     # ------------------------------ pixel recon ------------------------------ #
                                     if args.pixel_copy :
-                                        print(f'keys in mask_dict_avg : {mask_dict_avg.keys()}')
                                         for key in mask_dict_avg.keys():
                                             up_key = False
                                             if 'up' in key :
@@ -450,7 +449,10 @@ def main(args) :
                                                     pil_img_512.save(
                                                         os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
                                                 # ----------------------------------------------------------------------
-                                                pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0) # 1, 1, res, res
+                                                if pixel_mask.dim() == 2:
+                                                    pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)
+                                                if pixel_mask.dim() == 3:
+                                                    pixel_mask = pixel_mask.unsqueeze(0) # 1, res, res
                                                 pixel_mask = pixel_mask.repeat(1, 4, 1, 1) # 1, 4, res, res
                                                 x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
                                                 # ------------------------------- latent2img ------------------------------- #
