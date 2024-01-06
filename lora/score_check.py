@@ -41,3 +41,4 @@ if __name__ == '__main__' :
     parser.add_argument('--record_dir', type=str,
                         default=r'../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_up_down_text_embedding/score_record')
     args = parser.parse_args()
+    main(args)
