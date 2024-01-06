@@ -345,6 +345,7 @@ def main(args) :
                                     save_pil_mask = Image.fromarray(save_mask).resize((512, 512)).convert('RGB')
 
                                     save_pil_mask.save(os.path.join(trg_img_output_dir, f'{name}_mask_{prev_time}{ext}'))
+                                    pil_img = Image.fromarray(latent2image(x_latent, vae))
                                     masked_pil_img = Image.blend(pil_img, save_pil_mask, 0.8)
                                     masked_pil_img.save(os.path.join(trg_img_output_dir, f'{name}_masked_recon_{prev_time}{ext}'))
 
