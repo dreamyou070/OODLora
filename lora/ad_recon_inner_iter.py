@@ -232,7 +232,7 @@ def main(args) :
                     os.makedirs(trg_img_output_dir, exist_ok=True)
 
                     test_img_dir = os.path.join(image_folder, test_image)
-                    shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
+                    Image.open(test_img_dir).convert('RGB').resize(512,512).save(test_img_dir)
 
                     mask_img_dir = os.path.join(mask_folder, test_image)
                     shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
@@ -336,14 +336,14 @@ def main(args) :
                         pil_img = Image.fromarray(latent2image(x_latent, vae))
                         pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
                         # ------------------------------ generate new latent ------------------------------ #
-                        #iter_latent_dict = {}
-                        #iter_latent_dict[0] = x_latent
-                        #for i in range(args.inner_iteration) :
-                        #    latent = iter_latent_dict[i]
-                        #    latent = org_vae_latent * pixel_mask + latent * (1 - pixel_mask)
-                        #    iter_latent_dict[i+1] = latent
-                        #pil_img = Image.fromarray(latent2image(latent, vae))
-                        #pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
+                        iter_latent_dict = {}
+                        iter_latent_dict[0] = x_latent
+                        for i in range(args.inner_iteration) :
+                            latent = iter_latent_dict[i]
+                            latent = org_vae_latent * pixel_mask + latent * (1 - pixel_mask)
+                            iter_latent_dict[i+1] = latent
+                        pil_img = Image.fromarray(latent2image(latent, vae))
+                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
 
 
 if __name__ == "__main__":
