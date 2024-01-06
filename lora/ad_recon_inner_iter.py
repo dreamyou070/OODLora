@@ -232,7 +232,7 @@ def main(args) :
                     os.makedirs(trg_img_output_dir, exist_ok=True)
 
                     test_img_dir = os.path.join(image_folder, test_image)
-                    Image.open(test_img_dir).convert('RGB').resize(512,512).save(test_img_dir)
+                    Image.open(test_img_dir).convert('RGB').resize((512,512)).save(test_img_dir)
 
                     mask_img_dir = os.path.join(mask_folder, test_image)
                     shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
