@@ -98,7 +98,6 @@ def main(args):
                         org_pil_gt_image = Image.open(org_gt_image_path).convert('L').resize((512,512))
 
                         if i in train_index:
-                            print(f'anomal to tain')
                             new_rgb_image_path = os.path.join(train_cat_rgb_dir, f'{category}_{img}')
                             new_gt_image_path = os.path.join(train_cat_gt_dir, f'{category}_{img}')
 
