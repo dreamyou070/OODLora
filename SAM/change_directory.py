@@ -9,13 +9,13 @@ def main(args):
 
     print(f'step 1. prepare model')
 
-    
+
 
     print(f'step 2. prepare images')
     base_folder = args.base_folder
     cats = os.listdir(base_folder)
     for cat in cats:
-        if cat == 'carrot':
+        if cat == args.trg_cat :
             cat_dir = os.path.join(base_folder, f'{cat}')
 
             train_dir = os.path.join(cat_dir, 'train')
@@ -123,5 +123,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
+    parser.add_argument('--trg_cat', type=str, default='carrot')
     args = parser.parse_args()
     main(args)
