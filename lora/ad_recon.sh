@@ -22,4 +22,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --num_ddim_steps 50 \
   --cross_map_res [64] \
   --pixel_copy \
-  --inner_iter 1
+  --inner_iter 2
