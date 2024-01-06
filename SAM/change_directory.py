@@ -76,8 +76,8 @@ def main(args):
             for category in categories:
                 if 'good' not in category:
                     category_dir = os.path.join(test_dir, category)
-                    train_cat_rgb_dir = os.path.join(train_ex_dir, f'50_{category}')
-                    train_cat_gt_dir = os.path.join(train_ex_dir, f'50_{category}')
+                    train_cat_rgb_dir = os.path.join(train_ex_rgb_dir, f'50_{category}')
+                    train_cat_gt_dir = os.path.join(train_ex_gt_dir, f'50_{category}')
                     os.makedirs(train_cat_rgb_dir, exist_ok=True)
                     os.makedirs(train_cat_gt_dir, exist_ok=True)
                     test_cat_rgb_dir = os.path.join(test_ex_rgb_dir, category)
