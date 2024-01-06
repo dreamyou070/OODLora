@@ -340,8 +340,6 @@ def main(args) :
                                     attn_stores = controller.step_store
                                     attn_dict = {}
                                     score_dict = {}
-                                    score_dict['class_name'] = class_name
-                                    score_dict['image_name'] = test_image
                                     for layer_name in attn_stores :
                                         attn = attn_stores[layer_name][0].squeeze() # head, pix_num
                                         res = int(attn.shape[1] ** 0.5)
