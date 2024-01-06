@@ -97,7 +97,8 @@ def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
     args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_'
-                                           f'not_using_crossattn_mask')
+                                           f'inner_iter_{args.inner_iteration}')
+    print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -396,7 +397,6 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
     parser.add_argument("--scheduler_timesteps", type=int, default=1000)
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
-    parser.add_argument("--mask_thredhold", type=float, default = 0.5)
     parser.add_argument("--pixel_copy", action = 'store_true')
     parser.add_argument("--inner_iteration", type=int, default=10)
     parser.add_argument('--train_down', nargs='+', type=int, help='use which res layers in U-Net down', default=[])
