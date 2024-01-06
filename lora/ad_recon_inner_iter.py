@@ -255,7 +255,7 @@ def main(args) :
                         #mask_dict = {}
                         mask_dict_avg = {}
                         back_dict[0] = latent
-                        noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
+                        noise_pred = call_unet(unet, latent, 0, con[:,:3,:], [[1]], None)
                         attn_stores = controller.step_store
                         controller.reset()
                         mask_dict_avg_sub = {}
