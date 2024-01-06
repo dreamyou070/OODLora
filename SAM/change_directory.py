@@ -51,8 +51,8 @@ def main(args):
             for image in images:
                 org_rgb_image_path = os.path.join(good_train_dir, image)
                 org_gt_image_path = os.path.join(sam_train_dir, image)
-                new_rgb_image_path = os.path.join(train_ex_rgb_dir, f'train_{image}')
-                new_gt_image_path = os.path.join(train_ex_gt_dir, f'train_{image}')
+                new_rgb_image_path = os.path.join(train_ex_good_rgb_dir, f'train_{image}')
+                new_gt_image_path = os.path.join(train_ex_good_gt_dir, f'train_{image}')
                 Image.open(org_rgb_image_path).resize((512,512)).save(new_rgb_image_path)
                 gt = Image.open(org_gt_image_path).resize((512,512)).convert('L')
                 gt.save(new_gt_image_path)
@@ -65,8 +65,8 @@ def main(args):
             for image in val_images:
                 org_rgb_image_path = os.path.join(good_validation_dir, image)
                 org_gt_image_path = os.path.join(sam_validation_dir, image)
-                new_rgb_image_path = os.path.join(train_ex_rgb_dir, f'val_{image}')
-                new_gt_image_path = os.path.join(train_ex_gt_dir, f'val_{image}')
+                new_rgb_image_path = os.path.join(train_ex_good_rgb_dir, f'val_{image}')
+                new_gt_image_path = os.path.join(train_ex_good_gt_dir, f'val_{image}')
                 Image.open(org_rgb_image_path).resize((512,512)).save(new_rgb_image_path)
                 gt = Image.open(org_gt_image_path).resize((512,512)).convert('L')
                 gt.save(new_gt_image_path)
