@@ -232,7 +232,8 @@ def main(args) :
                     os.makedirs(trg_img_output_dir, exist_ok=True)
 
                     test_img_dir = os.path.join(image_folder, test_image)
-                    Image.open(test_img_dir).convert('RGB').resize((512,512)).save(test_img_dir)
+                    Image.open(test_img_dir).convert('RGB').resize((512,512)).save(os.path.join(trg_img_output_dir,
+                                                                                                f'{name}_org{ext}'))
 
                     mask_img_dir = os.path.join(mask_folder, test_image)
                     shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
@@ -344,7 +345,6 @@ def main(args) :
                             iter_latent_dict[i+1] = latent
                         pil_img = Image.fromarray(latent2image(latent, vae))
                         pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
