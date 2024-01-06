@@ -97,7 +97,7 @@ def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
     args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_'
-                                           f'inner_iter_{args.inner_iteration}')
+                                           f'not_using_crossattn_mask')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -341,23 +341,24 @@ def main(args) :
                                     pixel_mask = pixel_mask.repeat(1, 4, 1, 1) # 1, 4, res, res
                                     x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
                             x_latent_dict[prev_time] = x_latent
-                    pil_img = Image.fromarray(latent2image(x_latent, vae))
-                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_before_innerloop{ext}'))
-                    recon_latent_dict = {}
-                    recon_latent_dict[0] = x_latent
+                        pil_img = Image.fromarray(latent2image(x_latent, vae))
+                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
+                    # ------------------------------ generate new latent ------------------------------ #
+                    iter_latent_dict = {}
+                    iter_latent_dict[0] = x_latent
+
                     for i in range(args.inner_iteration) :
+                        latent = iter_latent_dict[i]
                         with torch.no_grad() :
-                            latent = recon_latent_dict[i]
                             noise_pred = call_unet(unet, latent, 0, con, None, None)
-                            latent = next_step(noise_pred, 0, latent, scheduler)
-                            noise_pred = call_unet(unet, latent, 0, con, None, None)
-                            latent = prev_step(noise_pred, 0, latent, scheduler)
-                            latent = org_vae_latent * pixel_mask + latent * (1 - pixel_mask)
-                            recon_latent_dict[i+1] = latent
-                    pil_img = Image.fromarray(latent2image(latent, vae))
-                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_innerloop_{i}{ext}'))
-
-
+                            sub_latent = prev_step(noise_pred, 0, latent, scheduler)
+                            noise_pred = call_unet(unet, sub_latent,
+                                                   inf_time[1], con, None, None)
+                            latent = prev_step(noise_pred, inf_time[1], sub_latent, scheduler)
+                            iter_latent_dict[i+1] = latent
+                    with torch.no_grad() :
+                        pil_img = Image.fromarray(latent2image(latent, vae))
+                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_i{ext}'))
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
@@ -396,11 +397,8 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_timesteps", type=int, default=1000)
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
-    parser.add_argument("--pixel_thredhold", type=float, default=0.1)
     parser.add_argument("--pixel_copy", action = 'store_true')
     parser.add_argument("--inner_iteration", type=int, default=10)
-    parser.add_argument("--org_latent_attn_map_check", action = 'store_true')
-    parser.add_argument("--other_token_preserving", action = 'store_true')
     parser.add_argument('--train_down', nargs='+', type=int, help='use which res layers in U-Net down', default=[])
     parser.add_argument('--train_mid', nargs='+', type=int, help='use which res layers in U-Net mid', default=[8])
     parser.add_argument('--train_up', nargs='+', type=int, help='use which res layers in U-Net up', default=[16,32,64])
