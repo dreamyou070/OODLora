@@ -34,9 +34,9 @@ def main(args) :
                 first_elem.append(name)
                 elem.append(score)
                 if name not in score_dict.keys():
-                    score_dict[name] = score
+                    score_dict[name] = float(score.strip())
                 else :
-                    score_dict[name] += score
+                    score_dict[name] += float(score.strip())
             if first_elem not in elems:
                 elems.append(first_elem)
             elems.append(elem)
