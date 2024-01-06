@@ -1132,6 +1132,7 @@ if __name__ == "__main__":
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--use_attn_loss", action='store_true')
     parser.add_argument("--resolution_wise_attn_loss", action='store_true')
+    parser.add_argument("--pretrained_training_text_embedding_dir", type=str)
 
 
     import ast
