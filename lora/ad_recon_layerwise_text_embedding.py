@@ -487,6 +487,7 @@ if __name__ == "__main__":
     parser.add_argument('--train_up', nargs='+', type=int, help='use which res layers in U-Net up', default=[16,32,64])
     parser.add_argument("--detail_64", action='store_true')
     parser.add_argument("--recon_only_trg_epoch", action='store_true')
+    parser.add_argument("--trg_epoch", type=str)
 
 
     import ast
