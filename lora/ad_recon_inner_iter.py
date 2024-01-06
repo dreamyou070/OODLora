@@ -352,7 +352,7 @@ def main(args) :
                             latent = next_step(noise_pred, 0, latent, scheduler)
                             noise_pred = call_unet(unet, latent, 0, con, None, None)
                             latent = prev_step(noise_pred, 0, latent, scheduler)
-                            latent = org_vae_latent * pixel_mask + org_vae_latent * (1 - pixel_mask)
+                            latent = org_vae_latent * pixel_mask + latent * (1 - pixel_mask)
                             recon_latent_dict[i+1] = latent
                     pil_img = Image.fromarray(latent2image(latent, vae))
                     pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_innerloop_{i}{ext}'))
