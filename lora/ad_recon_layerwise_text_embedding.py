@@ -453,6 +453,7 @@ def main(args) :
                                                     pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)
                                                 if pixel_mask.dim() == 3:
                                                     pixel_mask = pixel_mask.unsqueeze(0) # 1, res, res
+                                                pixel_mask = pixel_mask.where(pixel_mask > 0.5, 1, 0)
                                                 pixel_mask = pixel_mask.repeat(1, 4, 1, 1).to(x_latent.device) # 1, 4, res, res
                                                 x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
                                                 # ------------------------------- latent2img ------------------------------- #
