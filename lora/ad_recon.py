@@ -57,10 +57,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                     z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0) # head, pix_num, sen_len
                     x_attn_probs = z_attn_probs * mask + x_attn_probs * (1 - mask)
                     attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
-                else :
-                    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0)  # head, pix_num, sen_len
-                    x_attn_probs = z_attn_probs
-                    attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
+                #else :
+                #    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0)  # head, pix_num, sen_len
+                #    x_attn_probs = z_attn_probs
+                #    attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
 
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -242,6 +242,9 @@ def main(args) :
                     with torch.no_grad():
                         inf_time = inference_times.tolist()
                         inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                        if '999' not in inf_time:
+                            inf_time.append(999)
+                        print(f'inf_time : {inf_time}')
                         back_dict = {}
                         latent = org_vae_latent
                         with torch.no_grad():
@@ -249,49 +252,48 @@ def main(args) :
                             mask_dict_avg = {}
                             for i, t in enumerate(inf_time[:-1]):
                                 if i == 0 :
-                                    next_time = inf_time[i + 1]
-                                    if next_time <= args.final_noising_time:
-                                        back_dict[int(t)] = latent
-                                        from utils.model_utils import call_unet
-                                        noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
-                                        attn_stores = controller.step_store
-                                        controller.reset()
-                                        mask_dict_avg_sub = {}
-                                        for layer_name in attn_stores:
-                                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                                            res = int(attn.shape[1] ** 0.5)
-                                            if res in args.cross_map_res:
-                                                if 'down' in layer_name:
-                                                    key_name = f'down_{res}'
-                                                elif 'up' in layer_name:
-                                                    key_name = f'up_{res}'
-                                                else:
-                                                    key_name = f'mid_{res}'
-                                                if key_name not in mask_dict_avg_sub :
-                                                    mask_dict_avg_sub[key_name] = []
-                                                mask_dict_avg_sub[key_name].append(attn)
+                                    back_dict[int(t)] = latent
+                                    from utils.model_utils import call_unet
+                                    noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
+                                    attn_stores = controller.step_store
+                                    controller.reset()
+                                    mask_dict_avg_sub = {}
+                                    for layer_name in attn_stores:
+                                        attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                                        res = int(attn.shape[1] ** 0.5)
+                                        if res in args.cross_map_res:
+                                            if 'down' in layer_name:
+                                                key_name = f'down_{res}'
+                                            elif 'up' in layer_name:
+                                                key_name = f'up_{res}'
+                                            else:
+                                                key_name = f'mid_{res}'
+                                            if key_name not in mask_dict_avg_sub :
+                                                mask_dict_avg_sub[key_name] = []
+                                            mask_dict_avg_sub[key_name].append(attn)
 
-                                                cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
-                                                h = cls_score.shape[0]
-                                                trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
-                                                trigger_score = trigger_score.reshape(h, res, res) # head, res, res
-                                                trigger_score = trigger_score.mean(dim=0) # res, res
-                                                trigger = trigger_score / trigger_score.max()
-                                                anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
-                                                mask_dict[layer_name] = anormal_map
-
-                                        # attn_dict
-                                        for key_name in mask_dict_avg_sub:
-                                            attn_list = mask_dict_avg_sub[key_name]
-                                            attn = torch.cat(attn_list, dim=0)
-                                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
-                                            res = int(trigger_score.shape[1] ** 0.5)
-                                            h = trigger_score.shape[0]
+                                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
+                                            h = cls_score.shape[0]
                                             trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
-                                            trigger_score = trigger_score.reshape( h, res, res) # head, res, res
-                                            trigger_score = trigger_score.mean(dim=0)           # res, res
+                                            trigger_score = trigger_score.reshape(h, res, res) # head, res, res
+                                            trigger_score = trigger_score.mean(dim=0) # res, res
                                             trigger = trigger_score / trigger_score.max()
-                                            mask_dict_avg[key_name] = trigger                   # up_64
+                                            anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
+                                            mask_dict[layer_name] = anormal_map
+
+                                    # attn_dict
+                                    for key_name in mask_dict_avg_sub:
+                                        """ averaging values """
+                                        attn_list = mask_dict_avg_sub[key_name]
+                                        attn = torch.cat(attn_list, dim=0)
+                                        cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
+                                        res = int(trigger_score.shape[1] ** 0.5)
+                                        h = trigger_score.shape[0]
+                                        trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
+                                        trigger_score = trigger_score.reshape( h, res, res) # head, res, res
+                                        trigger_score = trigger_score.mean(dim=0)           # res, res
+                                        trigger = trigger_score / trigger_score.max()
+                                        mask_dict_avg[key_name] = trigger                   # up_64
 
                     # ------------------------------ generate background latent ------------------------------ #
                     from utils.scheduling_utils import next_step
@@ -301,15 +303,12 @@ def main(args) :
                         with torch.no_grad():
                             for i, t in enumerate(inf_time[:-1]):
                                 time_steps.append(t)
-                                next_time = inf_time[i + 1]
-                                if next_time <= args.final_noising_time:
-                                    back_dict[int(t)] = latent
-                                    time_steps.append(t)
-                                    noise_pred = call_unet(unet, latent, t, inv_c, None, None)
-                                    latent = next_step(noise_pred, int(t), latent, scheduler)
-                        if args.final_noising_time not in back_dict.keys():
-                            back_dict[args.final_noising_time] = latent
-                            time_steps.append(args.final_noising_time)
+                                back_dict[int(t)] = latent
+                                time_steps.append(t)
+                                noise_pred = call_unet(unet, latent, t, inv_c, None, None)
+                                latent = next_step(noise_pred, int(t), latent, scheduler)
+                        back_dict[inf_time[-1]] = latent
+                        time_steps.append(inf_time[-1])
                     time_steps.reverse()
 
                     # ------------------------------ generate new latent ------------------------------ #
