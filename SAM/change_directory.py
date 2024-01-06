@@ -23,13 +23,16 @@ def main(args):
             validation_dir = os.path.join(cat_dir, 'validation')
 
             train_ex_dir = os.path.join(cat_dir, 'train_ex')
-            test_ex_dir = os.path.join(cat_dir, 'test_ex')
+
             train_ex_rgb_dir = os.path.join(train_ex_dir, 'rgb')
             train_ex_gt_dir = os.path.join(train_ex_dir, 'gt')
-            test_ex_rgb_dir = os.path.join(test_ex_dir, 'rgb')
-            test_ex_gt_dir = os.path.join(test_ex_dir, 'gt')
             os.makedirs(train_ex_rgb_dir, exist_ok=True)
             os.makedirs(train_ex_gt_dir, exist_ok=True)
+
+            test_ex_dir = os.path.join(cat_dir, 'test_ex')
+
+            test_ex_rgb_dir = os.path.join(test_ex_dir, 'rgb')
+            test_ex_gt_dir = os.path.join(test_ex_dir, 'gt')
             os.makedirs(test_ex_rgb_dir, exist_ok=True)
             os.makedirs(test_ex_gt_dir, exist_ok=True)
 
@@ -37,11 +40,14 @@ def main(args):
             # (1) train
             good_train_dir = os.path.join(train_dir, 'good/rgb')
             sam_train_dir = os.path.join(train_dir, f'good/gt')
-            train_ex_good_rgb_dir = os.path.join(test_ex_dir, f'rgb/10_good')
-            train_ex_good_gt_dir = os.path.join(test_ex_dir, f'gt/10_good')
+
+            train_ex_good_rgb_dir = os.path.join(train_ex_dir, f'rgb/10_good')
+            train_ex_good_gt_dir = os.path.join(train_ex_dir, f'gt/10_good')
             os.makedirs(train_ex_good_rgb_dir, exist_ok=True)
             os.makedirs(train_ex_good_gt_dir, exist_ok=True)
+
             images = os.listdir(good_train_dir)
+
             for image in images:
                 org_rgb_image_path = os.path.join(good_train_dir, image)
                 org_gt_image_path = os.path.join(sam_train_dir, image)
