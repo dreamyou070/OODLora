@@ -736,7 +736,20 @@ class NetworkTrainer:
                                                     batch,
                                                     weight_dtype, 1, None)
 
-                    if batch['train_class_list'][0] == 1 :
+                    if args.only_normal_training :
+
+                        if batch['train_class_list'][0] == 1 :
+                            if args.v_parameterization:
+                                target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                            else:
+                                target = noise
+                            loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
+                            loss = loss.mean([1, 2, 3])
+                            loss_weights = batch["loss_weights"]  # 各sampleごとのweight
+                            loss = loss * loss_weights
+                            task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                            loss = task_loss * args.task_loss_weight
+                    else :
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
@@ -785,10 +798,13 @@ class NetworkTrainer:
                                         activation_loss = activation_loss / (res*res)
                                     attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
-                        if batch['train_class_list'][0] == 1:
-                            loss = loss + args.anormal_weight * attn_loss
+                        if args.only_normal_training :
+                            if batch['train_class_list'][0] == 1:
+                                loss = loss + args.anormal_weight * attn_loss
+                            else :
+                                loss = args.anormal_weight * attn_loss
                         else :
-                            loss = args.anormal_weight * attn_loss
+                            loss = loss + args.anormal_weight * attn_loss
 
                         if is_main_process and batch['train_class_list'][0] == 1 :
                             loss_dict["loss/normal_activation"] = attn_loss.item()
@@ -1139,6 +1155,8 @@ if __name__ == "__main__":
     parser.add_argument("--use_attn_loss", action='store_true')
     parser.add_argument("--resolution_wise_attn_loss", action='store_true')
     parser.add_argument("--pretrained_training_text_embedding_dir", type=str)
+    parser.add_argument("--only_normal_training", action='store_true')
+
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)

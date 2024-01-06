@@ -323,6 +323,7 @@ def main(args) :
                                             next_time = inf_time[i + 1]
                                             if next_time <= args.final_noising_time:
                                                 back_dict[int(t)] = latent
+
                                                 from utils.model_utils import call_unet
 
                                                 cls_embedding = con[:, 0, :]
@@ -343,6 +344,7 @@ def main(args) :
                                                     attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                                                     res = int(attn.shape[1] ** 0.5)
                                                     if res in args.cross_map_res:
+
                                                         if 'down' in layer_name:
                                                             key_name = f'down_{res}'
                                                         elif 'up' in layer_name:
@@ -369,6 +371,8 @@ def main(args) :
                                                         if 'down_blocks_0' in mask_dict_key:
                                                             sub_key_name = mask_dict_key.replace('down_blocks_0', 'up_blocks_3')
                                                             mask_dict[mask_dict_key] = mask_dict[sub_key_name]
+
+
 
                                                 # attn_dict
                                                 for key_name in mask_dict_avg_sub:
