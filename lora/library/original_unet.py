@@ -983,7 +983,6 @@ class CrossAttnDownBlock2D(nn.Module):
                                      timestep=temb).sample
 
             output_states += (hidden_states,)
-            j += 1
 
         if self.downsamplers is not None:
             for downsampler in self.downsamplers:
