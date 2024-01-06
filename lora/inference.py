@@ -152,6 +152,9 @@ def main(args) :
         invers_text_encoders = invers_text_encoder if isinstance(invers_text_encoder, list) else [invers_text_encoder]
         text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
                                                                                               unet_use_linear_projection_in_v2=False, )
+        from diffusers import UNet2DConditionModel
+        original_config = unet.config
+        unet = UNet2DConditionModel.from_config(original_config)
         print(f'unet : {unet.__class__.__name__}')
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
         vae.to(accelerator.device, dtype=vae_dtype)
