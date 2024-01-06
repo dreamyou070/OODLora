@@ -3,6 +3,7 @@ import os, argparse
 def main(args) :
 
     files = os.listdir(args.record_dir)
+    print(f'files: {files}')
 
     for file in files:
         file_name, file_ext = os.path.splitext(file)
