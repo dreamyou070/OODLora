@@ -352,6 +352,8 @@ def main(args) :
                                 pixel_mask = flatten_mask.reshape(mask_res,mask_res)
                                 pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)
                                 pixel_mask = pixel_mask.repeat(1, 4, 1, 1)
+                                print(f'after softmax, max value of pixel_mask : {pixel_mask.max()}')
+                                print(f'after softmax, min value of pixel_mask : {pixel_mask.min()}')
 
                                 for i in range(args.inner_iteration) :
                                     latent = iter_latent_dict[i]
