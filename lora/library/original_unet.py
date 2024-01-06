@@ -1597,6 +1597,7 @@ class UNet2DConditionModel(nn.Module):
                                         temb=emb,
                                         res_hidden_states_tuple=res_samples,
                                         upsample_size=upsample_size)
+        print(f'after up , len of down_block_res_samples : {len(down_block_res_samples)}')
         # 6. post-process
         sample = self.conv_norm_out(sample)
         sample = self.conv_act(sample)
