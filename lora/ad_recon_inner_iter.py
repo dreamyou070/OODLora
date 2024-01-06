@@ -97,7 +97,7 @@ def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
     args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_'
-                                           f'not_using_crossattn_mask')
+                                           f'inner_iter_{args.inner_iteration}')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -341,8 +341,21 @@ def main(args) :
                                     pixel_mask = pixel_mask.repeat(1, 4, 1, 1) # 1, 4, res, res
                                     x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
                             x_latent_dict[prev_time] = x_latent
-                        pil_img = Image.fromarray(latent2image(x_latent, vae))
-                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
+                    pil_img = Image.fromarray(latent2image(x_latent, vae))
+                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_before_innerloop{ext}'))
+                    recon_latent_dict = {}
+                    recon_latent_dict[0] = x_latent
+                    for i in range(args.inner_iteration) :
+                        latent = recon_latent_dict[i]
+                        noise_pred = call_unet(unet, latent, 0, con, None, None)
+                        latent = next_step(noise_pred, 0, latent, scheduler)
+                        noise_pred = call_unet(unet, latent, 0, con, None, None)
+                        latent = prev_step(noise_pred, 0, latent, scheduler)
+                        latent = org_vae_latent * pixel_mask + org_vae_latent * (1 - pixel_mask)
+                        recon_latent_dict[i+1] = latent
+                    pil_img = Image.fromarray(latent2image(latent, vae))
+                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_innerloop_{i}{ext}'))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
