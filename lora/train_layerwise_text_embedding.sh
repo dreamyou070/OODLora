@@ -21,12 +21,13 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --seed 42 \
   --task_loss_weight 1.0 \
   --class_caption 'good' \
-  --start_epoch 0 \
-  --output_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_16_up_down_text_embedding_detail_64 \
+  --start_epoch 8 \
+  --output_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_16_up_down_text_embedding \
+  --network_weights ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_16_up_down_text_embedding/models/epoch-000008.safetensors \
+  --pretrained_training_text_embedding_dir ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_32_16_up_down_text_embedding/text_embedding/training_text_embeddings-000008.pt \
   --network_train_unet_only \
   --max_train_steps 480000 \
   --use_attn_loss \
   --normal_activation_train \
   --cross_map_res [64,32,16] \
-  --trg_position "['up','down']" \
-  --detail_64
+  --trg_position "['up','down']"

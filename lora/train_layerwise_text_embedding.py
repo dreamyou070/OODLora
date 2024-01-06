@@ -681,7 +681,7 @@ class NetworkTrainer:
             current_epoch.value = epoch + 1
             metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
-
+            """
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
@@ -848,10 +848,12 @@ class NetworkTrainer:
                 logs = {"loss/epoch": loss_total / len(loss_list), }
                 accelerator.log(logs, step=epoch + 1)
             accelerator.wait_for_everyone()
+            """
 
             # 指定エポックごとにモデルを保存
             if args.save_every_n_epochs is not None:
-                saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < num_train_epochs
+                print(f'saving model ane text embedding ... ')
+                saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < args.start_epoch+num_train_epochs
                 if is_main_process and saving:
                     ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
                     save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch + 1)
