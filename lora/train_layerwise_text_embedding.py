@@ -1119,22 +1119,16 @@ if __name__ == "__main__":
                         help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率", )
     parser.add_argument("--no_half_vae", action="store_true",
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
-
     parser.add_argument("--mask_threshold", type=float, default=0.5)
     parser.add_argument("--normal_activation_train", action='store_true')
-    parser.add_argument("--contrastive_eps", type=float, default=0.00005)
     parser.add_argument("--resume_lora_training", action="store_true", )
     parser.add_argument("--start_epoch", type=int, default=0)
     parser.add_argument("--valid_data_dir", type=str)
     parser.add_argument("--task_loss_weight", type=float, default=0.5)
     parser.add_argument("--anormal_training", action='store_true')
-    parser.add_argument("--truncate_pad", action='store_true')
-    parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--use_attn_loss", action='store_true')
     parser.add_argument("--resolution_wise_attn_loss", action='store_true')
     parser.add_argument("--pretrained_training_text_embedding_dir", type=str)
-
-
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
@@ -1145,7 +1139,6 @@ if __name__ == "__main__":
     parser.add_argument('--anormal_weight', type=float, default=1.0)
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--detail_64", action="store_true", )
-
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
