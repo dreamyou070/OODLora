@@ -692,13 +692,13 @@ class NetworkTrainer:
                             loss = args.anormal_weight * attn_loss
 
                         if is_main_process and batch['train_class_list'][0] == 1 :
+                            loss_dict["task_loss"] = task_loss.item()
                             loss_dict["loss/normal_activation"] = attn_loss.item()
                         elif is_main_process and batch['train_class_list'][0] == 0 :
                             loss_dict["loss/anormal_activation_on_normal"] = attn_loss.item()
 
 
-                    if is_main_process:
-                        loss_dict["task_loss"] = task_loss.item()
+
 
                     accelerator.backward(loss)
 
