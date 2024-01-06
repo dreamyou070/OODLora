@@ -675,7 +675,7 @@ class NetworkTrainer:
             gradient_dict = {}
             loss_dict = {}
 
-        for epoch in range(args.start_epoch, num_train_epochs, 1):
+        for epoch in range(args.start_epoch, args.start_epoch+num_train_epochs, 1):
 
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
             current_epoch.value = epoch + 1
