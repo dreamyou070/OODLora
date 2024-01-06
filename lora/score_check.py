@@ -27,19 +27,32 @@ def main(args) :
             elem.append(class_name)
             elem.append(img_name)
             score_list = line_list[2:]
+            score_dict = {}
             for score_elem in score_list:
                 name = score_elem.split('=')[0]
                 score = score_elem.split('=')[1]
                 first_elem.append(name)
                 elem.append(score)
+                if name not in score_dict.keys():
+                    score_dict[name] = score
+                else :
+                    score_dict[name] += score
             if first_elem not in elems:
                 elems.append(first_elem)
             elems.append(elem)
+        new_elem = [['', '', 'total']]
+        for k in score_dict.keys():
+            new_elem[0].append(score_dict[k])
         # ---------------------------------------------- make csv file ---------------------------------------------- #
         with open(os.path.join(record_dir, f'score_epoch_{epoch_info}.csv'), 'w') as f:
             for elem in elems:
                 f.write(','.join(elem))
                 f.write('\n')
+        with open(os.path.join(record_dir, f'score_epoch_{epoch_info}.csv'), 'a') as f:
+            for elem in new_elem:
+                f.write(','.join(elem))
+                f.write('\n')
+
 
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
