@@ -449,7 +449,7 @@ def main(args) :
                                                     pil_img_512.save(
                                                         os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
                                                 # ----------------------------------------------------------------------
-                                                pixel_mask = pixel_mask.where(pixel_mask > 0.5, 1, 0)
+                                                pixel_mask = torch.where(pixel_mask > 0.5, 1, 0)
                                                 if pixel_mask.dim() == 2:
                                                     pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)
                                                 if pixel_mask.dim() == 3:
