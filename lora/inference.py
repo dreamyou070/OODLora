@@ -154,7 +154,7 @@ def main(args) :
                                                                                               unet_use_linear_projection_in_v2=False, )
         from diffusers import UNet2DConditionModel
         original_config = unet.config
-        unet = UNet2DConditionModel.from_config(original_config)
+        unet = UNet2DConditionModel.load_config(original_config)
         print(f'unet : {unet.__class__.__name__}')
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
         vae.to(accelerator.device, dtype=vae_dtype)
