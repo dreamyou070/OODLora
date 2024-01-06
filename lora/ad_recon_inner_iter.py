@@ -345,19 +345,22 @@ def main(args) :
                                 print(f'max value of pixel_mask : {pixel_mask.max()}')
                                 print(f'min value of pixel_mask : {pixel_mask.min()}')
 
-                                mask_res = pixel_mask.shape[-1]
-                                flatten_mask = torch.flatten(pixel_mask[:,0,:,:].squeeze())
-                                m = torch.nn.Softmax()
-                                flatten_mask = m(flatten_mask)
-                                pixel_mask = flatten_mask.reshape(mask_res,mask_res)
-                                pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)
-                                pixel_mask = pixel_mask.repeat(1, 4, 1, 1)
-                                print(f'after softmax, max value of pixel_mask : {pixel_mask.max()}')
-                                print(f'after softmax, min value of pixel_mask : {pixel_mask.min()}')
+                                import torch
+                                def cosine_function(x):
+                                    x = math.pi * (x - 1)
+                                    result = math.cos(x)
+                                    result = result * 0.5
+                                    result = result + 0.5
+                                    return result
+                                lambda x: cosine_function(x) if x > 0 else 0
+                                mask_torch = pixel_mask.apply_(lambda x: cosine_function(x) if x > 0 else 0)
+
+                                print(f'after lambda function, max value of mask_torch : {mask_torch.max()}')
+                                print(f'after, min value of mask_torch : {mask_torch.min()}')
 
                                 for i in range(args.inner_iteration) :
                                     latent = iter_latent_dict[i]
-                                    latent = org_vae_latent * pixel_mask + latent * (1 - pixel_mask)
+                                    latent = org_vae_latent * mask_torch + latent * (1 - mask_torch)
                                     iter_latent_dict[i+1] = latent
                                 pil_img = Image.fromarray(latent2image(latent, vae))
                                 pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
