@@ -14,7 +14,7 @@ def main(args) :
             content = f.readlines()
         for line_ in content:
             line = line_.strip()
-            first_elem = ['epoch', 'class_name', 'img_name,']
+            first_elem = ['epoch', 'class_name', 'img_name']
             elem = [epoch_info]
             line = line_.strip()
             line_list = line.split(' | ')
