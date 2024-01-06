@@ -313,7 +313,7 @@ def main(args) :
 
                     # ------------------------------ generate new latent ------------------------------ #
                     x_latent_dict = {}
-                    x_latent_dict[args.final_noising_time] = back_dict[args.final_noising_time]
+                    x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
                     with torch.no_grad():
                         for j, t in enumerate(time_steps[:-1]):
                             prev_time = time_steps[j + 1]
@@ -380,7 +380,6 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
     parser.add_argument("--scheduler_timesteps", type=int, default=1000)
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
-    parser.add_argument("--final_noising_time", type=int, default = 250)
     parser.add_argument("--mask_thredhold", type=float, default = 0.5)
     parser.add_argument("--pixel_thredhold", type=float, default=0.1)
     parser.add_argument("--pixel_copy", action = 'store_true')
