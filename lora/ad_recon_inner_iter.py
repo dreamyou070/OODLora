@@ -315,14 +315,14 @@ def main(args) :
                                 x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
                                 if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
                                     pixel_mask = mask_dict_avg['up_64'].to(latent.device)
-                                    # ----------------------------------------------------------------------
+                                    # ---------------------------------------------------------------------------------------- #
                                     pixel_save_mask_np = pixel_mask.cpu().numpy()
                                     pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
-                                    pil_img = Image.fromarray(pixel_mask_img).resize((512, 512))
-                                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-                                    pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)  # 1, 1, res, res
-                                    pixel_mask = pixel_mask.repeat(1, 4, 1, 1)  # 1, 4, res, res
-                                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
+                                    Image.fromarray(pixel_mask_img).resize((512, 512)).save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
+                                    # ---------------------------------------------------------------------------------------- #
+                                    pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)
+                                    pixel_mask = pixel_mask.repeat(1, 4, 1, 1)
+
 
                                 for j, t in enumerate(time_steps[:-1]):
                                     prev_time = time_steps[j + 1]
@@ -337,12 +337,15 @@ def main(args) :
                                     if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
                                         x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
                                     x_latent_dict[prev_time] = x_latent
-                                    pil_img = Image.fromarray(latent2image(x_latent, vae))
-                                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
 
-                                    mask_pil_img = Image.fromarray(latent2image(pixel_mask, vae)).convert('RGB')
-                                    mask_pil_img.save(os.path.join(trg_img_output_dir, f'{name}_mask_{prev_time}{ext}'))
-                                    masked_pil_img = Image.blend(pil_img, mask_pil_img, 0.8)
+                                    save_mask = pixel_mask[:,0,:,:].squeeze()
+
+                                    save_mask = save_mask.cpu().numpy()
+                                    save_mask = (save_mask * 255).astype(np.uint8)
+                                    save_pil_mask = Image.fromarray(save_mask).resize((512, 512)).convert('RGB')
+
+                                    save_pil_mask.save(os.path.join(trg_img_output_dir, f'{name}_mask_{prev_time}{ext}'))
+                                    masked_pil_img = Image.blend(pil_img, save_pil_mask, 0.8)
                                     masked_pil_img.save(os.path.join(trg_img_output_dir, f'{name}_masked_recon_{prev_time}{ext}'))
 
                                 pil_img = Image.fromarray(latent2image(x_latent, vae))
