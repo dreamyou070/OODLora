@@ -382,6 +382,9 @@ if __name__ == "__main__":
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
     parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
-    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
+    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
+    parser.add_argument("--detail_64", action="store_true", )
+
+
     args = parser.parse_args()
     main(args)

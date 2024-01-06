@@ -351,6 +351,14 @@ def main(args) :
                                             position = 'mid'
                                         if res in args.cross_map_res and position in args.trg_position:
 
+                                            flag = True
+
+                                            if args.detail_64:
+                                                if res == 64 and 'down' in layer_name:
+                                                    flag = False
+
+                                            if flag:
+
                                                 if 'attentions_0' in layer_name :
                                                     part = 'attn_0'
                                                 elif 'attentions_1' in layer_name :
