@@ -960,7 +960,9 @@ class CrossAttnDownBlock2D(nn.Module):
         trg_indexs_list=None,
         mask=None):
         output_states = ()
+        j = 0
         for resnet, attn in zip(self.resnets, self.attentions):
+            print(f' [down_{j}] ')
             if self.training and self.gradient_checkpointing:
                 def create_custom_forward(module, return_dict=None):
                     def custom_forward(*inputs):
@@ -976,14 +978,14 @@ class CrossAttnDownBlock2D(nn.Module):
                 hidden_states = torch.utils.checkpoint.checkpoint(create_custom_forward(attn, return_dict=False),
                                                                   hidden_states, encoder_hidden_states)[0]
             else:
-                hidden_states = resnet(hidden_states,
-                                       temb)
+                hidden_states = resnet(hidden_states, temb)
                 hidden_states = attn(hidden_states, encoder_hidden_states=encoder_hidden_states,
                                      trg_indexs_list=trg_indexs_list,
                                      mask=mask,
                                      timestep=temb).sample
 
             output_states += (hidden_states,)
+            j += 1
 
         if self.downsamplers is not None:
             for downsampler in self.downsamplers:
@@ -1244,7 +1246,10 @@ class CrossAttnUpBlock2D(nn.Module):
         upsample_size=None,
         trg_indexs_list=None,
         mask=None):
+
+        j = 0
         for resnet, attn in zip(self.resnets, self.attentions):
+            print(f' [up (get res from down) ] {j}')
             # pop res hidden states
             res_hidden_states = res_hidden_states_tuple[-1]
             res_hidden_states_tuple = res_hidden_states_tuple[:-1]
@@ -1276,6 +1281,7 @@ class CrossAttnUpBlock2D(nn.Module):
                                      trg_indexs_list=trg_indexs_list,
                                      mask=mask,
                                      timestep=temb).sample
+            j += 1
 
         if self.upsamplers is not None:
             for upsampler in self.upsamplers:
