@@ -353,6 +353,7 @@ def main(args) :
                         with torch.no_grad() :
                             noise_pred = call_unet(unet, latent, 0, con, None, None)
                             sub_latent = next_step(noise_pred, 0, latent, scheduler)
+                            sub_latent = org_vae_latent * pixel_mask + sub_latent * (1 - pixel_mask)
                             noise_pred = call_unet(unet, sub_latent,
                                                    inf_time[1], con, None, None)
                             latent = prev_step(noise_pred, inf_time[1], sub_latent, scheduler)
