@@ -19,5 +19,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/bagel \
   --seed 42 \
   --network_weights ../result/MVTec3D-AD_experiment/bagel/lora_training/res_64_up/models \
-  --num_ddim_steps 20 \
-  --cross_map_res [64]
+  --num_ddim_steps 50 \
+  --cross_map_res [64] \
+  --pixel_copy \
+  --inner_iter 5
