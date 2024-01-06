@@ -97,7 +97,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/inv_unet_ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_'
+    args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/truncate_infer_inv_unet_ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_'
                                            f'inner_iter_{args.inner_iteration}')
     print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
@@ -311,25 +311,22 @@ def main(args) :
                                 # ------------------------------ reconstruction with background ------------------------------ #
                                 # (4) reconstruction
                                 x_latent_dict = {}
-                                print(f'final timestep : {time_steps[0]}')
                                 x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
                                 if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
                                     pixel_mask = mask_dict_avg['up_64'].to(latent.device)
-                                    # ---------------------------------------------------------------------------------------- #
                                     pixel_save_mask_np = pixel_mask.cpu().numpy()
                                     pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
                                     Image.fromarray(pixel_mask_img).resize((512, 512)).save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-                                    # ---------------------------------------------------------------------------------------- #
                                     pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)
                                     pixel_mask = pixel_mask.repeat(1, 4, 1, 1)
 
-
+                                # ------------------------------ recon ------------------------------ #
                                 for j, t in enumerate(time_steps[:-1]):
                                     prev_time = time_steps[j + 1]
                                     z_latent = back_dict[t]
                                     x_latent = x_latent_dict[t]
                                     input_latent = torch.cat([z_latent, x_latent], dim=0)
-                                    input_cont = torch.cat([uncon, con], dim=0)
+                                    input_cont = torch.cat([uncon, con], dim=0)[:,:2,:]
                                     noise_pred = call_unet(unet, input_latent, t, input_cont, None, None)
                                     controller.reset()
                                     z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
@@ -337,24 +334,12 @@ def main(args) :
                                     if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
                                         x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
                                     x_latent_dict[prev_time] = x_latent
-
-                                    save_mask = pixel_mask[:,0,:,:].squeeze()
-
-                                    save_mask = save_mask.cpu().numpy()
-                                    save_mask = (save_mask * 255).astype(np.uint8)
-                                    save_pil_mask = Image.fromarray(save_mask).resize((512, 512)).convert('RGB')
-
-                                    save_pil_mask.save(os.path.join(trg_img_output_dir, f'{name}_mask_{prev_time}{ext}'))
-                                    pil_img = Image.fromarray(latent2image(x_latent, vae))
-                                    masked_pil_img = Image.blend(pil_img, save_pil_mask, 0.8)
-                                    masked_pil_img.save(os.path.join(trg_img_output_dir, f'{name}_masked_recon_{prev_time}{ext}'))
-
                                 pil_img = Image.fromarray(latent2image(x_latent, vae))
                                 pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
-                                # ------------------------------ generate new latent ------------------------------ #
+
+                                # ------------------------------ inner loop ------------------------------ #
                                 iter_latent_dict = {}
                                 iter_latent_dict[0] = x_latent
-
                                 import math
                                 def cosine_function(x):
                                     x = math.pi * (x - 1)
