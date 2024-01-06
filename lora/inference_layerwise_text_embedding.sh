@@ -18,4 +18,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --num_ddim_steps 50 \
   --final_noising_time 980 \
   --cross_map_res [64,32,16] \
-  --trg_position "['up','down']"
+  --trg_position "['up','down']" \
+  --detail_64
