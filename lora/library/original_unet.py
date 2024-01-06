@@ -1554,7 +1554,7 @@ class UNet2DConditionModel(nn.Module):
             else:
                 sample, res_samples = downsample_block(hidden_states=sample, temb=emb)
             down_block_res_samples += res_samples
-            print(f'after {i}th downblock , len of down_block_res_samples : {len(down_block_res_samples)}')
+            print(f'after {i}th downblock , len of down_block_res_samples : {len(down_block_res_samples)} shape of sample : {sample.shape}')
             i += 1
 
         # skip connectionにControlNetの出力を追加する
@@ -1577,6 +1577,7 @@ class UNet2DConditionModel(nn.Module):
         print(f'before up start, num of down_block_res_samples : {len(down_block_res_samples)}')
 
         # 5. up
+        k = 0
         for i, upsample_block in enumerate(self.up_blocks):
             is_final_block = i == len(self.up_blocks) - 1
             res_samples = down_block_res_samples[-len(upsample_block.resnets) :]
@@ -1597,6 +1598,9 @@ class UNet2DConditionModel(nn.Module):
                                         temb=emb,
                                         res_hidden_states_tuple=res_samples,
                                         upsample_size=upsample_size)
+            print(
+                f'after {k}th upblock , len of down_block_res_samples : {len(down_block_res_samples)} shape of sample : {sample.shape}')
+            k += 1
         print(f'after up , len of down_block_res_samples : {len(down_block_res_samples)}')
         # 6. post-process
         sample = self.conv_norm_out(sample)
