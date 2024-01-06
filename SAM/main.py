@@ -16,6 +16,7 @@ def main(args):
     base_folder = args.base_folder
     cats = os.listdir(base_folder)
     for cat in cats:
+        print(f'cat: {cat}')
         if cat != 'bagel':
             cat_dir = os.path.join(base_folder, f'{cat}')
 
