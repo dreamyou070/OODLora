@@ -354,11 +354,7 @@ class BlueprintGenerator:
       for subset_config in subsets:
         #subset_config['trg_concept'] = argparse_namespace.trg_concept
         parent, child = os.path.split(subset_config['image_dir'])  # bad, 10_combined
-        super_parent, folder_name = os.path.split(parent) # , bad
-        mask_parent = os.path.join(super_parent, f'bad_sam')
-        mask_dir = os.path.join(mask_parent, child)
-        subset_config['mask_dir'] = mask_dir
-        #subset_config['mask_res'] = mask_res
+        super_parent, folder_name = os.path.split(parent)
         params = self.generate_params_by_fallbacks(subset_params_klass,
                                                    [subset_config,dataset_config,
                                                     general_config, argparse_config,
@@ -482,9 +478,6 @@ def generate_dataset_group_by_blueprint(dataset_group_blueprint: DatasetGroupBlu
 
   print(info)
 
-  # make buckets first because it determines the length of dataset
-  # and set the same seed for all datasets
-  # actual seed is seed + epoch_no
   seed = random.randint(0, 2**31)
   for i, dataset in enumerate(datasets):
     print(f"[Dataset {i}]")

@@ -1054,25 +1054,13 @@ class BaseDataset(torch.utils.data.Dataset):
             parent, name = os.path.split(absolute_path)      # parent = 120_good , name = 000.png
             super_parent, class_name = os.path.split(parent) # class_name = 120_good
             super_super_parent, change = os.path.split(super_parent) # dir = 120
-            #img_mask_dir = os.path.join(super_super_parent, 'bad_sam', class_name, name)
-            anormal_mask_dir = os.path.join(super_super_parent, 'corrected', class_name, name)
-
-            # (2.1) img mask """ background is zero """
-            #mask_img = Image.open(img_mask_dir).convert('L').resize((512, 512), Image.BICUBIC)
-            #mask_img = attn_transforms(mask_img)
-            # normalize to [0, 1]
-            #if mask_img.max() > 0:
-            #    mask_img = mask_img / mask_img.max()
-            #img_masks.append(mask_img)
-
-            # (2.2) anormal mask """ normal is zero, anormal is white """
+            anormal_mask_dir = os.path.join(super_super_parent, 'mask', class_name, name)
 
             anormal_mask_64 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
             anormal_mask_32 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
             anormal_mask_16 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((16, 16), Image.BICUBIC))
             anormal_mask_8 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((8, 8), Image.BICUBIC))
-            #if anormal_mask.max() > 0:
-            #    anormal_mask = anormal_mask / anormal_mask.max()
+
             anormal_mask_dict = {64 : anormal_mask_64,
                                  32 : anormal_mask_32,
                                  16 : anormal_mask_16,
