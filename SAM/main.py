@@ -17,7 +17,7 @@ def main(args):
     cats = os.listdir(base_folder)
     for cat in cats:
         print(f'cat: {cat}')
-        if cat != 'bagel':
+        if cat == 'cookie':
             cat_dir = os.path.join(base_folder, f'{cat}')
 
             train_dir = os.path.join(cat_dir, 'train')
