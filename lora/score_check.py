@@ -12,8 +12,6 @@ def main(args) :
         file_path = os.path.join(args.record_dir, file)
         with open(file_path, 'r') as f:
             content = f.readlines()
-        import time
-        time.sleep(1000)
         for line_ in content:
             line = line_.strip()
             first_elem = ['epoch', 'class_name', 'img_name']
