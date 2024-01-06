@@ -15,6 +15,7 @@ def main(args) :
         file_path = os.path.join(args.record_dir, file)
         with open(file_path, 'r') as f:
             content = f.readlines()
+        score_dict = {}
         for line_ in content:
             line = line_.strip()
             first_elem = ['epoch', 'class_name', 'img_name']
@@ -27,7 +28,6 @@ def main(args) :
             elem.append(class_name)
             elem.append(img_name)
             score_list = line_list[2:]
-            score_dict = {}
             for score_elem in score_list:
                 name = score_elem.split('=')[0]
                 score = score_elem.split('=')[1]
@@ -40,6 +40,7 @@ def main(args) :
             if first_elem not in elems:
                 elems.append(first_elem)
             elems.append(elem)
+
         new_elem = [['', '', 'total']]
         for k in score_dict.keys():
             new_elem[0].append(score_dict[k])
