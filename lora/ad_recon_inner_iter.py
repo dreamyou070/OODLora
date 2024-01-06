@@ -345,7 +345,7 @@ def main(args) :
                                 print(f'max value of pixel_mask : {pixel_mask.max()}')
                                 print(f'min value of pixel_mask : {pixel_mask.min()}')
 
-                                import torch
+                                import math
                                 def cosine_function(x):
                                     x = math.pi * (x - 1)
                                     result = math.cos(x)
