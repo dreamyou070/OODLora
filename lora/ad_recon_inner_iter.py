@@ -212,142 +212,144 @@ def main(args) :
             classes = os.listdir(test_img_folder)
 
             for class_name in classes:
-                if '_' in class_name:
-                    trg_prompt = class_name.split('_')[-1]
-                else:
-                    trg_prompt = class_name
-                class_base_folder = os.path.join(save_dir, class_name)
-                os.makedirs(class_base_folder, exist_ok=True)
+                if 'contamination' in class_name:
+                    if '_' in class_name:
+                        trg_prompt = class_name.split('_')[-1]
+                    else:
+                        trg_prompt = class_name
+                    class_base_folder = os.path.join(save_dir, class_name)
+                    os.makedirs(class_base_folder, exist_ok=True)
 
-                image_folder = os.path.join(test_img_folder, class_name)
-                mask_folder = os.path.join(test_mask_folder, class_name)
-                invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {trg_prompt}')
-                inv_unc, inv_c = invers_context.chunk(2)
-                test_images = os.listdir(image_folder)
+                    image_folder = os.path.join(test_img_folder, class_name)
+                    mask_folder = os.path.join(test_mask_folder, class_name)
+                    invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {trg_prompt}')
+                    inv_unc, inv_c = invers_context.chunk(2)
+                    test_images = os.listdir(image_folder)
 
-                for j, test_image in enumerate(test_images):
+                    for j, test_image in enumerate(test_images):
+                        if '009' in test_image:
 
-                    name, ext = os.path.splitext(test_image)
-                    trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
-                    os.makedirs(trg_img_output_dir, exist_ok=True)
+                            name, ext = os.path.splitext(test_image)
+                            trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
+                            os.makedirs(trg_img_output_dir, exist_ok=True)
 
-                    test_img_dir = os.path.join(image_folder, test_image)
-                    Image.open(test_img_dir).convert('RGB').resize((512,512)).save(os.path.join(trg_img_output_dir,
-                                                                                                f'{name}_org{ext}'))
+                            test_img_dir = os.path.join(image_folder, test_image)
+                            Image.open(test_img_dir).convert('RGB').resize((512,512)).save(os.path.join(trg_img_output_dir,
+                                                                                                        f'{name}_org{ext}'))
 
-                    mask_img_dir = os.path.join(mask_folder, test_image)
-                    shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+                            mask_img_dir = os.path.join(mask_folder, test_image)
+                            shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
 
-                    print(f' (2.3.1) inversion')
-                    with torch.no_grad():
-                        org_img = load_image(test_img_dir, 512, 512)
-                        org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-                        # ------------------------------ generate attn mask map ------------------------------ #
-                        # (1) inference timestep
-                        inf_time = inference_times.tolist()
-                        inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
-                        if '999' not in inf_time:
-                            inf_time.append(999)
-                        back_dict = {}
+                            print(f' (2.3.1) inversion')
+                            with torch.no_grad():
+                                org_img = load_image(test_img_dir, 512, 512)
+                                org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+                                # ------------------------------ generate attn mask map ------------------------------ #
+                                # (1) inference timestep
+                                inf_time = inference_times.tolist()
+                                inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                                if '999' not in inf_time:
+                                    inf_time.append(999)
+                                back_dict = {}
 
-                        latent = org_vae_latent
-                        # ------------------------------ generate attn mask map ------------------------------ #
-                        # (2) get mask
-                        #mask_dict = {}
-                        mask_dict_avg = {}
-                        back_dict[0] = latent
-                        noise_pred = call_unet(unet, latent, 0, con[:,:3,:], [[1]], None)
-                        attn_stores = controller.step_store
-                        controller.reset()
-                        mask_dict_avg_sub = {}
-                        for layer_name in attn_stores:
-                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                            res = int(attn.shape[1] ** 0.5)
-                            if res in args.cross_map_res:
-                                if 'down' in layer_name:
-                                    key_name = f'down_{res}'
-                                elif 'up' in layer_name:
-                                    key_name = f'up_{res}'
-                                else:
-                                    key_name = f'mid_{res}'
-                                if key_name not in mask_dict_avg_sub :
-                                    mask_dict_avg_sub[key_name] = []
-                                mask_dict_avg_sub[key_name].append(attn)
-                                #cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
-                                #h = cls_score.shape[0]
-                                #trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
-                                #trigger_score = trigger_score.reshape(h, res, res) # head, res, res
-                                #trigger_score = trigger_score.mean(dim=0) # res, res
-                                #trigger = trigger_score / trigger_score.max()
-                                #anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
-                                #mask_dict[layer_name] = anormal_map
-                        for key_name in mask_dict_avg_sub:
-                            """ averaging values """
-                            attn_list = mask_dict_avg_sub[key_name]
-                            attn = torch.cat(attn_list, dim=0)
-                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
-                            res = int(trigger_score.shape[1] ** 0.5)
-                            h = trigger_score.shape[0]
-                            trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
-                            trigger_score = trigger_score.reshape( h, res, res) # head, res, res
-                            trigger_score = trigger_score.mean(dim=0)           # res, res
-                            trigger = trigger_score / trigger_score.max()
-                            mask_dict_avg[key_name] = trigger                   # up_64
-                        # ------------------------------ generate background latent ------------------------------ #
-                        # (3) generate background latent
-                        time_steps = []
-                        for i, t in enumerate(inf_time[:-1]):
-                            time_steps.append(t)
-                            back_dict[int(t)] = latent
-                            time_steps.append(t)
-                            noise_pred = call_unet(unet, latent, t, inv_c, None, None)
-                            latent = next_step(noise_pred, int(t), latent, scheduler)
-                        back_dict[inf_time[-1]] = latent
-                        time_steps.append(inf_time[-1])
-                        time_steps.reverse()
+                                latent = org_vae_latent
+                                # ------------------------------ generate attn mask map ------------------------------ #
+                                # (2) get mask
+                                #mask_dict = {}
+                                mask_dict_avg = {}
+                                back_dict[0] = latent
+                                noise_pred = call_unet(unet, latent, 0, con[:,:3,:], [[1]], None)
+                                attn_stores = controller.step_store
+                                controller.reset()
+                                mask_dict_avg_sub = {}
+                                for layer_name in attn_stores:
+                                    attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                                    res = int(attn.shape[1] ** 0.5)
+                                    if res in args.cross_map_res:
+                                        if 'down' in layer_name:
+                                            key_name = f'down_{res}'
+                                        elif 'up' in layer_name:
+                                            key_name = f'up_{res}'
+                                        else:
+                                            key_name = f'mid_{res}'
+                                        if key_name not in mask_dict_avg_sub :
+                                            mask_dict_avg_sub[key_name] = []
+                                        mask_dict_avg_sub[key_name].append(attn)
+                                        #cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
+                                        #h = cls_score.shape[0]
+                                        #trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
+                                        #trigger_score = trigger_score.reshape(h, res, res) # head, res, res
+                                        #trigger_score = trigger_score.mean(dim=0) # res, res
+                                        #trigger = trigger_score / trigger_score.max()
+                                        #anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
+                                        #mask_dict[layer_name] = anormal_map
+                                for key_name in mask_dict_avg_sub:
+                                    """ averaging values """
+                                    attn_list = mask_dict_avg_sub[key_name]
+                                    attn = torch.cat(attn_list, dim=0)
+                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
+                                    res = int(trigger_score.shape[1] ** 0.5)
+                                    h = trigger_score.shape[0]
+                                    trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
+                                    trigger_score = trigger_score.reshape( h, res, res) # head, res, res
+                                    trigger_score = trigger_score.mean(dim=0)           # res, res
+                                    trigger = trigger_score / trigger_score.max()
+                                    mask_dict_avg[key_name] = trigger                   # up_64
+                                # ------------------------------ generate background latent ------------------------------ #
+                                # (3) generate background latent
+                                time_steps = []
+                                for i, t in enumerate(inf_time[:-1]):
+                                    time_steps.append(t)
+                                    back_dict[int(t)] = latent
+                                    time_steps.append(t)
+                                    noise_pred = call_unet(unet, latent, t, inv_c, None, None)
+                                    latent = next_step(noise_pred, int(t), latent, scheduler)
+                                back_dict[inf_time[-1]] = latent
+                                time_steps.append(inf_time[-1])
+                                time_steps.reverse()
 
-                        # ------------------------------ reconstruction with background ------------------------------ #
-                        # (4) reconstruction
-                        x_latent_dict = {}
-                        x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
-                        if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
-                            pixel_mask = mask_dict_avg['up_64'].to(latent.device)
-                            # ----------------------------------------------------------------------
-                            pixel_save_mask_np = pixel_mask.cpu().numpy()
-                            pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
-                            pil_img = Image.fromarray(pixel_mask_img).resize((512, 512))
-                            pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-                            pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)  # 1, 1, res, res
-                            pixel_mask = pixel_mask.repeat(1, 4, 1, 1)  # 1, 4, res, res
-                            pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
+                                # ------------------------------ reconstruction with background ------------------------------ #
+                                # (4) reconstruction
+                                x_latent_dict = {}
+                                x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
+                                if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
+                                    pixel_mask = mask_dict_avg['up_64'].to(latent.device)
+                                    # ----------------------------------------------------------------------
+                                    pixel_save_mask_np = pixel_mask.cpu().numpy()
+                                    pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
+                                    pil_img = Image.fromarray(pixel_mask_img).resize((512, 512))
+                                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
+                                    pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)  # 1, 1, res, res
+                                    pixel_mask = pixel_mask.repeat(1, 4, 1, 1)  # 1, 4, res, res
+                                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
 
-                        for j, t in enumerate(time_steps[:-1]):
-                            prev_time = time_steps[j + 1]
-                            z_latent = back_dict[t]
-                            x_latent = x_latent_dict[t]
-                            input_latent = torch.cat([z_latent, x_latent], dim=0)
-                            input_cont = torch.cat([uncon, con], dim=0)
-                            noise_pred = call_unet(unet, input_latent, t, input_cont, None, None)
-                            controller.reset()
-                            z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
-                            x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
-                            if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
-                                x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
-                            x_latent_dict[prev_time] = x_latent
-                        pil_img = Image.fromarray(latent2image(x_latent, vae))
-                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
-                        # ------------------------------ generate new latent ------------------------------ #
-                        iter_latent_dict = {}
-                        iter_latent_dict[0] = x_latent
-                        print(f'pixel_mask : {pixel_mask.shape}')
-                        print(f'max value of pixel_mask : {pixel_mask.max()}')
-                        print(f'min value of pixel_mask : {pixel_mask.min()}')
-                        for i in range(args.inner_iteration) :
-                            latent = iter_latent_dict[i]
-                            latent = org_vae_latent * pixel_mask + latent * (1 - pixel_mask)
-                            iter_latent_dict[i+1] = latent
-                        pil_img = Image.fromarray(latent2image(latent, vae))
-                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
+                                for j, t in enumerate(time_steps[:-1]):
+                                    prev_time = time_steps[j + 1]
+                                    z_latent = back_dict[t]
+                                    x_latent = x_latent_dict[t]
+                                    input_latent = torch.cat([z_latent, x_latent], dim=0)
+                                    input_cont = torch.cat([uncon, con], dim=0)
+                                    noise_pred = call_unet(unet, input_latent, t, input_cont, None, None)
+                                    controller.reset()
+                                    z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
+                                    x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
+                                    if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
+                                        x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
+                                    x_latent_dict[prev_time] = x_latent
+                                pil_img = Image.fromarray(latent2image(x_latent, vae))
+                                pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
+                                # ------------------------------ generate new latent ------------------------------ #
+                                iter_latent_dict = {}
+                                iter_latent_dict[0] = x_latent
+                                print(f'pixel_mask : {pixel_mask.shape}')
+                                print(f'max value of pixel_mask : {pixel_mask.max()}')
+                                print(f'min value of pixel_mask : {pixel_mask.min()}')
+                                for i in range(args.inner_iteration) :
+                                    latent = iter_latent_dict[i]
+                                    latent = org_vae_latent * pixel_mask + latent * (1 - pixel_mask)
+                                    iter_latent_dict[i+1] = latent
+                                pil_img = Image.fromarray(latent2image(latent, vae))
+                                pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
