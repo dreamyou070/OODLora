@@ -227,7 +227,7 @@ def main(args) :
                     test_images = os.listdir(image_folder)
 
                     for j, test_image in enumerate(test_images):
-                        if '009' in test_image:
+                        if '001' in test_image:
 
                             name, ext = os.path.splitext(test_image)
                             trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
@@ -336,14 +336,14 @@ def main(args) :
                                     if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
                                         x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
                                     x_latent_dict[prev_time] = x_latent
+                                    pil_img = Image.fromarray(latent2image(x_latent, vae))
+                                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
+
                                 pil_img = Image.fromarray(latent2image(x_latent, vae))
                                 pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
                                 # ------------------------------ generate new latent ------------------------------ #
                                 iter_latent_dict = {}
                                 iter_latent_dict[0] = x_latent
-                                print(f'pixel_mask : {pixel_mask.shape}')
-                                print(f'max value of pixel_mask : {pixel_mask.max()}')
-                                print(f'min value of pixel_mask : {pixel_mask.min()}')
 
                                 import math
                                 def cosine_function(x):
@@ -356,8 +356,6 @@ def main(args) :
                                 pixel_mask = pixel_mask.detach().cpu()
                                 mask_torch = pixel_mask.apply_(lambda x: cosine_function(x) if x > 0 else 0)
                                 mask_torch = mask_torch.to(x_latent.device)
-                                print(f'after lambda function, max value of mask_torch : {mask_torch.max()}')
-                                print(f'after, min value of mask_torch : {mask_torch.min()}')
 
                                 for i in range(args.inner_iteration) :
                                     latent = iter_latent_dict[i]
