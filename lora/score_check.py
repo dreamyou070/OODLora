@@ -12,7 +12,6 @@ def main(args) :
         file_path = os.path.join(args.record_dir, file)
         with open(file_path, 'r') as f:
             content = f.readlines()
-        print(f'content[-1] : {content} | len(content) : {len(content)}')
         import time
         time.sleep(1000)
         for line_ in content:
