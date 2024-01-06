@@ -346,13 +346,14 @@ def main(args) :
                     recon_latent_dict = {}
                     recon_latent_dict[0] = x_latent
                     for i in range(args.inner_iteration) :
-                        latent = recon_latent_dict[i]
-                        noise_pred = call_unet(unet, latent, 0, con, None, None)
-                        latent = next_step(noise_pred, 0, latent, scheduler)
-                        noise_pred = call_unet(unet, latent, 0, con, None, None)
-                        latent = prev_step(noise_pred, 0, latent, scheduler)
-                        latent = org_vae_latent * pixel_mask + org_vae_latent * (1 - pixel_mask)
-                        recon_latent_dict[i+1] = latent
+                        with torch.no_grad() :
+                            latent = recon_latent_dict[i]
+                            noise_pred = call_unet(unet, latent, 0, con, None, None)
+                            latent = next_step(noise_pred, 0, latent, scheduler)
+                            noise_pred = call_unet(unet, latent, 0, con, None, None)
+                            latent = prev_step(noise_pred, 0, latent, scheduler)
+                            latent = org_vae_latent * pixel_mask + org_vae_latent * (1 - pixel_mask)
+                            recon_latent_dict[i+1] = latent
                     pil_img = Image.fromarray(latent2image(latent, vae))
                     pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon_innerloop_{i}{ext}'))
 
