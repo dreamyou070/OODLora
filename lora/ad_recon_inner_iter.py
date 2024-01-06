@@ -339,6 +339,9 @@ def main(args) :
                         # ------------------------------ generate new latent ------------------------------ #
                         iter_latent_dict = {}
                         iter_latent_dict[0] = x_latent
+                        print(f'pixel_mask : {pixel_mask.shape}')
+                        print(f'max value of pixel_mask : {pixel_mask.max()}')
+                        print(f'min value of pixel_mask : {pixel_mask.min()}')
                         for i in range(args.inner_iteration) :
                             latent = iter_latent_dict[i]
                             latent = org_vae_latent * pixel_mask + latent * (1 - pixel_mask)
