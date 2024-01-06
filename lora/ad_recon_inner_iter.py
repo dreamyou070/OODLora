@@ -310,7 +310,7 @@ def main(args) :
                         x_latent_dict = {}
                         x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
                         if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
-                            pixel_mask = mask_dict_avg['up_64'].to(z_latent.device)
+                            pixel_mask = mask_dict_avg['up_64'].to(latent.device)
                             # ----------------------------------------------------------------------
                             pixel_save_mask_np = pixel_mask.cpu().numpy()
                             pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
