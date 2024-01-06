@@ -97,7 +97,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_'
+    args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/inv_unet_ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_'
                                            f'inner_iter_{args.inner_iteration}')
     print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
@@ -302,7 +302,7 @@ def main(args) :
                                     time_steps.append(t)
                                     back_dict[int(t)] = latent
                                     time_steps.append(t)
-                                    noise_pred = call_unet(unet, latent, t, inv_c, None, None)
+                                    noise_pred = call_unet(invers_unet, latent, t, inv_c, None, None)
                                     latent = next_step(noise_pred, int(t), latent, scheduler)
                                 back_dict[inf_time[-1]] = latent
                                 time_steps.append(inf_time[-1])
