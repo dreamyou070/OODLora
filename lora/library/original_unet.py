@@ -960,9 +960,7 @@ class CrossAttnDownBlock2D(nn.Module):
         trg_indexs_list=None,
         mask=None):
         output_states = ()
-        j = 0
         for resnet, attn in zip(self.resnets, self.attentions):
-            print(f' [down_{j}] ')
             if self.training and self.gradient_checkpointing:
                 def create_custom_forward(module, return_dict=None):
                     def custom_forward(*inputs):
@@ -1253,7 +1251,6 @@ class CrossAttnUpBlock2D(nn.Module):
             res_hidden_states = res_hidden_states_tuple[-1]
             res_hidden_states_tuple = res_hidden_states_tuple[:-1]
             hidden_states = torch.cat([hidden_states, res_hidden_states], dim=1)
-            print(f' [up (get res from down) ] {j}, shape of hidden states : {hidden_states.shape}')
 
             if self.training and self.gradient_checkpointing:
 
@@ -1364,9 +1361,7 @@ class UNet2DConditionModel(nn.Module):
     ):
         super().__init__()
         assert sample_size is not None, "sample_size must be specified"
-        print(
-            f"UNet2DConditionModel: {sample_size}, {attention_head_dim}, {cross_attention_dim}, {use_linear_projection}, {upcast_attention}"
-        )
+
 
         # 外部からの参照用に定義しておく
         self.in_channels = IN_CHANNELS
@@ -1542,8 +1537,6 @@ class UNet2DConditionModel(nn.Module):
         # 3. down
         # encoder_hidden_states = [4,277,768]
         down_block_res_samples = (sample,)
-        print(f'after conv_in , len of down_block_res_samples : {len(down_block_res_samples)}')
-        i = 0
         for downsample_block in self.down_blocks:
             if downsample_block.has_cross_attention:
                 sample, res_samples = downsample_block(hidden_states=sample,
@@ -1554,8 +1547,6 @@ class UNet2DConditionModel(nn.Module):
             else:
                 sample, res_samples = downsample_block(hidden_states=sample, temb=emb)
             down_block_res_samples += res_samples
-            print(f'after {i}th downblock , len of down_block_res_samples : {len(down_block_res_samples)} shape of sample : {sample.shape}')
-            i += 1
 
         # skip connectionにControlNetの出力を追加する
         if down_block_additional_residuals is not None:
@@ -1574,10 +1565,7 @@ class UNet2DConditionModel(nn.Module):
         if mid_block_additional_residual is not None:
             sample += mid_block_additional_residual
 
-        print(f'before up start, num of down_block_res_samples : {len(down_block_res_samples)}')
-
         # 5. up
-        k = 0
         for i, upsample_block in enumerate(self.up_blocks):
             is_final_block = i == len(self.up_blocks) - 1
             res_samples = down_block_res_samples[-len(upsample_block.resnets) :]
@@ -1598,10 +1586,7 @@ class UNet2DConditionModel(nn.Module):
                                         temb=emb,
                                         res_hidden_states_tuple=res_samples,
                                         upsample_size=upsample_size)
-            print(
-                f'after {k}th upblock , len of down_block_res_samples : {len(down_block_res_samples)} shape of sample : {sample.shape}')
-            k += 1
-        print(f'after up , len of down_block_res_samples : {len(down_block_res_samples)}')
+
         # 6. post-process
         sample = self.conv_norm_out(sample)
         sample = self.conv_act(sample)

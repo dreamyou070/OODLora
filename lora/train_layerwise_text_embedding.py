@@ -749,7 +749,7 @@ class NetworkTrainer:
                                 if args.detail_64 :
                                     if res == 64 and 'down' in layer_name :
                                         flag = False
-
+                                        print(f'layer = {layer_name} | res = {res} | flag = {flag}')
                                 if flag :
                                     anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                     mask = anormal_mask.squeeze()  # res,res
