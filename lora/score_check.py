@@ -12,6 +12,7 @@ def main(args) :
         file_path = os.path.join(args.record_dir, file)
         with open(file_path, 'r') as f:
             content = f.readlines()
+        print(f'content: {content}')
         for line_ in content:
             first_elem = ['epoch', 'class_name', 'img_name,']
             elem = [epoch_info]
