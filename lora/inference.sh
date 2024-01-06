@@ -20,5 +20,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --seed 42 \
   --network_weights ../result/MVTec3D-AD_experiment/bagel/lora_training/just_lora/res_32_up/models \
   --num_ddim_steps 50 \
-  --cross_map_res [16] \
-  --parser.add_argument "['down', 'up']"
+  --cross_map_res [16]
