@@ -2,6 +2,9 @@ import os, argparse
 
 def main(args) :
 
+    parent = os.path.split(args.record_dir)[0]
+    record_dir = os.path.join(parent, 'score_record_csv')
+
     files = os.listdir(args.record_dir)
     print(f'files: {files}')
 
@@ -33,8 +36,7 @@ def main(args) :
                 elems.append(first_elem)
             elems.append(elem)
         # ---------------------------------------------- make csv file ---------------------------------------------- #
-        csv_file = os.path.join(args.record_dir, f'score_epoch_{epoch_info}.csv')
-        with open(csv_file, 'w') as f:
+        with open(os.path.join(record_dir, f'score_epoch_{epoch_info}.csv'), 'w') as f:
             for elem in elems:
                 f.write(','.join(elem))
                 f.write('\n')
