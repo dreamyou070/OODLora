@@ -365,7 +365,8 @@ def main(args) :
                                                         pil_img = pil_img.resize((512, 512), Image.BILINEAR)
                                                         pil_img.save(os.path.join(trg_img_output_dir, f'unet_mask_{layer_name}.png'))
                                                         anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
-                                                        mask_dict[layer_name] = anormal_map
+                                                        # mask_dict[layer_name] = anormal_map
+                                                        mask_dict[layer_name] = torch.where(anormal_map > 0.5, 1, 0)
                                                 if args.detail_64 :
                                                     for mask_dict_key in mask_dict.keys():
                                                         if 'down_blocks_0' in mask_dict_key:
@@ -436,13 +437,14 @@ def main(args) :
                                             if up_key :
                                                 pixel_mask = mask_dict_avg[key].to(z_latent.device)
                                                 # ----------------------------------------------------------------------
-                                                pixel_save_mask_np = pixel_mask.cpu().numpy()
-                                                pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
+                                                binary_mask = torch.where(pixel_mask > 0.5, 1, 0)
+
+
+                                                pixel_mask_img = (binary_mask.cpu().numpy() * 255).astype(np.uint8)
                                                 pil_img_512 = Image.fromarray(pixel_mask_img).resize((512, 512))
 
                                                 pil_img_64 = Image.fromarray(pixel_mask_img).resize((64, 64))
-                                                from torchvision import transforms
-                                                pixel_mask = transforms.ToTensor()(pil_img_64)
+                                                pixel_mask = torch.tensor(np.array(pil_img_64))
                                                 print(f'pixel_mask.shape : {pixel_mask.shape}')
 
                                                 if prev_time == 0:
