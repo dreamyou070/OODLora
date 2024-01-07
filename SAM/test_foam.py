@@ -34,6 +34,7 @@ def main(args):
             os.makedirs(sam_train_dir, exist_ok=True)
             images = os.listdir(good_train_dir)
             for image in images:
+                print(f'start image name: {image}')
                 img_dir = os.path.join(good_train_dir, image)
                 np_img = np.array(Image.open(img_dir))
                 predictor.set_image(np_img)
@@ -41,8 +42,8 @@ def main(args):
                 h, w, c = np_img.shape
                 trg_h_1, trg_w_1 = h / 3, w / 3
                 trg_h_2, trg_w_2 = h * (2 / 3), w * (2 / 3)
-                input_point = [[trg_h_1, trg_w_1], [trg_h_2, trg_w_2]]
-                input_label = [1, 1]
+                input_point = np.array([[trg_h_1, trg_w_1], [trg_h_2, trg_w_2]])
+                input_label = np.array([1, 1])
 
                 masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                           multimask_output=True, )
