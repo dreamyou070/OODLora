@@ -47,10 +47,11 @@ def main(args):
                 if len(masks) < 3:
                     print('wrong')
                 else:
-                    if i == 1:
-                        np_mask = (mask * 1)
-                        np_mask = np.where(np_mask == 1, 0, 1) * 255
-                        sam_result_pil = Image.fromarray(np_mask.astype(np.uint8)).save(f'{i}_{image}')
+                    #if i == 1:
+                    np_mask = (mask * 1)
+                    np_mask = np.where(np_mask == 1, 0, 1) * 255
+                    #sam_result_pil = Image.fromarray(np_mask.astype(np.uint8)).save(f'{i}_{image}')
+                    Image.fromarray(np_mask.astype(np.uint8)).save(f'{i}_{image}')
             # -------------------------------------------------------------------------------------------------------
             # (2) test
             """
