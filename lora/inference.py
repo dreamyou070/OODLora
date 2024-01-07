@@ -16,6 +16,7 @@ import shutil
 from attention_store import AttentionStore
 import torch.nn as nn
 from utils.model_utils import call_unet
+import csv
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -194,7 +195,8 @@ def main(args) :
         test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/gt')
         classes = os.listdir(test_img_folder)
         records = []
-
+        first_elem = ['class', 'img_name']
+        total_dict = {}
         for class_name in classes:
             if '_' in class_name:
                 trg_prompt = class_name.split('_')[-1]
@@ -302,16 +304,25 @@ def main(args) :
                                                       f'normal_{key_name}.png'))
 
                 # ----------------------------------------------------------------------------------------------------- #
-                record = f'{trg_prompt} | {test_image} '
+                record = [trg_prompt, test_image]
                 for k in score_dict.keys():
                     trigger_score = score_dict[k]
-                    record += f'| {k}={trigger_score.sum().item()} '
-                record = record.strip()
+                    if k not in total_dict.keys() :
+                        total_dict[k] = trigger_score.sum().item()
+                    else :
+                        total_dict[k] += trigger_score.sum().item()
+                    first_elem.append(k)
+                    record.append(trigger_score.sum().item())
+                if first_elem not in records:
+                    records.append(first_elem)
                 records.append(record)
-        record_txt_dir = os.path.join(record_output_dir, f'score_epoch_{model_epoch}.txt')
-        with open(record_txt_dir, 'w') as f:
-            for line in records:
-                f.write(f'{line}\n')
+        total_elem = ['','']
+        for k in total_dict.keys() :
+            total_elem.append(total_dict[k])
+        record_csv_dir = os.path.join(record_output_dir, f'score_epoch_{model_epoch}.csv')
+        with open(record_csv_dir, 'w', newline='') as f:
+            wr = csv.writer(f)
+            wr.writerows(records)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
