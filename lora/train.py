@@ -15,6 +15,7 @@ import torch
 from torch import nn
 import wandb
 from attention_store import AttentionStore
+
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -45,30 +46,17 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
-            if is_cross_attention and trg_indexs_list is not None and ('up' in layer_name or 'mid' in layer_name) :
-                trg_map = attention_probs[:, :, 1:3]
-                controller.store(trg_map, layer_name)
-                """
-                batch, pix_num, _ = query.shape
-                res = int(pix_num) ** 0.5
-                if res in args.cross_map_res :
-                    batch_num = len(trg_indexs_list)
-                    attention_probs_batch = torch.chunk(attention_probs, batch_num, dim=0)
-                    attn_list = []
-                    
-                    for batch_idx, attn_probs in enumerate(attention_probs_batch):
-                        
-                        #batch_trg_index = trg_indexs_list[batch_idx]  # two times
-                        good_map = attn_probs[:,:,1]
-                        bad_map = attn_probs[:,:,2]
-                        if good_map.dim() == 2 :
-                            good_map = good_map.unsqueeze(-1)
-                            bad_map = bad_map.unsqueeze(-1)
-                        attn_score_map = torch.cat([good_map, bad_map], dim=-1)
-                        attn_list.append(attn_score_map)
-                    batch_attn_map = torch.cat(attn_list, dim=0)
-                    controller.store(batch_attn_map, layer_name)
-                """
+            if is_cross_attention and trg_indexs_list is not None :
+                if 'down' in layer_name :
+                    position = 'down'
+                elif 'up' in layer_name :
+                    position = 'up'
+                elif 'mid' in layer_name :
+                    position = 'mid'
+                if position in args.trg_position :
+                    trg_map = attention_probs[:, :, 1]
+                    controller.store(trg_map, layer_name)
+
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -149,11 +137,9 @@ class NetworkTrainer:
 
         return logs
 
-
     def load_target_model(self, args, weight_dtype, accelerator):
         text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
         return model_util.get_model_version_str_for_sd1_sd2(args.v2, args.v_parameterization), text_encoder, vae, unet
-
 
     def extract_triggerword_index(self, input_ids):
         cls_token = 49406
@@ -210,8 +196,10 @@ class NetworkTrainer:
 
         print(f'\n step 1. setting')
         print(f' (1) session')
-        if args.process_title: setproctitle(args.process_title)
-        else: setproctitle('parksooyeon')
+        if args.process_title:
+            setproctitle(args.process_title)
+        else:
+            setproctitle('parksooyeon')
         print(f' (2) seed')
         if args.seed is None: args.seed = random.randint(0, 2 ** 32)
         set_seed(args.seed)
@@ -228,17 +216,18 @@ class NetworkTrainer:
             user_config = {}
             user_config['datasets'] = [{"subsets": None}]
             subsets_dict_list = []
-            for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir, args.reg_data_dir, args.class_caption):
-                if use_class_caption :
+            for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
+                                                                                          args.reg_data_dir,
+                                                                                          args.class_caption):
+                if use_class_caption:
                     subsets_dict['class_caption'] = args.class_caption
                 subsets_dict_list.append(subsets_dict)
                 user_config['datasets'][0]['subsets'] = subsets_dict_list
             print(f'User config: {user_config}')
 
-
             # --------------------------------------------------------------------------------------------------------
             """ config_util.generate_dreambooth_subsets_config_by_subdirs """
-            blueprint = blueprint_generator.generate(user_config, # about data directory
+            blueprint = blueprint_generator.generate(user_config,  # about data directory
                                                      args,
                                                      tokenizer=tokenizer)
 
@@ -248,13 +237,11 @@ class NetworkTrainer:
         else:
             train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
 
-
         print(f' (2.3) collater')
         current_epoch = Value("i", 0)
         current_step = Value("i", 0)
         ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
         collater = train_util.collater_class(current_epoch, current_step, ds_for_collater)
-
 
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
@@ -270,7 +257,7 @@ class NetworkTrainer:
         print(f' (4.1) config saving')
         with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
-        #logging_file = os.path.join(args.output_dir, f"validation_log_{time}.txt")
+        # logging_file = os.path.join(args.output_dir, f"validation_log_{time}.txt")
 
         print(f'\n step 5. model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
@@ -282,7 +269,7 @@ class NetworkTrainer:
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
         enc_text_encoders = enc_text_encoder if isinstance(enc_text_encoder, list) else [enc_text_encoder]
         train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
-        if torch.__version__ >= "2.0.0" : vae.set_use_memory_efficient_attention_xformers(args.xformers)
+        if torch.__version__ >= "2.0.0": vae.set_use_memory_efficient_attention_xformers(args.xformers)
         print(' (5.2) lora model')
         sys.path.append(os.path.dirname(__file__))
         accelerator.print("import network module:", args.network_module)
@@ -293,10 +280,12 @@ class NetworkTrainer:
                 key, value = net_arg.split("=")
                 net_kwargs[key] = value
         if args.dim_from_weights:
-            network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet, **net_kwargs)
+            network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
+                                                                    **net_kwargs)
         else:
             network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae,
-                                                    text_encoder, unet, neuron_dropout=args.network_dropout, **net_kwargs, )
+                                                    text_encoder, unet, neuron_dropout=args.network_dropout,
+                                                    **net_kwargs, )
         if network is None:
             return
         print(' (5.3) lora with unet and text encoder')
@@ -317,7 +306,7 @@ class NetworkTrainer:
         print(f'\n step 6. optimizer')
         try:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
-        except :
+        except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
@@ -330,16 +319,17 @@ class NetworkTrainer:
         if args.max_train_epochs is not None:
             args.max_train_steps = args.max_train_epochs * math.ceil(
                 len(train_dataloader) / accelerator.num_processes / args.gradient_accumulation_steps)
-            accelerator.print( f"override steps. steps for {args.max_train_epochs} epochs / {args.max_train_steps}")
+            accelerator.print(f"override steps. steps for {args.max_train_epochs} epochs / {args.max_train_steps}")
 
         print(f'\n step 7. lr')
-        lr_scheduler = train_util.get_scheduler_fix(args,optimizer, accelerator.num_processes)
+        lr_scheduler = train_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
         if args.full_fp16:
             assert (args.mixed_precision == "fp16"), "full_fp16 requires mixed precision='fp16'"
             accelerator.print("enable full fp16 training.")
             network.to(weight_dtype)
         elif args.full_bf16:
-            assert (args.mixed_precision == "bf16"), "full_bf16 requires mixed precision='bf16' / mixed_precision='bf16'"
+            assert (
+                        args.mixed_precision == "bf16"), "full_bf16 requires mixed precision='bf16' / mixed_precision='bf16'"
             accelerator.print("enable full bf16 training.")
             network.to(weight_dtype)
 
@@ -355,11 +345,12 @@ class NetworkTrainer:
         print(f'\n step 7. training preparing')
         if train_unet and train_text_encoder:
             if len(text_encoders) > 1:
-                unet, t_enc1, t_enc2, network, optimizer, train_dataloader,lr_scheduler, = accelerator.prepare(
-                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler,)
+                unet, t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler, = accelerator.prepare(
+                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler, )
                 text_encoder = text_encoders = [t_enc1, t_enc2]
                 del t_enc1, t_enc2
-                enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1], enc_unet)
+                enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1],
+                                                                        enc_unet)
                 enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
                 del enc_t_enc1, enc_t_enc2
             else:
@@ -372,13 +363,15 @@ class NetworkTrainer:
             unet, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
                 unet, network, optimizer, train_dataloader, lr_scheduler)
             enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
+            text_encoder.to(accelerator.device)
         elif train_text_encoder:
             if len(text_encoders) > 1:
                 t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
                     text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler)
                 text_encoder = text_encoders = [t_enc1, t_enc2]
                 del t_enc1, t_enc2
-                enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1], enc_unet)
+                enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1],
+                                                                        enc_unet)
                 enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
                 del enc_t_enc1, enc_t_enc2
             else:
@@ -387,10 +380,13 @@ class NetworkTrainer:
                 text_encoders = [text_encoder]
                 enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
                 enc_text_encoders = [enc_text_encoder]
-            unet.to(accelerator.device,dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
-            enc_unet.to(accelerator.device,dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
+            unet.to(accelerator.device,
+                    dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
+            enc_unet.to(accelerator.device,
+                        dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
         else:
-            network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(network, optimizer, train_dataloader, lr_scheduler)
+            network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(network, optimizer,
+                                                                                     train_dataloader, lr_scheduler)
         text_encoders = train_util.transform_models_if_DDP(text_encoders)
         unet, network = train_util.transform_models_if_DDP([unet, network])
         enc_text_encoders = train_util.transform_models_if_DDP(enc_text_encoders)
@@ -494,8 +490,6 @@ class NetworkTrainer:
             "ss_scale_weight_norms": args.scale_weight_norms,
         }
 
-
-
         # conserving backward compatibility when using train_dataset_dir and reg_dataset_dir
         assert (
                 len(train_dataset_group.datasets) == 1
@@ -596,7 +590,6 @@ class NetworkTrainer:
 
             unwrapped_nw.save_weights(ckpt_file, save_dtype, metadata_to_save)
 
-
         def remove_model(old_ckpt_name):
             old_ckpt_file = os.path.join(args.output_dir, old_ckpt_name)
             if os.path.exists(old_ckpt_file):
@@ -607,7 +600,6 @@ class NetworkTrainer:
         if is_main_process:
             gradient_dict = {}
             loss_dict = {}
-
 
         for epoch in range(num_train_epochs):
             accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
@@ -629,12 +621,12 @@ class NetworkTrainer:
                         latents = latents * self.vae_scale_factor
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args,
-                                                                    accelerator,
-                                                                    batch,
-                                                                    tokenizers,
-                                                                    text_encoders,
-                                                                    weight_dtype)
-                        if args.truncate_pad :
+                                                                accelerator,
+                                                                batch,
+                                                                tokenizers,
+                                                                text_encoders,
+                                                                weight_dtype)
+                        if args.truncate_pad:
                             text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
 
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
@@ -651,59 +643,62 @@ class NetworkTrainer:
                                                     batch,
                                                     weight_dtype, 1, None)
 
-                    if args.v_parameterization:
-                        target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                    else:
-                        target = noise
-                    loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
-                    loss = loss.mean([1, 2, 3])
-                    loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                    loss = loss * loss_weights
-                    task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-                    loss = task_loss * args.task_loss_weight
+                    if batch['train_class_list'][0] == 1 :
+                        if args.v_parameterization:
+                            target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                        else:
+                            target = noise
+                        loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
+                        loss = loss.mean([1, 2, 3])
+                        loss_weights = batch["loss_weights"]  # 各sampleごとのweight
+                        loss = loss * loss_weights
+                        task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                        loss = task_loss * args.task_loss_weight
 
-                    if batch['train_class_list'][0] != 0 :
-                        attention_storer.reset()
+                    attn_dict = attention_storer.step_store
+                    attention_storer.reset()
+                    if args.use_attn_loss:
+                        attn_loss = 0
+                        for i, layer_name in enumerate(attn_dict.keys()):
+                            score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
+                            res = int(score_map.shape[1] ** 0.5)
+                            do_mask_loss = False
+                            if res in args.cross_map_res :
 
-                    if batch["train_class_list"][0] == 0 :
-                        # -----------------------------------------------------------------------------------------------------------------------
-                        attn_dict = attention_storer.step_store
-                        attention_storer.reset()
-                        if args.use_attn_loss :
-                            attn_loss = 0
-                            anormal_attn_loss, normal_attn_loss = 0,0
-                            for i, layer_name in enumerate(attn_dict.keys()) :
-                                score_map = attn_dict[layer_name][0] # 8, res*res
-                                normal_map, anormal_map = score_map.chunk(2, dim = -1)
-                                res = int(score_map.shape[1] ** 0.5)
-                                #from torchvision import transforms
+                                if res == 64 :
+                                    if 'up' in layer_name :
+                                        do_mask_loss = True
+                                else :
+                                    do_mask_loss = True
+                                if do_mask_loss :
+                                    anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                    mask = anormal_mask.squeeze()  # res,res
+                                    mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
 
-                                # ------------------------------------------------------------------------------------------------
-                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0) # [1,1,res,res] anomal = 1
-                                mask = anormal_mask.squeeze()  # res,res
-                                mask = torch.stack([mask.flatten() for i in range(8)], dim=0).unsqueeze(-1) # 8, res*res
+                                    activation = (score_map * mask).sum(dim=-1)
 
-                                activation = (anormal_map * mask).sum(dim=-1)
-                                total_score = (anormal_map).sum(dim=-1)
-                                activation_loss = (1- (activation / total_score))**2 # 8, res*res
+                                    #total_score = (score_map).sum(dim=-1)
+                                    total_score = torch.ones_like(activation)
 
-                                normal_activation = (normal_map * mask).sum(dim=-1)
-                                total_normal_score = (normal_map).sum(dim=-1)
-                                normal_activation_loss = (normal_activation/total_normal_score)
-
-                                anormal_attn_loss += activation_loss.mean()
-                                normal_attn_loss += normal_activation_loss.mean()
-
-                            attn_loss = (anormal_attn_loss + normal_attn_loss) / (i+1)
-
+                                    if batch['train_class_list'][0] == 1 :
+                                        activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+                                    else :
+                                        activation_loss = (activation / total_score) ** 2  # 8, res*res
+                                    attn_loss += activation_loss
+                        attn_loss = attn_loss.mean()
+                        if batch['train_class_list'][0] == 1:
                             loss = loss + args.anormal_weight * attn_loss
+                        else :
+                            loss = args.anormal_weight * attn_loss
 
-                            if is_main_process:
-                                loss_dict["loss/anormal_pixel_on_anormal"] = anormal_attn_loss.item()
-                                loss_dict["loss/anormal_pixel_on_normal"] = normal_attn_loss.item()
+                        if is_main_process and batch['train_class_list'][0] == 1 :
+                            loss_dict["task_loss"] = task_loss.item()
+                            loss_dict["loss/normal_activation"] = attn_loss.item()
+                        elif is_main_process and batch['train_class_list'][0] == 0 :
+                            loss_dict["loss/anormal_activation_on_normal"] = attn_loss.item()
 
-                    if is_main_process:
-                        loss_dict["task_loss"] = task_loss.item()
+
+
 
                     accelerator.backward(loss)
 
@@ -719,7 +714,8 @@ class NetworkTrainer:
                 if accelerator.sync_gradients:
                     progress_bar.update(1)
                     global_step += 1
-                    self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
+                    self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer,
+                                       text_encoder, unet)
                     attention_storer.reset()
 
                     # 指定ステップごとにモデルを保存
@@ -752,7 +748,7 @@ class NetworkTrainer:
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
                 if args.logging_dir is not None:
-                    #accelerator.log(logs, step=global_step)
+                    # accelerator.log(logs, step=global_step)
                     if is_main_process:
                         logs = self.generate_step_logs(loss_dict, lr_scheduler)
                         wandb.log(logs, step=global_step)
@@ -776,7 +772,8 @@ class NetworkTrainer:
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
 
-            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
+            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
+                               text_encoder, unet)
             attention_storer.reset()
 
         # metadata["ss_epoch"] = str(num_train_epochs)
@@ -797,7 +794,6 @@ class NetworkTrainer:
             import pickle
             with open(gradient_save_dir, 'wb') as fw:
                 pickle.dump(gradient_dict, fw)
-
 
 
 if __name__ == "__main__":
@@ -855,15 +851,12 @@ if __name__ == "__main__":
                         help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率", )
     parser.add_argument("--no_half_vae", action="store_true",
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
-
     parser.add_argument("--mask_threshold", type=float, default=0.5)
-
-    parser.add_argument("--contrastive_eps", type=float, default=0.00005)
-    parser.add_argument("--resume_lora_training", action="store_true",)
-    parser.add_argument("--start_epoch", type = int, default = 0)
+    parser.add_argument("--resume_lora_training", action="store_true", )
+    parser.add_argument("--start_epoch", type=int, default=0)
     parser.add_argument("--valid_data_dir", type=str)
     parser.add_argument("--task_loss_weight", type=float, default=0.5)
-    parser.add_argument("--anormal_training", action = 'store_true')
+    parser.add_argument("--anormal_training", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--use_attn_loss", action='store_true')
@@ -873,8 +866,9 @@ if __name__ == "__main__":
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
-    parser.add_argument('--anormal_weight', type = float, default = 1.0)
-    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
+    parser.add_argument('--trg_position', type = arg_as_list, default = ['down', 'up'])
+    parser.add_argument('--anormal_weight', type=float, default=1.0)
+    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--normal_training", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
