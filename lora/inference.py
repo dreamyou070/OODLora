@@ -304,18 +304,23 @@ def main(args) :
                                                       f'normal_{key_name}.png'))
 
                 # ----------------------------------------------------------------------------------------------------- #
-                record = [trg_prompt, test_image]
+                if 'good' not in trg_prompt :
+                    record = [trg_prompt, test_image]
                 for k in score_dict.keys():
                     trigger_score = score_dict[k]
-                    if k not in total_dict.keys() :
-                        total_dict[k] = trigger_score.sum().item()
-                    else :
-                        total_dict[k] += trigger_score.sum().item()
-                    first_elem.append(k)
-                    record.append(trigger_score.sum().item())
-                if first_elem not in records:
+                    if 'good' not in trg_prompt:
+                        if k not in total_dict.keys() :
+                            total_dict[k] = trigger_score.sum().item()
+                        else :
+                            total_dict[k] += trigger_score.sum().item()
+                        record.append(trigger_score.sum().item())
+
+                    if j == 0 :
+                        first_elem.append(k)
+                if j == 0:
                     records.append(first_elem)
-                records.append(record)
+                if 'good' not in trg_prompt:
+                    records.append(record)
         total_elem = ['','']
         for k in total_dict.keys() :
             total_elem.append(total_dict[k])
