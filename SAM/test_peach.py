@@ -43,8 +43,11 @@ def main(args):
                 trg_w_0, trg_w_1, trg_w_2 = int(w * (3/5)), int(w * (1/2)), int(w * (4/5))
 
                 input_point = np.array([[trg_h_0, trg_w_1],
-                                        [trg_h_1, trg_w_0],[trg_h_1, trg_w_1],[trg_h_1, trg_w_2]
-                                        [trg_h_2, trg_w_1]])
+                                        [trg_h_1, trg_w_0],
+                                        [trg_h_1, trg_w_1],
+                                        [trg_h_1, trg_w_2],
+                                        [trg_h_2, trg_w_1]
+                                        ])
                 input_label = np.array([1,1,1,1,1])
 
                 masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
