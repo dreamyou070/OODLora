@@ -39,25 +39,27 @@ def main(args):
                 predictor.set_image(np_img)
 
                 h, w, c = np_img.shape
+                trg_h_0, trg_w_0 = h / 2, w * (1 / 11)
                 trg_h_1, trg_w_1 = h / 2, w * (2 / 11)
                 trg_h_2, trg_w_2 = h * (1 / 2), w * (4 / 11)
                 trg_h_3, trg_w_3 = h * (1 / 2), w * (6 / 11)
                 trg_h_4, trg_w_4 = h * (1 / 2), w * (8 / 11)
                 trg_h_5, trg_w_5 = h * (1 / 2), w * (10 / 11)
-                input_point = np.array([[trg_h_1, trg_w_1], [trg_h_2, trg_w_2],
+                input_point = np.array([[trg_h_0, trg_w_0],
+                                        [trg_h_1, trg_w_1], [trg_h_2, trg_w_2],
                                         [trg_h_3, trg_w_3], [trg_h_4, trg_w_4],
                                         [trg_h_5, trg_w_5]])
-                input_label = np.array([1, 1, 1, 1, 1])
+                input_label = np.array([1, 1, 1, 1, 1, 1])
                 masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                           multimask_output=True, )
 
                 for i, (mask, score) in enumerate(zip(masks, scores)):
-
-                    print(f'{i}th boolen mask : {mask}')
-                    np_mask = (mask * 1)
-                    np_mask = np.where(np_mask == 1, 1, 0) * 255  # if true,  be black
-                    sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                    sam_result_pil.save(os.path.join(f'{i}_{image}'))
+                    if i == 2 :
+                        print(f'{i}th boolen mask : {mask}')
+                        np_mask = (mask * 1)
+                        np_mask = np.where(np_mask == 1, 1, 0) * 255  # if true,  be black
+                        sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                        sam_result_pil.save(os.path.join(f'{i}_{image}'))
 
                     #sam_result_pil.save(os.path.join(sam_train_dir, image))
             """
