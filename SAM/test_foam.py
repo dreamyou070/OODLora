@@ -47,10 +47,11 @@ def main(args):
                                                           multimask_output=True, )
 
                 for i, (mask, score) in enumerate(zip(masks, scores)):
-                    np_mask = (mask * 1)
-                    np_mask = np.where(np_mask == 1, 1, 0) * 255
-                    sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                    sam_result_pil.save(f'{i}_{image}')
+                    if i == 1 :
+                        np_mask = (mask * 1)
+                        np_mask = np.where(np_mask == 1, 0, 1) * 255
+                        sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                        sam_result_pil.save(f'{i}_{image}')
 
             # -------------------------------------------------------------------------------------------------------
             # (2) test
