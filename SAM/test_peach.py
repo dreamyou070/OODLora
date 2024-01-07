@@ -39,8 +39,8 @@ def main(args):
                 predictor.set_image(np_img)
 
                 h, w, c = np_img.shape
-                trg_h_0, trg_h_1, trg_h_2  = h * (3/5),h * (1/2),h * (4/5)
-                trg_w_0, trg_w_1, trg_w_2 = w * (3 / 5), w * (1 / 2), w * (4 / 5)
+                trg_h_0, trg_h_1, trg_h_2  = int(h * (3/5)), int(h * (1/2)), int(h * (4/5))
+                trg_w_0, trg_w_1, trg_w_2 = int(w * (3/5)), int(w * (1/2)), int(w * (4/5))
 
                 input_point = np.array([[trg_h_0, trg_w_1],
                                         [trg_h_1, trg_w_0],[trg_h_1, trg_w_1],[trg_h_1, trg_w_2]
