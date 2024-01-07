@@ -44,14 +44,13 @@ def main(args):
                         masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                                   multimask_output=True, )
                         for i, (mask, score) in enumerate(zip(masks, scores)):
-                            np_mask = (mask * 1)
-                            np_mask = np.where(np_mask == 1, 1, 0) * 255
-                            sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                            sam_result_pil.save(f'{i}_{image}')
+                            if i == 2 :
+                                np_mask = (mask * 1)
+                                np_mask = np.where(np_mask == 1, 1, 0) * 255
+                                sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                                sam_result_pil.save(os.path.join(class_rgb_dir, image))
 
 
-                        break
-            """
             # -------------------------------------------------------------------------------------------------------
             # (2) test
             class_names = os.listdir(test_ex_rgb_dir)
@@ -65,7 +64,7 @@ def main(args):
                         img_dir = os.path.join(class_rgb_dir, image)
                         np_img = np.array(Image.open(img_dir))
                         predictor.set_image(np_img)
-                        input_point = np.array([[0, 0]])
+                        input_point = np.array([[200, 200]])
                         input_label = np.array([0])
                         masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                                   multimask_output=True, )
@@ -75,10 +74,10 @@ def main(args):
                             else:
                                 if i == 2:
                                     np_mask = (mask * 1)
-                                    np_mask = np.where(np_mask == 1, 0, 1) * 255
+                                    np_mask = np.where(np_mask == 1, 1, 0) * 255
                                     sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                                     sam_result_pil.save(os.path.join(class_gt_dir, image))
-            """
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
