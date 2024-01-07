@@ -37,33 +37,6 @@ def main(args):
                 img_dir = os.path.join(good_train_dir, image)
                 np_img = np.array(Image.open(img_dir))
                 predictor.set_image(np_img)
-                input_point = np.array([[0, 0]])
-                input_label = np.array([0])
-                masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
-                                                          multimask_output=True, )
-                for i, (mask, score) in enumerate(zip(masks, scores)):
-                    if len(masks) < 3:
-                        print('wrong')
-                    else:
-                        if i == 1:
-                            np_mask = (mask * 1)
-                            np_mask = np.where(np_mask == 1, 0, 1) * 255
-                            sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                            sam_result_pil.save(os.path.join(sam_train_dir, image))
-            # -------------------------------------------------------------------------------------------------------
-            # (2) test
-            good_test_dir = os.path.join(test_dir, 'good/rgb')
-            sam_test_dir = os.path.join(test_dir, f'good/gt')
-            os.makedirs(sam_test_dir, exist_ok=True)
-            images = os.listdir(good_test_dir)
-            for image in images:
-                print(f'image processing: {image}')
-                img_dir = os.path.join(good_test_dir, image)
-                np_img = np.array(Image.open(img_dir))
-
-                predictor.set_image(np_img)
-                # input_point = np.array([[0, 0]])
-                # input_label = np.array([0])
 
                 h, w, c = np_img.shape
                 trg_h_1, trg_w_1 = h / 3, w / 3
@@ -80,9 +53,11 @@ def main(args):
                 sam_result_pil.save(f'mask_{image}')
                 import time
                 time.sleep(1000)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
-    parser.add_argument('--trg_cat', type=str, default='rope')
+    parser.add_argument('--trg_cat', type=str, default='foam')
     args = parser.parse_args()
     main(args)
