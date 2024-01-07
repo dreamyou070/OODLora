@@ -326,6 +326,8 @@ def main(args) :
                             # ------------------------------ self values ------------------------------ #
                             for layer_name in self_key_states:
                                 key = self_key_states[layer_name]
+                                print(f'key : {type(key)}')
+                                print(f'len of key : {len(key)}')
                                 value = self_value_states[layer_name]
                                 controller.reset()
                                 if t not in org_self_key_dict.keys():
