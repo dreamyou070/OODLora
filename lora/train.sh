@@ -1,7 +1,7 @@
 #!/bin/bash
 # dreamyou070
 # qkrtndus0701?!
-# srun -p suma_rtx4090 -q big_qos --job-name=lora_train_5 --gres=gpu:2 --time=48:00:00 --pty bash -i
+# srun -p suma_rtx4090 -q big_qos --job-name=lora_train_5 --gres=gpu:1 --time=48:00:00 --pty bash -i
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 

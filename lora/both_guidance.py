@@ -36,10 +36,12 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
+
             if not is_cross_attention and trg_indexs_list is None:
                 controller.save_key_value_states(key, value, layer_name)
 
             if not is_cross_attention and trg_indexs_list is not None:
+
                 sub_key_dict = trg_indexs_list[0]
                 sub_value_dict = trg_indexs_list[1]
                 key = sub_key_dict[layer_name]
@@ -58,7 +60,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
 
-            if is_cross_attention:
+            if is_cross_attention and mask is None :
                 #controller.store(attention_probs[:,:,:3], layer_name) # head, pixel_num, 2
                 controller.store(attention_probs[:, :, 1], layer_name)  # head, pixel_num, 2
 
@@ -267,7 +269,9 @@ def main(args) :
                         mask_dict = {}
                         mask_dict_avg = {}
                         back_dict[0] = latent
-                        noise_pred = call_unet(unet, latent, 0, con[:,:3,:], [[1]], None)
+
+
+                        noise_pred = call_unet(unet, latent, 0, con[:,:3,:], None, None)
                         attn_stores = controller.step_store
                         controller.reset()
 
