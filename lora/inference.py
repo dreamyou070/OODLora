@@ -197,7 +197,8 @@ def main(args) :
         records = []
         first_elem = ['class', 'img_name']
         total_dict = {}
-        for class_name in classes:
+        for k, class_name in enumerate(classes):
+
             if '_' in class_name:
                 trg_prompt = class_name.split('_')[-1]
             else:
@@ -306,19 +307,22 @@ def main(args) :
                 # ----------------------------------------------------------------------------------------------------- #
                 if 'good' not in trg_prompt :
                     record = [trg_prompt, test_image]
+
                 for k in score_dict.keys():
-                    trigger_score = score_dict[k]
                     if 'good' not in trg_prompt:
+                        trigger_score = score_dict[k]
                         if k not in total_dict.keys() :
                             total_dict[k] = trigger_score.sum().item()
                         else :
                             total_dict[k] += trigger_score.sum().item()
                         record.append(trigger_score.sum().item())
 
-                    if j == 0 :
+                    if j == 0 and k == 0 :
                         first_elem.append(k)
-                if j == 0:
+
+                if j == 0 and k == 0 :
                     records.append(first_elem)
+
                 if 'good' not in trg_prompt:
                     records.append(record)
         total_elem = ['','']
