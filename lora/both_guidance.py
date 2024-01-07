@@ -362,7 +362,9 @@ def main(args) :
                         #    Image.fromarray(pixel_mask_img).resize((512, 512)).save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
                         #    pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)
                         #    pixel_mask = pixel_mask.repeat(1, 4, 1, 1)
-
+                        org_self_key_dict
+                        self_times = org_self_key_dict.keys()
+                        print(f'self_times : {self_times}')
                         # ------------------------------ recon ------------------------------ #
                         for j, t in enumerate(time_steps[:-1]):
                             prev_time = time_steps[j + 1]
