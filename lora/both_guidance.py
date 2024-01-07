@@ -38,6 +38,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             value = self.to_v(context)
 
             if not is_cross_attention and trg_indexs_list is None:
+                print(f'saving self attention')
                 controller.save_key_value_states(key, value, layer_name)
 
             if not is_cross_attention and trg_indexs_list is not None:
