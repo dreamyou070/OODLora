@@ -325,10 +325,8 @@ def main(args) :
                             controller.reset()
                             # ------------------------------ self values ------------------------------ #
                             for layer_name in self_key_states:
-                                key = self_key_states[layer_name]
-                                print(f'key : {type(key)}')
-                                print(f'len of key : {len(key)}')
-                                value = self_value_states[layer_name]
+                                key = self_key_states[layer_name][0]
+                                value = self_value_states[layer_name][0]
                                 controller.reset()
                                 if t not in org_self_key_dict.keys():
                                     org_self_key_dict[t] = {}
@@ -344,8 +342,8 @@ def main(args) :
                         self_value_states = controller.value_dict
                         controller.reset()
                         for layer_name in self_key_states:
-                            key = self_key_states[layer_name]
-                            value = self_value_states[layer_name]
+                            key = self_key_states[layer_name][0]
+                            value = self_value_states[layer_name][0]
                             controller.reset()
                             if inf_time[-1] not in org_self_key_dict.keys():
                                 org_self_key_dict[inf_time[-1]] = {}
