@@ -5,7 +5,7 @@
 # srun -p suma_a6000 -q big_qos --job-name=lora_train_5 --gres=gpu:2 --time=48:00:00 --pty bash -i
 # conda activate venv_lora
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 53333 train.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port 55555 train.py \
   --process_title parksooyeon \
   --log_with wandb \
   --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
@@ -25,7 +25,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --seed 42 \
   --class_caption 'good' \
   --start_epoch 0 \
-  --wandb_init_name carrot \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/carrot/new_data/train_ex/rgb \
-  --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/carrot/new_data/test_ex/rgb \
-  --output_dir ../result/MVTec3D-AD_experiment/carrot/lora_training/res_64_up_normal_10_anormal_80
+  --wandb_init_name foam \
+  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/foam/new_data/train_ex/rgb \
+  --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/foam/test_ex/rgb \
+  --output_dir ../result/MVTec3D-AD_experiment/foam/lora_training/res_64_up_normal_10_anormal_80

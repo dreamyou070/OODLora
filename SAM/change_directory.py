@@ -41,8 +41,8 @@ def main(args):
             good_train_dir = os.path.join(train_dir, 'good/rgb')
             sam_train_dir = os.path.join(train_dir, f'good/gt')
 
-            train_ex_good_rgb_dir = os.path.join(train_ex_dir, f'rgb/50_good')
-            train_ex_good_gt_dir = os.path.join(train_ex_dir, f'gt/50_good')
+            train_ex_good_rgb_dir = os.path.join(train_ex_dir, f'rgb/10_good')
+            train_ex_good_gt_dir = os.path.join(train_ex_dir, f'gt/10_good')
             os.makedirs(train_ex_good_rgb_dir, exist_ok=True)
             os.makedirs(train_ex_good_gt_dir, exist_ok=True)
 
@@ -76,8 +76,8 @@ def main(args):
             for category in categories:
                 if 'good' not in category:
                     category_dir = os.path.join(test_dir, category)
-                    train_cat_rgb_dir = os.path.join(train_ex_rgb_dir, f'50_{category}')
-                    train_cat_gt_dir = os.path.join(train_ex_gt_dir, f'50_{category}')
+                    train_cat_rgb_dir = os.path.join(train_ex_rgb_dir, f'80_{category}')
+                    train_cat_gt_dir = os.path.join(train_ex_gt_dir, f'80_{category}')
                     os.makedirs(train_cat_rgb_dir, exist_ok=True)
                     os.makedirs(train_cat_gt_dir, exist_ok=True)
                     test_cat_rgb_dir = os.path.join(test_ex_rgb_dir, category)
@@ -134,6 +134,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
-    parser.add_argument('--trg_cat', type=str, default='carrot')
+    parser.add_argument('--trg_cat', type=str, default='peach')
     args = parser.parse_args()
     main(args)
