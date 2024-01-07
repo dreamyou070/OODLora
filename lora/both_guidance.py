@@ -47,6 +47,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 sub_value_dict = trg_indexs_list[1]
                 key = sub_key_dict[layer_name]
                 value = sub_value_dict[layer_name]
+                print(f'from back, key : {key.shape}, value : {value.shape}')
+                key = torch.cat([key, key], dim=0)
+                value = torch.cat([value, value], dim=0)
 
 
             query = self.reshape_heads_to_batch_dim(query)
