@@ -13,7 +13,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --resolution '512,512' \
   --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/cookie \
   --seed 42 \
-  --network_weights ../result/MVTec3D-AD_experiment/cookie/lora_training/res_64_up/models \
+  --network_weights ../result/MVTec3D-AD_experiment/cookie/lora_training/res_64_up/models_before \
   --num_ddim_steps 50 \
   --cross_map_res [64] \
   --trg_position "['up']"
