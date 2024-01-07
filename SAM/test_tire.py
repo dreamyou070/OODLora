@@ -62,7 +62,7 @@ def main(args):
                     np_mask = np.where(np_mask == 1, 0, 1) * 255  # if true,  be black
                     sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                     sam_result_pil.save(f'{i}_{image}')
-                    
+
 
 
 
