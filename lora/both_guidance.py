@@ -337,7 +337,7 @@ def main(args) :
                         back_dict[inf_time[-1]] = latent
                         # ------------------------------------------------------------------------------------
                         print(f'last time : {inf_time[-1]}')
-                        call_unet(invers_unet, latent, inf_time[-1], inv_c, None, None)
+                        call_unet(unet, latent, inf_time[-1], inv_c, None, None)
                         self_key_states = controller.key_dict
                         self_value_states = controller.value_dict
                         controller.reset()
