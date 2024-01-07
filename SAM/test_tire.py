@@ -48,15 +48,64 @@ def main(args):
                                                           multimask_output=True, )
                 mask_dict = {}
                 for i, (mask, score) in enumerate(zip(masks, scores)):
-                    if i == 2 :
+                    if i == 2:
                         np_mask = (mask * 1)
                         np_mask = np.where(np_mask == 1, 1, 0) * 255
                         sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                        sam_result_pil.save(f'{i}_mask_{image}')
-                
+                        sam_result_pil.save(os.path.join(sam_train_dir, image))
 
+            # -------------------------------------------------------------------------------------------------------
+            # (2) test
+            good_test_dir = os.path.join(test_dir, 'good/rgb')
+            sam_test_dir = os.path.join(test_dir, f'good/gt')
+            os.makedirs(sam_test_dir, exist_ok=True)
+            images = os.listdir(good_test_dir)
+            for image in images:
+                img_dir = os.path.join(good_test_dir, image)
+                np_img = np.array(Image.open(img_dir))
 
+                predictor.set_image(np_img)
+                h, w, c = np_img.shape
+                trg_h_0, trg_w_01 = h / 4, w * (6 / 12)
+                trg_h_1 = h / 2
+                input_point = np.array([[trg_h_1, trg_w_01]])
+                input_label = np.array([1])
 
+                masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
+                                                          multimask_output=True, )
+                mask_dict = {}
+                for i, (mask, score) in enumerate(zip(masks, scores)):
+                    if i == 2:
+                        np_mask = (mask * 1)
+                        np_mask = np.where(np_mask == 1, 1, 0) * 255
+                        sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                        sam_result_pil.save(os.path.join(sam_test_dir, image))
+
+            # -------------------------------------------------------------------------------------------------------
+            # (3) validation
+            good_validation_dir = os.path.join(validation_dir, 'good/rgb')
+            sam_validation_dir = os.path.join(validation_dir, f'good/gt')
+            os.makedirs(sam_validation_dir, exist_ok=True)
+            images = os.listdir(good_validation_dir)
+            for image in images:
+                img_dir = os.path.join(good_validation_dir, image)
+                np_img = np.array(Image.open(img_dir))
+                predictor.set_image(np_img)
+                h, w, c = np_img.shape
+                trg_h_0, trg_w_01 = h / 4, w * (6 / 12)
+                trg_h_1 = h / 2
+                input_point = np.array([[trg_h_1, trg_w_01]])
+                input_label = np.array([1])
+
+                masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
+                                                          multimask_output=True, )
+                mask_dict = {}
+                for i, (mask, score) in enumerate(zip(masks, scores)):
+                    if i == 2:
+                        np_mask = (mask * 1)
+                        np_mask = np.where(np_mask == 1, 1, 0) * 255
+                        sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                        sam_result_pil.save(os.path.join(sam_validation_dir, image))
 
 
 if __name__ == "__main__":
