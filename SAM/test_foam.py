@@ -49,6 +49,7 @@ def main(args):
                                                           multimask_output=True, )
                 np_mask = (masks * 1)
                 np_mask = np.where(np_mask == 1, 0, 1) * 255
+                print(f'np_mask: {np_mask}')
                 sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                 print(f'save image: mask_{image}')
                 sam_result_pil.save(f'mask_{image}')
