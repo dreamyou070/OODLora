@@ -41,8 +41,8 @@ def main(args):
             good_train_dir = os.path.join(train_dir, 'good/rgb')
             sam_train_dir = os.path.join(train_dir, f'good/gt')
 
-            train_ex_good_rgb_dir = os.path.join(train_ex_dir, f'rgb/10_good')
-            train_ex_good_gt_dir = os.path.join(train_ex_dir, f'gt/10_good')
+            train_ex_good_rgb_dir = os.path.join(train_ex_dir, f'rgb/50_good')
+            train_ex_good_gt_dir = os.path.join(train_ex_dir, f'gt/50_good')
             os.makedirs(train_ex_good_rgb_dir, exist_ok=True)
             os.makedirs(train_ex_good_gt_dir, exist_ok=True)
 
