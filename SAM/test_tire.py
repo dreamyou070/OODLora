@@ -69,15 +69,15 @@ def main(args):
                 for i, (mask, score) in enumerate(zip(masks, scores)):
                     if i == 1 :
                         np_mask = (mask * 1)
-                        np_mask = np.where(np_mask == 1, 0, 1) #* 255  # if true,  be black
+                        np_mask = np.where(np_mask == 1, 0, 1) #  # if true,  be black
                         mask_dict[1] = np_mask
-                        sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                        sam_result_pil = Image.fromarray((np_mask* 255).astype(np.uint8))
                         sam_result_pil.save(f'{i}_mask_{image}')
                     if i == 2 :
                         np_mask = (mask * 1)
                         np_mask = np.where(np_mask == 1, 0, 1) #* 255
                         mask_dict[2] = np_mask
-                        sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                        sam_result_pil = Image.fromarray((np_mask* 255).astype(np.uint8))
                         sam_result_pil.save(f'{i}_mask_{image}')
                 final_mask = (1- (mask_dict[1] * mask_dict[2])) * 255
                 sam_result_pil = Image.fromarray(final_mask.astype(np.uint8))
