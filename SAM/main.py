@@ -61,13 +61,11 @@ def main(args):
                 np_img = np.array(Image.open(img_dir))
 
                 predictor.set_image(np_img)
-
                 h, w, c = np_img.shape
                 trg_h_1, trg_w_1 = h / 3, w / 3
                 trg_h_2, trg_w_2 = h * (2 / 3), w * (2 / 3)
                 input_point = np.array([[trg_h_1, trg_w_1], [trg_h_2, trg_w_2]])
                 input_label = np.array([1, 1])
-
                 masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                           multimask_output=True, )
 
