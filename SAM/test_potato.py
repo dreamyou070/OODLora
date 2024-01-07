@@ -38,21 +38,20 @@ def main(args):
                 np_img = np.array(Image.open(img_dir))
                 predictor.set_image(np_img)
 
-                w,h,c = np_img.shape
+                h, w, c = np_img.shape
                 trg_h_1, trg_w_1 = h / 2, w / 3
                 trg_h_2, trg_w_2 = h * (1 / 2), w * (2 / 3)
-                input_point = np.array([[trg_w_1,trg_h_1], [trg_w_2,trg_h_2]])
+                input_point = np.array([[trg_h_1, trg_w_1], [trg_h_2, trg_w_2]])
                 input_label = np.array([1, 1])
                 masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                           multimask_output=True, )
 
                 for i, (mask, score) in enumerate(zip(masks, scores)):
-                    if i == 1 :
+                    if i == 1:
                         np_mask = (mask * 1)
                         np_mask = np.where(np_mask == 1, 0, 1) * 255
                         sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                        sam_result_pil.save(f'{i}_{image}')
-
+                        sam_result_pil.save(os.path.join(sam_train_dir, image))
             # -------------------------------------------------------------------------------------------------------
             # (2) test
             good_test_dir = os.path.join(test_dir, 'good/rgb')
@@ -73,15 +72,40 @@ def main(args):
                                                           multimask_output=True, )
 
                 for i, (mask, score) in enumerate(zip(masks, scores)):
-                    np_mask = (mask * 1)
-                    np_mask = np.where(np_mask == 1, 1, 0) * 255
-                    sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                    sam_result_pil.save(f'{i}_{image}')
+                    if i == 1:
+                        np_mask = (mask * 1)
+                        np_mask = np.where(np_mask == 1, 0, 1) * 255
+                        sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                        sam_result_pil.save(os.path.join(sam_test_dir, image))
 
+            # -------------------------------------------------------------------------------------------------------
+            # (3) validation
+            good_validation_dir = os.path.join(validation_dir, 'good/rgb')
+            sam_validation_dir = os.path.join(validation_dir, f'good/gt')
+            os.makedirs(sam_validation_dir, exist_ok=True)
+            images = os.listdir(good_validation_dir)
+            for image in images:
+                img_dir = os.path.join(good_validation_dir, image)
+                np_img = np.array(Image.open(img_dir))
+                predictor.set_image(np_img)
+                h, w, c = np_img.shape
+                trg_h_1, trg_w_1 = h / 2, w / 3
+                trg_h_2, trg_w_2 = h * (1 / 2), w * (2 / 3)
+                input_point = np.array([[trg_h_1, trg_w_1], [trg_h_2, trg_w_2]])
+                input_label = np.array([1, 1])
+                masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
+                                                          multimask_output=True, )
+
+                for i, (mask, score) in enumerate(zip(masks, scores)):
+                    if i == 1:
+                        np_mask = (mask * 1)
+                        np_mask = np.where(np_mask == 1, 0, 1) * 255
+                        sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                        sam_result_pil.save(os.path.join(sam_validation_dir, image))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
-    parser.add_argument('--trg_cat', type=str, default='potato')
+    parser.add_argument('--trg_cat', type=str, default='foam')
     args = parser.parse_args()
     main(args)
