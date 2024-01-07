@@ -318,7 +318,7 @@ def main(args) :
                             time_steps.append(t)
                             back_dict[int(t)] = latent
                             time_steps.append(t)
-                            noise_pred = call_unet(invers_unet, latent, t, inv_c, None, None)
+                            noise_pred = call_unet(unet, latent, t, inv_c, None, None)
                             self_key_states = controller.key_dict
                             self_value_states = controller.value_dict
                             controller.reset()
