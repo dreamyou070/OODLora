@@ -33,6 +33,7 @@ def main(args):
                 if 'good' in class_name:
                     class_rgb_dir = os.path.join(train_ex_rgb_dir, class_name)
                     class_gt_dir = os.path.join(train_ex_gt_dir, class_name)
+                    os.makedirs(class_gt_dir, exist_ok=True)
                     images = os.listdir(class_rgb_dir)
                     for image in images:
                         img_dir = os.path.join(class_rgb_dir, image)
@@ -58,6 +59,7 @@ def main(args):
                 if 'good' in class_name:
                     class_rgb_dir = os.path.join(test_ex_rgb_dir, class_name)
                     class_gt_dir = os.path.join(test_ex_gt_dir, class_name)
+                    os.makedirs(class_gt_dir, exist_ok=True)
                     images = os.listdir(class_rgb_dir)
                     for image in images:
                         img_dir = os.path.join(class_rgb_dir, image)
