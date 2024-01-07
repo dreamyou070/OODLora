@@ -44,6 +44,8 @@ def main(args):
                 trg_h_0, trg_w_02 = h / 4, w * (7 / 12)
 
                 trg_h_0 = h * (1 / 4)
+                trg_h_01 = h * (2 / 5)
+                trg_h_02 = h * (4 / 5)
                 trg_h_1 = h / 2
                 trg_h_2 = h * (3/ 4)
 
@@ -52,13 +54,15 @@ def main(args):
 
 
                 input_point = np.array([[trg_h_0, trg_w_01],[trg_h_0, trg_w_02],
+                                        [trg_h_01, trg_w_01],[trg_h_01, trg_w_02],
                     [trg_h_0, trg_w_00],[trg_h_0, trg_w_01], [trg_h_0, trg_w_02],
                                         [trg_h_1, trg_w_00],[trg_h_1, trg_w_01], [trg_h_1, trg_w_02],
                                         [trg_h_2, trg_w_00],[trg_h_2, trg_w_01], [trg_h_2, trg_w_02],
+                                        [trg_h_02, trg_w_01], [trg_h_02, trg_w_02],
                                         [trg_h_2, trg_w_01],[trg_h_2, trg_w_02]])
                 input_label = np.array([1, 1, 1,
                                         1, 1, 1,
-                                        1, 1, 1,1,1,1,1])
+                                        1, 1, 1,1,1,1,1,1,1,1,1])
                 masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                           multimask_output=True, )
                 mask_dict = {}
