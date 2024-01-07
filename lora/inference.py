@@ -15,8 +15,7 @@ from utils.model_utils import get_state_dict, init_prompt
 import shutil
 from attention_store import AttentionStore
 import torch.nn as nn
-from transformers import CLIPTextModel, CLIPTokenizer
-from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel
+from utils.model_utils import call_unet
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -78,30 +77,15 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
     controller.num_att_layers = cross_att_count
 
 
-def get_cross_attn_map_from_unet(attention_store: AttentionStore, reses=[64, 32, 16, 8], poses=["down", "mid", "up"]):
-
-    #attention_maps = attention_store.get_average_attention()
-    attention_maps = attention_store.step_store
-    attn_dict = {}
-    for pos in poses:
-        for res in reses:
-            temp_list = []
-            for item in attention_maps[f"{pos}_cross"]:
-                if item.shape[1] == res ** 2:
-                    cross_maps = item.reshape(-1, res, res, item.shape[-1])
-                    temp_list.append(cross_maps)
-            # if such resolution exists
-            if len(temp_list) > 0:
-                attn_dict[f"{pos}_{res}"] = temp_list # length 1 or 3
-    return attn_dict
-
-
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'per_res_normalized_cross_attention_map')
-    org_output_dir = os.path.join(parent, f'normalized_cross_attention_map')
+    args.output_dir = os.path.join(parent, f'cross_attention_map')
     os.makedirs(args.output_dir, exist_ok=True)
+    record_output_dir = os.path.join(parent, 'score_record')
+    print(f'base record dir : {record_output_dir}')
+    os.makedirs(record_output_dir, exist_ok=True)
+
 
     print(f' \n step 1. setting')
     if args.process_title:
@@ -134,11 +118,8 @@ def main(args) :
         else:
             model_epoch = 'last'
 
-
-        save_dir = os.path.join(output_dir, f'unnormalized_map_lora_{model_epoch}')
+        save_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
         os.makedirs(save_dir, exist_ok=True)
-        org_save_dir = os.path.join(org_output_dir, f'unnormalized_map_lora_{model_epoch}')
-        os.makedirs(org_save_dir, exist_ok=True)
 
         print(f' \n step 2. make stable diffusion model')
         device = accelerator.device
@@ -199,7 +180,6 @@ def main(args) :
         print(f' (2.4.+) model to accelerator device')
         controller = AttentionStore()
         register_attention_control(unet, controller)
-        #register_attention_control(invers_unet, controller)
 
         print(f' \n step 3. ground-truth image preparing')
         print(f' (3.1) prompt condition')
@@ -210,9 +190,10 @@ def main(args) :
         trg_h, trg_w = args.resolution
 
         print(f' (3.3) test images')
-        test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/bad')
-        test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/corrected')
+        test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/rgb')
+        test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/gt')
         classes = os.listdir(test_img_folder)
+        records = []
 
         for class_name in classes:
             if '_' in class_name:
@@ -221,8 +202,6 @@ def main(args) :
                 trg_prompt = class_name
             class_base_folder = os.path.join(save_dir, class_name)
             os.makedirs(class_base_folder, exist_ok=True)
-            org_class_base_folder = os.path.join(org_save_dir, class_name)
-            os.makedirs(org_class_base_folder, exist_ok=True)
 
             image_folder = os.path.join(test_img_folder, class_name)
             mask_folder = os.path.join(test_mask_folder, class_name)
@@ -233,104 +212,106 @@ def main(args) :
             for j, test_image in enumerate(test_images):
 
                 name, ext = os.path.splitext(test_image)
+
                 trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
                 os.makedirs(trg_img_output_dir, exist_ok=True)
-                org_trg_img_output_dir = os.path.join(org_class_base_folder, f'{name}')
-                os.makedirs(org_trg_img_output_dir, exist_ok=True)
 
                 test_img_dir = os.path.join(image_folder, test_image)
-                shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
-                shutil.copy(test_img_dir, os.path.join(org_trg_img_output_dir, test_image))
+                Image.open(test_img_dir).convert('RGB').resize((int(trg_h),int(trg_w))).save(os.path.join(trg_img_output_dir, test_image))
 
                 mask_img_dir = os.path.join(mask_folder, test_image)
-                shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
-                shutil.copy(mask_img_dir, os.path.join(org_trg_img_output_dir, f'{name}_mask{ext}'))
+                Image.open(mask_img_dir).convert('L').resize((int(trg_h),int(trg_w))).save(os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+
 
                 mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
                 mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
-                gt_pil = Image.fromarray(mask_np.astype(np.uint8) * 255)
 
-                print(f' (2.3.1) inversion')
+
                 with torch.no_grad():
+                    print(f' (1) img to latent')
                     org_img = load_image(test_img_dir, 512, 512)
                     org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
 
-                with torch.no_grad():
                     inf_time = inference_times.tolist()
                     inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+
                     latent_dict = {}
                     latent = org_vae_latent
-                    with torch.no_grad():
-                        for i, t in enumerate(inf_time[:-1]):
-                            if i == 0 :
-                                next_time = inf_time[i + 1]
-                                latent_dict[int(t)] = latent
-                                from utils.model_utils import call_unet
-                                noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
-                                attn_stores = controller.step_store
-                                attn_dict = {}
-                                for layer_name in attn_stores :
-                                    attn = attn_stores[layer_name][0].squeeze() # head, pix_num
-                                    res = int(attn.shape[1] ** 0.5)
-                                    if 'down' in layer_name:
-                                        position = 'down'
-                                    elif 'up' in layer_name:
-                                        position = 'up'
-                                    else:
-                                        position = 'middle'
 
-                                    if res in args.cross_map_res and position in args.trg_position :
+                    t, next_time = inf_time[0], inf_time[1]
+                    latent_dict[int(t)] = latent
 
+                    noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
+                    attn_stores = controller.step_store
+                    controller.reset()
+                    attn_dict = {}
+                    score_dict = {}
+                    for layer_name in attn_stores :
+                        attn = attn_stores[layer_name][0].squeeze() # head, pix_num
+                        res = int(attn.shape[1] ** 0.5)
+                        if 'down' in layer_name: position = 'down'
+                        elif 'up' in layer_name: position = 'up'
+                        else: position = 'middle'
+                        if res in args.cross_map_res and position in args.trg_position :
+                            if 'attentions_0' in layer_name : part = 'attn_0'
+                            elif 'attentions_1' in layer_name : part = 'attn_1'
+                            else : part = 'attn_2'
+                            title_name = f'res_{res}_{position}_{part}'
 
+                            # ----------------------------------------- get attn map ----------------------------------------- #
+                            cls_score, normal_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
+                            h = cls_score.shape[0]
+                            normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
+                            singl_head_normal_score = normal_score.mean(dim=0)
+                            n_score = singl_head_normal_score.detach().cpu()
+                            n_score = n_score / n_score.max()
 
-                                        if 'attentions_0' in layer_name :
-                                            part = 'attn_0'
-                                        elif 'attentions_1' in layer_name :
-                                            part = 'attn_1'
-                                        else :
-                                            part = 'attn_2'
+                            # [1] resizing for recording
+                            score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
+                            mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                            mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
+                            """ anormal portion score """
+                            score_dict[title_name] = score_np * mask_np
 
-                                        title_name = f'res_{res}_{position}_{part}'
+                            # [2] saving n_score map
+                            n_score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
+                            n_score_pil = Image.fromarray(n_score_np).resize((512, 512),Image.BILINEAR)
+                            n_score_pil.save(os.path.join(trg_img_output_dir,
+                                                          f'{title_name}_res_{res}.png'))
 
-                                        cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
-                                        h = cls_score.shape[0]
-                                        trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
-                                        trigger_score = trigger_score.reshape(h, res, res)
-                                        trigger_score = trigger_score.mean(dim=0)
-                                        trigger = trigger_score.detach().cpu()
-                                        trigger = trigger / trigger.max()
-                                        trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
-                                        trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512),Image.BILINEAR)
-                                        trigger_dir = os.path.join(org_trg_img_output_dir,
-                                                                   f'normalized_good_{title_name}_res_{res}.png')
-                                        trigger_score_pil.save(trigger_dir)
+                            if 'down' in layer_name : key_name = f'down_{res}'
+                            elif 'up' in layer_name : key_name = f'up_{res}'
+                            else : key_name = f'mid_{res}'
 
-                                        if 'down' in layer_name :
-                                            key_name = f'down_{res}'
-                                        elif 'up' in layer_name :
-                                            key_name = f'up_{res}'
-                                        else :
-                                            key_name = f'mid_{res}'
-                                        if key_name not in attn_dict :
-                                            attn_dict[key_name] = []
-                                        attn_dict[key_name].append(attn)
-                                for key_name in attn_dict :
-                                    attn_list = attn_dict[key_name]
-                                    attn = torch.cat(attn_list, dim=0)
-                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
-                                    res = int(attn.shape[1] ** 0.5)
-                                    h = cls_score.shape[0]
-                                    cls_score, trigger_score, pad_score = cls_score.unsqueeze(-1), trigger_score.unsqueeze(-1), pad_score.unsqueeze(-1)
-                                    cls_score, trigger_score, pad_score = cls_score.reshape(h, res, res), trigger_score.reshape(h, res, res), pad_score.reshape(h, res, res)
-                                    cls_score, trigger_score, pad_score = cls_score.mean(dim=0), trigger_score.mean(dim=0), pad_score.mean(dim=0)
-                                    trigger = trigger_score.detach().cpu()
-                                    trigger = trigger / trigger.max()
-                                    trigger_np = np.array((trigger.cpu()) * 255).astype(np.uint8)
-                                    trigger_score_pil = Image.fromarray(trigger_np).resize((512, 512), Image.BILINEAR)
-                                    trigger_dir = os.path.join(trg_img_output_dir,
-                                                                f'normalized_good_{key_name}.png')
-                                    trigger_score_pil.save(trigger_dir)
-                                controller.reset()
+                            if key_name not in attn_dict :
+                                attn_dict[key_name] = []
+                            attn_dict[key_name].append(attn)
+
+                    for key_name in attn_dict :
+                        attn_list = attn_dict[key_name]
+                        attn = torch.cat(attn_list, dim=0)
+                        cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                        res = int(attn.shape[1] ** 0.5)
+                        h = cls_score.shape[0]
+                        n_score = n_score.unsqueeze(-1).reshape(h, res, res)
+                        singl_head_normal_score = n_score.mean(dim=0)
+                        n_score = singl_head_normal_score.detach().cpu()
+                        n_score = np.array(((n_score / n_score.max()).cpu()) * 255).astype(np.uint8)
+                        n_score_pil = Image.fromarray(n_score).resize((512, 512), Image.BILINEAR)
+                        n_score_pil.save(os.path.join(trg_img_output_dir,
+                                                      f'normal_{key_name}.png'))
+
+                # ----------------------------------------------------------------------------------------------------- #
+                record = f'{trg_prompt} | {test_image} '
+                for k in score_dict.keys():
+                    trigger_score = score_dict[k]
+                    record += f'| {k}={trigger_score.sum().item()} '
+                record = record.strip()
+                records.append(record)
+        record_txt_dir = os.path.join(record_output_dir, f'score_epoch_{model_epoch}.txt')
+        with open(record_txt_dir, 'w') as f:
+            for line in records:
+                f.write(f'{line}\n')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
