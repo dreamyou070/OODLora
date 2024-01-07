@@ -53,7 +53,7 @@ def main(args):
                         np_mask = np.where(np_mask == 1, 1, 0) * 255
                         sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                         sam_result_pil.save(f'{i}_{image}')
-    
+
                 import time
                 time.sleep(1000)
 
