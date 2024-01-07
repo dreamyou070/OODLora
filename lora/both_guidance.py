@@ -263,6 +263,7 @@ def main(args) :
                         if '999' not in inf_time:
                             inf_time.append(999)
                         back_dict = {}
+                        # inf_time = [0,20,40,60,80,100 , ... 980, 999]
 
                         latent = org_vae_latent
                         # ------------------------------ generate attn mask map ------------------------------ #
@@ -335,6 +336,7 @@ def main(args) :
                             latent = next_step(noise_pred, int(t), latent, scheduler)
                         back_dict[inf_time[-1]] = latent
                         # ------------------------------------------------------------------------------------
+                        print(f'last time : {inf_time[-1]}')
                         call_unet(invers_unet, latent, inf_time[-1], inv_c, None, None)
                         self_key_states = controller.key_dict
                         self_value_states = controller.value_dict
