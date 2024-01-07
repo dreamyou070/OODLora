@@ -577,7 +577,9 @@ class NetworkTrainer:
         # function for saving/removing
         def save_model(ckpt_name, unwrapped_nw, steps, epoch_no, force_sync_upload=False):
             os.makedirs(args.output_dir, exist_ok=True)
-            ckpt_file = os.path.join(args.output_dir, ckpt_name)
+            save_model_base_dir = os.path.join(args.output_dir, "models")
+            os.makedirs(save_model_base_dir, exist_ok=True)
+            ckpt_file = os.path.join(save_model_base_dir, ckpt_name)
 
             accelerator.print(f"\nsaving checkpoint: {ckpt_file}")
             metadata["ss_training_finished_at"] = str(time.time())
