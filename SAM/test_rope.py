@@ -52,13 +52,14 @@ def main(args):
                                                           multimask_output=True, )
 
                 for i, (mask, score) in enumerate(zip(masks, scores)):
-                    if i == 1:
-                        np_mask = (mask * 1)
-                        np_mask = np.where(np_mask == 1, 1, 0) * 255  # if true,  be black
-                        sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                        sam_result_pil.save(os.path.join(f'{i}_{image}'))
 
-                        #sam_result_pil.save(os.path.join(sam_train_dir, image))
+                    print(f'{i}th boolen mask : {mask}')
+                    np_mask = (mask * 1)
+                    np_mask = np.where(np_mask == 1, 1, 0) * 255  # if true,  be black
+                    sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                    sam_result_pil.save(os.path.join(f'{i}_{image}'))
+
+                    #sam_result_pil.save(os.path.join(sam_train_dir, image))
             """
             # -------------------------------------------------------------------------------------------------------
             # (2) test
