@@ -39,52 +39,21 @@ def main(args):
                 predictor.set_image(np_img)
 
                 h, w, c = np_img.shape
-                #trg_h_0, trg_w_00 = h / 4, w * (5 / 12)
                 trg_h_0, trg_w_01 = h / 4, w * (6 / 12)
-                #trg_h_0, trg_w_02 = h / 4, w * (7 / 12)
-
-                #trg_h_0 = h * (1 / 4)
-                #trg_h_01 = h * (2 / 5)
-                #trg_h_02 = h * (4 / 5)
                 trg_h_1 = h / 2
-                #trg_h_2 = h * (3/ 4)
-
-                #trg_w_01 = w * (4 / 12)
-                #trg_w_02 = w * (5 / 12)
                 input_point = np.array([[trg_h_1, trg_w_01]])
                 input_label = np.array([1])
-                """  
-                input_point = np.array([[trg_h_0, trg_w_01],[trg_h_0, trg_w_02],
-                                        [trg_h_01, trg_w_01],[trg_h_01, trg_w_02],
-                    [trg_h_0, trg_w_00],[trg_h_0, trg_w_01], [trg_h_0, trg_w_02],
-                                        [trg_h_1, trg_w_00],[trg_h_1, trg_w_01], [trg_h_1, trg_w_02],
-                                        [trg_h_2, trg_w_00],[trg_h_2, trg_w_01], [trg_h_2, trg_w_02],
-                                        [trg_h_02, trg_w_01], [trg_h_02, trg_w_02],
-                                        [trg_h_2, trg_w_01],[trg_h_2, trg_w_02]])
-                input_label = np.array([1, 1, 1,
-                                        1, 1, 1,
-                                        1, 1, 1,1,1,1,1,1,1,1,1])
-                """
 
                 masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                           multimask_output=True, )
                 mask_dict = {}
                 for i, (mask, score) in enumerate(zip(masks, scores)):
-                    if i == 1 :
-                        np_mask = (mask * 1)
-                        np_mask = np.where(np_mask == 1, 0, 1) #  # if true,  be black
-                        mask_dict[1] = np_mask
-                        sam_result_pil = Image.fromarray((np_mask* 255).astype(np.uint8))
-                        sam_result_pil.save(f'{i}_mask_{image}')
                     if i == 2 :
                         np_mask = (mask * 1)
-                        np_mask = np.where(np_mask == 1, 0, 1) #* 255
-                        mask_dict[2] = np_mask
-                        sam_result_pil = Image.fromarray((np_mask* 255).astype(np.uint8))
+                        np_mask = np.where(np_mask == 1, 1, 0) * 255
+                        sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                         sam_result_pil.save(f'{i}_mask_{image}')
-                final_mask = (1- (mask_dict[1] * mask_dict[2])) * 255
-                sam_result_pil = Image.fromarray(final_mask.astype(np.uint8))
-                sam_result_pil.save(f'mask_{image}')
+                
 
 
 
