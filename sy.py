@@ -7,6 +7,7 @@ for image in images:
     img_dir = os.path.join(folder, image)
     np_img = np.array(Image.open(img_dir))
     h, w, c = np_img.shape
+    print(h, w, c)
     trg_h_1, trg_w_1 = h / 3, w / 3
     trg_h_2, trg_w_2 = h * (2/3), w * (2/3)
     positions = [[trg_h_1, trg_w_1],[trg_h_2, trg_w_2]]
