@@ -14,19 +14,23 @@ class AttentionStore :
         self.cross_query_store = {}
         self.cross_key_store = {}
         self.cross_value_store = {}
-        self.key_value_states_dict = {}
+        self.key_dict = {}
+        self.value_dict = {}
         self.repeat = 0
         self.normal_score_list = []
     def get_empty_store(self):
         return {}
 
-    def save_key_value_states(self, key_value_states, layer_name):
-        if layer_name not in self.key_value_states_dict.keys() :
-            self.key_value_states_dict[layer_name] = []
-            self.key_value_states_dict[layer_name].append(key_value_states)
-        else :
-            self.key_value_states_dict[layer_name].append(key_value_states)
-        return self.key_value_states_dict[layer_name].append(key_value_states)
+    def save_key_value_states(self, key, value, layer_name):
+        if layer_name not in self.key_dict.keys():
+            self.key_dict[layer_name] = []
+            self.value_dict[layer_name] = []
+            self.key_dict[layer_name].append(key)
+            self.value_dict[layer_name].append(value)
+        else:
+            self.key_dict[layer_name].append(key)
+            self.value_dict[layer_name].append(value)
+
 
     def store_normal_score(self, score):
         self.normal_score_list.append(score)
@@ -91,6 +95,7 @@ class AttentionStore :
         self.cross_query_store = {}
         self.cross_key_store = {}
         self.cross_value_store = {}
-        self.key_value_states_dict = {}
+        self.key_dict = {}
+        self.value_dict = {}
         self.repeat = 0
         self.normal_score_list = []
