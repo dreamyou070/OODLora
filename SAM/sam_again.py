@@ -46,12 +46,17 @@ def main(args):
                         for i, (mask, score) in enumerate(zip(masks, scores)):
                             if len(masks) < 3:
                                 print('wrong')
-                            else:
-                                if i == 2:
-                                    np_mask = (mask * 1)
-                                    np_mask = np.where(np_mask == 1, 0, 1) * 255
-                                    sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                                    sam_result_pil.save(os.path.join(class_gt_dir, image))
+                            #else:
+                            #    if i == 2:
+                            np_mask = (mask * 1)
+                            np_mask = np.where(np_mask == 1, 0, 1) * 255
+                            sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                            #sam_result_pil.save(os.path.join(class_gt_dir, image))
+
+                            sam_result_pil.save(f'{i}_{image}')
+
+                        break
+            """
             # -------------------------------------------------------------------------------------------------------
             # (2) test
             class_names = os.listdir(test_ex_rgb_dir)
@@ -78,9 +83,10 @@ def main(args):
                                     np_mask = np.where(np_mask == 1, 0, 1) * 255
                                     sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                                     sam_result_pil.save(os.path.join(class_gt_dir, image))
+            """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
-    parser.add_argument('--trg_cat', type=str, default='carrot')
+    parser.add_argument('--trg_cat', type=str, default='foam')
     args = parser.parse_args()
     main(args)
