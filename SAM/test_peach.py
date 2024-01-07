@@ -39,10 +39,13 @@ def main(args):
                 predictor.set_image(np_img)
 
                 h, w, c = np_img.shape
-                trg_h_0, trg_w_01 = h / 4, w * (6 / 12)
-                trg_h_1 = h / 2
-                input_point = np.array([[trg_h_1, trg_w_01]])
-                input_label = np.array([1])
+                trg_h_0, trg_h_1, trg_h_2  = h * (3/5),h * (1/2),h * (4/5)
+                trg_w_0, trg_w_1, trg_w_2 = w * (3 / 5), w * (1 / 2), w * (4 / 5)
+
+                input_point = np.array([[trg_h_0, trg_w_1],
+                                        [trg_h_1, trg_w_0],[trg_h_1, trg_w_1],[trg_h_1, trg_w_2]
+                                        [trg_h_2, trg_w_1]])
+                input_label = np.array([1,1,1,1,1])
 
                 masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                           multimask_output=True, )
@@ -59,6 +62,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
-    parser.add_argument('--trg_cat', type=str, default='peach')
+    parser.add_argument('--trg_cat', type=str, default='foam')
     args = parser.parse_args()
     main(args)
