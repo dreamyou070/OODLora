@@ -360,7 +360,8 @@ def main(args) :
                         # ------------------------------ reconstruction with guidacne ------------------------------ #
                         # (4) reconstruction
                         x_latent_dict = {}
-                        x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape).to(latent.device, dtype=weight_dtype)
+                        #x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape).to(latent.device, dtype=weight_dtype)
+                        x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
                         #if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
                         #    pixel_mask = mask_dict_avg['up_64'].to(latent.device)
                         #    pixel_save_mask_np = pixel_mask.cpu().numpy()
@@ -370,18 +371,25 @@ def main(args) :
                         #    pixel_mask = pixel_mask.repeat(1, 4, 1, 1)
                         org_self_key_dict
                         self_times = org_self_key_dict.keys()
-                        print(f'self_times : {self_times}')
+
                         # ------------------------------ recon ------------------------------ #
                         for j, t in enumerate(time_steps[:-1]):
+
                             prev_time = time_steps[j + 1]
+
                             z_latent = back_dict[t]
                             x_latent = x_latent_dict[t]
+
                             input_latent = torch.cat([z_latent, x_latent], dim=0)
                             input_cont = torch.cat([uncon, con], dim=0)[:,:2,:]
-                            self_key_guidance_dict = org_self_key_dict[t]
-                            self_value_guidance_dict = org_self_value_dict[t]
+
+                            #self_key_guidance_dict = org_self_key_dict[t]
+                            #self_value_guidance_dict = org_self_value_dict[t]
+                            self_key_guidance_dict = org_self_key_dict[0]
+                            self_value_guidance_dict = org_self_value_dict[0]
                             self_guidance = [self_key_guidance_dict,self_value_guidance_dict]
                             noise_pred = call_unet(unet, input_latent, t, input_cont, self_guidance, mask_dict)
+
                             controller.reset()
                             z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
                             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
