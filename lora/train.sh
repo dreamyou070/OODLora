@@ -41,7 +41,9 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --seed 42 \
   --class_caption 'good' \
   --start_epoch 0 \
-  --wandb_init_name carrot \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/carrot/new_data/train_ex/rgb \
-  --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/carrot/test_ex/rgb \
-  --output_dir ../result/MVTec3D-AD_experiment/carrot/lora_training/res_64_up_normal_10_anormal_80_bent_120 --cross_map_res [64]  --trg_position "['up']"
+  --wandb_init_name cable_gland \
+  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/cable_gland/new_data/train_ex/rgb \
+  --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/cable_gland/test_ex/rgb \
+  --output_dir ../result/MVTec3D-AD_experiment/cable_gland/lora_training/res_64_up_normal_10_anormal_80_bent_120 \
+  --cross_map_res [64] \
+  --trg_position "['up']"
