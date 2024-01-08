@@ -1,28 +1,11 @@
 #!/bin/bash
 # dreamyou070
 # qkrtndus0701?!
-# srun -p suma_a6000 -q big_qos --job-name=lora_train_5 --gres=gpu:1 --time=48:00:00 --pty bash -i
+# srun -p suma_a6000 -q big_qos --job-name=lora_train_5 --gres=gpu:2 --time=48:00:00 --pty bash -i
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-# 7) 32,16res up
-# 8) 32,16res down
-# 9) 32,16res updown
-
-# 64up, 32res, up
-# 64up, 32res, down
-# 64up, 32res, updown
-
-# 64up, 16res, up
-# 64up, 16res, down
-# 64up, 16res, updown
-
-# 64up, 32,16res up
-# 64up, 32,16res down
-# 64up, 32,16res updown
-
-
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 52222 train.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 51544 train.py \
   --process_title parksooyeon \
   --log_with wandb \
   --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc \
@@ -42,8 +25,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --class_caption 'good' \
   --start_epoch 0 \
   --wandb_init_name cable_gland \
-  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/cable_gland/new_data/train_ex/rgb \
+  --train_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/cable_gland/train_ex/rgb \
   --valid_data_dir ../../../MyData/anomaly_detection/MVTec3D-AD/cable_gland/test_ex/rgb \
-  --output_dir ../result/MVTec3D-AD_experiment/cable_gland/lora_training/res_64_up_normal_10_anormal_80_bent_120 \
-  --cross_map_res [64] \
-  --trg_position "['up']"
+  --output_dir ../result/MVTec3D-AD_experiment/cable_gland/lora_training/res_64_up_16_up_down_normal_10_anormal_80 \
+  --cross_map_res [64,16] \
+  --trg_position "['up','down']"

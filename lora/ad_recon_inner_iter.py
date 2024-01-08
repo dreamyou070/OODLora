@@ -294,7 +294,8 @@ def main(args) :
                             time_steps.append(t)
                             back_dict[int(t)] = latent
                             time_steps.append(t)
-                            noise_pred = call_unet(invers_unet, latent, t, inv_c, None, None)
+                            #noise_pred = call_unet(invers_unet, latent, t, inv_c, None, None)
+                            noise_pred = call_unet(unet, latent, t, con[:,:3,:], None, None)
                             latent = next_step(noise_pred, int(t), latent, scheduler)
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
@@ -318,7 +319,7 @@ def main(args) :
                             z_latent = back_dict[t]
                             x_latent = x_latent_dict[t]
                             input_latent = torch.cat([z_latent, x_latent], dim=0)
-                            input_cont = torch.cat([uncon, con], dim=0)[:,:2,:]
+                            input_cont = torch.cat([uncon[:,:3,:], con[:,:3,:]], dim=0)[:,:2,:]
                             noise_pred = call_unet(unet, input_latent, t, input_cont, None, None)
                             controller.reset()
                             z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
