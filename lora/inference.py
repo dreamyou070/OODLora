@@ -87,7 +87,6 @@ def main(args) :
     print(f'base record dir : {record_output_dir}')
     os.makedirs(record_output_dir, exist_ok=True)
 
-
     print(f' \n step 1. setting')
     if args.process_title:
         setproctitle(args.process_title)
