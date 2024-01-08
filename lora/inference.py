@@ -627,6 +627,7 @@ if __name__ == "__main__":
     parser.add_argument('--train_down', nargs='+', type=int, help='use which res layers in U-Net down', default=[])
     parser.add_argument('--train_mid', nargs='+', type=int, help='use which res layers in U-Net mid', default=[8])
     parser.add_argument('--train_up', nargs='+', type=int, help='use which res layers in U-Net up', default=[16,32,64])
+    parser.add_argument('--start_epoch',type=int, default=0)
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)

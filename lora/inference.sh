@@ -22,8 +22,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --cross_map_res [64] \
   --trg_position "['up']" \
   --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/potato \
-  --network_weights ../result/MVTec3D-AD_experiment/potato/lora_training/res_64_up_normal_10_anormal_80/models
-
+  --network_weights ../result/MVTec3D-AD_experiment/potato/lora_training/res_64_up_normal_10_anormal_80/models \
+  --start_epoch 0
 
 # -------------------------------------------------------------------------------------------------------------------------------------------- #
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 51661 inference_cookie.py \
