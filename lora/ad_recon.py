@@ -259,24 +259,27 @@ def main(args) :
                             if res in args.cross_map_res:
                                 if 'down' in layer_name:
                                     key_name = f'down_{res}'
+                                    pos = 'down'
                                 elif 'up' in layer_name:
                                     key_name = f'up_{res}'
-                                else:key_name = f'mid_{res}'
-
+                                    pos = 'up'
+                                else:
+                                    key_name = f'mid_{res}'
+                                    pos = 'mid'
                                 if 'attentions_0' in layer_name:
                                     part = 'attn_0'
                                 elif 'attentions_1' in layer_name:
                                     part = 'attn_1'
                                 else:
                                     part = 'attn_2'
-                                print(f'res : {res}, key_name : {key_name}, part : {part}')
+
                                 if args.use_avg_mask:
                                     if key_name not in mask_dict_avg_sub:
                                         mask_dict_avg_sub[key_name] = []
                                     mask_dict_avg_sub[key_name].append(attn)
                                 else :
-                                    print(f'res : {res}, key_name : {key_name}, part : {part}')
-                                    if res in args.cross_map_res and key_name in args.trg_position and part == args.trg_part:
+                                    print(f'[not using avg mask] res : {res}, key_name : {key_name}, part : {part}')
+                                    if res in args.cross_map_res and pos in args.trg_position and part == args.trg_part:
                                         cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                         h = trigger_score.shape[0]
                                         trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
