@@ -5,10 +5,10 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --prompt 'good' \
   --sample_sampler ddim \
   --resolution '512,512' \
-  --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/carrot \
+  --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/cable_gland \
   --seed 42 \
   --network_weights ../result/MVTec3D-AD_experiment/cable_gland/lora_training/res_64_up_16_up_normal_10_anormal_80_bent_120/models \
   --num_ddim_steps 50 \
   --trg_lora_epoch 'epoch-000012.safetensors' \
-  --inner_iter 10 \
+  --inner_iter 10 --only_zero_save \
   --cross_map_res [64] --trg_position "['up']" --trg_part "attn_2"

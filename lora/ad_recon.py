@@ -278,7 +278,6 @@ def main(args) :
                                         mask_dict_avg_sub[key_name] = []
                                     mask_dict_avg_sub[key_name].append(attn)
                                 else :
-                                    print(f'[not using avg mask] res : {res}, key_name : {key_name}, part : {part}')
                                     if res in args.cross_map_res and pos in args.trg_position and part == args.trg_part:
                                         cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                         h = trigger_score.shape[0]
@@ -357,8 +356,12 @@ def main(args) :
                             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
                             x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
                             x_latent_dict[prev_time] = x_latent
-
-                            Image.fromarray(latent2image(x_latent, vae)).save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
+                            if args.only_zero_save :
+                                if prev_time == 0:
+                                    Image.fromarray(latent2image(x_latent, vae)).save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
+                            else :
+                                Image.fromarray(latent2image(x_latent, vae)).save(
+                                    os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
 
                         # ------------------------------[4] inner loop ------------------------------ #
                         iter_latent_dict = {}
@@ -422,6 +425,8 @@ if __name__ == "__main__":
     parser.add_argument("--inner_iteration", type=int, default=10)
     parser.add_argument("--use_avg_mask", action='store_true')
     parser.add_argument("--trg_part", type = str)
+    parser.add_argument("--only_zero_save", action='store_true')
+
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
