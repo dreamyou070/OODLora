@@ -217,122 +217,122 @@ def main(args) :
 
             for class_name in classes:
 
-                if 'good' not in class_name :
-                    print(f' {class_name}')
-                    kk += 1
-                    if '_' in class_name:
-                        trg_prompt = class_name.split('_')[-1]
-                    else:
-                        trg_prompt = class_name
-                    class_base_folder = os.path.join(test_lora_dir, class_name)
-                    os.makedirs(class_base_folder, exist_ok=True)
 
-                    image_folder = os.path.join(test_img_folder, class_name)
-                    mask_folder = os.path.join(test_mask_folder, class_name)
-                    invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
-                    inv_unc, inv_c = invers_context.chunk(2)
-                    test_images = os.listdir(image_folder)
+                print(f' {class_name}')
+                kk += 1
+                if '_' in class_name:
+                    trg_prompt = class_name.split('_')[-1]
+                else:
+                    trg_prompt = class_name
+                class_base_folder = os.path.join(test_lora_dir, class_name)
+                os.makedirs(class_base_folder, exist_ok=True)
 
-                    for j, test_image in enumerate(test_images):
+                image_folder = os.path.join(test_img_folder, class_name)
+                mask_folder = os.path.join(test_mask_folder, class_name)
+                invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
+                inv_unc, inv_c = invers_context.chunk(2)
+                test_images = os.listdir(image_folder)
 
-                        name, ext = os.path.splitext(test_image)
+                for j, test_image in enumerate(test_images):
 
-                        trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
-                        os.makedirs(trg_img_output_dir, exist_ok=True)
-                        test_img_dir = os.path.join(image_folder, test_image)
-                        Image.open(test_img_dir).convert('RGB').resize((int(trg_h),int(trg_w))).save(os.path.join(trg_img_output_dir, test_image))
-                        mask_img_dir = os.path.join(mask_folder, test_image)
-                        Image.open(mask_img_dir).convert('L').resize((int(trg_h),int(trg_w))).save(os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
-                        mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
-                        mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
-                        with torch.no_grad():
-                            print(f' (1) img to latent')
-                            org_img = load_image(test_img_dir, 512, 512)
-                            org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-                            inf_time = inference_times.tolist()
-                            inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
-                            latent_dict = {}
-                            latent = org_vae_latent
-                            t, next_time = inf_time[0], inf_time[1]
-                            latent_dict[int(t)] = latent
-                            noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
-                            attn_stores = controller.step_store
-                            controller.reset()
-                            attn_dict = {}
-                            score_dict = {}
-                            for layer_name in attn_stores :
-                                attn = attn_stores[layer_name][0].squeeze() # head, pix_num
-                                res = int(attn.shape[1] ** 0.5)
-                                if 'down' in layer_name: position = 'down'
-                                elif 'up' in layer_name: position = 'up'
-                                else: position = 'middle'
-                                if res in args.cross_map_res and position in args.trg_position :
-                                    if 'attentions_0' in layer_name : part = 'attn_0'
-                                    elif 'attentions_1' in layer_name : part = 'attn_1'
-                                    else : part = 'attn_2'
-                                    title_name = f'res_{res}_{position}_{part}'
-                                    # ----------------------------------------- get attn map ----------------------------------------- #
-                                    cls_score, normal_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
-                                    h = cls_score.shape[0]
-                                    normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
-                                    singl_head_normal_score = normal_score.mean(dim=0)
-                                    n_score = singl_head_normal_score.detach().cpu()
-                                    n_score = n_score / n_score.max()
-                                    # [1] resizing for recording
-                                    score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
-                                    mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
-                                    mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                    """ anormal portion score """
-                                    score_dict[title_name] = score_np * mask_np
-                                    # [2] saving n_score map
-                                    n_score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
-                                    n_score_pil = Image.fromarray(n_score_np).resize((512, 512),Image.BILINEAR)
-                                    n_score_pil.save(os.path.join(trg_img_output_dir,
-                                                                  f'{title_name}_res_{res}.png'))
-                                    if 'down' in layer_name : key_name = f'down_{res}'
-                                    elif 'up' in layer_name : key_name = f'up_{res}'
-                                    else : key_name = f'mid_{res}'
+                    name, ext = os.path.splitext(test_image)
 
-                                    if key_name not in attn_dict :
-                                        attn_dict[key_name] = []
-                                    attn_dict[key_name].append(attn)
-                            for key_name in attn_dict :
-                                attn_list = attn_dict[key_name]
-                                attn = torch.cat(attn_list, dim=0)
-                                cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
-                                res = int(attn.shape[1] ** 0.5)
+                    trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
+                    os.makedirs(trg_img_output_dir, exist_ok=True)
+                    test_img_dir = os.path.join(image_folder, test_image)
+                    Image.open(test_img_dir).convert('RGB').resize((int(trg_h),int(trg_w))).save(os.path.join(trg_img_output_dir, test_image))
+                    mask_img_dir = os.path.join(mask_folder, test_image)
+                    Image.open(mask_img_dir).convert('L').resize((int(trg_h),int(trg_w))).save(os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+                    mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+                    mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
+                    with torch.no_grad():
+                        print(f' (1) img to latent')
+                        org_img = load_image(test_img_dir, 512, 512)
+                        org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+                        inf_time = inference_times.tolist()
+                        inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                        latent_dict = {}
+                        latent = org_vae_latent
+                        t, next_time = inf_time[0], inf_time[1]
+                        latent_dict[int(t)] = latent
+                        noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
+                        attn_stores = controller.step_store
+                        controller.reset()
+                        attn_dict = {}
+                        score_dict = {}
+                        for layer_name in attn_stores :
+                            attn = attn_stores[layer_name][0].squeeze() # head, pix_num
+                            res = int(attn.shape[1] ** 0.5)
+                            if 'down' in layer_name: position = 'down'
+                            elif 'up' in layer_name: position = 'up'
+                            else: position = 'middle'
+                            if res in args.cross_map_res and position in args.trg_position :
+                                if 'attentions_0' in layer_name : part = 'attn_0'
+                                elif 'attentions_1' in layer_name : part = 'attn_1'
+                                else : part = 'attn_2'
+                                title_name = f'res_{res}_{position}_{part}'
+                                # ----------------------------------------- get attn map ----------------------------------------- #
+                                cls_score, normal_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
                                 h = cls_score.shape[0]
-                                n_score = n_score.unsqueeze(-1).reshape(h, res, res)
-                                singl_head_normal_score = n_score.mean(dim=0)
+                                normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
+                                singl_head_normal_score = normal_score.mean(dim=0)
                                 n_score = singl_head_normal_score.detach().cpu()
-                                n_score = np.array(((n_score / n_score.max()).cpu()) * 255).astype(np.uint8)
-                                n_score_pil = Image.fromarray(n_score).resize((512, 512), Image.BILINEAR)
+                                n_score = n_score / n_score.max()
+                                # [1] resizing for recording
+                                score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
+                                mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                                mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
+                                """ anormal portion score """
+                                score_dict[title_name] = score_np * mask_np
+                                # [2] saving n_score map
+                                n_score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
+                                n_score_pil = Image.fromarray(n_score_np).resize((512, 512),Image.BILINEAR)
                                 n_score_pil.save(os.path.join(trg_img_output_dir,
-                                                              f'normal_{key_name}.png'))
-                        # ----------------------------------------------------------------------------------------------------- #
-                        if 'good' not in trg_prompt :
-                            record = [trg_prompt, test_image]
-                        for k in score_dict.keys():
-                            if 'good' not in trg_prompt:
-                                trigger_score = score_dict[k]
-                                if k not in total_dict.keys() :
-                                    total_dict[k] = trigger_score.sum().item()
-                                else :
-                                    total_dict[k] += trigger_score.sum().item()
-                                record.append(trigger_score.sum().item())
-                            if j == 0 and k == 1 :
-                                first_elem.append(k)
-                                epoch_elems.append('')
-                        # ----------------------------------------------------------------------------------------------------- #
-                        if j == 0 and kk == 1 :
-                            records.append(first_elem)
-                            print(f'recording title')
-                            total_score_list.append(epoch_elems)
-                            total_score_list.append(first_elem)
+                                                              f'{title_name}_res_{res}.png'))
+                                if 'down' in layer_name : key_name = f'down_{res}'
+                                elif 'up' in layer_name : key_name = f'up_{res}'
+                                else : key_name = f'mid_{res}'
 
+                                if key_name not in attn_dict :
+                                    attn_dict[key_name] = []
+                                attn_dict[key_name].append(attn)
+                        for key_name in attn_dict :
+                            attn_list = attn_dict[key_name]
+                            attn = torch.cat(attn_list, dim=0)
+                            cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            res = int(attn.shape[1] ** 0.5)
+                            h = cls_score.shape[0]
+                            n_score = n_score.unsqueeze(-1).reshape(h, res, res)
+                            singl_head_normal_score = n_score.mean(dim=0)
+                            n_score = singl_head_normal_score.detach().cpu()
+                            n_score = np.array(((n_score / n_score.max()).cpu()) * 255).astype(np.uint8)
+                            n_score_pil = Image.fromarray(n_score).resize((512, 512), Image.BILINEAR)
+                            n_score_pil.save(os.path.join(trg_img_output_dir,
+                                                          f'normal_{key_name}.png'))
+                    # ----------------------------------------------------------------------------------------------------- #
+                    if 'good' not in trg_prompt :
+                        record = [trg_prompt, test_image]
+                    for k in score_dict.keys():
                         if 'good' not in trg_prompt:
-                            records.append(record)
-                            total_score_list.append(record)
+                            trigger_score = score_dict[k]
+                            if k not in total_dict.keys() :
+                                total_dict[k] = trigger_score.sum().item()
+                            else :
+                                total_dict[k] += trigger_score.sum().item()
+                            record.append(trigger_score.sum().item())
+                        if j == 0 and k == 1 :
+                            first_elem.append(k)
+                            epoch_elems.append('')
+                    # ----------------------------------------------------------------------------------------------------- #
+                    if j == 0 and kk == 1 :
+                        records.append(first_elem)
+                        print(f'recording title')
+                        total_score_list.append(epoch_elems)
+                        total_score_list.append(first_elem)
+
+                    if 'good' not in trg_prompt:
+                        records.append(record)
+                        total_score_list.append(record)
 
             total_elem = ['','']
             for k in total_dict.keys() :
@@ -461,133 +461,133 @@ def main(args) :
 
             for class_name in classes:
 
-                if 'good' not in class_name:
-                    print(f' {class_name}')
-                    kk += 1
-                    if '_' in class_name:
-                        trg_prompt = class_name.split('_')[-1]
-                    else:
-                        trg_prompt = class_name
-                    class_base_folder = os.path.join(test_lora_dir, class_name)
-                    os.makedirs(class_base_folder, exist_ok=True)
 
-                    image_folder = os.path.join(test_img_folder, class_name)
-                    mask_folder = os.path.join(test_mask_folder, class_name)
-                    invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
-                    inv_unc, inv_c = invers_context.chunk(2)
-                    test_images = os.listdir(image_folder)
+                print(f' {class_name}')
+                kk += 1
+                if '_' in class_name:
+                    trg_prompt = class_name.split('_')[-1]
+                else:
+                    trg_prompt = class_name
+                class_base_folder = os.path.join(test_lora_dir, class_name)
+                os.makedirs(class_base_folder, exist_ok=True)
 
-                    for j, test_image in enumerate(test_images):
+                image_folder = os.path.join(test_img_folder, class_name)
+                mask_folder = os.path.join(test_mask_folder, class_name)
+                invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {class_name}')
+                inv_unc, inv_c = invers_context.chunk(2)
+                test_images = os.listdir(image_folder)
 
-                        name, ext = os.path.splitext(test_image)
+                for j, test_image in enumerate(test_images):
 
-                        trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
-                        os.makedirs(trg_img_output_dir, exist_ok=True)
-                        test_img_dir = os.path.join(image_folder, test_image)
-                        Image.open(test_img_dir).convert('RGB').resize((int(trg_h), int(trg_w))).save(
-                            os.path.join(trg_img_output_dir, test_image))
-                        mask_img_dir = os.path.join(mask_folder, test_image)
-                        Image.open(mask_img_dir).convert('L').resize((int(trg_h), int(trg_w))).save(
-                            os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
-                        mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
-                        mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
-                        with torch.no_grad():
-                            print(f' (1) img to latent')
-                            org_img = load_image(test_img_dir, 512, 512)
-                            org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-                            inf_time = inference_times.tolist()
-                            inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
-                            latent_dict = {}
-                            latent = org_vae_latent
-                            t, next_time = inf_time[0], inf_time[1]
-                            latent_dict[int(t)] = latent
-                            noise_pred = call_unet(unet, latent, t, con[:, :3, :], [[1]], None)
-                            attn_stores = controller.step_store
-                            controller.reset()
-                            attn_dict = {}
-                            score_dict = {}
-                            for layer_name in attn_stores:
-                                attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                                res = int(attn.shape[1] ** 0.5)
-                                if 'down' in layer_name:
-                                    position = 'down'
-                                elif 'up' in layer_name:
-                                    position = 'up'
+                    name, ext = os.path.splitext(test_image)
+
+                    trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
+                    os.makedirs(trg_img_output_dir, exist_ok=True)
+                    test_img_dir = os.path.join(image_folder, test_image)
+                    Image.open(test_img_dir).convert('RGB').resize((int(trg_h), int(trg_w))).save(
+                        os.path.join(trg_img_output_dir, test_image))
+                    mask_img_dir = os.path.join(mask_folder, test_image)
+                    Image.open(mask_img_dir).convert('L').resize((int(trg_h), int(trg_w))).save(
+                        os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+                    mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
+                    mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
+                    with torch.no_grad():
+                        print(f' (1) img to latent')
+                        org_img = load_image(test_img_dir, 512, 512)
+                        org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+                        inf_time = inference_times.tolist()
+                        inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                        latent_dict = {}
+                        latent = org_vae_latent
+                        t, next_time = inf_time[0], inf_time[1]
+                        latent_dict[int(t)] = latent
+                        noise_pred = call_unet(unet, latent, t, con[:, :3, :], [[1]], None)
+                        attn_stores = controller.step_store
+                        controller.reset()
+                        attn_dict = {}
+                        score_dict = {}
+                        for layer_name in attn_stores:
+                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                            res = int(attn.shape[1] ** 0.5)
+                            if 'down' in layer_name:
+                                position = 'down'
+                            elif 'up' in layer_name:
+                                position = 'up'
+                            else:
+                                position = 'middle'
+                            if res in args.cross_map_res and position in args.trg_position:
+                                if 'attentions_0' in layer_name:
+                                    part = 'attn_0'
+                                elif 'attentions_1' in layer_name:
+                                    part = 'attn_1'
                                 else:
-                                    position = 'middle'
-                                if res in args.cross_map_res and position in args.trg_position:
-                                    if 'attentions_0' in layer_name:
-                                        part = 'attn_0'
-                                    elif 'attentions_1' in layer_name:
-                                        part = 'attn_1'
-                                    else:
-                                        part = 'attn_2'
-                                    title_name = f'res_{res}_{position}_{part}'
-                                    # ----------------------------------------- get attn map ----------------------------------------- #
-                                    cls_score, normal_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
-                                    h = cls_score.shape[0]
-                                    normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
-                                    singl_head_normal_score = normal_score.mean(dim=0)
-                                    n_score = singl_head_normal_score.detach().cpu()
-                                    n_score = n_score / n_score.max()
-                                    # [1] resizing for recording
-                                    score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
-                                    mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
-                                    mask_np = np.where((np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                    """ anormal portion score """
-                                    score_dict[title_name] = score_np * mask_np
-                                    # [2] saving n_score map
-                                    n_score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
-                                    n_score_pil = Image.fromarray(n_score_np).resize((512, 512), Image.BILINEAR)
-                                    n_score_pil.save(os.path.join(trg_img_output_dir,
-                                                                  f'{title_name}_res_{res}.png'))
-                                    if 'down' in layer_name:
-                                        key_name = f'down_{res}'
-                                    elif 'up' in layer_name:
-                                        key_name = f'up_{res}'
-                                    else:
-                                        key_name = f'mid_{res}'
-
-                                    if key_name not in attn_dict:
-                                        attn_dict[key_name] = []
-                                    attn_dict[key_name].append(attn)
-                            for key_name in attn_dict:
-                                attn_list = attn_dict[key_name]
-                                attn = torch.cat(attn_list, dim=0)
-                                cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
-                                res = int(attn.shape[1] ** 0.5)
+                                    part = 'attn_2'
+                                title_name = f'res_{res}_{position}_{part}'
+                                # ----------------------------------------- get attn map ----------------------------------------- #
+                                cls_score, normal_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                 h = cls_score.shape[0]
-                                n_score = n_score.unsqueeze(-1).reshape(h, res, res)
-                                singl_head_normal_score = n_score.mean(dim=0)
+                                normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
+                                singl_head_normal_score = normal_score.mean(dim=0)
                                 n_score = singl_head_normal_score.detach().cpu()
-                                n_score = np.array(((n_score / n_score.max()).cpu()) * 255).astype(np.uint8)
-                                n_score_pil = Image.fromarray(n_score).resize((512, 512), Image.BILINEAR)
+                                n_score = n_score / n_score.max()
+                                # [1] resizing for recording
+                                score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
+                                mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                                mask_np = np.where((np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
+                                """ anormal portion score """
+                                score_dict[title_name] = score_np * mask_np
+                                # [2] saving n_score map
+                                n_score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
+                                n_score_pil = Image.fromarray(n_score_np).resize((512, 512), Image.BILINEAR)
                                 n_score_pil.save(os.path.join(trg_img_output_dir,
-                                                              f'normal_{key_name}.png'))
-                        # ----------------------------------------------------------------------------------------------------- #
-                        if 'good' not in trg_prompt:
-                            record = [trg_prompt, test_image]
-                        for k in score_dict.keys():
-                            if 'good' not in trg_prompt:
-                                trigger_score = score_dict[k]
-                                if k not in total_dict.keys():
-                                    total_dict[k] = trigger_score.sum().item()
+                                                              f'{title_name}_res_{res}.png'))
+                                if 'down' in layer_name:
+                                    key_name = f'down_{res}'
+                                elif 'up' in layer_name:
+                                    key_name = f'up_{res}'
                                 else:
-                                    total_dict[k] += trigger_score.sum().item()
-                                record.append(trigger_score.sum().item())
-                            if j == 0 and k == 1:
-                                first_elem.append(k)
-                                epoch_elems.append('')
-                        # ----------------------------------------------------------------------------------------------------- #
-                        if j == 0 and kk == 1:
-                            records.append(first_elem)
-                            print(f'recording title')
-                            total_score_list.append(epoch_title)
-                            total_score_list.append(first_elem)
+                                    key_name = f'mid_{res}'
 
+                                if key_name not in attn_dict:
+                                    attn_dict[key_name] = []
+                                attn_dict[key_name].append(attn)
+                        for key_name in attn_dict:
+                            attn_list = attn_dict[key_name]
+                            attn = torch.cat(attn_list, dim=0)
+                            cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            res = int(attn.shape[1] ** 0.5)
+                            h = cls_score.shape[0]
+                            n_score = n_score.unsqueeze(-1).reshape(h, res, res)
+                            singl_head_normal_score = n_score.mean(dim=0)
+                            n_score = singl_head_normal_score.detach().cpu()
+                            n_score = np.array(((n_score / n_score.max()).cpu()) * 255).astype(np.uint8)
+                            n_score_pil = Image.fromarray(n_score).resize((512, 512), Image.BILINEAR)
+                            n_score_pil.save(os.path.join(trg_img_output_dir,
+                                                          f'normal_{key_name}.png'))
+                    # ----------------------------------------------------------------------------------------------------- #
+                    if 'good' not in trg_prompt:
+                        record = [trg_prompt, test_image]
+                    for k in score_dict.keys():
                         if 'good' not in trg_prompt:
-                            records.append(record)
-                            total_score_list.append(record)
+                            trigger_score = score_dict[k]
+                            if k not in total_dict.keys():
+                                total_dict[k] = trigger_score.sum().item()
+                            else:
+                                total_dict[k] += trigger_score.sum().item()
+                            record.append(trigger_score.sum().item())
+                        if j == 0 and k == 1:
+                            first_elem.append(k)
+                            epoch_elems.append('')
+                    # ----------------------------------------------------------------------------------------------------- #
+                    if j == 0 and kk == 1:
+                        records.append(first_elem)
+                        print(f'recording title')
+                        total_score_list.append(epoch_title)
+                        total_score_list.append(first_elem)
+
+                    if 'good' not in trg_prompt:
+                        records.append(record)
+                        total_score_list.append(record)
 
             total_elem = ['', '']
             for k in total_dict.keys():
