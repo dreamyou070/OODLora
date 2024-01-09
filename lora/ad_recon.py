@@ -47,21 +47,18 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
-            if is_cross_attention:
 
+            if is_cross_attention:
                 controller.store(attention_probs[:,:,:3], layer_name)
+
             if is_cross_attention and mask is not None:
                 if layer_name in mask.keys() :
                     mask = mask[layer_name].unsqueeze(-1)
                     mask = mask.repeat(1, 1, attention_probs.shape[-1]).to(attention_probs.device) # head, pix_num, sen_len
-                    #print(mask.shape)
                     z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0) # head, pix_num, sen_len
                     x_attn_probs = z_attn_probs * mask + x_attn_probs * (1 - mask)
                     attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
-                #else :
-                #    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0)  # head, pix_num, sen_len
-                #    x_attn_probs = z_attn_probs
-                #    attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
+
 
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -236,10 +233,12 @@ def main(args) :
                     mask_img_dir = os.path.join(mask_folder, test_image)
                     shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
 
+
                     print(f' (2.3.1) inversion')
                     with torch.no_grad():
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+                        call_unet(unet, org_vae_latent, 0, con[:, :3, :], None, None)
                         # ------------------------------[1] generate attn mask map ------------------------------ #
                         """ averaging values """
                         inf_time = inference_times.tolist()
@@ -256,7 +255,6 @@ def main(args) :
                         for layer_name in attn_stores:
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res = int(attn.shape[1] ** 0.5)
-                            print(f'res : {res}, args.cross_map_res : {args.cross_map_res}')
 
                             if res in args.cross_map_res:
                                 if 'down' in layer_name:
@@ -272,12 +270,10 @@ def main(args) :
                                 else:
                                     part = 'attn_2'
                                 print(f'res : {res}, key_name : {key_name}, part : {part}')
-
                                 if args.use_avg_mask:
                                     if key_name not in mask_dict_avg_sub:
                                         mask_dict_avg_sub[key_name] = []
                                     mask_dict_avg_sub[key_name].append(attn)
-
                                 else :
                                     print(f'res : {res}, key_name : {key_name}, part : {part}')
                                     if res in args.cross_map_res and key_name in args.trg_position and part == args.trg_part:
