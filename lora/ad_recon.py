@@ -224,11 +224,9 @@ def main(args) :
                 image_folder = os.path.join(test_img_folder, class_name)
                 mask_folder = os.path.join(test_mask_folder, class_name)
                 invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {trg_prompt}')
-                inv_unc, inv_c = invers_context.chunk(2)
                 test_images = os.listdir(image_folder)
 
                 for j, test_image in enumerate(test_images):
-
                     name, ext = os.path.splitext(test_image)
                     trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
                     os.makedirs(trg_img_output_dir, exist_ok=True)
