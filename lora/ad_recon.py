@@ -240,15 +240,14 @@ def main(args) :
                     with torch.no_grad():
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-                        # ------------------------------ generate attn mask map ------------------------------ #
-                        # (1) inference timestep
+                        # ------------------------------[1] generate attn mask map ------------------------------ #
+                        """ averaging values """
                         inf_time = inference_times.tolist()
                         inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
                         if '999' not in inf_time:
                             inf_time.append(999)
                         back_dict = {}
                         latent = org_vae_latent
-                        # ------------------------------[1] generate attn mask map ------------------------------ #
                         mask_dict_avg = {}
                         back_dict[0] = latent
                         attn_stores = controller.step_store
@@ -270,9 +269,11 @@ def main(args) :
                                     part = 'attn_0'
                                 elif 'attentions_1' in layer_name:
                                     part = 'attn_1'
-                                else:part = 'attn_2'
+                                else:
+                                    part = 'attn_2'
 
                                 if not args.use_avg_mask:
+                                    print(f'layer_name : {layer_name}')
                                     if res in args.cross_map_res and key_name in args.trg_position and part in args.trg_part:
                                         cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                         h = trigger_score.shape[0]
@@ -299,7 +300,6 @@ def main(args) :
                                     mask_dict_avg_sub[key_name].append(attn)
                         if args.use_avg_mask:
                             for key_name in mask_dict_avg_sub:
-                                """ averaging values """
                                 attn_list = mask_dict_avg_sub[key_name]
                                 attn = torch.cat(attn_list, dim=0)
                                 cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num

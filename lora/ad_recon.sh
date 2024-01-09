@@ -9,8 +9,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --seed 42 \
   --network_weights ../result/MVTec3D-AD_experiment/cable_gland/lora_training/res_64_up_16_up_normal_10_anormal_80_bent_120/models \
   --num_ddim_steps 50 \
-  --cross_map_res [64] \
-  --trg_position "['up']" \
   --trg_lora_epoch 'epoch-000012.safetensors' \
   --inner_iter 10 \
-  --trg_part attentions_2
+  --cross_map_res [64] --trg_position "['up']" --trg_part attentions_2
