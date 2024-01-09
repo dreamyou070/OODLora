@@ -271,7 +271,7 @@ def main(args) :
                                     part = 'attn_2'
 
                                 if not args.use_avg_mask:
-                                    print(f'layer_name : {layer_name}')
+                                    print(f'res : {res}, key_name : {key_name}, part : {part}')
                                     if res in args.cross_map_res and key_name in args.trg_position and part == args.trg_part:
                                         cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                         h = trigger_score.shape[0]
@@ -290,7 +290,6 @@ def main(args) :
                                             os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
                                         latent_mask_torch = latent_mask_torch.unsqueeze(0).unsqueeze(0)
                                         latent_mask = latent_mask_torch.repeat(1, 4, 1, 1)
-                                        print(f'latent_mask : {latent_mask.shape}')
 
                                 if args.use_avg_mask:
                                     if key_name not in mask_dict_avg_sub:
@@ -419,16 +418,12 @@ if __name__ == "__main__":
     parser.add_argument("--inner_iteration", type=int, default=10)
     parser.add_argument("--use_avg_mask", action='store_true')
     parser.add_argument("--trg_part", type = str)
-
     import ast
-
-
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
-
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--trg_position", type=arg_as_list, default=['up'])
     parser.add_argument("--trg_lora_epoch", type=str)
