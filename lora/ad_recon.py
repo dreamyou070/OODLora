@@ -256,7 +256,7 @@ def main(args) :
                         for layer_name in attn_stores:
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res = int(attn.shape[1] ** 0.5)
-                            print(f'res : {res}')
+                            print(f'res : {res}, args.cross_map_res : {args.cross_map_res}')
 
                             if res in args.cross_map_res:
                                 if 'down' in layer_name:
