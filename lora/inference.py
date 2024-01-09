@@ -116,6 +116,7 @@ def main(args) :
 
     network_weights = os.listdir(args.network_weights)
     total_score = []
+
     for weight in network_weights:
         weight_dir = os.path.join(args.network_weights, weight)
         parent, network_dir = os.path.split(weight_dir)
@@ -129,7 +130,7 @@ def main(args) :
 
         if model_epoch > args.start_epoch :
 
-            epoch_elems = [str(epoch_title)]
+            epoch_elems = [f'epoch {str(epoch_title)}']
 
             test_lora_dir = os.path.join(test_set_output_dir, f'lora_{model_epoch}')
             os.makedirs(test_lora_dir, exist_ok=True)
@@ -219,9 +220,6 @@ def main(args) :
                 if 'good' not in class_name :
                     print(f' {class_name}')
                     k += 1
-
-                    if k == 1 :
-                        epoch_elems.append('')
 
                     if '_' in class_name:
                         trg_prompt = class_name.split('_')[-1]
@@ -337,13 +335,13 @@ def main(args) :
                             records.append(record)
                             total_score.append(record)
 
-        total_elem = ['','']
-        for k in total_dict.keys() :
-            total_elem.append(total_dict[k])
-        record_csv_dir = os.path.join(test_set_record_dir, f'score_epoch_{model_epoch}.csv')
-        with open(record_csv_dir, 'w', newline='') as f:
-            wr = csv.writer(f)
-            wr.writerows(records)
+            total_elem = ['','']
+            for k in total_dict.keys() :
+                total_elem.append(total_dict[k])
+            record_csv_dir = os.path.join(test_set_record_dir, f'score_epoch_{model_epoch}.csv')
+            with open(record_csv_dir, 'w', newline='') as f:
+                wr = csv.writer(f)
+                wr.writerows(records)
 
     record_total_csv_dir = os.path.join(test_set_record_dir, f'score_total.csv')
     with open(record_total_csv_dir, 'w', newline='') as f:
