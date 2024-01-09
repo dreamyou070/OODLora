@@ -336,8 +336,8 @@ def main(args) :
                             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
                             x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
                             x_latent_dict[prev_time] = x_latent
-                        pil_img = Image.fromarray(latent2image(x_latent, vae))
-                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
+
+                            Image.fromarray(latent2image(x_latent, vae)).save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
 
                         # ------------------------------ inner loop ------------------------------ #
                         iter_latent_dict = {}
