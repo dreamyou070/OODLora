@@ -115,7 +115,7 @@ def main(args) :
     os.makedirs(test_set_record_dir, exist_ok=True)
 
     network_weights = os.listdir(args.network_weights)
-    total_score = []
+    total_score_list = []
 
     for weight in network_weights:
         weight_dir = os.path.join(args.network_weights, weight)
@@ -327,12 +327,12 @@ def main(args) :
                         if j == 0 and kk == 1 :
                             records.append(first_elem)
                             print(f'recording title')
-                            total_score.append(epoch_elems)
-                            total_score.append(first_elem)
+                            total_score_list.append(epoch_elems)
+                            total_score_list.append(first_elem)
 
                         if 'good' not in trg_prompt:
                             records.append(record)
-                            total_score.append(record)
+                            total_score_list.append(record)
 
             total_elem = ['','']
             for k in total_dict.keys() :
@@ -345,7 +345,7 @@ def main(args) :
     record_total_csv_dir = os.path.join(test_set_record_dir, f'score_total.csv')
     with open(record_total_csv_dir, 'w', newline='') as f:
         wr = csv.writer(f)
-        wr.writerows(total_score)
+        wr.writerows(total_score_list)
 
 
     # ------------------------------------------------ train check -------------------------------------------------------- #
@@ -356,7 +356,7 @@ def main(args) :
     os.makedirs(test_set_record_dir, exist_ok=True)
 
     network_weights = os.listdir(args.network_weights)
-    total_score = []
+    total_score_list = []
 
     for weight in network_weights:
         weight_dir = os.path.join(args.network_weights, weight)
@@ -582,12 +582,12 @@ def main(args) :
                         if j == 0 and kk == 1:
                             records.append(first_elem)
                             print(f'recording title')
-                            total_score.append(epoch_title)
-                            total_score.append(first_elem)
+                            total_score_list.append(epoch_title)
+                            total_score_list.append(first_elem)
 
                         if 'good' not in trg_prompt:
                             records.append(record)
-                            total_score.append(record)
+                            total_score_list.append(record)
 
             total_elem = ['', '']
             for k in total_dict.keys():
@@ -600,7 +600,7 @@ def main(args) :
     record_total_csv_dir = os.path.join(test_set_record_dir, f'score_total.csv')
     with open(record_total_csv_dir, 'w', newline='') as f:
         wr = csv.writer(f)
-        wr.writerows(total_score)
+        wr.writerows(total_score_list)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

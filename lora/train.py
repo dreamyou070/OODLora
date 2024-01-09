@@ -603,10 +603,9 @@ class NetworkTrainer:
             gradient_dict = {}
             loss_dict = {}
 
-        for epoch in range(num_train_epochs):
-            accelerator.print(f"\nepoch {epoch + 1}/{num_train_epochs}")
+        for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
+            accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
             current_epoch.value = epoch + 1
-            metadata["ss_epoch"] = str(epoch + 1)
             network.on_epoch_start(text_encoder, unet)
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
@@ -699,9 +698,6 @@ class NetworkTrainer:
                         elif is_main_process and batch['train_class_list'][0] == 0 :
                             loss_dict["loss/anormal_activation_on_normal"] = attn_loss.item()
 
-
-
-
                     accelerator.backward(loss)
 
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
@@ -736,7 +732,7 @@ class NetworkTrainer:
                 # ------------------------------------------------------------------------------------------------------
                 # 1) total loss
                 current_loss = loss.detach().item()
-                if epoch == 0:
+                if epoch == args.start_epoch :
                     loss_list.append(current_loss)
                 else:
                     loss_total -= loss_list[step]
@@ -762,7 +758,7 @@ class NetworkTrainer:
             accelerator.wait_for_everyone()
             # 指定エポックごとにモデルを保存
             if args.save_every_n_epochs is not None:
-                saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < num_train_epochs
+                saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < args.start_epoch + num_train_epochs
                 if is_main_process and saving:
                     ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
                     save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch + 1)
@@ -778,8 +774,6 @@ class NetworkTrainer:
                                text_encoder, unet)
             attention_storer.reset()
 
-        # metadata["ss_epoch"] = str(num_train_epochs)
-        metadata["ss_training_finished_at"] = str(time.time())
 
         if is_main_process:
             network = accelerator.unwrap_model(network)
