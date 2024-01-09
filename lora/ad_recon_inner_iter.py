@@ -127,7 +127,7 @@ def main(args) :
     network_weights = os.listdir(args.network_weights)
     for weight in network_weights:
         weight_dir = os.path.join(args.network_weights, weight)
-        if 'epoch-000008.safetensors' in weight :
+        if args.trg_lora_epoch in weight:
             parent, network_dir = os.path.split(weight_dir)
             model_name = os.path.splitext(network_dir)[0]
             if 'last' not in model_name:
@@ -401,11 +401,16 @@ if __name__ == "__main__":
     parser.add_argument("--pixel_copy", action = 'store_true')
     parser.add_argument("--inner_iteration", type=int, default=10)
     import ast
+
+
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
-    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
+
+    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
+    parser.add_argument("--trg_position", type=arg_as_list, default=['up'])
+    parser.add_argument("--trg_lora_epoch", type=str)
     args = parser.parse_args()
     main(args)
