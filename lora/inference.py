@@ -352,8 +352,8 @@ def main(args) :
     print(f" [2] Train")
     test_set_output_dir = os.path.join(args.output_dir, 'train_set')
     os.makedirs(test_set_output_dir, exist_ok=True)
-    test_set_record_dir = os.path.join(record_output_dir, 'train_set')
-    os.makedirs(test_set_record_dir, exist_ok=True)
+    train_set_record_dir = os.path.join(record_output_dir, 'train_set')
+    os.makedirs(train_set_record_dir, exist_ok=True)
 
     network_weights = os.listdir(args.network_weights)
     total_score_list = []
@@ -592,12 +592,12 @@ def main(args) :
             total_elem = ['', '']
             for k in total_dict.keys():
                 total_elem.append(total_dict[k])
-            record_csv_dir = os.path.join(test_set_record_dir, f'score_epoch_{model_epoch}.csv')
+            record_csv_dir = os.path.join(train_set_record_dir, f'score_epoch_{model_epoch}.csv')
             with open(record_csv_dir, 'w', newline='') as f:
                 wr = csv.writer(f)
                 wr.writerows(records)
 
-    record_total_csv_dir = os.path.join(test_set_record_dir, f'score_total.csv')
+    record_total_csv_dir = os.path.join(train_set_record_dir, f'score_total.csv')
     with open(record_total_csv_dir, 'w', newline='') as f:
         wr = csv.writer(f)
         wr.writerows(total_score_list)
