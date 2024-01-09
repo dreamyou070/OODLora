@@ -217,6 +217,7 @@ def main(args) :
             for class_name in classes:
 
                 if 'good' not in class_name :
+                    print(f' {class_name}')
                     k += 1
 
                     if k == 1 :
