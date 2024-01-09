@@ -353,7 +353,7 @@ def main(args) :
             with open(record_csv_dir, 'w', newline='') as f:
                 wr = csv.writer(f)
                 wr.writerows(records)
-                
+
     record_total_csv_dir = os.path.join(test_set_record_dir, f'score_total.csv')
     with open(record_total_csv_dir, 'w', newline='') as f:
         wr = csv.writer(f)
