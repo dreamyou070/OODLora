@@ -350,7 +350,7 @@ def main(args) :
                             result = result + 0.5
                             return result
                         lambda x: cosine_function(x) if x > 0 else 0
-                        pixel_mask = pixel_mask.detach().cpu()
+                        pixel_mask = latent_mask.detach().cpu()
                         mask_torch = pixel_mask.apply_(lambda x: cosine_function(x) if x > 0 else 0)
                         mask_torch = mask_torch.to(x_latent.device)
 
