@@ -115,16 +115,23 @@ def main(args) :
     os.makedirs(test_set_record_dir, exist_ok=True)
 
     network_weights = os.listdir(args.network_weights)
+    total_score = []
     for weight in network_weights:
         weight_dir = os.path.join(args.network_weights, weight)
         parent, network_dir = os.path.split(weight_dir)
         model_name = os.path.splitext(network_dir)[0]
         if 'last' not in model_name:
             model_epoch = int(model_name.split('-')[-1])
+            epoch_title = model_epoch
         else:
             model_epoch = 10000
+            epoch_title = 'last'
+
+
 
         if model_epoch > args.start_epoch :
+
+            epoch_elems = [str(epoch_title)]
 
             test_lora_dir = os.path.join(test_set_output_dir, f'lora_{model_epoch}')
             os.makedirs(test_lora_dir, exist_ok=True)
@@ -315,6 +322,7 @@ def main(args) :
                     # ----------------------------------------------------------------------------------------------------- #
                     if 'good' not in trg_prompt :
                         record = [trg_prompt, test_image]
+                        epoch_elems.append('')
 
                     for k in score_dict.keys():
                         if 'good' not in trg_prompt:
@@ -324,15 +332,20 @@ def main(args) :
                             else :
                                 total_dict[k] += trigger_score.sum().item()
                             record.append(trigger_score.sum().item())
+                            epoch_elems.append('')
 
                         if j == 0 and k == 0 :
                             first_elem.append(k)
 
                     if j == 0 and k == 0 :
                         records.append(first_elem)
+                        total_score.append(epoch_elems)
+
 
                     if 'good' not in trg_prompt:
                         records.append(record)
+                        total_score.append(record)
+
             total_elem = ['','']
             for k in total_dict.keys() :
                 total_elem.append(total_dict[k])
@@ -340,6 +353,13 @@ def main(args) :
             with open(record_csv_dir, 'w', newline='') as f:
                 wr = csv.writer(f)
                 wr.writerows(records)
+                
+    record_total_csv_dir = os.path.join(test_set_record_dir, f'score_total.csv')
+    with open(record_total_csv_dir, 'w', newline='') as f:
+        wr = csv.writer(f)
+        wr.writerows(total_score)
+
+    """            
     # ------------------------------------------------ train check -------------------------------------------------------- #
     print(f" [2] Train")
     test_set_output_dir = os.path.join(args.output_dir, 'train_set')
@@ -521,7 +541,7 @@ def main(args) :
                                 score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
                                 mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
                                 mask_np = np.where((np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                """ anormal portion score """
+                                # anormal portion score 
                                 score_dict[title_name] = score_np * mask_np
 
                                 # [2] saving n_score map
@@ -583,7 +603,7 @@ def main(args) :
             with open(record_csv_dir, 'w', newline='') as f:
                 wr = csv.writer(f)
                 wr.writerows(records)
-
+    """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
