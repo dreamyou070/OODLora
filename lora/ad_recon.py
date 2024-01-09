@@ -21,7 +21,8 @@ try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
-
+from utils.model_utils import call_unet
+from utils.scheduling_utils import next_step
 
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
@@ -96,8 +97,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer_without_thredhold/ddim_step_{args.num_ddim_steps}_cross_map_res_{args.cross_map_res[0]}_'
-                                           f'not_using_crossattn_mask')
+    args.output_dir = os.path.join(parent, f'recon_infer/start_random_noise_ddim_step_{args.num_ddim_steps}_'
+                                           f'cross_map_res_{args.cross_map_res[0]}_'
+                                           f'inner_iter_{args.inner_iteration}')
+    print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -124,7 +127,7 @@ def main(args) :
     network_weights = os.listdir(args.network_weights)
     for weight in network_weights:
         weight_dir = os.path.join(args.network_weights, weight)
-        if args.trg_lora_epoch  in weight :
+        if args.trg_lora_epoch in weight:
             parent, network_dir = os.path.split(weight_dir)
             model_name = os.path.splitext(network_dir)[0]
             if 'last' not in model_name:
@@ -205,11 +208,12 @@ def main(args) :
             trg_h, trg_w = args.resolution
 
             print(f' (3.3) test images')
-            test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/bad')
-            test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/corrected')
+            test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/rgb')
+            test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/gt')
             classes = os.listdir(test_img_folder)
 
             for class_name in classes:
+
                 if '_' in class_name:
                     trg_prompt = class_name.split('_')[-1]
                 else:
@@ -230,7 +234,8 @@ def main(args) :
                     os.makedirs(trg_img_output_dir, exist_ok=True)
 
                     test_img_dir = os.path.join(image_folder, test_image)
-                    shutil.copy(test_img_dir, os.path.join(trg_img_output_dir, test_image))
+                    Image.open(test_img_dir).convert('RGB').resize((512,512)).save(os.path.join(trg_img_output_dir,
+                                                                                                f'{name}_org{ext}'))
 
                     mask_img_dir = os.path.join(mask_folder, test_image)
                     shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
@@ -239,117 +244,122 @@ def main(args) :
                     with torch.no_grad():
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-                    # ------------------------------ generate attn mask map ------------------------------ #
-                    with torch.no_grad():
+                        # ------------------------------ generate attn mask map ------------------------------ #
+                        # (1) inference timestep
                         inf_time = inference_times.tolist()
                         inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
                         if '999' not in inf_time:
                             inf_time.append(999)
                         back_dict = {}
+
                         latent = org_vae_latent
-                        with torch.no_grad():
-                            mask_dict = {}
-                            mask_dict_avg = {}
-                            for i, t in enumerate(inf_time[:-1]):
-                                if i == 0 :
-                                    back_dict[int(t)] = latent
-                                    from utils.model_utils import call_unet
-                                    noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
-                                    attn_stores = controller.step_store
-                                    controller.reset()
-                                    mask_dict_avg_sub = {}
-                                    for layer_name in attn_stores:
-                                        attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                                        res = int(attn.shape[1] ** 0.5)
-                                        if res in args.cross_map_res :
+                        # ------------------------------ generate attn mask map ------------------------------ #
+                        # (2) get mask
+                        #mask_dict = {}
+                        mask_dict_avg = {}
+                        back_dict[0] = latent
+                        noise_pred = call_unet(unet, latent, 0, con[:,:3,:], [[1]], None)
+                        attn_stores = controller.step_store
+                        controller.reset()
+                        mask_dict_avg_sub = {}
+                        for layer_name in attn_stores:
+                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                            res = int(attn.shape[1] ** 0.5)
+                            if res in args.cross_map_res:
+                                if 'down' in layer_name:
+                                    key_name = f'down_{res}'
+                                elif 'up' in layer_name:
+                                    key_name = f'up_{res}'
+                                else:
+                                    key_name = f'mid_{res}'
+                                if key_name not in mask_dict_avg_sub :
+                                    mask_dict_avg_sub[key_name] = []
+                                mask_dict_avg_sub[key_name].append(attn)
 
-                                            if 'down' in layer_name:
-                                                key_name = f'down_{res}'
-                                                position = 'down'
+                        for key_name in mask_dict_avg_sub:
 
-                                            elif 'up' in layer_name:
-                                                key_name = f'up_{res}'
-                                                position = 'up'
-
-                                            else:
-                                                key_name = f'mid_{res}'
-                                                position = 'mid'
-
-                                            if position in args.trg_position :
-                                                if key_name not in mask_dict_avg_sub :
-                                                    mask_dict_avg_sub[key_name] = []
-                                                mask_dict_avg_sub[key_name].append(attn)
-                                                cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
-                                                h = cls_score.shape[0]
-                                                trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
-                                                trigger_score = trigger_score.reshape(h, res, res) # head, res, res
-                                                trigger_score = trigger_score.mean(dim=0) # res, res
-                                                trigger = trigger_score / trigger_score.max()
-                                                anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
-                                                mask_dict[layer_name] = anormal_map
-
-                                    # attn_dict
-                                    for key_name in mask_dict_avg_sub:
-                                        """ averaging values """
-                                        attn_list = mask_dict_avg_sub[key_name]
-                                        attn = torch.cat(attn_list, dim=0)
-                                        cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
-                                        res = int(trigger_score.shape[1] ** 0.5)
-                                        h = trigger_score.shape[0]
-                                        trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
-                                        trigger_score = trigger_score.reshape( h, res, res) # head, res, res
-                                        trigger_score = trigger_score.mean(dim=0)           # res, res
-                                        trigger = trigger_score / trigger_score.max()
-                                        mask_dict_avg[key_name] = trigger                   # up_64
-
-                    # ------------------------------ generate background latent ------------------------------ #
-                    from utils.scheduling_utils import next_step
-
-                    with torch.no_grad() :
+                            """ averaging values """
+                            attn_list = mask_dict_avg_sub[key_name]
+                            attn = torch.cat(attn_list, dim=0)
+                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
+                            res = int(trigger_score.shape[1] ** 0.5)
+                            h = trigger_score.shape[0]
+                            trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
+                            trigger_score = trigger_score.reshape( h, res, res) # head, res, res
+                            trigger_score = trigger_score.mean(dim=0)           # res, res
+                            trigger = trigger_score / trigger_score.max()
+                            mask_dict_avg[key_name] = trigger                   # up_64
+                        # ------------------------------ generate background latent ------------------------------ #
+                        # (3) generate background latent
                         time_steps = []
-                        with torch.no_grad():
-                            for i, t in enumerate(inf_time[:-1]):
-                                time_steps.append(t)
-                                back_dict[int(t)] = latent
-                                time_steps.append(t)
-                                noise_pred = call_unet(unet, latent, t, inv_c, None, None)
-                                latent = next_step(noise_pred, int(t), latent, scheduler)
+                        for i, t in enumerate(inf_time[:-1]):
+                            time_steps.append(t)
+                            back_dict[int(t)] = latent
+                            time_steps.append(t)
+                            #noise_pred = call_unet(invers_unet, latent, t, inv_c, None, None)
+                            noise_pred = call_unet(unet, latent, t, con[:,:3,:], None, None)
+                            latent = next_step(noise_pred, int(t), latent, scheduler)
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
-                    time_steps.reverse()
+                        time_steps.reverse()
 
-                    # ------------------------------ generate new latent ------------------------------ #
-                    x_latent_dict = {}
-                    x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
-                    with torch.no_grad():
+                        # ------------------------------ reconstruction with background ------------------------------ #
+                        # (4) reconstruction
+                        x_latent_dict = {}
+                        x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape).to(latent.device, dtype=weight_dtype)
+                        for key in mask_dict_avg.keys():
+                            pixel_mask = mask_dict_avg[key].to(latent.device)
+                            # ------------------------------ generate pixel mask ------------------------------ #
+                            pixel_save_mask_np = pixel_mask.cpu().numpy()
+                            pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
+                            latent_mask_pil = Image.fromarray(pixel_mask_img).resize((64,64,))
+                            latent_mask_np = np.array(latent_mask_pil)
+                            latent_mask_np = latent_mask_np / latent_mask_np.max() # 64,64
+                            latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device, dtype=weight_dtype)
+                            print(f'latent_mask_torch max : {latent_mask_torch.max()}')
+                            print(f'latent_mask_torch min : {latent_mask_torch.max()}')
+                            Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
+
+                            latent_mask_torch = latent_mask_torch.unsqueeze(0).unsqueeze(0)
+                            latent_mask = latent_mask_torch.repeat(1, 4, 1, 1)
+
+                        # ------------------------------ recon ------------------------------ #
                         for j, t in enumerate(time_steps[:-1]):
                             prev_time = time_steps[j + 1]
                             z_latent = back_dict[t]
                             x_latent = x_latent_dict[t]
                             input_latent = torch.cat([z_latent, x_latent], dim=0)
-                            input_cont = torch.cat([uncon, con], dim=0)
-                            #noise_pred = call_unet(unet, input_latent, t, input_cont, None, mask_dict)
+                            input_cont = torch.cat([uncon[:,:3,:], con[:,:3,:]], dim=0)[:,:2,:]
                             noise_pred = call_unet(unet, input_latent, t, input_cont, None, None)
                             controller.reset()
                             z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
                             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
-                            # ------------------------------ pixel recon ------------------------------ #
-                            if args.pixel_copy :
-                                if 'up_64' in mask_dict_avg.keys():
-                                    pixel_mask = mask_dict_avg['up_64'].to(z_latent.device)
-                                    # ----------------------------------------------------------------------
-                                    pixel_save_mask_np = pixel_mask.cpu().numpy()
-                                    pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
-                                    #print(f'after 255 multiply, pixel mask : {pixel_mask_img}')
-                                    pil_img = Image.fromarray(pixel_mask_img).resize((512, 512))
-                                    pil_img.save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-                                    # ----------------------------------------------------------------------
-                                    pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0) # 1, 1, res, res
-                                    pixel_mask = pixel_mask.repeat(1, 4, 1, 1) # 1, 4, res, res
-                                    x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
+                            x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
                             x_latent_dict[prev_time] = x_latent
-                        pil_img = Image.fromarray(latent2image(x_latent, vae))
-                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))
+
+                            Image.fromarray(latent2image(x_latent, vae)).save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
+
+                        # ------------------------------ inner loop ------------------------------ #
+                        iter_latent_dict = {}
+                        iter_latent_dict[0] = x_latent
+                        import math
+                        def cosine_function(x):
+                            x = math.pi * (x - 1)
+                            result = math.cos(x)
+                            result = result * 0.5
+                            result = result + 0.5
+                            return result
+                        lambda x: cosine_function(x) if x > 0 else 0
+                        pixel_mask = latent_mask.detach().cpu()
+                        mask_torch = pixel_mask.apply_(lambda x: cosine_function(x) if x > 0 else 0)
+                        mask_torch = mask_torch.to(x_latent.device)
+
+                        for i in range(args.inner_iteration) :
+                            latent = iter_latent_dict[i]
+                            latent = org_vae_latent * mask_torch + latent * (1 - mask_torch)
+                            iter_latent_dict[i+1] = latent
+                        pil_img = Image.fromarray(latent2image(latent, vae))
+                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -388,22 +398,18 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
     parser.add_argument("--scheduler_timesteps", type=int, default=1000)
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
-    parser.add_argument("--mask_thredhold", type=float, default = 0.5)
-    parser.add_argument("--pixel_thredhold", type=float, default=0.1)
     parser.add_argument("--pixel_copy", action = 'store_true')
     parser.add_argument("--inner_iteration", type=int, default=10)
-    parser.add_argument("--org_latent_attn_map_check", action = 'store_true')
-    parser.add_argument("--other_token_preserving", action = 'store_true')
-    parser.add_argument('--train_down', nargs='+', type=int, help='use which res layers in U-Net down', default=[])
-    parser.add_argument('--train_mid', nargs='+', type=int, help='use which res layers in U-Net mid', default=[8])
-    parser.add_argument('--train_up', nargs='+', type=int, help='use which res layers in U-Net up', default=[16,32,64])
     import ast
+
+
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
-    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
+
+    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--trg_position", type=arg_as_list, default=['up'])
     parser.add_argument("--trg_lora_epoch", type=str)
     args = parser.parse_args()
