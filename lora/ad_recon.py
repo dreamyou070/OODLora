@@ -251,7 +251,6 @@ def main(args) :
                         if '999' not in inf_time:
                             inf_time.append(999)
                         back_dict = {}
-
                         latent = org_vae_latent
                         # ------------------------------ generate attn mask map ------------------------------ #
                         # (2) get mask
@@ -265,7 +264,9 @@ def main(args) :
                         for layer_name in attn_stores:
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res = int(attn.shape[1] ** 0.5)
+
                             if res in args.cross_map_res:
+
                                 if 'down' in layer_name:
                                     key_name = f'down_{res}'
                                 elif 'up' in layer_name:
@@ -274,6 +275,39 @@ def main(args) :
                                     key_name = f'mid_{res}'
                                 if key_name not in mask_dict_avg_sub :
                                     mask_dict_avg_sub[key_name] = []
+
+                                if 'attentions_0' in layer_name:
+                                    part = 'attn_0'
+                                elif 'attentions_1' in layer_name:
+                                    part = 'attn_1'
+                                else:
+                                    part = 'attn_2'
+
+                                if not args.use_avg_mask:
+
+                                    if res in args.cross_map_res and key_name in args.trg_position and part in args.trg_part:
+
+                                        cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
+                                        h = trigger_score.shape[0]
+                                        trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
+                                        trigger_score = trigger_score.reshape(h, res, res)  # head, res, res
+                                        trigger_score = trigger_score.mean(dim=0)  # res, res
+                                        pixel_mask = trigger_score / trigger_score.max()  # res, res
+
+                                        pixel_save_mask_np = pixel_mask.cpu().numpy()
+                                        pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
+                                        latent_mask_pil = Image.fromarray(pixel_mask_img).resize((64, 64,))
+                                        latent_mask_np = np.array(latent_mask_pil)
+                                        latent_mask_np = latent_mask_np / latent_mask_np.max()  # 64,64
+                                        latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device,
+                                                                                                dtype=weight_dtype)
+                                        Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize(
+                                            (512, 512)).save(
+                                            os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
+
+                                        latent_mask_torch = latent_mask_torch.unsqueeze(0).unsqueeze(0)
+                                        latent_mask = latent_mask_torch.repeat(1, 4, 1, 1)
+
                                 mask_dict_avg_sub[key_name].append(attn)
 
                         # ------------------------------ [2] mask mask ------------------------------ #
@@ -307,23 +341,8 @@ def main(args) :
 
                                 latent_mask_torch = latent_mask_torch.unsqueeze(0).unsqueeze(0)
                                 latent_mask = latent_mask_torch.repeat(1, 4, 1, 1)
-                        else:
-                            for layer_name in attn_stores:
-                                attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                                res = int(attn.shape[1] ** 0.5)
 
-                                if 'down' in layer_name:  key_name = f'down_{res}'
-                                elif 'up' in layer_name: key_name = f'up_{res}'
-                                else: key_name = f'mid_{res}'
-
-                                if 'attentions_0' in layer_name :
-                                    attn_num = 'attn_0'
-                                print(layer_name)
-
-                                if res in args.cross_map_res and key_name in args.trg_positino and :
-                                    latent_mask = None
-
-
+                        # ----------------------------------------------------------------------------------------- #
                         # ----------------------------[3] generate background latent ------------------------------ #
                         time_steps = []
                         for i, t in enumerate(inf_time[:-1]):
@@ -337,7 +356,8 @@ def main(args) :
                         time_steps.append(inf_time[-1])
                         time_steps.reverse()
 
-                        # ------------------------------[4] recon ------------------------------ #
+                        # ----------------------------------------------------------------------------------------- #
+                        # ------------------------------[4] recon ------------------------------------------------- #
                         x_latent_dict = {}
                         x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape).to(latent.device,
                                                                                                       dtype=weight_dtype)
@@ -415,8 +435,10 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
     parser.add_argument("--scheduler_timesteps", type=int, default=1000)
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
-    parser.add_argument("--pixel_copy", action = 'store_true')
     parser.add_argument("--inner_iteration", type=int, default=10)
+    parser.add_argument("--use_avg_mask", action='store_true')
+    parser.add_argument("--trg_part", type = str)
+
     import ast
 
 
