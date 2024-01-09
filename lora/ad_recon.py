@@ -256,6 +256,7 @@ def main(args) :
                         for layer_name in attn_stores:
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res = int(attn.shape[1] ** 0.5)
+                            print(f'res : {res}')
 
                             if res in args.cross_map_res:
                                 if 'down' in layer_name:
@@ -271,10 +272,12 @@ def main(args) :
                                 else:
                                     part = 'attn_2'
                                 print(f'res : {res}, key_name : {key_name}, part : {part}')
+
                                 if args.use_avg_mask:
                                     if key_name not in mask_dict_avg_sub:
                                         mask_dict_avg_sub[key_name] = []
                                     mask_dict_avg_sub[key_name].append(attn)
+
                                 else :
                                     print(f'res : {res}, key_name : {key_name}, part : {part}')
                                     if res in args.cross_map_res and key_name in args.trg_position and part == args.trg_part:
