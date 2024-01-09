@@ -256,9 +256,7 @@ def main(args) :
                         for layer_name in attn_stores:
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res = int(attn.shape[1] ** 0.5)
-
                             if res in args.cross_map_res:
-
                                 if 'down' in layer_name:
                                     key_name = f'down_{res}'
                                 elif 'up' in layer_name:
@@ -274,7 +272,7 @@ def main(args) :
 
                                 if not args.use_avg_mask:
                                     print(f'layer_name : {layer_name}')
-                                    if res in args.cross_map_res and key_name in args.trg_position and part in args.trg_part:
+                                    if res in args.cross_map_res and key_name in args.trg_position and part == args.trg_part:
                                         cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                         h = trigger_score.shape[0]
                                         trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1

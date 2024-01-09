@@ -11,4 +11,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --num_ddim_steps 50 \
   --trg_lora_epoch 'epoch-000012.safetensors' \
   --inner_iter 10 \
-  --cross_map_res [64] --trg_position "['up']" --trg_part attentions_2
+  --cross_map_res [64] --trg_position "['up']" --trg_part attn_2
