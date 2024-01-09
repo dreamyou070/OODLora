@@ -213,13 +213,13 @@ def main(args) :
             epoch_elems.append('')
             total_dict = {}
 
-            k = 0
+            kk = 0
 
             for class_name in classes:
 
                 if 'good' not in class_name :
                     print(f' {class_name}')
-                    k += 1
+                    kk += 1
 
                     if '_' in class_name:
                         trg_prompt = class_name.split('_')[-1]
