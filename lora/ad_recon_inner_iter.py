@@ -213,6 +213,7 @@ def main(args) :
             classes = os.listdir(test_img_folder)
 
             for class_name in classes:
+
                 if '_' in class_name:
                     trg_prompt = class_name.split('_')[-1]
                 else:
@@ -276,6 +277,7 @@ def main(args) :
                                 mask_dict_avg_sub[key_name].append(attn)
 
                         for key_name in mask_dict_avg_sub:
+
                             """ averaging values """
                             attn_list = mask_dict_avg_sub[key_name]
                             attn = torch.cat(attn_list, dim=0)
@@ -305,13 +307,21 @@ def main(args) :
                         # (4) reconstruction
                         x_latent_dict = {}
                         x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape).to(latent.device, dtype=weight_dtype)
-                        if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
-                            pixel_mask = mask_dict_avg['up_64'].to(latent.device)
+                        for key in mask_dict_avg.keys():
+                            pixel_mask = mask_dict_avg[key].to(latent.device)
+                            # ------------------------------ generate pixel mask ------------------------------ #
                             pixel_save_mask_np = pixel_mask.cpu().numpy()
                             pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
                             Image.fromarray(pixel_mask_img).resize((512, 512)).save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-                            pixel_mask = pixel_mask.unsqueeze(0).unsqueeze(0)
-                            pixel_mask = pixel_mask.repeat(1, 4, 1, 1)
+                            # ------------------------------ generate pixel mask ------------------------------ #
+                            pixel_save_mask_np = pixel_mask.cpu().numpy()
+                            pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
+                            latent_mask_pil = Image.fromarray(pixel_mask_img).resize((64,64,))
+                            latent_mask_np = np.array(latent_mask_pil)
+                            latent_mask_np = latent_mask_np / latent_mask_np.max()
+                            latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device, dtype=weight_dtype)
+                            latent_mask_torch = latent_mask_torch.unsqueeze(0).unsqueeze(0)
+                            latent_mask = latent_mask_torch.repeat(1, 4, 1, 1)
 
                         # ------------------------------ recon ------------------------------ #
                         for j, t in enumerate(time_steps[:-1]):
@@ -324,8 +334,7 @@ def main(args) :
                             controller.reset()
                             z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
                             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
-                            if args.pixel_copy and 'up_64' in mask_dict_avg.keys():
-                                x_latent = z_latent * pixel_mask + x_latent * (1 - pixel_mask)
+                            x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
                             x_latent_dict[prev_time] = x_latent
                         pil_img = Image.fromarray(latent2image(x_latent, vae))
                         pil_img.save(os.path.join(trg_img_output_dir, f'{name}_recon{ext}'))

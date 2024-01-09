@@ -124,7 +124,7 @@ def main(args) :
     network_weights = os.listdir(args.network_weights)
     for weight in network_weights:
         weight_dir = os.path.join(args.network_weights, weight)
-        if 'epoch-000008.safetensors' in weight :
+        if args.trg_lora_epoch  in weight :
             parent, network_dir = os.path.split(weight_dir)
             model_name = os.path.splitext(network_dir)[0]
             if 'last' not in model_name:
@@ -261,25 +261,32 @@ def main(args) :
                                     for layer_name in attn_stores:
                                         attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                                         res = int(attn.shape[1] ** 0.5)
-                                        if res in args.cross_map_res:
+                                        if res in args.cross_map_res :
+
                                             if 'down' in layer_name:
                                                 key_name = f'down_{res}'
+                                                position = 'down'
+
                                             elif 'up' in layer_name:
                                                 key_name = f'up_{res}'
+                                                position = 'up'
+
                                             else:
                                                 key_name = f'mid_{res}'
-                                            if key_name not in mask_dict_avg_sub :
-                                                mask_dict_avg_sub[key_name] = []
-                                            mask_dict_avg_sub[key_name].append(attn)
+                                                position = 'mid'
 
-                                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
-                                            h = cls_score.shape[0]
-                                            trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
-                                            trigger_score = trigger_score.reshape(h, res, res) # head, res, res
-                                            trigger_score = trigger_score.mean(dim=0) # res, res
-                                            trigger = trigger_score / trigger_score.max()
-                                            anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
-                                            mask_dict[layer_name] = anormal_map
+                                            if position in args.trg_position :
+                                                if key_name not in mask_dict_avg_sub :
+                                                    mask_dict_avg_sub[key_name] = []
+                                                mask_dict_avg_sub[key_name].append(attn)
+                                                cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)
+                                                h = cls_score.shape[0]
+                                                trigger_score = trigger_score.unsqueeze(-1)        # head, pix_num, 1
+                                                trigger_score = trigger_score.reshape(h, res, res) # head, res, res
+                                                trigger_score = trigger_score.mean(dim=0) # res, res
+                                                trigger = trigger_score / trigger_score.max()
+                                                anormal_map = torch.flatten(trigger).unsqueeze(0)  # 1, res*res
+                                                mask_dict[layer_name] = anormal_map
 
                                     # attn_dict
                                     for key_name in mask_dict_avg_sub:
@@ -397,5 +404,7 @@ if __name__ == "__main__":
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64,32,16,8])
+    parser.add_argument("--trg_position", type=arg_as_list, default=['up'])
+    parser.add_argument("--trg_lora_epoch", type=str)
     args = parser.parse_args()
     main(args)

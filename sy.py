@@ -1,5 +1,6 @@
 import torch
+import numpy as np
 
-key = torch.randn(8, 30)
-key = torch.cat([key, key], dim=0)
-print(key.shape)
+latent_mask_np = np.array([1,2,3])
+latent_mask_torch = torch.from_numpy(latent_mask_np)
+print(latent_mask_torch)
