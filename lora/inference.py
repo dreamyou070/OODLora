@@ -220,7 +220,6 @@ def main(args) :
                 if 'good' not in class_name :
                     print(f' {class_name}')
                     kk += 1
-
                     if '_' in class_name:
                         trg_prompt = class_name.split('_')[-1]
                     else:
@@ -325,7 +324,7 @@ def main(args) :
                                 first_elem.append(k)
                                 epoch_elems.append('')
                         # ----------------------------------------------------------------------------------------------------- #
-                        if j == 0 and k == 1 :
+                        if j == 0 and kk == 1 :
                             records.append(first_elem)
                             print(f'recording title')
                             total_score.append(epoch_title)
