@@ -327,7 +327,7 @@ def main(args) :
                         if j == 0 and kk == 1 :
                             records.append(first_elem)
                             print(f'recording title')
-                            total_score.append(epoch_title)
+                            total_score.append(epoch_elems)
                             total_score.append(first_elem)
 
                         if 'good' not in trg_prompt:
