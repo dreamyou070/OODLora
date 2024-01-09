@@ -23,7 +23,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --trg_position "['up','down']" \
   --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/cable_gland \
   --network_weights ../result/MVTec3D-AD_experiment/cable_gland/lora_training/res_64_up_16_up_down_normal_10_anormal_80_bent_120/models \
-  --start_epoch 13
+  --start_epoch 0
 
 # -------------------------------------------------------------------------------------------------------------------------------------------- #
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 51661 inference_cookie.py \
