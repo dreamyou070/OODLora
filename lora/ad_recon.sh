@@ -10,7 +10,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_weights ../result/MVTec3D-AD_experiment/cookie/lora_training/res_64_up_16_up_down_normal_10_anormal_80/models \
   --num_ddim_steps 50 \
   --cross_map_res [16] \
-  --trg_position ['up'] \
+  --trg_position "['up']" \
   --trg_lora_epoch 'epoch-000015.safetensors' \
   --pixel_copy \
   --inner_iter 10
