@@ -217,7 +217,6 @@ def main(args) :
 
             for class_name in classes:
 
-
                 print(f' {class_name}')
                 kk += 1
                 if '_' in class_name:
@@ -246,7 +245,7 @@ def main(args) :
                     mask_np = load_image(mask_img_dir, trg_h=int(trg_h), trg_w=int(trg_w))
                     mask_np = np.where(mask_np > 100, 1, 0)  # binary mask
                     with torch.no_grad():
-                        print(f' (1) img to latent')
+
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                         inf_time = inference_times.tolist()
@@ -263,13 +262,23 @@ def main(args) :
                         for layer_name in attn_stores :
                             attn = attn_stores[layer_name][0].squeeze() # head, pix_num
                             res = int(attn.shape[1] ** 0.5)
-                            if 'down' in layer_name: position = 'down'
-                            elif 'up' in layer_name: position = 'up'
-                            else: position = 'middle'
+
+                            if 'down' in layer_name:
+                                position = 'down'
+                            elif 'up' in layer_name:
+                                position = 'up'
+                            else:
+                                position = 'middle'
+
                             if res in args.cross_map_res and position in args.trg_position :
-                                if 'attentions_0' in layer_name : part = 'attn_0'
-                                elif 'attentions_1' in layer_name : part = 'attn_1'
-                                else : part = 'attn_2'
+
+                                if 'attentions_0' in layer_name :
+                                    part = 'attn_0'
+                                elif 'attentions_1' in layer_name :
+                                    part = 'attn_1'
+                                else :
+                                    part = 'attn_2'
+
                                 title_name = f'res_{res}_{position}_{part}'
                                 # ----------------------------------------- get attn map ----------------------------------------- #
                                 cls_score, normal_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
@@ -289,8 +298,10 @@ def main(args) :
                                 n_score_pil = Image.fromarray(n_score_np).resize((512, 512),Image.BILINEAR)
                                 n_score_pil.save(os.path.join(trg_img_output_dir,
                                                               f'{title_name}_res_{res}.png'))
-                                if 'down' in layer_name : key_name = f'down_{res}'
-                                elif 'up' in layer_name : key_name = f'up_{res}'
+                                if 'down' in layer_name :
+                                    key_name = f'down_{res}'
+                                elif 'up' in layer_name :
+                                    key_name = f'up_{res}'
                                 else : key_name = f'mid_{res}'
 
                                 if key_name not in attn_dict :
@@ -320,7 +331,7 @@ def main(args) :
                             else :
                                 total_dict[k] += trigger_score.sum().item()
                             record.append(trigger_score.sum().item())
-                        if j == 0 and k == 1 :
+                        if j == 0 and kk == 1 :
                             first_elem.append(k)
                             epoch_elems.append('')
                     # ----------------------------------------------------------------------------------------------------- #
@@ -575,7 +586,7 @@ def main(args) :
                             else:
                                 total_dict[k] += trigger_score.sum().item()
                             record.append(trigger_score.sum().item())
-                        if j == 0 and k == 1:
+                        if j == 0 and kk == 1:
                             first_elem.append(k)
                             epoch_elems.append('')
                     # ----------------------------------------------------------------------------------------------------- #
