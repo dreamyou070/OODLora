@@ -730,54 +730,55 @@ class NetworkTrainer:
                         lr_scheduler.step()
                         optimizer.zero_grad(set_to_none=True)
 
-                # Checks if the accelerator has performed an optimization step behind the scenes
-                if accelerator.sync_gradients:
-                    progress_bar.update(1)
-                    global_step += 1
-                    self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer,
-                                       text_encoder, unet)
-                    attention_storer.reset()
+                    # Checks if the accelerator has performed an optimization step behind the scenes
+                    if accelerator.sync_gradients:
+                        progress_bar.update(1)
+                        global_step += 1
+                        self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer,
+                                           text_encoder, unet)
+                        attention_storer.reset()
 
-                    # 指定ステップごとにモデルを保存
-                    if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
-                        accelerator.wait_for_everyone()
-                        if accelerator.is_main_process:
-                            ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
-                            save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch)
-                            if args.save_state:
-                                train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
-                            remove_step_no = train_util.get_remove_step_no(args, global_step)
-                            if remove_step_no is not None:
-                                remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as,
-                                                                                 remove_step_no)
-                                remove_model(remove_ckpt_name)
-                # ------------------------------------------------------------------------------------------------------
-                # 1) total loss
-                current_loss = loss.detach().item()
-                if epoch == args.start_epoch :
-                    loss_list.append(current_loss)
-                else:
-                    loss_total -= loss_list[step]
-                    loss_list[step] = current_loss
-                loss_total += current_loss
-                avr_loss = loss_total / len(loss_list)
+                        # 指定ステップごとにモデルを保存
+                        if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
+                            accelerator.wait_for_everyone()
+                            if accelerator.is_main_process:
+                                ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
+                                save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch)
+                                if args.save_state:
+                                    train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
+                                remove_step_no = train_util.get_remove_step_no(args, global_step)
+                                if remove_step_no is not None:
+                                    remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as,
+                                                                                     remove_step_no)
+                                    remove_model(remove_ckpt_name)
+                #
+                    # ------------------------------------------------------------------------------------------------------
+                    # 1) total loss
+                    current_loss = loss.detach().item()
+                    if epoch == args.start_epoch:
+                        loss_list.append(current_loss)
+                    else:
+                        loss_total -= loss_list[step]
+                        loss_list[step] = current_loss
+                    loss_total += current_loss
+                    avr_loss = loss_total / len(loss_list)
 
-                logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-                progress_bar.set_postfix(**logs)
+                    logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
+                    progress_bar.set_postfix(**logs)
 
-                # ------------------------------------------------------------------------------------------------------
-                # 2) total loss
-                if args.logging_dir is not None:
-                    # accelerator.log(logs, step=global_step)
-                    if is_main_process:
-                        logs = self.generate_step_logs(loss_dict, lr_scheduler)
-                        wandb.log(logs, step=global_step)
-                if global_step >= args.max_train_steps:
-                    break
-            if args.logging_dir is not None:
-                logs = {"loss/epoch": loss_total / len(loss_list), }
-                accelerator.log(logs, step=epoch + 1)
-            accelerator.wait_for_everyone()
+                    # ------------------------------------------------------------------------------------------------------
+                    # 2) total loss
+                    if args.logging_dir is not None:
+                        # accelerator.log(logs, step=global_step)
+                        if is_main_process:
+                            logs = self.generate_step_logs(loss_dict, lr_scheduler)
+                            wandb.log(logs, step=global_step)
+                    if global_step >= args.max_train_steps:
+                        break
+                    if args.logging_dir is not None:
+                        logs = {"loss/epoch": loss_total / len(loss_list), }
+                        accelerator.log(logs, step=epoch + 1)
+                    accelerator.wait_for_everyone()
             # 指定エポックごとにモデルを保存
             if args.save_every_n_epochs is not None:
                 saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < args.start_epoch + num_train_epochs
