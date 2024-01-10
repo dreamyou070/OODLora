@@ -605,13 +605,10 @@ class NetworkTrainer:
 
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
-                    normal_sample = False
-                    normal_flag = batch['train_class_list']
-                    print(f'normal_flag  : {normal_flag}')
 
+                    normal_sample = False
                     if batch['train_class_list'][0] == 1:
                         normal_sample = True
-
                     do_train = False
                     if epoch < args.warmup_epochs:
                         if normal_sample :
