@@ -864,7 +864,8 @@ if __name__ == "__main__":
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--use_attn_loss", action='store_true')
-    parser.add_argument("--detail_64", action='store_true')
+    parser.add_argument("--detail_64_up", action='store_true')
+    parser.add_argument("--detail_64_down", action='store_true')
 
     import ast
     def arg_as_list(arg):
