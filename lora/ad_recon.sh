@@ -1,4 +1,11 @@
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 51231 ad_recon.py \
+# dreamyou070
+# qkrtndus0701?!
+# srun -p suma_a6000 -q big_qos --gres=gpu:1 --time=2-0 --pty bash -i
+# srun -p suma_a6000 -q big_qos --gres=gpu:2 --time=2-0 --pty bash -i
+# cd ./Lora/OODLora/lora/
+# conda activate venv_lora
+
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 51200 ad_recon.py \
   --process_title parksooyeon --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 \
@@ -11,4 +18,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --num_ddim_steps 50 \
   --trg_lora_epoch 'epoch-000017.safetensors' \
   --inner_iter 10 --only_zero_save \
-  --cross_map_res [64] --trg_position "['up']" --trg_part "attn_0"
+  --cross_map_res [64] --trg_position "['up']" --trg_part "attn_2"

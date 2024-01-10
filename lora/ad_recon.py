@@ -97,7 +97,8 @@ def main(args) :
                                            f'cross_map_res_{args.cross_map_res[0]}_'
                                            f'inner_iter_{args.inner_iteration}_'
                                            f'trg_position_{args.trg_position[0]}_'
-                                           f'trg_partn_{args.trg_part}_')
+                                           f'trg_part_{args.trg_part}_'
+                                           f'text_truncate_{args.truncate_pad}')
     print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -200,7 +201,7 @@ def main(args) :
             print(f' (3.1) prompt condition')
             context = init_prompt(tokenizer, text_encoder, device, args.prompt)
             uncon, con = torch.chunk(context, 2)
-            uncon, con = uncon[:, :3,:], con[:, :3,:]
+            uncon, con = uncon[:, :,:], con[:, :,:]
 
             print(f' (3.2) train images')
             trg_h, trg_w = args.resolution
@@ -346,7 +347,10 @@ def main(args) :
                             z_latent = back_dict[t]
                             x_latent = x_latent_dict[t]
                             input_latent = torch.cat([z_latent, x_latent], dim=0)
-                            input_cont = torch.cat([uncon[:,:3,:], con[:,:3,:]], dim=0)[:,:2,:]
+                            if args.truncate_pad :
+                                input_cont = torch.cat([uncon[:,:3,:], con[:,:3,:]], dim=0)[:,:2,:]
+                            else :
+                                input_cont = context
                             noise_pred = call_unet(unet, input_latent, t, input_cont, None, None)
                             controller.reset()
                             z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
@@ -423,6 +427,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_avg_mask", action='store_true')
     parser.add_argument("--trg_part", type = str)
     parser.add_argument("--only_zero_save", action='store_true')
+    parser.add_argument("--truncate_pad", action='store_true')
 
     import ast
     def arg_as_list(arg):
