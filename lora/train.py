@@ -698,7 +698,7 @@ class NetworkTrainer:
                                     attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:
-                            loss = loss + args.anormal_weight * attn_loss
+                            loss = loss + args.normal_weight * attn_loss
                         else:
                             loss = args.anormal_weight * attn_loss
 
@@ -759,14 +759,10 @@ class NetworkTrainer:
                     # accelerator.log(logs, step=global_step)
                     if is_main_process:
                         logs = self.generate_step_logs(loss_dict, lr_scheduler)
-                        wandb.log(logs, step=global_step)
+                        wandb.log(logs)#, step=global_step)
                 if global_step >= args.max_train_steps:
                     break
-            if args.logging_dir is not None:
-                logs = {"loss/epoch": loss_total / len(loss_list), }
-                accelerator.log(logs, step=epoch + 1)
             accelerator.wait_for_everyone()
-            # 指定エポックごとにモデルを保存
             if args.save_every_n_epochs is not None:
                 saving = (epoch + 1) % args.save_every_n_epochs == 0 and (
                             epoch + 1) < args.start_epoch + num_train_epochs
@@ -790,17 +786,6 @@ class NetworkTrainer:
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
-        if is_main_process:
-            print("model saved.")
-            ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
-            save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
-
-            print("gradient recording")
-            gradient_save_dir = os.path.join(record_save_dir, "gradient_norm.pickle")
-            import pickle
-            with open(gradient_save_dir, 'wb') as fw:
-                pickle.dump(gradient_dict, fw)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -877,6 +862,7 @@ if __name__ == "__main__":
         return v
     parser.add_argument('--trg_position', type = arg_as_list, default = ['down', 'up'])
     parser.add_argument('--anormal_weight', type=float, default=1.0)
+    parser.add_argument('--normal_weight', type=float, default=1.0)
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--normal_training", action="store_true", )
     args = parser.parse_args()
