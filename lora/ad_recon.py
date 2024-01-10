@@ -97,7 +97,7 @@ def main(args) :
                                            f'cross_map_res_{args.cross_map_res[0]}_'
                                            f'inner_iter_{args.inner_iteration}_'
                                            f'trg_position_{args.trg_position[0]}_'
-                                           f'trg_partn_{args.trg_trg_part}_')
+                                           f'trg_partn_{args.trg_part}_')
     print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
 
