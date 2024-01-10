@@ -865,7 +865,6 @@ if __name__ == "__main__":
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
-
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--trg_position', type = arg_as_list, default = ['down', 'up'])
     parser.add_argument('--anormal_weight', type=float, default=1.0)
