@@ -9,7 +9,7 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 59435 inference.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 59442 inference.py \
   --process_title parksooyeon \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora \
@@ -18,7 +18,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --cross_map_res [64,32] \
   --trg_position "['up','down']" \
   --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/carrot \
-  --network_weights ../result/MVTec3D-AD_experiment/carrot/lora_training/7_res_64_down_res_32_up_down/models \
+  --network_weights ../result/MVTec3D-AD_experiment/carrot/lora_training/12_res_64_up_down_res_32_up_down/models \
   --start_epoch 0
 
 # -------------------------------------------------------------------------------------------------------------------------------------------- #
