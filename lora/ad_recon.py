@@ -90,7 +90,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
 
 
-
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
