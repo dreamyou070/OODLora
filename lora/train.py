@@ -658,6 +658,7 @@ class NetworkTrainer:
                             res = int(score_map.shape[1] ** 0.5)
                             do_mask_loss = False
                             if res in args.cross_map_res:
+
                                 if 'down' in layer_name:
                                     position = 'down'
                                 elif 'up' in layer_name:
@@ -665,11 +666,17 @@ class NetworkTrainer:
                                 elif 'mid' in layer_name:
                                     position = 'mid'
 
+                                if 'attentions_0' in layer_name:
+                                    part = 'attn_0'
+                                elif 'attentions_1' in layer_name:
+                                    part = 'attn_1'
+                                else:
+                                    part = 'attn_2'
+
                                 if res == 64:
                                     if args.detail_64_up:
                                         if 'up' in layer_name:
                                             do_mask_loss = True
-
                                     elif args.detail_64_down:
                                         if 'down' in layer_name:
                                             do_mask_loss = True
@@ -679,21 +686,18 @@ class NetworkTrainer:
                                     if position in args.trg_position:
                                         do_mask_loss = True
 
-                                if do_mask_loss:
-                                    anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
-                                        0)  # [1,1,res,res], foreground = 1
+                                if do_mask_loss and part in args.trg_part :
+                                    anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                     mask = anormal_mask.squeeze()  # res,res
-                                    mask = torch.stack([mask.flatten() for i in range(8)],
-                                                       dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
-
+                                    mask = torch.stack([mask.flatten() for i in range(8)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
                                     activation = (score_map * mask).sum(dim=-1)
 
                                     # total_score = (score_map).sum(dim=-1)
                                     total_score = torch.ones_like(activation)
 
-                                    if batch['train_class_list'][0] == 1:
+                                    if batch['train_class_list'][0] == 1 : # normal data
                                         activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
-                                    else:
+                                    else: # anormal data
                                         activation_loss = (activation / total_score) ** 2  # 8, res*res
                                     attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
@@ -854,12 +858,15 @@ if __name__ == "__main__":
     parser.add_argument("--detail_64_up", action='store_true')
     parser.add_argument("--detail_64_down", action='store_true')
 
+
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
+
+    parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--trg_position', type = arg_as_list, default = ['down', 'up'])
     parser.add_argument('--anormal_weight', type=float, default=1.0)
     parser.add_argument('--normal_weight', type=float, default=1.0)
