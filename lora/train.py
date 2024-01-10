@@ -604,7 +604,6 @@ class NetworkTrainer:
                 current_step.value = global_step
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
-
                     with torch.no_grad():
                         if "latents" in batch and batch["latents"] is not None:
                             latents = batch["latents"].to(accelerator.device)
@@ -638,7 +637,7 @@ class NetworkTrainer:
                                                     batch,
                                                     weight_dtype, 1, None)
 
-                    if batch['train_class_list'][0] == 1 :
+                    if batch['train_class_list'][0] == 1:
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
@@ -650,8 +649,6 @@ class NetworkTrainer:
                         task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
                         loss = task_loss * args.task_loss_weight
 
-
-
                     attn_dict = attention_storer.step_store
                     attention_storer.reset()
                     if args.use_attn_loss:
@@ -660,7 +657,7 @@ class NetworkTrainer:
                             score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
                             res = int(score_map.shape[1] ** 0.5)
                             do_mask_loss = False
-                            if res in args.cross_map_res :
+                            if res in args.cross_map_res:
                                 if 'down' in layer_name:
                                     position = 'down'
                                 elif 'up' in layer_name:
@@ -668,46 +665,47 @@ class NetworkTrainer:
                                 elif 'mid' in layer_name:
                                     position = 'mid'
 
-                                if res == 64 :
-                                    if args.detail_64_up :
-                                        if 'up' in layer_name :
+                                if res == 64:
+                                    if args.detail_64_up:
+                                        if 'up' in layer_name:
                                             do_mask_loss = True
 
-                                    elif args.detail_64_down :
-                                        if 'down' in layer_name :
+                                    elif args.detail_64_down:
+                                        if 'down' in layer_name:
                                             do_mask_loss = True
-                                    else :
+                                    else:
                                         do_mask_loss = True
                                 else:
                                     if position in args.trg_position:
                                         do_mask_loss = True
 
-                                if do_mask_loss :
-                                    anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                if do_mask_loss:
+                                    anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
+                                        0)  # [1,1,res,res], foreground = 1
                                     mask = anormal_mask.squeeze()  # res,res
-                                    mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
+                                    mask = torch.stack([mask.flatten() for i in range(8)],
+                                                       dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
                                     activation = (score_map * mask).sum(dim=-1)
 
-                                    #total_score = (score_map).sum(dim=-1)
+                                    # total_score = (score_map).sum(dim=-1)
                                     total_score = torch.ones_like(activation)
 
-                                    if batch['train_class_list'][0] == 1 :
-                                        total_score = (score_map).sum(dim=-1)
+                                    if batch['train_class_list'][0] == 1:
                                         activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
-                                    else :
+                                    else:
                                         activation_loss = (activation / total_score) ** 2  # 8, res*res
                                     attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:
                             loss = loss + args.anormal_weight * attn_loss
-                        else :
+                        else:
                             loss = args.anormal_weight * attn_loss
 
-                        if is_main_process and batch['train_class_list'][0] == 1 :
+                        if is_main_process and batch['train_class_list'][0] == 1:
                             loss_dict["task_loss"] = task_loss.item()
                             loss_dict["loss/normal_activation"] = attn_loss.item()
-                        elif is_main_process and batch['train_class_list'][0] == 0 :
+                        elif is_main_process and batch['train_class_list'][0] == 0:
                             loss_dict["loss/anormal_activation_on_normal"] = attn_loss.item()
 
                     accelerator.backward(loss)
@@ -744,7 +742,7 @@ class NetworkTrainer:
                 # ------------------------------------------------------------------------------------------------------
                 # 1) total loss
                 current_loss = loss.detach().item()
-                if epoch == args.start_epoch :
+                if epoch == args.start_epoch:
                     loss_list.append(current_loss)
                 else:
                     loss_total -= loss_list[step]
@@ -770,7 +768,8 @@ class NetworkTrainer:
             accelerator.wait_for_everyone()
             # 指定エポックごとにモデルを保存
             if args.save_every_n_epochs is not None:
-                saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < args.start_epoch + num_train_epochs
+                saving = (epoch + 1) % args.save_every_n_epochs == 0 and (
+                            epoch + 1) < args.start_epoch + num_train_epochs
                 if is_main_process and saving:
                     ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
                     save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch + 1)
@@ -785,7 +784,6 @@ class NetworkTrainer:
             self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
                                text_encoder, unet)
             attention_storer.reset()
-
 
         if is_main_process:
             network = accelerator.unwrap_model(network)
