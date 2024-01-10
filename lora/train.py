@@ -606,6 +606,9 @@ class NetworkTrainer:
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
                     normal_sample = False
+                    normal_flag = batch['train_class_list']
+                    print(f'normal_flag  : {normal_flag}')
+
                     if batch['train_class_list'][0] == 1:
                         normal_sample = True
 
@@ -616,122 +619,121 @@ class NetworkTrainer:
                     else :
                         do_train = True
 
-                    if do_train:
-                        with torch.no_grad():
-                            if "latents" in batch and batch["latents"] is not None:
-                                latents = batch["latents"].to(accelerator.device)
-                            else:
-                                latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
-                                if torch.any(torch.isnan(latents)):
-                                    accelerator.print("NaN found in latents, replacing with zeros")
-                                    latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
-                            latents = latents * self.vae_scale_factor
+                    with torch.no_grad():
+                        if "latents" in batch and batch["latents"] is not None:
+                            latents = batch["latents"].to(accelerator.device)
+                        else:
+                            latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
+                            if torch.any(torch.isnan(latents)):
+                                accelerator.print("NaN found in latents, replacing with zeros")
+                                latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
+                        latents = latents * self.vae_scale_factor
 
-                        with torch.set_grad_enabled(train_text_encoder):
-                            text_encoder_conds = self.get_text_cond(args,
-                                                                    accelerator,
-                                                                    batch,
-                                                                    tokenizers,
-                                                                    text_encoders,
-                                                                    weight_dtype)
-                            if args.truncate_pad:
-                                text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
+                    with torch.set_grad_enabled(train_text_encoder):
+                        text_encoder_conds = self.get_text_cond(args,
+                                                                accelerator,
+                                                                batch,
+                                                                tokenizers,
+                                                                text_encoders,
+                                                                weight_dtype)
+                        if args.truncate_pad:
+                            text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
 
-                        noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                           noise_scheduler,
-                                                                                                           latents)
-                        with accelerator.autocast():
-                            # -----------------------------------------------------------------------------------------------------------------------
-                            noise_pred = self.call_unet(args,
-                                                        accelerator,
-                                                        unet,
-                                                        noisy_latents,
-                                                        timesteps,
-                                                        text_encoder_conds,
-                                                        batch,
-                                                        weight_dtype, 1, None)
+                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                       noise_scheduler,
+                                                                                                       latents)
+                    with accelerator.autocast():
+                        # -----------------------------------------------------------------------------------------------------------------------
+                        noise_pred = self.call_unet(args,
+                                                    accelerator,
+                                                    unet,
+                                                    noisy_latents,
+                                                    timesteps,
+                                                    text_encoder_conds,
+                                                    batch,
+                                                    weight_dtype, 1, None)
 
-                        if batch['train_class_list'][0] == 1 :
-                            if args.v_parameterization:
-                                target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                            else:
-                                target = noise
-                            loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
-                            loss = loss.mean([1, 2, 3])
-                            loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                            loss = loss * loss_weights
-                            task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-                            loss = task_loss * args.task_loss_weight
-
+                    if batch['train_class_list'][0] == 1 :
+                        if args.v_parameterization:
+                            target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                        else:
+                            target = noise
+                        loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
+                        loss = loss.mean([1, 2, 3])
+                        loss_weights = batch["loss_weights"]  # 各sampleごとのweight
+                        loss = loss * loss_weights
+                        task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                        loss = task_loss * args.task_loss_weight
 
 
-                        attn_dict = attention_storer.step_store
-                        attention_storer.reset()
-                        if args.use_attn_loss:
-                            attn_loss = 0
-                            for i, layer_name in enumerate(attn_dict.keys()):
-                                score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
-                                res = int(score_map.shape[1] ** 0.5)
-                                do_mask_loss = False
-                                if res in args.cross_map_res :
-                                    if 'down' in layer_name:
-                                        position = 'down'
-                                    elif 'up' in layer_name:
-                                        position = 'up'
-                                    elif 'mid' in layer_name:
-                                        position = 'mid'
 
-                                    if res == 64 :
-                                        if args.detail_64_up :
-                                            if 'up' in layer_name :
-                                                do_mask_loss = True
+                    attn_dict = attention_storer.step_store
+                    attention_storer.reset()
+                    if args.use_attn_loss:
+                        attn_loss = 0
+                        for i, layer_name in enumerate(attn_dict.keys()):
+                            score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
+                            res = int(score_map.shape[1] ** 0.5)
+                            do_mask_loss = False
+                            if res in args.cross_map_res :
+                                if 'down' in layer_name:
+                                    position = 'down'
+                                elif 'up' in layer_name:
+                                    position = 'up'
+                                elif 'mid' in layer_name:
+                                    position = 'mid'
 
-                                        elif args.detail_64_down :
-                                            if 'down' in layer_name :
-                                                do_mask_loss = True
-                                        else :
-                                            do_mask_loss = True
-                                    else:
-                                        if position in args.trg_position:
+                                if res == 64 :
+                                    if args.detail_64_up :
+                                        if 'up' in layer_name :
                                             do_mask_loss = True
 
-                                    if do_mask_loss :
-                                        anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                        mask = anormal_mask.squeeze()  # res,res
-                                        mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
+                                    elif args.detail_64_down :
+                                        if 'down' in layer_name :
+                                            do_mask_loss = True
+                                    else :
+                                        do_mask_loss = True
+                                else:
+                                    if position in args.trg_position:
+                                        do_mask_loss = True
 
-                                        activation = (score_map * mask).sum(dim=-1)
+                                if do_mask_loss :
+                                    anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                    mask = anormal_mask.squeeze()  # res,res
+                                    mask = torch.stack([mask.flatten() for i in range(8)], dim=0)#.unsqueeze(-1)  # 8, res*res, 1
 
-                                        #total_score = (score_map).sum(dim=-1)
-                                        total_score = torch.ones_like(activation)
+                                    activation = (score_map * mask).sum(dim=-1)
 
-                                        if batch['train_class_list'][0] == 1 :
-                                            total_score = (score_map).sum(dim=-1)
-                                            activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
-                                        else :
-                                            activation_loss = (activation / total_score) ** 2  # 8, res*res
-                                        attn_loss += activation_loss
-                            attn_loss = attn_loss.mean()
-                            if batch['train_class_list'][0] == 1:
-                                loss = loss + args.anormal_weight * attn_loss
-                            else :
-                                loss = args.anormal_weight * attn_loss
+                                    #total_score = (score_map).sum(dim=-1)
+                                    total_score = torch.ones_like(activation)
 
-                            if is_main_process and batch['train_class_list'][0] == 1 :
-                                loss_dict["task_loss"] = task_loss.item()
-                                loss_dict["loss/normal_activation"] = attn_loss.item()
-                            elif is_main_process and batch['train_class_list'][0] == 0 :
-                                loss_dict["loss/anormal_activation_on_normal"] = attn_loss.item()
+                                    if batch['train_class_list'][0] == 1 :
+                                        total_score = (score_map).sum(dim=-1)
+                                        activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+                                    else :
+                                        activation_loss = (activation / total_score) ** 2  # 8, res*res
+                                    attn_loss += activation_loss
+                        attn_loss = attn_loss.mean()
+                        if batch['train_class_list'][0] == 1:
+                            loss = loss + args.anormal_weight * attn_loss
+                        else :
+                            loss = args.anormal_weight * attn_loss
 
-                        accelerator.backward(loss)
+                        if is_main_process and batch['train_class_list'][0] == 1 :
+                            loss_dict["task_loss"] = task_loss.item()
+                            loss_dict["loss/normal_activation"] = attn_loss.item()
+                        elif is_main_process and batch['train_class_list'][0] == 0 :
+                            loss_dict["loss/anormal_activation_on_normal"] = attn_loss.item()
+
+                        if do_train :
+                            accelerator.backward(loss)
+                            optimizer.step()
+                            lr_scheduler.step()
+                            optimizer.zero_grad(set_to_none=True)
 
                         if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                             params_to_clip = network.get_trainable_params()
                             accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
-
-                        optimizer.step()
-                        lr_scheduler.step()
-                        optimizer.zero_grad(set_to_none=True)
 
                         # Checks if the accelerator has performed an optimization step behind the scenes
                         if accelerator.sync_gradients:
