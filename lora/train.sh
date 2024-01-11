@@ -9,7 +9,7 @@
 
 class_name="carrot"
 data_source='train_ex'
-save_folder="1_7_res_64_down_32_up_from_normal_eighth_epoch_anormal_deact_only_on_64_down"
+save_folder="1_7_res_64_down_32_up_from_normal_eighth_epoch"
 start_folder="0_7_res_64_down_32_up_normal"
 trg_lora_model="epoch-000008.safetensors"
 start_epoch=0
