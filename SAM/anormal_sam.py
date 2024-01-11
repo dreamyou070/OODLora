@@ -16,25 +16,18 @@ def main(args):
     base_folder = args.base_folder
     cats = os.listdir(base_folder)
     for cat in cats:
-
         if cat == args.trg_cat:
-            print(f'cat : {cat}')
-
             cat_dir = os.path.join(base_folder, f'{cat}')
-
             train_ex_dir = os.path.join(cat_dir, 'train_ex')
 
-            train_rgb_dir = os.path.join(train_ex_dir, 'mask')
+            train_rgb_dir = os.path.join(train_ex_dir, 'rgb')
             train_gt_dir = os.path.join(train_ex_dir, 'gt')
             train_pixel_mask_dir = os.path.join(train_ex_dir, 'mask')
             os.makedirs(train_pixel_mask_dir, exist_ok=True)
 
             folders = os.listdir(train_rgb_dir)
-            print(f'folders : {folders}')
             for folder in folders:
-                print(f'folder : {folder}')
                 if 'good' not in folder :
-                    print(f'folder : {folder}')
                     rgb_folder_dir = os.path.join(train_rgb_dir, folder)
                     mask_folder_dir = os.path.join(train_pixel_mask_dir, folder)
                     os.makedirs(mask_folder_dir, exist_ok=True)
