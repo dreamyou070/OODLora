@@ -10,7 +10,7 @@
 class_name="carrot"
 start_epoch=0
 port_number=51250
-save_folder="1_9_res_64_up_down_32_up_down_from_15_epoch_attn_0"
+save_folder="1_9_res_64_up_down_32_up_down_from_15_epoch_attn_0_double_mask"
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
