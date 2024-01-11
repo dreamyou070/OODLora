@@ -710,12 +710,13 @@ class NetworkTrainer:
                                         anormal_activation_loss = (activation / total_score) ** 2  # 8, res*res
 
                                         # (2) normal position
-                                        normal_mask = torch.where((img_mask - mask) == 1, 1, 0)
-                                        normal_activation = (score_map * normal_mask).sum(dim=-1)
-                                        normal_activation_loss = (1-(normal_activation/total_score)) ** 2
+                                        #normal_mask = torch.where((img_mask - mask) == 1, 1, 0)
+                                        #normal_activation = (score_map * normal_mask).sum(dim=-1)
+                                        #normal_activation_loss = (1-(normal_activation/total_score)) ** 2
 
                                         # (3) total activation loss
-                                        activation_loss = normal_activation_loss + anormal_activation_loss
+                                        activation_loss = anormal_activation_loss
+                                        #activation_loss = normal_activation_loss + anormal_activation_loss
 
                                     attn_loss += activation_loss
                         attn_loss = attn_loss.mean()

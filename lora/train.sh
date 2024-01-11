@@ -11,10 +11,10 @@
 class_name="cookie"
 data_source='train_ex'
 start_folder="0_res_64_up_16_up_only_normal"
-save_folder="2_1_res_64_up_attn_2_part_normal_double_mask"
-trg_lora_model="last.safetensors"
+save_folder="2_1_res_64_up_attn_2_part_retest"
+trg_lora_model="epoch-000003.safetensors"
 start_epoch=0
-port_number=55836
+port_number=55833
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
 start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
