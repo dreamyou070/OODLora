@@ -2,19 +2,19 @@
 # dreamyou070
 # qkrtndus0701?!
 # srun -p suma_a6000 -q big_qos --gres=gpu:2 --time=2-0 --pty bash -i
-# srun -p suma_a6000 -q big_qos --gres=gpu:2 --time=2-0 --pty bash -i
-# srun -p suma_rtx4090 -q big_qos --gres=gpu:2 --time=2-0 --pty bash -i
+# srun -p suma_a6000 -q big_qos --gres=gpu:2 --time=1-0 --pty bash -i
+# srun -p suma_rtx4090 -q big_qos --gres=gpu:2 --time=1-0 --pty bash -i
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 # network_weights": "../result/MVTec3D-AD_experiment/cookie/lora_training/0_res_64_up_16_up_only_normal/models/epoch-000003.safetensors
 # 3_0_res_64_up_32_up_down_normal_10_contamination_80_anormal_50
 class_name="foam"
 data_source='train_ex_2'
-#start_folder="0_9_res_64_up_down_32_up_down_normal"
-save_folder="3_1_res_64_up_32_up_down_normal_10_contamination_80_anormal_50_weight_10_double_mask"
-#trg_lora_model="epoch-000015.safetensors"
+#start_folder="0_res_64_up_16_up_only_normal"
+save_folder="3_1_res_64_up_32_up_down_normal_10_contamination_80_anormal_50_weight_5_double_mask"
+#trg_lora_model="epoch-000003.safetensors"
 start_epoch=0
-port_number=55872
+port_number=55811
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
 #start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
@@ -36,9 +36,9 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --anormal_weight 5 \
   --cross_map_res [64,32] \
   --detail_64_up \
+  --anormal_weight 5.0 \
   --trg_position "['up','down']" \
-  --trg_part "['attn_2']"
-  #--network_weights "$network_weights" \
+  --trg_part "['attn_2']" \
+  --network_weights "$network_weights"
