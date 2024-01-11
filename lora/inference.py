@@ -307,7 +307,7 @@ def main(args) :
                                 n_score = n_score / n_score.max()
                                 # [1] resizing for recording
                                 score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
-                                mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                                mask_img = Image.open(mask_img_dir).convert("L").resize((512,512), Image.BICUBIC)
                                 mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
                                 """ anormal portion score """
                                 score_dict[title_name] = score_np * mask_np
