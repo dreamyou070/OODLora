@@ -8,13 +8,13 @@
 # conda activate venv_lora
 # network_weights": "../result/MVTec3D-AD_experiment/cookie/lora_training/0_res_64_up_16_up_only_normal/models/epoch-000003.safetensors
 # 3_0_res_64_up_32_up_down_normal_10_contamination_80_anormal_50
-class_name="foam"
-data_source='train_ex_2'
+class_name="carrot"
+data_source='train_normal'
 #start_folder="0_res_64_up_16_up_only_normal"
-save_folder="3_1_res_64_up_32_up_down_normal_10_contamination_80_anormal_50_weight_5"
+save_folder="0_10_res_64_up_down_32_up_normal_weight_5"
 #trg_lora_model="epoch-000003.safetensors"
 start_epoch=0
-port_number=55811
+port_number=55821
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
 #start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
@@ -31,14 +31,12 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --lr_warmup_steps 144 --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 --resolution '512,512' --save_every_n_epochs 1 \
   --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
-  --max_train_steps 30000 --use_attn_loss --task_loss_weight 1.0 --seed 42 --class_caption 'good' --start_epoch 0 \
+  --max_train_steps 80000 --use_attn_loss --task_loss_weight 1.0 --seed 42 --class_caption 'good' --start_epoch 0 \
   --wandb_init_name "$class_name" \
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
   --cross_map_res [64,32] \
-  --detail_64_up \
   --anormal_weight 5.0 \
-  --trg_position "['up','down']" \
-  --trg_part "['attn_2']" \
-  --network_weights "$network_weights"
+  --trg_position "['up']" \
+  --trg_part '["attn_0","attn_1","attn_2"]'
