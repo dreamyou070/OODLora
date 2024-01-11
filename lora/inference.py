@@ -310,6 +310,7 @@ def main(args) :
                                 attn_dict[key_name].append(attn)
                                 if res not in res_avg_dict :
                                     res_avg_dict[res] = []
+                                print(f'adding res avg dict')
                                 res_avg_dict[res].append(attn)
 
                         # ------------------------------------------------------------------------------------------------ #
