@@ -9,9 +9,9 @@
 
 class_name="carrot"
 data_source='train_normal'
-save_folder="0_0_res_64_up_normal"
-#start_folder="0_5_res_64_down_16_up_normal"
-#trg_lora_model="epoch-000005.safetensors"
+save_folder="1_5_res_64_down_16_up_normal_from_second_epoch_normal"
+start_folder="0_5_res_64_down_16_up_normal"
+trg_lora_model="epoch-000002.safetensors"
 start_epoch=0
 port_number=55882
 
@@ -36,7 +36,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res [64] \
+  --cross_map_res [64,32] \
   --detail_64_up \
-  --trg_position "['up']" \
+  --trg_position "['up','down']" \
   --trg_part "['attn_0','attn_1','attn_2']"
