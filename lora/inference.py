@@ -305,16 +305,16 @@ def main(args) :
                                     key_name = f'up_{res}'
                                 else : key_name = f'mid_{res}'
 
-                                if key_name not in attn_dict :
+                                if key_name not in attn_dict.keys() :
                                     attn_dict[key_name] = []
                                 attn_dict[key_name].append(attn)
-                                if res not in res_avg_dict :
-                                    res_avg_dict[res] = []
+                                if res not in res_avg_dict.keys() :
+                                    res_avg_dict[str(res)] = []
                                 print(f'adding res avg dict')
-                                res_avg_dict[res].append(attn)
+                                res_avg_dict[str(res)].append(attn)
 
                         # ------------------------------------------------------------------------------------------------ #
-                        for key_name in attn_dict :
+                        for key_name in attn_dict.keys() :
                             attn_list = attn_dict[key_name]
                             attn = torch.cat(attn_list, dim=0)
                             cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
@@ -328,8 +328,10 @@ def main(args) :
                             n_score_pil.save(os.path.join(trg_img_output_dir,
                                                           f'normal_{key_name}.png'))
                         # ------------------------------------------------------------------------------------------------ #
-                        for key_name in res_avg_dict:
+                        print(f'res_avg_dict : {res_avg_dict}')
+                        for key_name in res_avg_dict.keys():
                             attn_list = attn_dict[key_name]
+
                             attn = torch.cat(attn_list, dim=0)
                             cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
                             res = int(attn.shape[1] ** 0.5)
