@@ -1070,13 +1070,13 @@ class BaseDataset(torch.utils.data.Dataset):
             anormal_masks.append(anormal_mask_dict)
 
             pixel_mask_64 = transforms.ToTensor()(Image.open(pixel_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
-            pixel_mask_64 = torch.where(pixel_mask_64 == 0, 0, 1).float()
+            pixel_mask_64 = torch.where(pixel_mask_64 == 1, 1, 0).float()
             pixel_mask_32 = transforms.ToTensor()(Image.open(pixel_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
-            pixel_mask_32 = torch.where(pixel_mask_32 == 0, 0, 1).float()
+            pixel_mask_32 = torch.where(pixel_mask_32 == 1, 1, 0).float()
             pixel_mask_16 = transforms.ToTensor()(Image.open(pixel_mask_dir).convert('L').resize((16, 16), Image.BICUBIC))
-            pixel_mask_16 = torch.where(pixel_mask_16 == 0, 0, 1).float()
+            pixel_mask_16 = torch.where(pixel_mask_16 == 1, 1, 0).float()
             pixel_mask_8 = transforms.ToTensor()(Image.open(pixel_mask_dir).convert('L').resize((8, 8), Image.BICUBIC))
-            pixel_mask_8 = torch.where(pixel_mask_8 == 0, 0, 1).float()
+            pixel_mask_8 = torch.where(pixel_mask_8 == 1, 1, 0).float()
             pixel_mask_dict = {64 : pixel_mask_64,32 : pixel_mask_32,16 : pixel_mask_16,8 : pixel_mask_8}
             img_masks.append(pixel_mask_dict)
 
