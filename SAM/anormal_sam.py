@@ -16,7 +16,7 @@ def main(args):
     base_folder = args.base_folder
     cats = os.listdir(base_folder)
     for cat in cats:
-        print(f'cat : {cat} : trg_cat : {args.trg_cat}')
+
         if cat == args.trg_cat:
             print(f'cat : {cat}')
 
@@ -30,6 +30,7 @@ def main(args):
             os.makedirs(train_pixel_mask_dir, exist_ok=True)
 
             folders = os.listdir(train_rgb_dir)
+            print(f'folders : {folders}')
             for folder in folders:
                 print(f'folder : {folder}')
                 if 'good' not in folder :
