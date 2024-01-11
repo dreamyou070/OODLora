@@ -16,9 +16,9 @@ def main(args):
     base_folder = args.base_folder
     cats = os.listdir(base_folder)
     for cat in cats:
-
-        print(f'cat : {cat}')
+        print(f'cat : {cat} : trg_cat : {args.trg_cat}')
         if cat == args.trg_cat:
+            print(f'cat : {cat}')
 
             cat_dir = os.path.join(base_folder, f'{cat}')
 
