@@ -687,6 +687,12 @@ class NetworkTrainer:
                                         do_mask_loss = True
 
                                 if do_mask_loss and part in args.trg_part :
+
+                                    img_masks = batch["img_masks"][0][res].unsqueeze(0)         # [1,1,res,res], foreground = 1
+                                    img_mask = img_masks.squeeze()                              # res,res
+                                    img_mask = torch.stack([img_mask.flatten() for i in range(8)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
+
+
                                     anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                     mask = anormal_mask.squeeze()  # res,res
                                     mask = torch.stack([mask.flatten() for i in range(8)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
@@ -697,8 +703,20 @@ class NetworkTrainer:
 
                                     if batch['train_class_list'][0] == 1 : # normal data
                                         activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+
                                     else: # anormal data
-                                        activation_loss = (activation / total_score) ** 2  # 8, res*res
+
+                                        # (1) anormal position
+                                        anormal_activation_loss = (activation / total_score) ** 2  # 8, res*res
+
+                                        # (2) normal position
+                                        normal_mask = torch.where((img_mask - mask) == 1, 1, 0)
+                                        normal_activation = (score_map * normal_mask).sum(dim=-1)
+                                        normal_activation_loss = (1-(normal_activation/total_score)) ** 2
+
+                                        # (3) total activation loss
+                                        activation_loss = normal_activation_loss + anormal_activation_loss
+
                                     attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:
