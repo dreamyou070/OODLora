@@ -29,7 +29,7 @@ def main(args):
             os.makedirs(train_pixel_mask_dir, exist_ok=True)
 
             folders = os.listdir(train_rgb_dir)
-            
+
             for folder in folders:
                 rgb_folder_dir = os.path.join(train_rgb_dir, folder)
                 mask_folder_dir = os.path.join(train_pixel_mask_dir, folder)
@@ -38,8 +38,7 @@ def main(args):
                 images = os.listdir(rgb_folder_dir)
                 for image in images:
                     rgb_img_dir = os.path.join(rgb_folder_dir, image)
-                    img_dir = os.path.join(rgb_img_dir, image)
-                    np_img = np.array(Image.open(img_dir))
+                    np_img = np.array(Image.open(rgb_img_dir))
                     predictor.set_image(np_img)
 
                     h, w, c = np_img.shape
