@@ -9,7 +9,7 @@
 # conda activate venv_lora
 class_name="carrot"
 start_epoch=0
-port_number=54707
+port_number=54788
 save_folder="0_3_res_64_up_16_up_down_normal"
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
