@@ -8,17 +8,18 @@
 # conda activate venv_lora
 
 class_name="carrot"
-data_source='train_ex'
-save_folder="1_5_res_64_down_16_up_normal_from_firth_epoch_normal"
-start_folder="0_5_res_64_down_16_up_normal"
-trg_lora_model="epoch-000005.safetensors"
+data_source='train_normal'
+save_folder="0_6_res_64_down_normal"
+#start_folder="0_5_res_64_down_16_up_normal"
+#trg_lora_model="epoch-000005.safetensors"
 start_epoch=0
-port_number=55151
+port_number=55181
 
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
-start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
-network_weights="${start_dir}/models/${trg_lora_model}"
+#start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
+#network_weights="${start_dir}/models/${trg_lora_model}"
+#--network_weights "$network_weights" \
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train.py \
   --process_title parksooyeon \
@@ -38,6 +39,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --cross_map_res [64] \
   --detail_64_down \
   --trg_position "['down']" \
-  --trg_part "['attn_0']" \
-  --network_weights "$network_weights" \
-
+  --trg_part "['attn_0','attn_1','attn_2']"
