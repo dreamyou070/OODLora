@@ -9,8 +9,8 @@
 # conda activate venv_lora
 class_name="foam"
 start_epoch=0
-port_number=51237
-save_folder="2_1_res_64_up_res_16_up_normal_10_anormal_80_anormal_weight_5"
+port_number=51220
+save_folder="2_0_res_64_up_res_16_up_normal_10_contamination_80_anormal_50"
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
@@ -22,7 +22,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 --prompt 'good' --sample_sampler ddim --resolution '512,512' --seed 42 \
   --cross_map_res [64,16] \
-  --trg_position "['up','down']" \
+  --trg_position "['up']" \
   --concept_image_folder "${concept_image_folder}" \
   --network_weights "${network_weights}" \
   --start_epoch ${start_epoch}
