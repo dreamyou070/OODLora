@@ -312,7 +312,6 @@ def main(args) :
                                 attn_dict[key_name].append(attn)
                                 if res_key_name not in res_avg_dict.keys() :
                                     res_avg_dict[res_key_name] = []
-                                print(f'adding res avg dict')
                                 res_avg_dict[res_key_name].append(attn)
 
                         # ------------------------------------------------------------------------------------------------ #
@@ -330,9 +329,8 @@ def main(args) :
                             n_score_pil.save(os.path.join(trg_img_output_dir,
                                                           f'normal_{key_name}.png'))
                         # ------------------------------------------------------------------------------------------------ #
-                        print(f'res_avg_dict : {res_avg_dict}')
                         for key_name in res_avg_dict.keys():
-                            attn_list = attn_dict[key_name]
+                            attn_list = res_avg_dict[key_name]
 
                             attn = torch.cat(attn_list, dim=0)
                             cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
