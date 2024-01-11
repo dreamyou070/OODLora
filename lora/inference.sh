@@ -10,7 +10,7 @@
 class_name="foam"
 start_epoch=0
 port_number=51220
-save_folder="2_0_res_64_up_res_16_up_normal_10_contamination_80_anormal_50"
+save_folder="5_0_res_64_up_res_32_16_up_normal_10_contamination_80_anormal_50"
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"

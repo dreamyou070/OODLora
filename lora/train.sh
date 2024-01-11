@@ -7,18 +7,18 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 # network_weights": "../result/MVTec3D-AD_experiment/cookie/lora_training/0_res_64_up_16_up_only_normal/models/epoch-000003.safetensors
-
-class_name="carrot"
-data_source='train_ex'
-start_folder="0_9_res_64_up_down_32_up_down_normal"
-save_folder="1_9_res_64_up_down_32_up_down_from_15_epoch_attn_0"
-trg_lora_model="epoch-000015.safetensors"
+# 3_0_res_64_up_32_up_down_normal_10_contamination_80_anormal_50
+class_name="foam"
+data_source='train_ex_2'
+#start_folder="0_9_res_64_up_down_32_up_down_normal"
+save_folder="3_1_res_64_up_32_up_down_normal_10_contamination_80_anormal_50_weight_10"
+#trg_lora_model="epoch-000015.safetensors"
 start_epoch=0
-port_number=55861
+port_number=55871
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
-start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
-network_weights="${start_dir}/models/${trg_lora_model}"
+#start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
+#network_weights="${start_dir}/models/${trg_lora_model}"
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train.py \
@@ -36,8 +36,9 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res [64] \
+  --anormal_weight 5 \
+  --cross_map_res [64,32] \
   --detail_64_up \
-  --trg_position "['up']" \
-  --network_weights "$network_weights" \
-  --trg_part "['attn_0']"
+  --trg_position "['up','down']" \
+  --trg_part "['attn_2']"
+  #--network_weights "$network_weights" \
