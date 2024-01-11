@@ -9,9 +9,9 @@
 
 class_name="carrot"
 data_source='train_normal'
-save_folder="0_10_res_64_up_down_32_up_normal"
-#start_folder="0_7_res_64_down_32_up_normal"
-#trg_lora_model="epoch-000008.safetensors"
+save_folder="1_8_res_64_down_32_up_down"
+start_folder="0_8_res_64_down_32_up_down_normal"
+trg_lora_model="epoch-000008.safetensors"
 start_epoch=0
 port_number=55810
 
