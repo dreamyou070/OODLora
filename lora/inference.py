@@ -300,6 +300,21 @@ def main(args) :
                                 c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
                                 c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
 
+                                pad_score = pad_score.unsqueeze(-1).reshape(h, res, res)
+                                singl_head_pad_score = pad_score.mean(dim=0)
+                                p_score = singl_head_pad_score.detach().cpu()
+                                p_score = p_score / p_score.max()
+                                # [1] resizing for recording
+                                score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
+                                mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                                mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
+                                """ anormal portion score """
+                                #score_dict[title_name] = score_np * mask_np
+                                # [2] saving p_score map
+                                p_score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
+                                p_score_img = Image.fromarray(p_score_np).resize((512, 512),Image.BILINEAR)
+                                p_score_img.save(os.path.join(trg_img_output_dir, f'pad_{name}_{title_name}.png'))
+
                                 normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
                                 singl_head_normal_score = normal_score.mean(dim=0)
                                 n_score = singl_head_normal_score.detach().cpu()
