@@ -8,13 +8,13 @@
 # conda activate venv_lora
 # network_weights": "../result/MVTec3D-AD_experiment/cookie/lora_training/0_res_64_up_16_up_only_normal/models/epoch-000003.safetensors
 
-class_name="cookie"
+class_name="carrot"
 data_source='train_ex'
-start_folder="0_res_64_up_16_up_only_normal"
-save_folder="1_res_64_up_16_up_double_mask"
-trg_lora_model="epoch-000003.safetensors"
+start_folder="0_9_res_64_up_down_32_up_down_normal"
+save_folder="1_9_res_64_up_down_32_up_down_normal_from_15"
+trg_lora_model="epoch-000015.safetensors"
 start_epoch=0
-port_number=55810
+port_number=55815
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
 start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
@@ -36,7 +36,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res [64,16] \
-  --detail_64_up \
-  --trg_position "['up']" \
+  --cross_map_res [64,32] \
+  --trg_position "['up','down']" \
   --trg_part "['attn_0','attn_1','attn_2']"
