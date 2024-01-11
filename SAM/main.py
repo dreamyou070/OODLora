@@ -17,8 +17,8 @@ def main(args):
     cats = os.listdir(base_folder)
     for cat in cats:
         if cat == args.trg_cat:
-            cat_dir = os.path.join(base_folder, f'{cat}')
 
+            cat_dir = os.path.join(base_folder, f'{cat}')
             train_dir = os.path.join(cat_dir, 'train')
             test_dir = os.path.join(cat_dir, 'test')
             validation_dir = os.path.join(cat_dir, 'validation')
@@ -101,9 +101,10 @@ def main(args):
                         np_mask = np.where(np_mask == 1, 1, 0) * 255
                         sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                         sam_result_pil.save(os.path.join(sam_validation_dir, image))
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
-    parser.add_argument('--trg_cat', type=str, default='foam')
+    parser.add_argument('--trg_cat', type=str, default='cookie')
     args = parser.parse_args()
     main(args)
