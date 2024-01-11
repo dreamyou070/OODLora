@@ -7,7 +7,7 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 class_name="carrot"
-start_epoch=0
+start_epoch=2
 port_number=51528
 save_folder="0_8_res_64_down_32_up_down_normal"
 
