@@ -40,4 +40,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --detail_64_up \
   --trg_position "['up']" \
   --network_weights "$network_weights" \
-  --trg_part "['attn_0']"
+  --trg_part "['attn_2']"
