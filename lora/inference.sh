@@ -7,10 +7,10 @@
 # srun -p suma_rtx4090 -q big_qos --gres=gpu:2 --time=2-0 --pty bash -i
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
-class_name="cookie"
+class_name="foam"
 start_epoch=0
 port_number=51237
-save_folder="2_1_res_64_up_attn_2_part_retest"
+save_folder="2_1_res_64_up_res_16_up_normal_10_anormal_80_anormal_weight_5"
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
