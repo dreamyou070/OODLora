@@ -8,9 +8,9 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 class_name="carrot"
-start_epoch=20
+start_epoch=5
 port_number=54707
-save_folder="0_8_res_64_down_32_up_down_normal"
+save_folder="0_5_res_64_down_16_up_normal"
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
