@@ -33,6 +33,7 @@ def main(args):
             for folder in folders:
                 print(f'folder : {folder}')
                 if 'good' not in folder :
+                    print(f'folder : {folder}')
                     rgb_folder_dir = os.path.join(train_rgb_dir, folder)
                     mask_folder_dir = os.path.join(train_pixel_mask_dir, folder)
                     os.makedirs(mask_folder_dir, exist_ok=True)
