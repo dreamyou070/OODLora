@@ -11,10 +11,10 @@
 class_name="carrot"
 data_source='train_normal'
 #start_folder="0_res_64_up_16_up_only_normal"
-save_folder="0_10_res_64_up_down_32_up_normal_truncate_pad_part_all_truncate_length_3"
+save_folder="0_10_res_64_up_down_32_up_normal_truncate_pad_part_attn_0_truncate_length_3"
 #trg_lora_model="epoch-000003.safetensors"
 start_epoch=0
-port_number=55836
+port_number=55837
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
 #start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
@@ -40,4 +40,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --trg_position "['up']" \
   --truncate_pad \
   --truncate_length 3 \
-  --trg_part '["attn_0","attn_1","attn_2"]'
+  --trg_part '["attn_0"]'
