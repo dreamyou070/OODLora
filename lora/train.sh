@@ -8,17 +8,16 @@
 # conda activate venv_lora
 
 class_name="carrot"
-data_source='train_normal'
-save_folder="1_8_res_64_down_32_up_down"
+data_source='train_ex'
 start_folder="0_8_res_64_down_32_up_down_normal"
-trg_lora_model="epoch-000008.safetensors"
+save_folder="1_8_res_64_down_32_down_from_0_8"
+trg_lora_model="epoch-000005.safetensors"
 start_epoch=0
 port_number=55810
-
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
-#start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
-#network_weights="${start_dir}/models/${trg_lora_model}"
+start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
+network_weights="${start_dir}/models/${trg_lora_model}"
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train.py \
@@ -31,11 +30,12 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --lr_warmup_steps 144 --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 --resolution '512,512' --save_every_n_epochs 1 \
   --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
-  --max_train_steps 300000 --use_attn_loss --task_loss_weight 1.0 --seed 42 --class_caption 'good' --start_epoch 0 \
+  --max_train_steps 30000 --use_attn_loss --task_loss_weight 1.0 --seed 42 --class_caption 'good' --start_epoch 0 \
   --wandb_init_name "$class_name" \
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
   --cross_map_res [64,32] \
-  --trg_position "['up']" \
+  --detail_64_down \
+  --trg_position "['down']" \
   --trg_part "['attn_0','attn_1','attn_2']"
