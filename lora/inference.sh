@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # dreamyou070
 # qkrtndus0701?!
 # srun -p suma_a6000 -q big_qos --gres=gpu:1 --time=2-0 --pty bash -i
