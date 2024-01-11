@@ -2,8 +2,8 @@
 # dreamyou070
 # qkrtndus0701?!
 # srun -p suma_a6000 -q big_qos --gres=gpu:2 --time=2-0 --pty bash -i
-# srun -p suma_a6000 -q big_qos --gres=gpu:2 --time=1-0 --pty bash -i
-# srun -p suma_rtx4090 -q big_qos --gres=gpu:2 --time=1-0 --pty bash -i
+# srun -p suma_a6000 -q big_qos --gres=gpu:2 --time=2-0 --pty bash -i
+# srun -p suma_rtx4090 -q big_qos --gres=gpu:2 --time=2-0 --pty bash -i
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 # network_weights": "../result/MVTec3D-AD_experiment/cookie/lora_training/0_res_64_up_16_up_only_normal/models/epoch-000003.safetensors
