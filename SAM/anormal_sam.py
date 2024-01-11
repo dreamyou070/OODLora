@@ -31,29 +31,30 @@ def main(args):
             folders = os.listdir(train_rgb_dir)
 
             for folder in folders:
-                rgb_folder_dir = os.path.join(train_rgb_dir, folder)
-                mask_folder_dir = os.path.join(train_pixel_mask_dir, folder)
-                os.makedirs(mask_folder_dir, exist_ok=True)
+                if 'good' not in folder :
+                    rgb_folder_dir = os.path.join(train_rgb_dir, folder)
+                    mask_folder_dir = os.path.join(train_pixel_mask_dir, folder)
+                    os.makedirs(mask_folder_dir, exist_ok=True)
 
-                images = os.listdir(rgb_folder_dir)
-                for image in images:
-                    rgb_img_dir = os.path.join(rgb_folder_dir, image)
-                    np_img = np.array(Image.open(rgb_img_dir))
-                    predictor.set_image(np_img)
+                    images = os.listdir(rgb_folder_dir)
+                    for image in images:
+                        rgb_img_dir = os.path.join(rgb_folder_dir, image)
+                        np_img = np.array(Image.open(rgb_img_dir))
+                        predictor.set_image(np_img)
 
-                    h, w, c = np_img.shape
-                    trg_h_1, trg_w_1 = h / 3, w / 3
-                    trg_h_2, trg_w_2 = h * (2 / 3), w * (2 / 3)
-                    input_point = np.array([[trg_h_1, trg_w_1], [trg_h_2, trg_w_2]])
-                    input_label = np.array([1, 1])
-                    masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
-                                                              multimask_output=True, )
-                    for i, (mask, score) in enumerate(zip(masks, scores)):
-                        if i == 1:
-                            np_mask = (mask * 1)
-                            np_mask = np.where(np_mask == 1, 1, 0) * 255
-                            sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                            sam_result_pil.save(os.path.join(mask_folder_dir, image))
+                        h, w, c = np_img.shape
+                        trg_h_1, trg_w_1 = h / 3, w / 3
+                        trg_h_2, trg_w_2 = h * (2 / 3), w * (2 / 3)
+                        input_point = np.array([[trg_h_1, trg_w_1], [trg_h_2, trg_w_2]])
+                        input_label = np.array([1, 1])
+                        masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
+                                                                  multimask_output=True, )
+                        for i, (mask, score) in enumerate(zip(masks, scores)):
+                            if i == 1:
+                                np_mask = (mask * 1)
+                                np_mask = np.where(np_mask == 1, 1, 0) * 255
+                                sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                                sam_result_pil.save(os.path.join(mask_folder_dir, image))
 
 
 if __name__ == "__main__":
