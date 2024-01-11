@@ -9,7 +9,7 @@
 # conda activate venv_lora
 class_name="carrot"
 start_epoch=0
-port_number=51211
+port_number=51221
 #save_folder="0_10_res_64_up_down_32_up_normal_truncate_pad_par_all"
 #save_folder='0_10_res_64_up_down_32_up_normal_truncate_pad_part_attn_0
 save_folder = '0_10_res_64_up_down_32_up_normal_truncate_pad_part_all_truncate_length_3'
