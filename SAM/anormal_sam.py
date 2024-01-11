@@ -23,7 +23,7 @@ def main(args):
 
             train_ex_dir = os.path.join(cat_dir, 'train_ex')
 
-            train_rgb_dir = os.path.join(train_ex_dir, 'rgb')
+            train_rgb_dir = os.path.join(train_ex_dir, 'mask')
             train_gt_dir = os.path.join(train_ex_dir, 'gt')
             train_pixel_mask_dir = os.path.join(train_ex_dir, 'mask')
             os.makedirs(train_pixel_mask_dir, exist_ok=True)

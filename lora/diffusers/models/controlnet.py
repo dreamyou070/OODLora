@@ -160,8 +160,8 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalControlnetMixin):
         projection_class_embeddings_input_dim (`int`, *optional*, defaults to `None`):
             The dimension of the `class_labels` input when `class_embed_type="projection"`. Required when
             `class_embed_type="projection"`.
-        controlnet_conditioning_channel_order (`str`, defaults to `"rgb"`):
-            The channel order of conditional image. Will convert to `rgb` if it's `bgr`.
+        controlnet_conditioning_channel_order (`str`, defaults to `"mask"`):
+            The channel order of conditional image. Will convert to `mask` if it's `bgr`.
         conditioning_embedding_out_channels (`tuple[int]`, *optional*, defaults to `(16, 32, 96, 256)`):
             The tuple of output channel for each block in the `conditioning_embedding` layer.
         global_pool_conditions (`bool`, defaults to `False`):
@@ -204,7 +204,7 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalControlnetMixin):
         upcast_attention: bool = False,
         resnet_time_scale_shift: str = "default",
         projection_class_embeddings_input_dim: Optional[int] = None,
-        controlnet_conditioning_channel_order: str = "rgb",
+        controlnet_conditioning_channel_order: str = "mask",
         conditioning_embedding_out_channels: Optional[Tuple[int]] = (16, 32, 96, 256),
         global_pool_conditions: bool = False,
         addition_embed_type_num_heads=64,
@@ -419,7 +419,7 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalControlnetMixin):
     def from_unet(
         cls,
         unet: UNet2DConditionModel,
-        controlnet_conditioning_channel_order: str = "rgb",
+        controlnet_conditioning_channel_order: str = "mask",
         conditioning_embedding_out_channels: Optional[Tuple[int]] = (16, 32, 96, 256),
         load_weights_from_unet: bool = True,
     ):
@@ -673,8 +673,8 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalControlnetMixin):
         # check channel order
         channel_order = self.config.controlnet_conditioning_channel_order
 
-        if channel_order == "rgb":
-            # in rgb order by default
+        if channel_order == "mask":
+            # in mask order by default
             ...
         elif channel_order == "bgr":
             controlnet_cond = torch.flip(controlnet_cond, dims=[1])

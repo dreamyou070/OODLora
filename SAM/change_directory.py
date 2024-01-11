@@ -24,24 +24,24 @@ def main(args):
 
             train_ex_dir = os.path.join(cat_dir, 'train_ex')
 
-            train_ex_rgb_dir = os.path.join(train_ex_dir, 'rgb')
+            train_ex_rgb_dir = os.path.join(train_ex_dir, 'mask')
             train_ex_gt_dir = os.path.join(train_ex_dir, 'gt')
             os.makedirs(train_ex_rgb_dir, exist_ok=True)
             os.makedirs(train_ex_gt_dir, exist_ok=True)
 
             test_ex_dir = os.path.join(cat_dir, 'test_ex')
 
-            test_ex_rgb_dir = os.path.join(test_ex_dir, 'rgb')
+            test_ex_rgb_dir = os.path.join(test_ex_dir, 'mask')
             test_ex_gt_dir = os.path.join(test_ex_dir, 'gt')
             os.makedirs(test_ex_rgb_dir, exist_ok=True)
             os.makedirs(test_ex_gt_dir, exist_ok=True)
 
             # -------------------------------------------------------------------------------------------------------
             # (1) train
-            good_train_dir = os.path.join(train_dir, 'good/rgb')
+            good_train_dir = os.path.join(train_dir, 'good/mask')
             sam_train_dir = os.path.join(train_dir, f'good/gt')
 
-            train_ex_good_rgb_dir = os.path.join(train_ex_dir, f'rgb/10_good')
+            train_ex_good_rgb_dir = os.path.join(train_ex_dir, f'mask/10_good')
             train_ex_good_gt_dir = os.path.join(train_ex_dir, f'gt/10_good')
             os.makedirs(train_ex_good_rgb_dir, exist_ok=True)
             os.makedirs(train_ex_good_gt_dir, exist_ok=True)
@@ -59,7 +59,7 @@ def main(args):
 
             # -------------------------------------------------------------------------------------------------------
             # (2) validation
-            good_validation_dir = os.path.join(validation_dir, 'good/rgb')
+            good_validation_dir = os.path.join(validation_dir, 'good/mask')
             sam_validation_dir = os.path.join(validation_dir, f'good/gt')
             val_images = os.listdir(good_validation_dir)
             for image in val_images:
@@ -85,7 +85,7 @@ def main(args):
                     os.makedirs(test_cat_rgb_dir, exist_ok=True)
                     os.makedirs(test_cat_gt_dir, exist_ok=True)
 
-                    cat_rgb_dir = os.path.join(category_dir, 'rgb')
+                    cat_rgb_dir = os.path.join(category_dir, 'mask')
                     cat_gt_dir = os.path.join(category_dir, 'gt')
                     cat_images = os.listdir(cat_rgb_dir)
                     num_images = len(cat_images)
@@ -111,7 +111,7 @@ def main(args):
 
                     category_dir = os.path.join(test_dir, category)
 
-                    cat_rgb_dir = os.path.join(category_dir, 'rgb')
+                    cat_rgb_dir = os.path.join(category_dir, 'mask')
                     cat_gt_dir = os.path.join(category_dir, 'gt')
                     cat_images = os.listdir(cat_rgb_dir)
 

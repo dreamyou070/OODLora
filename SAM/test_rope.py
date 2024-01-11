@@ -29,7 +29,7 @@ def main(args):
             os.makedirs(test_ex_dir, exist_ok=True)
             # -------------------------------------------------------------------------------------------------------
             # (1) train
-            good_train_dir = os.path.join(train_dir, 'good/rgb')
+            good_train_dir = os.path.join(train_dir, 'good/mask')
             sam_train_dir = os.path.join(train_dir, f'good/gt')
             os.makedirs(sam_train_dir, exist_ok=True)
             images = os.listdir(good_train_dir)
@@ -70,7 +70,7 @@ def main(args):
 
             # -------------------------------------------------------------------------------------------------------
             # (2) test
-            good_test_dir = os.path.join(test_dir, 'good/rgb')
+            good_test_dir = os.path.join(test_dir, 'good/mask')
             sam_test_dir = os.path.join(test_dir, f'good/gt')
             os.makedirs(sam_test_dir, exist_ok=True)
             images = os.listdir(good_test_dir)
@@ -111,7 +111,7 @@ def main(args):
         
             # -------------------------------------------------------------------------------------------------------
             # (3) validation
-            good_validation_dir = os.path.join(validation_dir, 'good/rgb')
+            good_validation_dir = os.path.join(validation_dir, 'good/mask')
             sam_validation_dir = os.path.join(validation_dir, f'good/gt')
             os.makedirs(sam_validation_dir, exist_ok=True)
             images = os.listdir(good_validation_dir)

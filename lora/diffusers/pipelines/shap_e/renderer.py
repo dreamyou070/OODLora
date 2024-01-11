@@ -92,8 +92,8 @@ def integrate_samples(volume_range, ts, density, channels):
         density: torch.Tensor [batch_size, *shape, n_samples, 1]
         channels: torch.Tensor [batch_size, *shape, n_samples, n_channels]
     returns:
-        channels: integrated rgb output weights: torch.Tensor [batch_size, *shape, n_samples, 1] (density
-        *transmittance)[i] weight for each rgb output at [..., i, :]. transmittance: transmittance of this volume
+        channels: integrated mask output weights: torch.Tensor [batch_size, *shape, n_samples, 1] (density
+        *transmittance)[i] weight for each mask output at [..., i, :]. transmittance: transmittance of this volume
     )
     """
 

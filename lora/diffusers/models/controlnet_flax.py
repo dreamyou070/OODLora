@@ -141,8 +141,8 @@ class FlaxControlNetModel(nn.Module, FlaxModelMixin, ConfigMixin):
         flip_sin_to_cos (`bool`, *optional*, defaults to `True`):
             Whether to flip the sin to cos in the time embedding.
         freq_shift (`int`, *optional*, defaults to 0): The frequency shift to apply to the time embedding.
-        controlnet_conditioning_channel_order (`str`, *optional*, defaults to `rgb`):
-            The channel order of conditional image. Will convert to `rgb` if it's `bgr`.
+        controlnet_conditioning_channel_order (`str`, *optional*, defaults to `mask`):
+            The channel order of conditional image. Will convert to `mask` if it's `bgr`.
         conditioning_embedding_out_channels (`tuple`, *optional*, defaults to `(16, 32, 96, 256)`):
             The tuple of output channel for each block in the `conditioning_embedding` layer.
     """
@@ -165,7 +165,7 @@ class FlaxControlNetModel(nn.Module, FlaxModelMixin, ConfigMixin):
     dtype: jnp.dtype = jnp.float32
     flip_sin_to_cos: bool = True
     freq_shift: int = 0
-    controlnet_conditioning_channel_order: str = "rgb"
+    controlnet_conditioning_channel_order: str = "mask"
     conditioning_embedding_out_channels: Tuple[int] = (16, 32, 96, 256)
 
     def init_weights(self, rng: jax.random.KeyArray) -> FrozenDict:

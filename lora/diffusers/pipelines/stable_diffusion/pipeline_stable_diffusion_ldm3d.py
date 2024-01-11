@@ -49,7 +49,7 @@ EXAMPLE_DOC_STRING = """
 
         >>> prompt = "a photo of an astronaut riding a horse on mars"
         >>> output = pipe(prompt)
-        >>> rgb_image, depth_image = output.rgb, output.depth
+        >>> rgb_image, depth_image = output.mask, output.depth
         >>> rgb_image[0].save("astronaut_ldm3d_rgb.jpg")
         >>> depth_image[0].save("astronaut_ldm3d_depth.png")
         ```
