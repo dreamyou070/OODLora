@@ -8,7 +8,7 @@
 # conda activate venv_lora
 
 class_name="carrot"
-start_epoch=0
+start_epoch=1
 port_number=51185
 save_folder="0_5_res_64_down_16_up_normal"
 
