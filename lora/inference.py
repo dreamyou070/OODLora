@@ -263,7 +263,6 @@ def main(args) :
                         for layer_name in attn_stores :
                             attn = attn_stores[layer_name][0].squeeze() # head, pix_num
                             res = int(attn.shape[1] ** 0.5)
-
                             if 'down' in layer_name:
                                 position = 'down'
                             elif 'up' in layer_name:
@@ -298,7 +297,7 @@ def main(args) :
                                 #score_dict[title_name] = score_np * mask_np
                                 # [2] saving c_score map
                                 c_score_np = np.array((c_score.cpu()) * 255).astype(np.uint8)
-                                c_score_img = Image.fromarray(c_score_np)
+                                c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
                                 c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
 
                                 normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
@@ -307,7 +306,7 @@ def main(args) :
                                 n_score = n_score / n_score.max()
                                 # [1] resizing for recording
                                 score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
-                                mask_img = Image.open(mask_img_dir).convert("L").resize((512,512), Image.BICUBIC)
+                                mask_img = Image.open(mask_img_dir).convert("L").resize((res,res), Image.BICUBIC)
                                 mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
                                 """ anormal portion score """
                                 score_dict[title_name] = score_np * mask_np
