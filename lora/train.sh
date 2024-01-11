@@ -2,7 +2,7 @@
 # dreamyou070
 # qkrtndus0701?!
 # srun -p suma_a6000 -q big_qos --gres=gpu:2 --time=2-0 --pty bash -i
-# srun -p suma_a6000 -q big_qos --gres=gpu:2 --time=1-0 --pty bash -i
+# srun -p suma_a6000 -q big_qos --gres=gpu:2 --time=2-0 --pty bash -i
 # srun -p suma_rtx4090 -q big_qos --gres=gpu:2 --time=1-0 --pty bash -i
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
@@ -11,10 +11,10 @@
 class_name="carrot"
 data_source='train_normal'
 #start_folder="0_res_64_up_16_up_only_normal"
-save_folder="0_10_res_64_up_down_32_up_normal_truncate_pad_2_part_all_cls_training"
+save_folder="0_10_res_64_up_down_32_up_normal_truncate_pad_2_part_attn_0_cls_training"
 #trg_lora_model="epoch-000003.safetensors"
 start_epoch=0
-port_number=55847
+port_number=55837
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
 #start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
@@ -40,5 +40,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --trg_position "['up']" \
   --truncate_pad \
   --truncate_length 2 \
-  --trg_part '["attn_0","attn_1","attn_2"]' \
+  --trg_part '["attn_0"]' \
   --cls_training
