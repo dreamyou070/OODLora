@@ -29,7 +29,6 @@ def main(args):
             os.makedirs(train_pixel_mask_dir, exist_ok=True)
 
             folders = os.listdir(train_rgb_dir)
-
             for folder in folders:
                 if 'good' not in folder :
                     rgb_folder_dir = os.path.join(train_rgb_dir, folder)
