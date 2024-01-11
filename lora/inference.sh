@@ -6,7 +6,6 @@
 # srun -p suma_rtx4090 -q big_qos --gres=gpu:2 --time=2-0 --pty bash -i
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
-
 class_name="carrot"
 start_epoch=0
 port_number=51188
