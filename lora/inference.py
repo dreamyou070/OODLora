@@ -273,6 +273,8 @@ def main(args) :
 
                             if res in args.cross_map_res and position in args.trg_position :
 
+                                res_key_name = f'res_{res}'
+
                                 if 'attentions_0' in layer_name :
                                     part = 'attn_0'
                                 elif 'attentions_1' in layer_name :
@@ -308,10 +310,10 @@ def main(args) :
                                 if key_name not in attn_dict.keys() :
                                     attn_dict[key_name] = []
                                 attn_dict[key_name].append(attn)
-                                if res not in res_avg_dict.keys() :
-                                    res_avg_dict[str(res)] = []
+                                if res_key_name not in res_avg_dict.keys() :
+                                    res_avg_dict[res_key_name] = []
                                 print(f'adding res avg dict')
-                                res_avg_dict[str(res)].append(attn)
+                                res_avg_dict[res_key_name].append(attn)
 
                         # ------------------------------------------------------------------------------------------------ #
                         for key_name in attn_dict.keys() :
