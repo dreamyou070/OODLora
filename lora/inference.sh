@@ -10,7 +10,7 @@
 class_name="cookie"
 start_epoch=0
 port_number=51237
-save_folder="2_1_res_64_up_attn_2_part_normal_double_mask"
+save_folder="2_1_res_64_up_attn_2_part_retest"
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
