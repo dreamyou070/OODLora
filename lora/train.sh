@@ -8,13 +8,14 @@
 # conda activate venv_lora
 
 class_name="carrot"
-trg_lora_mode ="epoch-000003.safetensors"
+trg_lora_model="epoch-000003.safetensors"
 start_epoch=3
 port_number=51178
+save_folder="0_1_res_64_up_16_up_normal"
 
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/train_normal/rgb"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/0_3_res_64_up_16_up_down_normal"
-network_weights="${output_dir}/models/${trg_lora_mode}"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
+network_weights="${output_dir}/models/${trg_lora_model}"
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train.py \
   --process_title parksooyeon \
