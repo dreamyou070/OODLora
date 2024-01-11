@@ -6,6 +6,7 @@
 # srun -p suma_rtx4090 -q big_qos --gres=gpu:2 --time=1-0 --pty bash -i
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
+
 # network_weights": "../result/MVTec3D-AD_experiment/cookie/lora_training/0_res_64_up_16_up_only_normal/models/epoch-000003.safetensors
 # 3_0_res_64_up_32_up_down_normal_10_contamination_80_anormal_50
 class_name="carrot"
