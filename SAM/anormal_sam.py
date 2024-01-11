@@ -52,7 +52,7 @@ def main(args):
                         for i, (mask, score) in enumerate(zip(masks, scores)):
                             if i == 1:
                                 np_mask = (mask * 1)
-                                np_mask = np.where(np_mask == 1, 1, 0) * 255
+                                np_mask = 255 - (np.where(np_mask == 1, 1, 0) * 255)
                                 sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                                 sam_result_pil.save(os.path.join(mask_folder_dir, image))
 
