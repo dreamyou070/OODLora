@@ -15,7 +15,7 @@ trg_lora_model="epoch-000005.safetensors"
 start_epoch=0
 port_number=55151
 
-train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${train_ex}/rgb"
+train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
 start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
 network_weights="${start_dir}/models/${trg_lora_model}"
