@@ -726,9 +726,9 @@ class NetworkTrainer:
                                     else: # anormal data
                                         # (1) anormal position
                                         anormal_activation_loss = (activation / total_score) ** 2  # 8, res*res
-                                        if args.cls_training :
-                                            anormal_cls_activation_loss = (1 - (cls_activation / cls_total_score)) ** 2
-                                            anormal_activation_loss = anormal_activation_loss + anormal_cls_activation_loss
+                                        #if args.cls_training :
+                                        #    anormal_cls_activation_loss = (1 - (cls_activation / cls_total_score)) ** 2
+                                        #    anormal_activation_loss = anormal_activation_loss + anormal_cls_activation_loss
                                         activation_loss = anormal_activation_loss
 
                                     attn_loss += activation_loss
