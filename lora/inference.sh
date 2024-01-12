@@ -9,10 +9,10 @@
 # conda activate venv_lora
 class_name="cookie"
 start_epoch=0
-port_number=50020
+port_number=50022
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/1_res_64_up_16_up_part_attn_2_pad_3_cls_training_with_anormal"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/0_res_64_up_16_up_only_normal_pad_3_cls_training"
 network_weights="${output_dir}/models"
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} inference.py \
