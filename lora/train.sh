@@ -19,7 +19,7 @@ train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${dat
 #start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
 #network_weights="${start_dir}/models/${trg_lora_model}"
 
-save_folder="0_res_64_up_16_up_pad_3_cls_training_with_background"
+save_folder="0_res_64_up_16_up_pad_3_cls_training_with_background_no_anormal_normal_loss"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
 
 port_number=50322
