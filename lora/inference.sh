@@ -10,9 +10,9 @@
 
 class_name="foam"
 start_epoch=0
-port_number=50212
+port_number=50213
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/res_64_up_16_up_down"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/res_64_up_32_up_down"
 network_weights="${output_dir}/models"
 
 
@@ -21,7 +21,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 --prompt 'good' --sample_sampler ddim --resolution '512,512' --seed 42 \
-  --cross_map_res [64,16] \
+  --cross_map_res [64,32] \
   --trg_position "['up','down']" \
   --concept_image_folder "${concept_image_folder}" \
   --network_weights "${network_weights}" \
