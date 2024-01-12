@@ -11,10 +11,10 @@ class_name="carrot"
 start_epoch=0
 port_number=52222
 
-save_folder="0_10_res_64_up_down_32_up_normal_truncate_pad_3_part_attn_0_cls_training"
+save_folder=""
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folde}"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/0_10_res_64_up_down_32_up_normal_truncate_pad_3_part_attn_0_cls_training"
 network_weights="${output_dir}/models"
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} inference.py \
