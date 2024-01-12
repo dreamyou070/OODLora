@@ -31,7 +31,7 @@ test/*.json
 
 # Temporary requirements
 requirements_tmp_for_setup.txt
-
+result
 # Version specific
 0.13.3
 *.jpg
