@@ -1,6 +1,5 @@
-<<<<<<< HEAD
-=======
 #!/bin/bash
+
 # dreamyou070
 # qkrtndus0701?!
 # srun -p suma_a6000 -q big_qos --gres=gpu:1 --time=2-0 --pty bash -i
@@ -27,4 +26,3 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --concept_image_folder "${concept_image_folder}" \
   --network_weights "${network_weights}" \
   --start_epoch ${start_epoch}
->>>>>>> 32ed00f34b810a5efe995b9a3b8b352f0b051356
