@@ -412,6 +412,18 @@ def main(args) :
 
 
     # ------------------------------------------------ train check -------------------------------------------------------- #
+    print(f" (1.3) save dir")
+
+    test_set_output_dir = os.path.join(args.output_dir, 'train_set')
+    os.makedirs(test_set_output_dir, exist_ok=True)
+    test_set_record_dir = os.path.join(record_output_dir, 'train_set')
+    os.makedirs(test_set_record_dir, exist_ok=True)
+
+    network_weights = os.listdir(args.network_weights)
+    total_score_list = []
+
+
+
     for weight in network_weights:
         weight_dir = os.path.join(args.network_weights, weight)
         parent, network_dir = os.path.split(weight_dir)
