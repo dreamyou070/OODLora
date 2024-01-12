@@ -9,10 +9,10 @@
 # conda activate venv_lora
 
 class_name="cookie"
-start_epoch=1
-port_number=52111
+start_epoch=2
+port_number=52311
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/res_64_up_16_up_truncate_3_cls_training_normal_weight_4_third_code"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/res_64_up_16_up_truncate_3_cls_training_normal_weight_2_change_mask_code"
 network_weights="${output_dir}/models"
 
 
