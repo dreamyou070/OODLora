@@ -13,15 +13,15 @@ class_name="carrot"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-start_folder="0_10_res_64_up_down_32_up_normal_truncate_pad_3_part_all_cls_training"
-trg_lora_model='epoch-000023.safetensors'
-start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
-network_weights="${start_dir}/models/${trg_lora_model}"
+#start_folder="0_10_res_64_up_down_32_up_normal_truncate_pad_3_part_all_cls_training"
+#trg_lora_model='epoch-000023.safetensors'
+#start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
+#network_weights="${start_dir}/models/${trg_lora_model}"
 
-save_folder="1_10_res_64_up_down_32_up_normal_truncate_pad_3_part_all_cls_training_from_23_epoch"
+save_folder="1_10_res_64_up_down_32_up_normal_truncate_pad_3_part_all_cls_training_with_anormal"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
 
-port_number=50007
+port_number=50008
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train.py \
@@ -44,5 +44,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --truncate_pad \
   --truncate_length 3 \
   --trg_part '["attn_2","attn_1","attn_0"]' \
-  --cls_training \
-  --network_weights "$network_weights"
+  --cls_training
