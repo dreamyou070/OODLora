@@ -8,7 +8,7 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-class_name="carrot"
+class_name="foamt"
 start_epoch=0
 port_number=52399
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
