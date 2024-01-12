@@ -12,7 +12,7 @@
 class_name="carrot"
 data_source='train_ex'
 #start_folder="0_res_64_up_16_up_only_normal"
-save_folder="1_res_64_up_down_32_up_normal_truncate_pad_3_part_all_cls_training_with_anormal"
+save_folder="1_res_64_up_down_32_up_normal_truncate_pad_3_part_attn_0_cls_training_with_anormal"
 #trg_lora_model="epoch-000003.safetensors"
 start_epoch=0
 port_number=54544
@@ -41,5 +41,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --trg_position "['up']" \
   --truncate_pad \
   --truncate_length 3 \
-  --trg_part '["attn_0","attn_1","attn_2"]' \
+  --trg_part '["attn_0"]' \
   --cls_training
