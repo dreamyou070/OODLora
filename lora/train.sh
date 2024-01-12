@@ -1,13 +1,13 @@
 #!bin/bash
 
 class_name="cookie"
-data_source='train_ex'
+data_source='train_ex_2'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_16_up_truncate_3_cls_training_normal_weight_6_third_code"
+save_folder="res_64_up_16_up_truncate_3_cls_training_normal_weight_2_third_code_more_good_repeat"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
 
-port_number=53316
+port_number=53366
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config --main_process_port $port_number train.py \
