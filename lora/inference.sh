@@ -8,7 +8,7 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 class_name="cookie"
-start_epoch=0
+start_epoch=3
 port_number=50241
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
