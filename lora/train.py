@@ -711,27 +711,35 @@ class NetworkTrainer:
                                     mask = torch.stack([mask.flatten() for i in range(8)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
                                     if args.cls_training :
-                                        cls_activation = (cls_map * mask).sum(dim=-1)
+                                        cls_activation = (cls_map * img_mask).sum(dim=-1) # normal sample -> normal position
                                         cls_total_score = torch.ones_like(cls_activation)
 
-                                    activation = (score_map * mask).sum(dim=-1)
+                                    activation = (score_map * mask).sum(dim=-1) # normal sample --> normal position
                                     total_score = torch.ones_like(activation)
 
                                     if batch['train_class_list'][0] == 1 : # normal data
-                                        activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+                                        trigger_activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
                                         back_activation = (score_map * (1-mask)).sum(dim=-1)
                                         back_loss = (back_activation / total_score) ** 2
+                                        trigger_loss = trigger_activation_loss + back_loss
+                                        activation_loss = trigger_loss
 
                                         if args.cls_training :
                                             cls_activation_loss = (cls_activation/cls_total_score) ** 2
-                                            activation_loss = activation_loss + cls_activation_loss + back_loss
+                                            back_cls_activation = (cls_map * (1 - img_mask)).sum(dim=-1)
+                                            back_cls_activation_loss = (1-(back_cls_activation / cls_total_score)) ** 2
+                                            cls_loss = cls_activation_loss + back_cls_activation_loss
+
+                                            activation_loss = activation_loss + cls_loss
 
                                     else: # anormal data
                                         # (1) anormal position
                                         anormal_activation_loss = (activation / total_score) ** 2  # 8, res*res
-                                        #if args.cls_training :
-                                        #    anormal_cls_activation_loss = (1 - (cls_activation / cls_total_score)) ** 2
-                                        #    anormal_activation_loss = anormal_activation_loss + anormal_cls_activation_loss
+                                        """
+                                        if args.cls_training :
+                                            anormal_cls_activation_loss = (1 - (cls_activation / cls_total_score)) ** 2
+                                            anormal_activation_loss = anormal_activation_loss + anormal_cls_activation_loss
+                                        """
                                         activation_loss = anormal_activation_loss
 
                                     attn_loss += activation_loss
