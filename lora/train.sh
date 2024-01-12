@@ -1,6 +1,7 @@
 #!bin/bash
 
 class_name="cookie"
+<<<<<<< HEAD
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
@@ -8,9 +9,18 @@ save_folder="res_64_up_16_up_truncate_3_cls_training_normal_weight_2"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
 
 port_number=50332
+=======
+data_source='train_ex_2'
+train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
+
+save_folder="res_64_up_16_up_truncate_3_cls_training_normal_weight_2_third_code_more_good_repeat"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
+
+port_number=53367
+>>>>>>> 32ed00f34b810a5efe995b9a3b8b352f0b051356
 start_epoch=0
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config --main_process_port $port_number train.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port $port_number train.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -31,6 +41,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --truncate_pad \
   --truncate_length 3 \
   --trg_part '["attn_2","attn_1","attn_0"]' \
+  --normal_weight 6.0 \
   --anormal_sample_normal_loss \
   --normal_weight 2.0 \
   --cls_training
