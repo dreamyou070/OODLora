@@ -6,12 +6,12 @@ train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${dat
 
 save_folder="res_64_up_16_up_truncate_3_cls_training_normal_weight_2_third_code_more_good_repeat"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-network_weights ="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}/models/epoch-000002.safetensors"
+network_weights ="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/res_64_up_16_up_truncate_3_cls_training_normal_weight_2_third_code_more_good_repeat/models/epoch-000002.safetensors"
 port_number=50003
 
 start_epoch=2
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port $port_number train.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config --main_process_port $port_number train.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
