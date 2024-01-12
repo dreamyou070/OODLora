@@ -18,10 +18,10 @@ train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${dat
 #start_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${start_folder}"
 #network_weights="${start_dir}/models/${trg_lora_model}"
 
-save_folder="1_res_64_up_16_up_part_all_pad_3_cls_training_with_anormal_not_anormal_cls"
+save_folder="1_res_64_up_16_up_part_all_pad_3_cls_training_with_anormal_not_anormal_cls_anormal_weight_5.0"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${save_folder}"
 
-port_number=50111
+port_number=50212
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train.py \
@@ -45,4 +45,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --truncate_pad \
   --truncate_length 3 \
   --trg_part '["attn_2","attn_1","attn_0"]' \
-  --cls_training
+  --cls_training \
+  --anormal_weight 5.0
