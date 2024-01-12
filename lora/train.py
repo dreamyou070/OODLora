@@ -721,18 +721,17 @@ class NetworkTrainer:
                                         activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
                                         if args.cls_training :
                                             cls_activation_loss = (cls_activation/cls_total_score) ** 2
+                                            activation_loss = activation_loss + cls_activation_loss
 
                                     else: # anormal data
                                         # (1) anormal position
                                         anormal_activation_loss = (activation / total_score) ** 2  # 8, res*res
                                         if args.cls_training :
                                             anormal_cls_activation_loss = (1 - (cls_activation / cls_total_score)) ** 2
+                                            anormal_activation_loss = anormal_activation_loss + anormal_cls_activation_loss
                                         activation_loss = anormal_activation_loss
 
-                                    if args.cls_training :
-                                        attn_loss += activation_loss + cls_activation_loss
-                                    else :
-                                        attn_loss += activation_loss
+                                    attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:
                             loss = loss + args.normal_weight * attn_loss
