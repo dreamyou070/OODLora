@@ -38,14 +38,17 @@ def main(args):
                         np_img = np.array(Image.open(rgb_img_dir))
                         predictor.set_image(np_img)
                         h, w, c = np_img.shape
-                        trg_h_1, trg_w_1 = h / 2, w / 3
-                        trg_h_2, trg_w_2 = h * (1 / 2), w * (2 / 3)
-                        input_point = np.array([[trg_h_1, trg_w_1], [trg_h_2, trg_w_2]])
-                        input_label = np.array([1, 1])
-                        masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
-                                                                  multimask_output=True, )
 
-                        for i, (mask, score) in enumerate(zip(masks, scores)):
+                        input_box = np.array([int(h / 5), int(w / 5), int(h * 4 / 5), int(w * 4 / 5)])
+
+                        masks, _, _ = predictor.predict(
+                            point_coords=None,
+                            point_labels=None,
+                            box=input_box[None, :],
+                            multimask_output=False, )
+
+                        mask_dict = {}
+                        for i, mask in enumerate(masks):
                             np_mask = (mask * 1)
                             np_mask = np.where(np_mask == 1, 1, 0) * 255
                             sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
@@ -55,6 +58,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
-    parser.add_argument('--trg_cat', type=str, default='foam')
+    parser.add_argument('--trg_cat', type=str, default='peach')
     args = parser.parse_args()
     main(args)
