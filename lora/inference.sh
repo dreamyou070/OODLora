@@ -12,9 +12,8 @@ start_epoch=0
 port_number=50252
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/0_res_64_up_16_up_pad_3_cls_training_with_background_no_anormal_normal_loss"
-start_epoch=4
-port_number=50250
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/0_res_64_up_16_up_pad_3_cls_training_with_background_anormal_weight_5"
+port_number=50253
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/0_res_64_up_16_up_pad_3_cls_training_with_background"
