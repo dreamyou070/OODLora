@@ -712,7 +712,7 @@ class NetworkTrainer:
 
                                     if args.cls_training :
                                         cls_activation = (cls_map * mask).sum(dim=-1)
-                                        cls_total_score = (cls_map).sum(dim=-1)
+                                        cls_total_score = torch.ones_like(cls_activation)
 
                                     activation = (score_map * mask).sum(dim=-1)
                                     total_score = torch.ones_like(activation)
