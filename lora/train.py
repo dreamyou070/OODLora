@@ -735,12 +735,28 @@ class NetworkTrainer:
                                     else: # anormal data
                                         # (1) anormal position
                                         anormal_activation_loss = (activation / total_score) ** 2  # 8, res*res
-                                        """
+                                        # (2) normal position
+                                        normal_pixel = torch.where(img_mask - mask == 1, 1, 0)
+                                        normal_activation = (score_map * normal_pixel).sum(dim=-1)
+                                        normal_loss = (1-(normal_activation / total_score) )** 2
+                                        # (3) back position
+                                        back_activation = (score_map * (1 - img_mask)).sum(dim=-1)
+                                        back_loss = (back_activation / total_score) ** 2
+                                        activation_loss = anormal_activation_loss + back_loss + normal_loss
+
                                         if args.cls_training :
-                                            anormal_cls_activation_loss = (1 - (cls_activation / cls_total_score)) ** 2
-                                            anormal_activation_loss = anormal_activation_loss + anormal_cls_activation_loss
-                                        """
-                                        activation_loss = anormal_activation_loss
+                                            # (1) anormal position
+                                            cls_activation = (cls_map * mask).sum(dim=-1)  # anormal pixel cls score
+                                            cls_anormal_activation_loss = (1 - (cls_activation / cls_total_score)) ** 2
+                                            # (2) normal position
+                                            cls_normal_activation = (cls_map * normal_pixel).sum(dim=-1)
+                                            cls_normal_loss = (cls_normal_activation / total_score)** 2
+                                            # (3) back position
+                                            back_cls_activation = (cls_map * (1 - img_mask)).sum(dim=-1)
+                                            back_cls_activation_loss = (1 - (back_cls_activation / cls_total_score)) ** 2
+                                            cls_loss = cls_anormal_activation_loss + cls_normal_loss + back_cls_activation_loss
+                                            # (4) total
+                                            activation_loss = activation_loss + cls_loss
 
                                     attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
