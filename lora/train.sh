@@ -40,7 +40,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
   --cross_map_res [64,16] \
-  --detail_up_64 \
+  --detail_64_up \
   --trg_position "['up']" \
   --truncate_pad \
   --truncate_length 3 \
