@@ -12,7 +12,7 @@
 class_name="cookie"
 data_source='train_ex'
 #start_folder="0_res_64_up_16_up_only_normal"
-save_folder="1_res_64_up_16_up_pad_3_cls_training"
+save_folder="1_res_64_up_16_up_part_all_pad_3_cls_training_with_anormal"
 #trg_lora_model="epoch-000003.safetensors"
 start_epoch=0
 port_number=54545
