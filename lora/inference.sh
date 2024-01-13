@@ -8,11 +8,11 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-class_name="foam"
+class_name="cookie"
 start_epoch=0
-port_number=50000
+port_number=50001
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/64_down_16_down"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/res_64_down_16_up_down_text_3_no_background"
 network_weights="${output_dir}/models"
 
 
