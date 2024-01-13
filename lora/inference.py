@@ -351,7 +351,10 @@ def main(args) :
                         for key_name in attn_dict.keys() :
                             attn_list = attn_dict[key_name]
                             attn = torch.cat(attn_list, dim=0)
-                            cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            if args.truncate_length == 3:
+                                cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            else:
+                                cls_score, n_score = attn.chunk(2, dim=-1)
                             res = int(attn.shape[1] ** 0.5)
                             h = cls_score.shape[0]
                             n_score = n_score.unsqueeze(-1).reshape(h, res, res)
@@ -366,7 +369,10 @@ def main(args) :
                             attn_list = res_avg_dict[key_name]
 
                             attn = torch.cat(attn_list, dim=0)
-                            cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            if args.truncate_length == 3:
+                                cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            else:
+                                cls_score, n_score = attn.chunk(2, dim=-1)
                             res = int(attn.shape[1] ** 0.5)
                             h = cls_score.shape[0]
                             n_score = n_score.unsqueeze(-1).reshape(h, res, res)
@@ -664,7 +670,10 @@ def main(args) :
                         for key_name in attn_dict.keys() :
                             attn_list = attn_dict[key_name]
                             attn = torch.cat(attn_list, dim=0)
-                            cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            if args.truncate_length == 3:
+                                cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            else:
+                                cls_score, n_score = attn.chunk(2, dim=-1)
                             res = int(attn.shape[1] ** 0.5)
                             h = cls_score.shape[0]
                             n_score = n_score.unsqueeze(-1).reshape(h, res, res)
@@ -679,7 +688,10 @@ def main(args) :
                             attn_list = res_avg_dict[key_name]
 
                             attn = torch.cat(attn_list, dim=0)
-                            cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            if args.truncate_length == 3:
+                                cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            else:
+                                cls_score, n_score = attn.chunk(2, dim=-1)
                             res = int(attn.shape[1] ** 0.5)
                             h = cls_score.shape[0]
                             n_score = n_score.unsqueeze(-1).reshape(h, res, res)
