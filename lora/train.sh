@@ -6,7 +6,7 @@ train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${dat
 
 save_folder="res_64_up_down_res_16_up_down_text_3_backgroundloss_anormal"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-port_number=52332
+port_number=52333
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port $port_number train.py \
@@ -25,7 +25,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
   --cross_map_res [64,16] \
-  --detail_64_down \
   --trg_position "['down','up']" \
   --trg_part '["attn_2","attn_1","attn_0"]' \
   --anormal_sample_normal_loss --background_loss --truncate_pad --truncate_length 3 --cls_training
