@@ -48,7 +48,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention:
 
-                controller.store(attention_probs[:,:,:3], layer_name)
+                controller.store(attention_probs[:,:,:args.truncate_length], layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -79,11 +79,12 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
 
 def main(args) :
-
-    parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'trg_res_check_cross_attention_map')
+    parent = os.path.split(args.network_weights)[0]  # unique_folder,
+    args.output_dir = os.path.join(parent,
+                                   f'inference_truncate_length_{args.truncate_length}/trg_res_check_cross_attention_map')
     os.makedirs(args.output_dir, exist_ok=True)
-    record_output_dir = os.path.join(parent, 'trg_res_check_score_record')
+    record_output_dir = os.path.join(parent,
+                                     f'inference_truncate_length_{args.truncate_length}/trg_res_check_score_record')
     print(f'base record dir : {record_output_dir}')
     os.makedirs(record_output_dir, exist_ok=True)
 
@@ -254,7 +255,7 @@ def main(args) :
                         latent = org_vae_latent
                         t, next_time = inf_time[0], inf_time[1]
                         latent_dict[int(t)] = latent
-                        noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
+                        noise_pred = call_unet(unet, latent, t, con[:,:args.truncate_length,:], [[1]], None)
                         attn_stores = controller.step_store
                         controller.reset()
                         attn_dict = {}
@@ -283,7 +284,10 @@ def main(args) :
 
                                 title_name = f'res_{res}_{position}_{part}'
                                 # ----------------------------------------- get attn map ----------------------------------------- #
-                                cls_score, normal_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
+                                if args.truncate_length == 3 :
+                                    cls_score, normal_score, pad_score = attn.chunk(args.truncate_length, dim=-1) # head, pix_num
+                                else :
+                                    cls_score, normal_score = attn.chunk(args.truncate_length,dim=-1)  # head, pix_num
                                 h = cls_score.shape[0]
                                 cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
                                 singl_head_cls_score = cls_score.mean(dim=0)
@@ -300,20 +304,21 @@ def main(args) :
                                 c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
                                 c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
 
-                                pad_score = pad_score.unsqueeze(-1).reshape(h, res, res)
-                                singl_head_pad_score = pad_score.mean(dim=0)
-                                p_score = singl_head_pad_score.detach().cpu()
-                                p_score = p_score / p_score.max()
-                                # [1] resizing for recording
-                                score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
-                                mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
-                                mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                """ anormal portion score """
-                                #score_dict[title_name] = score_np * mask_np
-                                # [2] saving p_score map
-                                p_score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
-                                p_score_img = Image.fromarray(p_score_np).resize((512, 512),Image.BILINEAR)
-                                p_score_img.save(os.path.join(trg_img_output_dir, f'pad_{name}_{title_name}.png'))
+                                if args.truncate_length == 3:
+                                    pad_score = pad_score.unsqueeze(-1).reshape(h, res, res)
+                                    singl_head_pad_score = pad_score.mean(dim=0)
+                                    p_score = singl_head_pad_score.detach().cpu()
+                                    p_score = p_score / p_score.max()
+                                    # [1] resizing for recording
+                                    score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
+                                    mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                                    mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
+                                    """ anormal portion score """
+                                    #score_dict[title_name] = score_np * mask_np
+                                    # [2] saving p_score map
+                                    p_score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
+                                    p_score_img = Image.fromarray(p_score_np).resize((512, 512),Image.BILINEAR)
+                                    p_score_img.save(os.path.join(trg_img_output_dir, f'pad_{name}_{title_name}.png'))
 
                                 normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
                                 singl_head_normal_score = normal_score.mean(dim=0)
@@ -347,7 +352,10 @@ def main(args) :
                         for key_name in attn_dict.keys() :
                             attn_list = attn_dict[key_name]
                             attn = torch.cat(attn_list, dim=0)
-                            cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            if args.truncate_length == 3:
+                                cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            else:
+                                cls_score, n_score = attn.chunk(2, dim=-1)
                             res = int(attn.shape[1] ** 0.5)
                             h = cls_score.shape[0]
                             n_score = n_score.unsqueeze(-1).reshape(h, res, res)
@@ -362,7 +370,10 @@ def main(args) :
                             attn_list = res_avg_dict[key_name]
 
                             attn = torch.cat(attn_list, dim=0)
-                            cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            if args.truncate_length == 3:
+                                cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            else:
+                                cls_score, n_score = attn.chunk(2, dim=-1)
                             res = int(attn.shape[1] ** 0.5)
                             h = cls_score.shape[0]
                             n_score = n_score.unsqueeze(-1).reshape(h, res, res)
@@ -561,7 +572,7 @@ def main(args) :
                         latent = org_vae_latent
                         t, next_time = inf_time[0], inf_time[1]
                         latent_dict[int(t)] = latent
-                        noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
+                        noise_pred = call_unet(unet, latent, t, con[:,:args.truncate_length,:], [[1]], None)
                         attn_stores = controller.step_store
                         controller.reset()
                         attn_dict = {}
@@ -590,7 +601,12 @@ def main(args) :
 
                                 title_name = f'res_{res}_{position}_{part}'
                                 # ----------------------------------------- get attn map ----------------------------------------- #
-                                cls_score, normal_score, pad_score = attn.chunk(3, dim=-1) # head, pix_num
+                                if args.truncate_length == 3 :
+                                    cls_score, normal_score, pad_score = attn.chunk(args.truncate_length, dim=-1) # head, pix_num
+                                else :
+                                    cls_score, normal_score = attn.chunk(args.truncate_length,dim=-1)  # head, pix_num
+
+
                                 h = cls_score.shape[0]
                                 cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
                                 singl_head_cls_score = cls_score.mean(dim=0)
@@ -606,21 +622,22 @@ def main(args) :
                                 c_score_np = np.array((c_score.cpu()) * 255).astype(np.uint8)
                                 c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
                                 c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
+                                if args.truncate_length == 3:
 
-                                pad_score = pad_score.unsqueeze(-1).reshape(h, res, res)
-                                singl_head_pad_score = pad_score.mean(dim=0)
-                                p_score = singl_head_pad_score.detach().cpu()
-                                p_score = p_score / p_score.max()
-                                # [1] resizing for recording
-                                score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
-                                mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
-                                mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                """ anormal portion score """
-                                #score_dict[title_name] = score_np * mask_np
-                                # [2] saving p_score map
-                                p_score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
-                                p_score_img = Image.fromarray(p_score_np).resize((512, 512),Image.BILINEAR)
-                                p_score_img.save(os.path.join(trg_img_output_dir, f'pad_{name}_{title_name}.png'))
+                                    pad_score = pad_score.unsqueeze(-1).reshape(h, res, res)
+                                    singl_head_pad_score = pad_score.mean(dim=0)
+                                    p_score = singl_head_pad_score.detach().cpu()
+                                    p_score = p_score / p_score.max()
+                                    # [1] resizing for recording
+                                    score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
+                                    mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                                    mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
+                                    """ anormal portion score """
+                                    #score_dict[title_name] = score_np * mask_np
+                                    # [2] saving p_score map
+                                    p_score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
+                                    p_score_img = Image.fromarray(p_score_np).resize((512, 512),Image.BILINEAR)
+                                    p_score_img.save(os.path.join(trg_img_output_dir, f'pad_{name}_{title_name}.png'))
 
                                 normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
                                 singl_head_normal_score = normal_score.mean(dim=0)
@@ -654,7 +671,10 @@ def main(args) :
                         for key_name in attn_dict.keys() :
                             attn_list = attn_dict[key_name]
                             attn = torch.cat(attn_list, dim=0)
-                            cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            if args.truncate_length == 3:
+                                cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            else:
+                                cls_score, n_score = attn.chunk(2, dim=-1)
                             res = int(attn.shape[1] ** 0.5)
                             h = cls_score.shape[0]
                             n_score = n_score.unsqueeze(-1).reshape(h, res, res)
@@ -669,7 +689,10 @@ def main(args) :
                             attn_list = res_avg_dict[key_name]
 
                             attn = torch.cat(attn_list, dim=0)
-                            cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            if args.truncate_length == 3:
+                                cls_score, n_score, pad_score = attn.chunk(3, dim=-1)
+                            else:
+                                cls_score, n_score = attn.chunk(2, dim=-1)
                             res = int(attn.shape[1] ** 0.5)
                             h = cls_score.shape[0]
                             n_score = n_score.unsqueeze(-1).reshape(h, res, res)
@@ -770,7 +793,7 @@ if __name__ == "__main__":
     parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--detail_64", action="store_true", )
-
+    parser.add_argument("--truncate_length", type=int, default=3)
 
     args = parser.parse_args()
     main(args)

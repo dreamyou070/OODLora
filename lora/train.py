@@ -720,17 +720,21 @@ class NetworkTrainer:
                                     if batch['train_class_list'][0] == 1 : # normal data
                                         #
                                         trigger_activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
-                                        back_activation = (score_map * (1-mask)).sum(dim=-1)
-                                        back_loss = (back_activation / total_score) ** 2
-                                        trigger_loss = trigger_activation_loss + back_loss
+                                        trigger_loss = trigger_activation_loss
+                                        if args.background_loss :
+                                            back_activation = (score_map * (1-mask)).sum(dim=-1)
+                                            back_loss = (back_activation / total_score) ** 2
+                                            trigger_loss = trigger_activation_loss + back_loss
+
                                         activation_loss = trigger_loss
 
                                         if args.cls_training :
                                             cls_activation_loss = (cls_activation/cls_total_score) ** 2
-                                            back_cls_activation = (cls_map * (1 - img_mask)).sum(dim=-1)
-                                            back_cls_activation_loss = (1-(back_cls_activation / cls_total_score)) ** 2
-                                            cls_loss = cls_activation_loss + back_cls_activation_loss
-
+                                            cls_loss = cls_activation_loss
+                                            if args.background_loss :
+                                                back_cls_activation = (cls_map * (1 - img_mask)).sum(dim=-1)
+                                                back_cls_activation_loss = (1-(back_cls_activation / cls_total_score)) ** 2
+                                                cls_loss += back_cls_activation_loss
                                             activation_loss = args.normal_weight * (activation_loss + cls_loss)
 
                                     else: # anormal data
@@ -744,17 +748,25 @@ class NetworkTrainer:
                                             normal_activation = (score_map * normal_pixel).sum(dim=-1)
                                             normal_loss = (1-(normal_activation / total_score) )** 2
 
-                                        # (3) back position
-                                        back_activation = (score_map * (1 - img_mask)).sum(dim=-1)
-                                        back_loss = (back_activation / total_score) ** 2
+                                        if args.background_loss:
+                                            # (3) back position
+                                            back_activation = (score_map * (1 - img_mask)).sum(dim=-1)
+                                            back_loss = (back_activation / total_score) ** 2
 
                                         if args.anormal_sample_normal_loss:
-                                            activation_loss = args.anormal_weight * anormal_activation_loss\
-                                                              + back_loss\
-                                                              + args.normal_weight * normal_loss
+                                            if args.background_loss :
+                                                activation_loss = args.anormal_weight * anormal_activation_loss\
+                                                                  + back_loss\
+                                                                  + args.normal_weight * normal_loss
+                                            else :
+                                                activation_loss = args.anormal_weight * anormal_activation_loss \
+                                                                  + args.normal_weight * normal_loss
                                         else :
-                                            activation_loss = args.anormal_weight * anormal_activation_loss \
+                                            if args.background_loss :
+                                                activation_loss = args.anormal_weight * anormal_activation_loss \
                                                               + back_loss
+                                            else :
+                                                activation_loss = args.anormal_weight * anormal_activation_loss
 
                                         if args.cls_training :
                                             # (1) anormal position
@@ -764,17 +776,24 @@ class NetworkTrainer:
                                                 cls_normal_activation = (cls_map * normal_pixel).sum(dim=-1)
                                                 cls_normal_loss = (cls_normal_activation / total_score)** 2
                                             # (3) back position
-                                            back_cls_activation = (cls_map * (1 - img_mask)).sum(dim=-1)
-                                            back_cls_activation_loss = (1 - (back_cls_activation / cls_total_score)) ** 2
+                                            if args.background_loss :
+                                                back_cls_activation = (cls_map * (1 - img_mask)).sum(dim=-1)
+                                                back_cls_activation_loss = (1 - (back_cls_activation / cls_total_score)) ** 2
 
                                             if args.anormal_sample_normal_loss:
-                                                cls_loss = args.anormal_weight * cls_anormal_activation_loss \
-                                                           + args.normal_weight * cls_normal_loss\
-                                                           + back_cls_activation_loss
-
+                                                if args.background_loss:
+                                                    cls_loss = args.anormal_weight * cls_anormal_activation_loss \
+                                                               + args.normal_weight * cls_normal_loss\
+                                                               + back_cls_activation_loss
+                                                else :
+                                                    cls_loss = args.anormal_weight * cls_anormal_activation_loss \
+                                                               + args.normal_weight * cls_normal_loss
                                             else :
-                                                cls_loss = args.anormal_weight * cls_anormal_activation_loss \
+                                                if args.background_loss :
+                                                    cls_loss = args.anormal_weight * cls_anormal_activation_loss \
                                                            + back_cls_activation_loss
+                                                else :
+                                                    cls_loss = args.anormal_weight * cls_anormal_activation_loss
                                             # (4) total
                                             activation_loss = activation_loss + cls_loss
 
@@ -951,6 +970,7 @@ if __name__ == "__main__":
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--normal_training", action="store_true", )
     parser.add_argument("--cls_training", action="store_true", )
+    parser.add_argument("--background_loss", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
