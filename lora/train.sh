@@ -4,7 +4,7 @@ class_name="foam"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_res_16_up_down_text_3_backgroundloss_anormal"
+save_folder="res_64_up_res_16_up_text_3_backgroundloss_anormal"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
 port_number=52327
 start_epoch=0
@@ -26,6 +26,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --output_dir "$output_dir" \
   --cross_map_res [64,16] \
   --detail_64_up \
-  --trg_position "['up','down']" \
+  --trg_position "['up']" \
   --trg_part '["attn_2","attn_1","attn_0"]' \
   --anormal_sample_normal_loss --background_loss --truncate_pad --truncate_length 3 --cls_training
