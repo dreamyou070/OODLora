@@ -1,6 +1,6 @@
 import os
 
-base_folder = r'../result/MVTec3D-AD_experiment/carrot/lora_training/anormal'
+base_folder = r'../result/MVTec3D-AD_experiment/cookie/lora_training/normal'
 folders = os.listdir(base_folder)
 for folder in folders:
     folder_dir = os.path.join(base_folder, folder)
@@ -29,5 +29,5 @@ for folder in folders:
                         images = os.listdir(sub_cat_dir)
                         for img in images :
                             img_dir = os.path.join(sub_cat_dir, img)
-                            re_img_dir = os.path.join(save_sub_cat, f'l{lora}_{img}')
+                            re_img_dir = os.path.join(save_sub_cat, f'{lora}_{img}')
                             os.rename(img_dir,re_img_dir )
