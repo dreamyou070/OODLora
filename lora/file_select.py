@@ -26,4 +26,3 @@ for folder in folders:
                                 img_dir = os.path.join(sub_cat_dir, img)
                                 if 'down' in img :
                                     os.remove(img_dir)
-                                
