@@ -1,6 +1,6 @@
 import os
 
-base_folder = r'../result/MVTec3D-AD_experiment/carrot/lora_training/anormal'
+base_folder = r'../result/MVTec3D-AD_experiment/cookie/lora_training/anormal'
 folders = os.listdir(base_folder)
 for folder in folders:
 
