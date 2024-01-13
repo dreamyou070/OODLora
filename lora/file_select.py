@@ -1,6 +1,6 @@
 import os
 
-base_folder = r'/home/dreamyou070/Lora/OODLora/result/MVTec3D-AD_experiment/carrot/lora_training/anormal'
+base_folder = r'../result/MVTec3D-AD_experiment/carrot/lora_training/anormal'
 folders = os.listdir(base_folder)
 for folder in folders:
     folder_dir = os.path.join(base_folder, folder)
@@ -25,7 +25,9 @@ for folder in folders:
                             img_dir = os.path.join(sub_cat_dir, img)
                             if 'cls' in img :
                                 os.remove(img_dir)
-                            if '_32' in img :
-                                os.remove(img_dir)
-                            if 'up' in img :
-                                os.remove(img_dir)
+                            else :
+                                if '_32' in img :
+                                    os.remove(img_dir)
+                                else :
+                                    if 'up' in img :
+                                        os.remove(img_dir)
