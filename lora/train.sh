@@ -4,9 +4,9 @@ class_name="cookie"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="64_up_16_up_background_loss"
+save_folder="res_64_up_16_up_text_3_background_loss"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-port_number=50348
+port_number=50359
 
 start_epoch=0
 
