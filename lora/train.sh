@@ -6,9 +6,9 @@ train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${dat
 
 save_folder="res_64_up_down_16_up"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/${save_folder}"
-port_number=50013
+port_number=50011
 
-start_epoch=2
+start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train.py \
   --process_title parksooyeon \
