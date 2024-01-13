@@ -288,22 +288,22 @@ def main(args) :
                                     cls_score, normal_score, pad_score = attn.chunk(args.truncate_length, dim=-1) # head, pix_num
                                 else :
                                     cls_score, normal_score = attn.chunk(args.truncate_length,dim=-1)  # head, pix_num
-
                                 h = cls_score.shape[0]
-                                #cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
-                                #singl_head_cls_score = cls_score.mean(dim=0)
-                                #c_score = singl_head_cls_score.detach().cpu()
-                                #c_score = c_score / c_score.max()
+                                """
+                                cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
+                                singl_head_cls_score = cls_score.mean(dim=0)
+                                c_score = singl_head_cls_score.detach().cpu()
+                                c_score = c_score / c_score.max()
                                 # [1] resizing for recording
                                 score_np = np.array((c_score.cpu()) * 255).astype(np.uint8)
                                 mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
                                 mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                """ anormal portion score """
+                                # anormal portion score 
                                 #score_dict[title_name] = score_np * mask_np
                                 # [2] saving c_score map
-                                #c_score_np = np.array((c_score.cpu()) * 255).astype(np.uint8)
-                                #c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
-                                #c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
+                                c_score_np = np.array((c_score.cpu()) * 255).astype(np.uint8)
+                                c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
+                                c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
 
                                 if args.truncate_length == 3:
                                     pad_score = pad_score.unsqueeze(-1).reshape(h, res, res)
@@ -314,13 +314,13 @@ def main(args) :
                                     score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
                                     mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
                                     mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                    """ anormal portion score """
+                                    # anormal portion score 
                                     #score_dict[title_name] = score_np * mask_np
                                     # [2] saving p_score map
                                     p_score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
                                     p_score_img = Image.fromarray(p_score_np).resize((512, 512),Image.BILINEAR)
                                     p_score_img.save(os.path.join(trg_img_output_dir, f'pad_{name}_{title_name}.png'))
-
+                                """
                                 normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
                                 singl_head_normal_score = normal_score.mean(dim=0)
                                 n_score = singl_head_normal_score.detach().cpu()
@@ -602,29 +602,29 @@ def main(args) :
 
                                 title_name = f'res_{res}_{position}_{part}'
                                 # ----------------------------------------- get attn map ----------------------------------------- #
-                                if args.truncate_length == 3 :
-                                    cls_score, normal_score, pad_score = attn.chunk(args.truncate_length, dim=-1) # head, pix_num
-                                else :
-                                    cls_score, normal_score = attn.chunk(args.truncate_length,dim=-1)  # head, pix_num
-
-
-                                h = cls_score.shape[0]
-                                #cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
-                                #singl_head_cls_score = cls_score.mean(dim=0)
-                                #c_score = singl_head_cls_score.detach().cpu()
-                                #c_score = c_score / c_score.max()
-                                # [1] resizing for recording
-                                #score_np = np.array((c_score.cpu()) * 255).astype(np.uint8)
-                                #mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
-                                #mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                """ anormal portion score """
-                                ##score_dict[title_name] = score_np * mask_np
-                                # [2] saving c_score map
-                                #c_score_np = np.array((c_score.cpu()) * 255).astype(np.uint8)
-                                #c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
-                                #c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
                                 if args.truncate_length == 3:
+                                    cls_score, normal_score, pad_score = attn.chunk(args.truncate_length,
+                                                                                    dim=-1)  # head, pix_num
+                                else:
+                                    cls_score, normal_score = attn.chunk(args.truncate_length, dim=-1)  # head, pix_num
+                                h = cls_score.shape[0]
+                                """
+                                cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
+                                singl_head_cls_score = cls_score.mean(dim=0)
+                                c_score = singl_head_cls_score.detach().cpu()
+                                c_score = c_score / c_score.max()
+                                # [1] resizing for recording
+                                score_np = np.array((c_score.cpu()) * 255).astype(np.uint8)
+                                mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                                mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
+                                # anormal portion score 
+                                #score_dict[title_name] = score_np * mask_np
+                                # [2] saving c_score map
+                                c_score_np = np.array((c_score.cpu()) * 255).astype(np.uint8)
+                                c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
+                                c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
 
+                                if args.truncate_length == 3:
                                     pad_score = pad_score.unsqueeze(-1).reshape(h, res, res)
                                     singl_head_pad_score = pad_score.mean(dim=0)
                                     p_score = singl_head_pad_score.detach().cpu()
@@ -633,38 +633,39 @@ def main(args) :
                                     score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
                                     mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
                                     mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                    """ anormal portion score """
+                                    # anormal portion score 
                                     #score_dict[title_name] = score_np * mask_np
                                     # [2] saving p_score map
                                     p_score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
                                     p_score_img = Image.fromarray(p_score_np).resize((512, 512),Image.BILINEAR)
                                     p_score_img.save(os.path.join(trg_img_output_dir, f'pad_{name}_{title_name}.png'))
-
+                                """
                                 normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
                                 singl_head_normal_score = normal_score.mean(dim=0)
                                 n_score = singl_head_normal_score.detach().cpu()
                                 n_score = n_score / n_score.max()
                                 # [1] resizing for recording
                                 score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
-                                mask_img = Image.open(mask_img_dir).convert("L").resize((res,res), Image.BICUBIC)
-                                mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
+                                mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                                mask_np = np.where((np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
                                 """ anormal portion score """
                                 score_dict[title_name] = score_np * mask_np
                                 # [2] saving n_score map
                                 n_score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
-                                n_score_pil = Image.fromarray(n_score_np).resize((512, 512),Image.BILINEAR)
+                                n_score_pil = Image.fromarray(n_score_np).resize((512, 512), Image.BILINEAR)
                                 n_score_pil.save(os.path.join(trg_img_output_dir,
                                                               f'{title_name}_res_{res}.png'))
-                                if 'down' in layer_name :
+                                if 'down' in layer_name:
                                     key_name = f'down_{res}'
-                                elif 'up' in layer_name :
+                                elif 'up' in layer_name:
                                     key_name = f'up_{res}'
-                                else : key_name = f'mid_{res}'
+                                else:
+                                    key_name = f'mid_{res}'
 
-                                if key_name not in attn_dict.keys() :
+                                if key_name not in attn_dict.keys():
                                     attn_dict[key_name] = []
                                 attn_dict[key_name].append(attn)
-                                if res_key_name not in res_avg_dict.keys() :
+                                if res_key_name not in res_avg_dict.keys():
                                     res_avg_dict[res_key_name] = []
                                 res_avg_dict[res_key_name].append(attn)
 
