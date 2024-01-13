@@ -79,11 +79,12 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
 
 def main(args) :
-
-    parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'trg_res_check_cross_attention_map')
+    parent = os.path.split(args.network_weights)[0]  # unique_folder,
+    args.output_dir = os.path.join(parent,
+                                   f'inference_truncate_length_{args.truncate_length}/trg_res_check_cross_attention_map')
     os.makedirs(args.output_dir, exist_ok=True)
-    record_output_dir = os.path.join(parent, 'trg_res_check_score_record')
+    record_output_dir = os.path.join(parent,
+                                     f'inference_truncate_length_{args.truncate_length}/trg_res_check_score_record')
     print(f'base record dir : {record_output_dir}')
     os.makedirs(record_output_dir, exist_ok=True)
 
