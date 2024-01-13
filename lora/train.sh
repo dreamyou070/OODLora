@@ -1,6 +1,6 @@
 #!bin/bash
 
-class_name="carrot"
+class_name="cookie"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
