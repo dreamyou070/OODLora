@@ -10,9 +10,9 @@
 
 class_name="cookie"
 start_epoch=0
-port_number=50083
+port_number=50084
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/res_64_up_down_16_up"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/res_64_up_down_16_up_down"
 network_weights="${output_dir}/models"
 
 
