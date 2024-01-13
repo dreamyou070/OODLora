@@ -254,7 +254,7 @@ def main(args) :
                         latent = org_vae_latent
                         t, next_time = inf_time[0], inf_time[1]
                         latent_dict[int(t)] = latent
-                        noise_pred = call_unet(unet, latent, t, con[:,:3,:], [[1]], None)
+                        noise_pred = call_unet(unet, latent, t, con[:,:args.truncate_length,:], [[1]], None)
                         attn_stores = controller.step_store
                         controller.reset()
                         attn_dict = {}
