@@ -1,12 +1,12 @@
 #!bin/bash
 
-class_name="cookie"
-data_source='train_ex'
+class_name="foam"
+data_source='train_normal'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_16_up_text_3"
+save_folder="64_down_16_down"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-port_number=50333
+port_number=50341
 
 start_epoch=0
 
@@ -26,8 +26,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
   --cross_map_res [64,16] \
-  --detail_64_up \
-  --trg_position "['up']" \
+  --detail_64_down \
+  --trg_position "['down']" \
   --trg_part '["attn_2","attn_1","attn_0"]' \
   --anormal_sample_normal_loss \
   --truncate_pad --truncate_length 3 --cls_training
