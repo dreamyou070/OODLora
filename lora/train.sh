@@ -4,9 +4,9 @@ class_name="carrot"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_down_32_up_down_text_len_2"
+save_folder="res_64_up_down_32_up_down_text_len_2_anormal_weight_2"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-port_number=50022
+port_number=50023
 
 start_epoch=0
 
@@ -31,4 +31,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --truncate_length 2 \
   --trg_part '["attn_2","attn_1","attn_0"]' \
   --anormal_sample_normal_loss \
+  --anormal_weight 2.0 \
   --cls_training
