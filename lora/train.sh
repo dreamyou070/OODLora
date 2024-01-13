@@ -4,9 +4,9 @@ class_name="cookie"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_16_up_text_3_background_loss_anormal_weight_5"
+save_folder="res_64_up_16_up_text_3_background_loss_anormal_weight_2"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-port_number=50369
+port_number=50370
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port $port_number train.py \
@@ -28,5 +28,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --detail_64_up \
   --trg_position "['up']" \
   --trg_part '["attn_2","attn_1","attn_0"]' \
-  --anormal_weight 5.0 \
+  --anormal_weight 2.0 \
   --anormal_sample_normal_loss --background_loss --truncate_pad --truncate_length 3 --cls_training
