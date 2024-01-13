@@ -10,9 +10,9 @@
 
 class_name="carrot"
 start_epoch=3
-port_number=50032
+port_number=50033
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/res_64_up_down_32_up_down_text_len_2"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/res_64_up_down_32_up_down_text_len_2_anormal_weight_2"
 network_weights="${output_dir}/models"
 
 
