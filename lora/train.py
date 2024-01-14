@@ -718,15 +718,14 @@ class NetworkTrainer:
                                         normal_position = torch.where((back_position == 0) & (anormal_position == 0), 1, 0)
                                         anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1) # anormal sample -> anormal position
                                         anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1) # anormal sample -> anormal position
-
                                     normal_trigger_activation = (score_map * normal_position).sum(dim=-1) # normal sample -> normal position
                                     normal_cls_activation = (cls_map * normal_position).sum(dim=-1) # normal sample -> normal position
                                     back_trigger_activation = (score_map * back_position).sum(dim=-1) # normal sample -> normal position
                                     back_cls_activation = (cls_map * back_position).sum(dim=-1) # normal sample -> normal position
+
                                     total_score = torch.ones_like(normal_trigger_activation)
 
                                     if batch['train_class_list'][0] == 1 : # normal data
-                                        #
                                         trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                         activation_loss = args.normal_weight * trigger_activation_loss
                                         if args.background_loss :
@@ -753,7 +752,6 @@ class NetworkTrainer:
                                             if args.background_loss:
                                                 back_cls_activation_loss = (1 - (back_cls_activation / total_score)) ** 2
                                                 activation_loss += back_cls_activation_loss
-
                                     attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:

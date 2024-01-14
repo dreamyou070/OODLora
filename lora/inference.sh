@@ -25,5 +25,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --trg_position "['up','down']" \
   --concept_image_folder "${concept_image_folder}" \
   --network_weights "${network_weights}" \
-  --truncate_length 2 \
+  --truncate_length 3 \
   --start_epoch ${start_epoch}

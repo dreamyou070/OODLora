@@ -608,7 +608,7 @@ def main(args) :
                                 else:
                                     cls_score, normal_score = attn.chunk(args.truncate_length, dim=-1)  # head, pix_num
                                 h = cls_score.shape[0]
-                                """
+
                                 cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
                                 singl_head_cls_score = cls_score.mean(dim=0)
                                 c_score = singl_head_cls_score.detach().cpu()
@@ -639,7 +639,7 @@ def main(args) :
                                     p_score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
                                     p_score_img = Image.fromarray(p_score_np).resize((512, 512),Image.BILINEAR)
                                     p_score_img.save(os.path.join(trg_img_output_dir, f'pad_{name}_{title_name}.png'))
-                                """
+
                                 normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
                                 singl_head_normal_score = normal_score.mean(dim=0)
                                 n_score = singl_head_normal_score.detach().cpu()
