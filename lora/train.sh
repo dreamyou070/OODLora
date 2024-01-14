@@ -1,6 +1,6 @@
 #!bin/bash
 
-class_name="cookie"
+class_name="foam"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
