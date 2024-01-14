@@ -2,6 +2,7 @@ import os
 import argparse
 
 def main(args) :
+
     base_folder = r'../result/MVTec3D-AD_experiment/carrot/lora_training/anormal'
     folders = os.listdir(base_folder)
     for folder in folders:
@@ -9,6 +10,7 @@ def main(args) :
             folder_dir = os.path.join(base_folder, folder)
             files = os.listdir(folder_dir)
             for file in files :
+                print(file)
 
                 if args.trg_word in file :
                     file_dir_ = os.path.join(folder_dir,f'{file}' )
