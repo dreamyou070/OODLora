@@ -1,15 +1,15 @@
 #!bin/bash
 
-class_name="carrot"
-data_source='train_ex'
+class_name="cookie"
+data_source='train_ex_2'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_down_32_up_down_text_len_3_more_cut_no_background_loss"
+save_folder="res_64_up_16_up_text_3_background_loss_more_crack_ratio"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}/models/epoch-000015.safetensors"
-port_number=50301
+network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}/models/epoch-000003.safetensors"
+port_number=50303
 
-start_epoch=15
+start_epoch=3
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config --main_process_port $port_number train.py \
   --process_title parksooyeon \
@@ -26,9 +26,10 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res [64,32] \
-  --trg_position "['up','down']" \
+  --cross_map_res [64,16] \
+  --detail_64_up \
+  --trg_position "['up']" \
   --trg_part '["attn_2","attn_1","attn_0"]' \
   --anormal_sample_normal_loss \
   --network_weights "${network_weights}" \
-  --truncate_pad --truncate_length 3 --cls_training
+  --truncate_pad --truncate_length 3 --cls_training --background_loss
