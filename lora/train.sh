@@ -4,7 +4,7 @@ class_name="carrot"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_down_32_up_down_text_len_3_more_cut_with_background_loss_no_cls_training"
+save_folder="res_64_up_down_32_up_down_text_len_3_more_cut_no_background_loss_no_cls_training"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
 network_weights="${output_dir}/models/epoch-000017.safetensors"
 port_number=54919
