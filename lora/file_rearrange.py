@@ -3,14 +3,13 @@ import argparse
 
 def main(args) :
 
-    base_folder = r'../result/MVTec3D-AD_experiment/carrot/lora_training/anormal'
+    base_folder = r'../result/MVTec3D-AD_experiment/foam/lora_training/anormal'
     folders = os.listdir(base_folder)
 
     for folder in folders:
         if folder == args.trg_folder :
             folder_dir = os.path.join(base_folder, folder)
             files = os.listdir(folder_dir)
-            print(files)
             for file in files :
 
                 if args.trg_word in file :
