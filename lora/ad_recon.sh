@@ -14,7 +14,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --resolution '512,512' \
   --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/carrot \
   --seed 42 \
-  --network_weights ../result/MVTec3D-AD_experiment/carrot/lora_training/res_64_up_down_32_up_down_text_len_3_more_cut_with_background_loss_recode/models \
+  --network_weights ../result/MVTec3D-AD_experiment/carrot/lora_training/anormal/res_64_up_down_32_up_down_text_len_3_more_cut_with_background_loss_recode/models \
   --num_ddim_steps 50 \
   --trg_lora_epoch 'epoch-000012.safetensors' \
   --inner_iter 10 --only_zero_save \
