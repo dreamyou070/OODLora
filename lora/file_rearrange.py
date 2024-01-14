@@ -10,6 +10,7 @@ def main(args) :
         if folder == args.trg_folder :
             folder_dir = os.path.join(base_folder, folder)
             files = os.listdir(folder_dir)
+            print(files)
             for file in files :
 
                 if args.trg_word in file :
