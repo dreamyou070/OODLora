@@ -731,7 +731,7 @@ class NetworkTrainer:
                                         activation_loss = args.normal_weight * trigger_activation_loss
                                         if args.background_loss :
                                             back_loss = (back_trigger_activation / total_score) ** 2
-                                        activation_loss += back_loss
+                                            activation_loss += back_loss
                                         if args.cls_training :
                                             cls_activation_loss = (normal_cls_activation/total_score) ** 2
                                             activation_loss += args.normal_weight * cls_activation_loss
