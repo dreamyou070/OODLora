@@ -207,7 +207,7 @@ def main(args) :
             trg_h, trg_w = args.resolution
 
             print(f' (3.3) test images')
-            test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/mask')
+            test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/rgb')
             test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/gt')
             classes = os.listdir(test_img_folder)
 
