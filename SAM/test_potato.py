@@ -36,6 +36,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
-    parser.add_argument('--sub_dir', type=str, default='potato/train_ex/30_good/val_001.png')
+    parser.add_argument('--sub_dir', type=str, default='potato/train_ex/rgb/30_good/val_001.png')
     args = parser.parse_args()
     main(args)
