@@ -17,5 +17,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_weights ../result/MVTec3D-AD_experiment/carrot/lora_training/anormal/res_64_up_down_32_up_down_text_len_3_more_cut_with_background_loss_recode/models \
   --num_ddim_steps 50 \
   --trg_lora_epoch 'epoch-000012.safetensors' \
-  --inner_iter 10 --only_zero_save \
+  --inner_iter 10 --only_zero_save --truncate_length 2 \
   --cross_map_res [64] --trg_position "['down']" --trg_part "attn_2" --use_avg_mask

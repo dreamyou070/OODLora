@@ -49,7 +49,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_probs.to(value.dtype)
 
             if is_cross_attention:
-                controller.store(attention_probs[:,:,:3], layer_name)
+                controller.store(attention_probs[:,:,:args.truncate_length], layer_name)
 
             if is_cross_attention and mask is not None:
                 if layer_name in mask.keys() :
@@ -243,7 +243,7 @@ def main(args) :
                     with torch.no_grad():
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-                        call_unet(unet, org_vae_latent, 0, con[:, :3, :], None, None)
+                        call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                         # ------------------------------[1] generate attn mask map ------------------------------ #
                         """ averaging values """
                         inf_time = inference_times.tolist()
@@ -285,7 +285,10 @@ def main(args) :
                                 else :
 
                                     if res in args.cross_map_res and pos in args.trg_position and part == args.trg_part:
-                                        cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
+                                        if args.truncate_length == 3 :
+                                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
+                                        else :
+                                            cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                                         h = trigger_score.shape[0]
                                         trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                         trigger_score = trigger_score.mean(dim=0)  # res, res
@@ -303,7 +306,10 @@ def main(args) :
                             for key_name in mask_dict_avg_sub:
                                 attn_list = mask_dict_avg_sub[key_name]
                                 attn = torch.cat(attn_list, dim=0)
-                                cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
+                                if args.truncate_length == 3:
+                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
+                                else:
+                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                                 res = int(trigger_score.shape[1] ** 0.5)
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
@@ -431,6 +437,7 @@ if __name__ == "__main__":
     parser.add_argument("--trg_part", type = str)
     parser.add_argument("--only_zero_save", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
+    parser.add_argument("--truncate_length", type=int, default=3)
 
     import ast
     def arg_as_list(arg):
