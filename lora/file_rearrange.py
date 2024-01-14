@@ -3,7 +3,7 @@ import os
 base_folder = r'../result/MVTec3D-AD_experiment/carrot/lora_training/anormal'
 folders = os.listdir(base_folder)
 for folder in folders:
-    if folder == 'res_64_up_down_32_up_down_text_len_3_more_cut_no_background_loss' or folder == 'res_64_up_down_32_up_down_text_len_3_more_cut_with_background_loss':
+    if folder == 'res_64_up_down_32_up_down_text_len_3_more_cut_with_background_loss_recode':
         folder_dir = os.path.join(base_folder, folder)
         files = os.listdir(folder_dir)
         for file in files :
