@@ -1,16 +1,16 @@
 #!bin/bash
 
-class_name="peach"
+class_name="carrot"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_down_res_16_up_down_text_77_no_back_cls"
+save_folder="res_64_up_down_32_up_down_text_len_3_more_cut_with_background_loss_no_cls_training"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-
+network_weights="${output_dir}/models/epoch-000017.safetensors"
 port_number=54919
-start_epoch=0
+start_epoch=17
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config --main_process_port $port_number train.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port $port_number train.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -25,8 +25,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res [64,16] \
+  --cross_map_res [64,32] \
   --trg_position "['up','down']" \
   --trg_part '["attn_2","attn_1","attn_0"]' \
   --anormal_sample_normal_loss \
-  --truncate_pad --truncate_length 77 --cls_training
+  --truncate_pad --truncate_length 3 --cls_training
