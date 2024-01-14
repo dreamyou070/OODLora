@@ -1,15 +1,15 @@
 #!bin/bash
 
-class_name="foam"
+class_name="peach"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="check_res_64_up_down_res_16_up_text_3_no_background_loss_recode"
+save_folder="res_64_up_down_res_16_up_down_text_3_no_background_loss_recode"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-port_number=50511
+port_number=50521
 start_epoch=0
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port $port_number train.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -25,7 +25,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
   --cross_map_res [64,16] \
-  --trg_position "['up']" \
+  --trg_position "['up','down']" \
   --trg_part '["attn_2","attn_1","attn_0"]' \
   --anormal_sample_normal_loss \
   --truncate_pad --truncate_length 3 --cls_training
