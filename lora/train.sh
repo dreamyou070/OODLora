@@ -1,10 +1,10 @@
 #!bin/bash
 
-class_name="peach"
+class_name="carrot"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_down_res_32_up_down_text_3_backgroundloss"
+save_folder="res_64_up_down_32_up_down_text_len_3_more_cut_with_background_loss_recode"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
 port_number=50401
 start_epoch=0
