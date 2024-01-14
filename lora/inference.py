@@ -289,11 +289,6 @@ def main(args) :
                                 else :
                                     cls_score, normal_score = attn.chunk(args.truncate_length,dim=-1)  # head, pix_num
 
-                                print(f'when training with 2 length')
-                                print(f'cls first score : {cls_score[0,0]}')
-                                print(f'nor first score : {normal_score[0,0]}')
-                                import time
-                                time.sleep(100)
                                 h = cls_score.shape[0]
 
                                 cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
