@@ -716,12 +716,16 @@ class NetworkTrainer:
                                     else :
                                         anormal_position = torch.where((anormal_mask == 1), 1, 0)
                                         normal_position = torch.where((back_position == 0) & (anormal_position == 0), 1, 0)
-                                        anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1) # anormal sample -> anormal position
-                                        anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1) # anormal sample -> anormal position
+                                        anormal_trigger_activation = (score_map * anormal_position).sum(
+                                            dim=-1)  # anormal sample -> anormal position
+                                        if args.cls_training :
+                                            anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1) # anormal sample -> anormal position
                                     normal_trigger_activation = (score_map * normal_position).sum(dim=-1) # normal sample -> normal position
-                                    normal_cls_activation = (cls_map * normal_position).sum(dim=-1) # normal sample -> normal position
+                                    if args.cls_training:
+                                        normal_cls_activation = (cls_map * normal_position).sum(dim=-1) # normal sample -> normal position
                                     back_trigger_activation = (score_map * back_position).sum(dim=-1) # normal sample -> normal position
-                                    back_cls_activation = (cls_map * back_position).sum(dim=-1) # normal sample -> normal position
+                                    if args.cls_training:
+                                        back_cls_activation = (cls_map * back_position).sum(dim=-1) # normal sample -> normal position
 
                                     total_score = torch.ones_like(normal_trigger_activation)
 
