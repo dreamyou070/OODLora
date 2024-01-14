@@ -5,12 +5,12 @@ def main(args) :
 
     base_folder = r'../result/MVTec3D-AD_experiment/carrot/lora_training/anormal'
     folders = os.listdir(base_folder)
+
     for folder in folders:
-        if folder == 'inference_truncate_length_3':
+        if folder == args.trg_folder :
             folder_dir = os.path.join(base_folder, folder)
             files = os.listdir(folder_dir)
             for file in files :
-                print(file)
 
                 if args.trg_word in file :
                     file_dir_ = os.path.join(folder_dir,f'{file}' )
@@ -40,5 +40,6 @@ def main(args) :
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--trg_word', type=str, default='inference_truncate_length_3')
+    parser.add_argument('--trg_folder', type=str, default='res_64_up_down_32_up_down_text_len_3_more_cut_no_background_loss')
     args = parser.parse_args()
     main(args)
