@@ -1,15 +1,17 @@
 #!bin/bash
 
-class_name="foam"
+class_name="carrot"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_res_16_up_text_3_backgroundloss_anormal"
+save_folder="res_64_up_down_32_up_down_text_len_3_more_cut_with_background_loss"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-port_number=52727
-start_epoch=0
+network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}/models/epoch-000003.safetensors"
+port_number=50300
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port $port_number train.py \
+start_epoch=3
+
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config --main_process_port $port_number train.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -24,8 +26,9 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res [64,16] \
-  --detail_64_up \
-  --trg_position "['up']" \
+  --cross_map_res [64,32] \
+  --trg_position "['up','down']" \
   --trg_part '["attn_2","attn_1","attn_0"]' \
-  --anormal_sample_normal_loss --background_loss --truncate_pad --truncate_length 3 --cls_training
+  --anormal_sample_normal_loss \
+  --network_weights "${network_weights}" \
+  --truncate_pad --truncate_length 3 --cls_training --background_loss
