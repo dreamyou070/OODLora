@@ -22,7 +22,7 @@ def main(args):
     w_min, w_max = 0, int(w * 1/5)
     for h_ in range(h_min, h_max, 1):
         for w_ in range(w_min, w_max, 1):
-            np_img[h_, w_, :] = 0
+            np_img[h_, w_] = 0
     new_mask = Image.fromarray(np_img)
     new_mask.save('test.png')
     """
