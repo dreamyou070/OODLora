@@ -16,7 +16,8 @@ def main(args):
     base_folder = args.base_folder
     trg_img_dir = os.path.join(base_folder, args.sub_dir)
     np_img = np.array(Image.open(trg_img_dir))
-    h, w, c = np_img.shape
+    #h, w, c = np_img.shape
+    h, w = np_img.shape
     h_min, h_max = 0, int(h * 4/10)
     w_min, w_max = 0, int(w * 1/5)
     for h_ in range(h_min, h_max, 1):
