@@ -29,4 +29,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --trg_position "['up','down']" \
   --trg_part '["attn_2","attn_1","attn_0"]' \
   --anormal_sample_normal_loss \
+  --network_weights "$network_weights" \
   --truncate_pad --truncate_length 3 --cls_training

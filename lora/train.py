@@ -745,14 +745,22 @@ class NetworkTrainer:
                                     else: # anormal data
                                         normal_activation_loss =  (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                         anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                                        activation_loss = args.anormal_weight * anormal_activation_loss + args.normal_weight * normal_activation_loss
+                                        if args.anormal_sample_normal_loss :
+                                            activation_loss = args.anormal_weight * anormal_activation_loss + args.normal_weight * normal_activation_loss
+                                        else :
+                                            activation_loss = args.anormal_weight * anormal_activation_loss
+
                                         if args.background_loss :
                                             back_loss = (back_trigger_activation / total_score) ** 2
                                             activation_loss += back_loss
                                         if args.cls_training:
                                             normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
-                                            anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                            activation_loss += args.anormal_weight * anormal_cls_activation_loss + args.normal_weight * normal_cls_activation_loss
+                                            anormal_cls_activation_loss = (1 - (
+                                                        anormal_cls_activation / total_score)) ** 2
+                                            if args.anormal_sample_normal_loss:
+                                                activation_loss += args.anormal_weight * anormal_cls_activation_loss + args.normal_weight * normal_cls_activation_loss
+                                            else :
+                                                activation_loss += args.normal_weight * normal_cls_activation_loss
                                             if args.background_loss:
                                                 back_cls_activation_loss = (1 - (back_cls_activation / total_score)) ** 2
                                                 activation_loss += back_cls_activation_loss
@@ -927,7 +935,6 @@ if __name__ == "__main__":
     parser.add_argument('--anormal_weight', type=float, default=1.0)
     parser.add_argument('--normal_weight', type=float, default=1.0)
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
-    parser.add_argument("--normal_training", action="store_true", )
     parser.add_argument("--cls_training", action="store_true", )
     parser.add_argument("--background_loss", action="store_true", )
     args = parser.parse_args()
