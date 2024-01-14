@@ -10,10 +10,10 @@
 
 class_name="foam"
 start_epoch=0
-port_number=50322
+port_number=50333
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/check_res_64_up_down_res_16_up_down_text_3_no_background_loss_recode"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/check_res_64_up_down_res_16_up_text_3_no_background_loss_recode"
 network_weights="${output_dir}/models"
 
 
