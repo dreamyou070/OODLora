@@ -18,7 +18,7 @@ def main(args):
     np_img = np.array(Image.open(trg_img_dir))
     #h, w, c = np_img.shape
     h, w = np_img.shape
-    h_min, h_max = 0, int(h * 14/30)
+    h_min, h_max = 0, int(h * 13/30)
     w_min, w_max = 0, int(w * 1/5)
     for h_ in range(h_min, h_max, 1):
         for w_ in range(w_min, w_max, 1):
