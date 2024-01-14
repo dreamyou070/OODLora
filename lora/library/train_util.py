@@ -1071,7 +1071,8 @@ class BaseDataset(torch.utils.data.Dataset):
             anormal_mask_16 = torch.where(anormal_mask_16 > p, 1, 0).float()
             anormal_mask_8 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((8, 8), Image.BICUBIC))
             anormal_mask_8 = torch.where(anormal_mask_8 > p, 1, 0).float()
-            anormal_mask_dict = {64 : anormal_mask_64,32 : anormal_mask_32,16 : anormal_mask_16,8 : anormal_mask_8}
+            anormal_mask_dict = {64 : anormal_mask_64,
+                                 32 : anormal_mask_32,16 : anormal_mask_16,8 : anormal_mask_8}
             anormal_masks.append(anormal_mask_dict)
 
             pixel_mask_64 = transforms.ToTensor()(Image.open(pixel_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
