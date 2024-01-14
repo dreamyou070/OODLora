@@ -1,9 +1,9 @@
 import os
 
-base_folder = r'../result/MVTec3D-AD_experiment/foam/lora_training/anormal'
+base_folder = r'../result/MVTec3D-AD_experiment/carrot/lora_training/anormal'
 folders = os.listdir(base_folder)
 for folder in folders:
-    if folder == 'res_64_up_res_16_up_down_text_3_backgroundloss_anormal' :
+    if folder == 'res_64_up_down_32_up_down_text_len_3_more_cut_no_background_loss' or folder == 'res_64_up_down_32_up_down_text_len_3_more_cut_with_background_loss':
         folder_dir = os.path.join(base_folder, folder)
         files = os.listdir(folder_dir)
         for file in files :
