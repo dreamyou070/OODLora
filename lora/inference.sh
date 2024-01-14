@@ -10,7 +10,7 @@
 
 class_name="carrot"
 start_epoch=0
-port_number=50022
+port_number=50023
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/res_64_up_down_32_up_down_text_len_2_more_cut_with_background_loss"
 network_weights="${output_dir}/models"
@@ -25,5 +25,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --trg_position "['up','down']" \
   --concept_image_folder "${concept_image_folder}" \
   --network_weights "${network_weights}" \
-  --truncate_length 2 \
+  --truncate_length 3 \
   --start_epoch ${start_epoch}
