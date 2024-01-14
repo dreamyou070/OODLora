@@ -226,10 +226,13 @@ def main(args) :
                 test_images = os.listdir(image_folder)
 
                 for j, test_image in enumerate(test_images):
+
                     name, ext = os.path.splitext(test_image)
                     trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
+
                     os.makedirs(trg_img_output_dir, exist_ok=True)
                     test_img_dir = os.path.join(image_folder, test_image)
+                    print(f'test_img_dir : {test_img_dir}')
                     Image.open(test_img_dir).convert('RGB').resize((512,512)).save(os.path.join(trg_img_output_dir,f'{name}_org{ext}'))
 
                     mask_img_dir = os.path.join(mask_folder, test_image)
