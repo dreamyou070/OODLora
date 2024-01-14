@@ -4,10 +4,11 @@ class_name="carrot"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_down_32_up_down_text_len_77_more_cut_no_background_loss"
+save_folder="res_64_up_down_32_up_down_text_len_3_more_cut_with_background_loss"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-port_number=50521
-start_epoch=0
+network_weights="${output_dir}/models/epoch-000015.safetensors"
+port_number=50522
+start_epoch=15
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port $port_number train.py \
   --process_title parksooyeon \
@@ -28,4 +29,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --trg_position "['up','down']" \
   --trg_part '["attn_2","attn_1","attn_0"]' \
   --anormal_sample_normal_loss \
-  --truncate_pad --truncate_length 77 --cls_training
+  --truncate_pad --truncate_length 3 --cls_training --background_loss
