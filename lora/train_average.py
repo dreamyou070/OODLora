@@ -47,7 +47,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None :
-                trg_map = attention_probs[:, :, 1]
+
+                if args.cls_training :
+                    trg_map = attention_probs[:, :, :2]
+                else :
+                    trg_map = attention_probs[:, :, 1]
                 controller.store(trg_map, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -653,18 +657,27 @@ class NetworkTrainer:
                     attention_storer.reset()
                     if args.use_attn_loss:
                         attn_loss = 0
+                        average_mask_dict = {}
                         for i, layer_name in enumerate(attn_dict.keys()):
-                            score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
+                            if args.cls_training :
+                                map = attn_dict[layer_name][0].squeeze()  # 8, res*res
+                                cls_map, score_map = torch.chunk(map, 2, dim=-1)
+                                cls_map = cls_map.squeeze()
+                                score_map = score_map.squeeze()
+                            else :
+                                score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
+
                             res = int(score_map.shape[1] ** 0.5)
                             do_mask_loss = False
-                            if res in args.cross_map_res:
 
+                            if res in args.cross_map_res:
                                 if 'down' in layer_name:
                                     position = 'down'
                                 elif 'up' in layer_name:
                                     position = 'up'
                                 elif 'mid' in layer_name:
                                     position = 'mid'
+                                key_name = f'{position}_{res}'
 
                                 if 'attentions_0' in layer_name:
                                     part = 'attn_0'
@@ -686,44 +699,170 @@ class NetworkTrainer:
                                     if position in args.trg_position:
                                         do_mask_loss = True
 
-                                if do_mask_loss and part in args.trg_part :
+                                if do_mask_loss :
+                                    if args.average_mask :
+                                        if key_name not in average_mask_dict.keys():
+                                            average_mask_dict[key_name] = []
+                                        else :
+                                            average_mask_dict[key_name].append(map)
+                                    else :
+                                        if part in args.trg_part :
 
-                                    img_masks = batch["img_masks"][0][res].unsqueeze(0)         # [1,1,res,res], foreground = 1
-                                    img_mask = img_masks.squeeze()                              # res,res
-                                    img_mask = torch.stack([img_mask.flatten() for i in range(8)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
+                                            img_masks = batch["img_masks"][0][res].unsqueeze(0)         # [1,1,res,res], foreground = 1
+                                            img_mask = img_masks.squeeze()                              # res,res
+                                            img_mask = torch.stack([img_mask.flatten() for i in range(8)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
 
+                                            anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                            mask = anormal_mask.squeeze()  # res,res
+                                            anormal_mask = torch.stack([mask.flatten() for i in range(8)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                    anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                    mask = anormal_mask.squeeze()  # res,res
-                                    mask = torch.stack([mask.flatten() for i in range(8)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
-                                    activation = (score_map * mask).sum(dim=-1)
+                                            back_position = torch.where((img_mask == 0) & (anormal_mask == 0), 1, 0)
+                                            if batch['train_class_list'][0] == 1:
+                                                normal_position = torch.where((anormal_mask == 1) , 1, 0)
+                                            else :
+                                                anormal_position = torch.where((anormal_mask == 1), 1, 0)
+                                                normal_position = torch.where((back_position == 0) & (anormal_position == 0), 1, 0)
+                                                anormal_trigger_activation = (score_map * anormal_position).sum(
+                                                    dim=-1)  # anormal sample -> anormal position
+                                                if args.cls_training :
+                                                    anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1) # anormal sample -> anormal position
+                                            normal_trigger_activation = (score_map * normal_position).sum(dim=-1) # normal sample -> normal position
+                                            if args.cls_training:
+                                                normal_cls_activation = (cls_map * normal_position).sum(dim=-1) # normal sample -> normal position
+                                            back_trigger_activation = (score_map * back_position).sum(dim=-1) # normal sample -> normal position
+                                            if args.cls_training:
+                                                back_cls_activation = (cls_map * back_position).sum(dim=-1) # normal sample -> normal position
 
-                                    # total_score = (score_map).sum(dim=-1)
-                                    total_score = torch.ones_like(activation)
+                                            total_score = torch.ones_like(normal_trigger_activation)
 
-                                    if batch['train_class_list'][0] == 1 : # normal data
-                                        activation_loss = (1 - (activation / total_score)) ** 2  # 8, res*res
+                                            if batch['train_class_list'][0] == 1 : # normal data
+                                                trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                                activation_loss = args.normal_weight * trigger_activation_loss
+                                                if args.background_loss :
+                                                    back_loss = (back_trigger_activation / total_score) ** 2
+                                                    activation_loss += back_loss
+                                                if args.cls_training :
+                                                    cls_activation_loss = (normal_cls_activation/total_score) ** 2
+                                                    activation_loss += args.normal_weight * cls_activation_loss
+                                                    if args.background_loss :
+                                                        back_cls_activation_loss = (1-(back_cls_activation / total_score)) ** 2
+                                                        activation_loss += back_cls_activation_loss
 
-                                    else: # anormal data
+                                            else: # anormal data
+                                                normal_activation_loss =  (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                                anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
+                                                if args.anormal_sample_normal_loss :
+                                                    activation_loss = args.anormal_weight * anormal_activation_loss + args.normal_weight * normal_activation_loss
+                                                else :
+                                                    activation_loss = args.anormal_weight * anormal_activation_loss
 
-                                        # (1) anormal position
-                                        anormal_activation_loss = (activation / total_score) ** 2  # 8, res*res
+                                                if args.background_loss :
+                                                    back_loss = (back_trigger_activation / total_score) ** 2
+                                                    activation_loss += back_loss
+                                                if args.cls_training:
+                                                    normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                                    anormal_cls_activation_loss = (1 - (
+                                                                anormal_cls_activation / total_score)) ** 2
+                                                    if args.anormal_sample_normal_loss:
+                                                        activation_loss += args.anormal_weight * anormal_cls_activation_loss + args.normal_weight * normal_cls_activation_loss
+                                                    else :
+                                                        activation_loss += args.normal_weight * normal_cls_activation_loss
+                                                    if args.background_loss:
+                                                        back_cls_activation_loss = (1 - (back_cls_activation / total_score)) ** 2
+                                                        activation_loss += back_cls_activation_loss
 
-                                        # (2) normal position
-                                        normal_mask = torch.where((img_mask - mask) == 1, 1, 0)
-                                        normal_activation = (score_map * normal_mask).sum(dim=-1)
-                                        normal_activation_loss = (1-(normal_activation/total_score)) ** 2
+                        if args.average_mask :
+                            for key_name in average_mask_dict.keys():
+                                attn_list = average_mask_dict[key_name]
+                                attn = torch.cat(attn_list, dim=0)
+                                if args.cls_training:
+                                    map = attn.squeeze()  # 8, res*res
+                                    cls_map, score_map = torch.chunk(map, 2, dim=-1)
+                                    cls_map = cls_map.squeeze()
+                                    score_map = score_map.squeeze()
+                                else:
+                                    score_map = attn.squeeze()  # 8, res*res
 
-                                        # (3) total activation loss
-                                        #activation_loss = anormal_activation_loss
-                                        activation_loss = normal_activation_loss + anormal_activation_loss
+                                img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                img_mask = img_masks.squeeze()  # res,res
+                                img_mask = torch.stack([img_mask.flatten() for i in range(8)],
+                                                       dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                    attn_loss += activation_loss
+                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
+                                    0)  # [1,1,res,res], foreground = 1
+                                mask = anormal_mask.squeeze()  # res,res
+                                anormal_mask = torch.stack([mask.flatten() for i in range(8)],
+                                                           dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
+
+                                back_position = torch.where((img_mask == 0) & (anormal_mask == 0), 1, 0)
+                                if batch['train_class_list'][0] == 1:
+                                    normal_position = torch.where((anormal_mask == 1), 1, 0)
+                                else:
+                                    anormal_position = torch.where((anormal_mask == 1), 1, 0)
+                                    normal_position = torch.where((back_position == 0) & (anormal_position == 0), 1, 0)
+                                    anormal_trigger_activation = (score_map * anormal_position).sum(
+                                        dim=-1)  # anormal sample -> anormal position
+                                    if args.cls_training:
+                                        anormal_cls_activation = (cls_map * anormal_position).sum(
+                                            dim=-1)  # anormal sample -> anormal position
+                                normal_trigger_activation = (score_map * normal_position).sum(
+                                    dim=-1)  # normal sample -> normal position
+                                if args.cls_training:
+                                    normal_cls_activation = (cls_map * normal_position).sum(
+                                        dim=-1)  # normal sample -> normal position
+                                back_trigger_activation = (score_map * back_position).sum(
+                                    dim=-1)  # normal sample -> normal position
+                                if args.cls_training:
+                                    back_cls_activation = (cls_map * back_position).sum(
+                                        dim=-1)  # normal sample -> normal position
+
+                                total_score = torch.ones_like(normal_trigger_activation)
+
+                                if batch['train_class_list'][0] == 1:  # normal data
+                                    trigger_activation_loss = (1 - (
+                                                normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                    activation_loss = args.normal_weight * trigger_activation_loss
+                                    if args.background_loss:
+                                        back_loss = (back_trigger_activation / total_score) ** 2
+                                        activation_loss += back_loss
+                                    if args.cls_training:
+                                        cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                        activation_loss += args.normal_weight * cls_activation_loss
+                                        if args.background_loss:
+                                            back_cls_activation_loss = (1 - (back_cls_activation / total_score)) ** 2
+                                            activation_loss += back_cls_activation_loss
+
+                                else:  # anormal data
+                                    normal_activation_loss = (1 - (
+                                                normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                    anormal_activation_loss = (
+                                                                          anormal_trigger_activation / total_score) ** 2  # 8, res*res
+                                    if args.anormal_sample_normal_loss:
+                                        activation_loss = args.anormal_weight * anormal_activation_loss + args.normal_weight * normal_activation_loss
+                                    else:
+                                        activation_loss = args.anormal_weight * anormal_activation_loss
+
+                                    if args.background_loss:
+                                        back_loss = (back_trigger_activation / total_score) ** 2
+                                        activation_loss += back_loss
+                                    if args.cls_training:
+                                        normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                        anormal_cls_activation_loss = (1 - (
+                                                anormal_cls_activation / total_score)) ** 2
+                                        if args.anormal_sample_normal_loss:
+                                            activation_loss += args.anormal_weight * anormal_cls_activation_loss + args.normal_weight * normal_cls_activation_loss
+                                        else:
+                                            activation_loss += args.normal_weight * normal_cls_activation_loss
+                                        if args.background_loss:
+                                            back_cls_activation_loss = (1 - (back_cls_activation / total_score)) ** 2
+                                            activation_loss += back_cls_activation_loss
+
+                        attn_loss += activation_loss
                         attn_loss = attn_loss.mean()
                         if batch['train_class_list'][0] == 1:
-                            loss = loss + args.normal_weight * attn_loss
+                            loss = loss + attn_loss
                         else:
-                            loss = args.anormal_weight * attn_loss
+                            loss = attn_loss
 
                         if is_main_process and batch['train_class_list'][0] == 1:
                             loss_dict["task_loss"] = task_loss.item()
@@ -876,7 +1015,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_attn_loss", action='store_true')
     parser.add_argument("--detail_64_up", action='store_true')
     parser.add_argument("--detail_64_down", action='store_true')
-
+    parser.add_argument("--anormal_sample_normal_loss", action='store_true')
 
     import ast
     def arg_as_list(arg):
@@ -889,7 +1028,10 @@ if __name__ == "__main__":
     parser.add_argument('--anormal_weight', type=float, default=1.0)
     parser.add_argument('--normal_weight', type=float, default=1.0)
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
-    parser.add_argument("--normal_training", action="store_true", )
+    parser.add_argument("--cls_training", action="store_true", )
+    parser.add_argument("--background_loss", action="store_true")
+    parser.add_argument("--average_mask", action="store_true",)
+
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
