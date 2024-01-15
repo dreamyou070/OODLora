@@ -775,6 +775,7 @@ class NetworkTrainer:
                             for key_name in average_mask_dict.keys():
                                 attn_list = average_mask_dict[key_name]
                                 attn = torch.cat(attn_list, dim=0) # head = 24
+                                head_num = attn.shape[0]
                                 if args.cls_training:
                                     map = attn.squeeze()  # 8, res*res
                                     cls_map, score_map = torch.chunk(map, 2, dim=-1)
@@ -785,14 +786,12 @@ class NetworkTrainer:
 
                                 img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                 img_mask = img_masks.squeeze()  # res,res
-                                img_mask = torch.stack([img_mask.flatten() for i in range(8)],
-                                                       dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
+                                img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
                                 anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
                                     0)  # [1,1,res,res], foreground = 1
                                 mask = anormal_mask.squeeze()  # res,res
-                                anormal_mask = torch.stack([mask.flatten() for i in range(8)],
-                                                           dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
+                                anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
                                 back_position = torch.where((img_mask == 0) & (anormal_mask == 0), 1, 0)
                                 if batch['train_class_list'][0] == 1:
