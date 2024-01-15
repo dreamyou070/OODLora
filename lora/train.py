@@ -716,10 +716,11 @@ class NetworkTrainer:
                                         print(f'normal equal check : {equal_check}')
                                     else :
                                         anormal_position = torch.where((anormal_mask == 1), 1, 0)
-                                        normal_position = torch.where((back_position == 0) & (anormal_position == 0), 1, 0)
+                                        normal_position = torch.where((anormal_mask == 0), 1, 0)
+                                        normal_position = torch.where((normal_position == 1) and (img_mask==1), 1, 0)
 
                                         total_position = back_position + normal_position + anormal_position
-                                        predict_total_position = torch.ones_like(total_position) 
+                                        predict_total_position = torch.ones_like(total_position)
                                         equal_check = torch.equal(total_position, predict_total_position)
                                         print(f'anormal equal check : {equal_check}')
 
