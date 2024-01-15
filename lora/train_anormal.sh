@@ -1,12 +1,12 @@
 #!bin/bash
 
 class_name="carrot"
-data_source='train_ex'
+data_source='train_normal'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 
-save_folder="res_64_up_from_normal_40_text_len_real_3_no_cls_no_back_no_anormal_normal_loss_avg_mask_new_code"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${save_folder}"
-port_number=54931
+save_folder="1_res_64_up_down_32_up_down_no_back_cls_training"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/${save_folder}"
+port_number=54930
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port $port_number train_average.py \
@@ -24,7 +24,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res [64] \
-  --detail_64_up \
-  --network_weights "../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/res_64_up_down_32_up_down/models/epoch-000040.safetensors" \
-  --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3 --average_mask
+  --cross_map_res [64,32] \
+  --trg_position "['up','down']" \
+  --cls_training \
+  --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3
