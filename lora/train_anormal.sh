@@ -4,10 +4,10 @@ class_name="carrot"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="1_3_from_30_epoch_res_64_down_32_up_cls_training_text_total"
+save_folder="1_3_from_30_epoch_res_64_down_32_up_cls_training_text_3"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_3_res_64_down_32_up_no_back_cls_training_from_1_1_42_epoch/models/epoch-000030.safetensors"
-port_number=54958
+port_number=54953
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port $port_number train_anormal.py \
@@ -28,4 +28,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --cross_map_res [64,32] --detail_64_down \
   --network_weights "$network_weights" \
   --trg_position "['up']" \
-  --trg_part '["attn_2","attn_1","attn_0"]' --cls_training
+  --trg_part '["attn_2","attn_1","attn_0"]' --cls_training --truncate_pad --pad_length 3
