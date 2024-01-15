@@ -85,6 +85,7 @@ def main(args) :
     os.makedirs(args.output_dir, exist_ok=True)
     record_output_dir = os.path.join(parent,
                                      f'inference_truncate_length_{args.truncate_length}/trg_res_check_score_record')
+    print(f'output dir : {args.output_dir}')
     print(f'base record dir : {record_output_dir}')
     os.makedirs(record_output_dir, exist_ok=True)
 
@@ -537,8 +538,6 @@ def main(args) :
             kk = 0
 
             for class_name in classes:
-
-                print(f' {class_name}')
                 kk += 1
                 if '_' in class_name:
                     trg_prompt = class_name.split('_')[-1]
