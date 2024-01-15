@@ -686,7 +686,7 @@ class NetworkTrainer:
                                     if args.detail_64_up:
                                         if 'up' in layer_name:
                                             do_mask_loss = True
-                                    elif args.detail_64_down:
+                                    if args.detail_64_down:
                                         if 'down' in layer_name:
                                             do_mask_loss = True
                                 else:
