@@ -669,7 +669,6 @@ class NetworkTrainer:
                                 score_map = map
                             res = int(score_map.shape[1] ** 0.5)
                             head_num = int(score_map.shape[0])
-                            print(f'head_num : {head_num}')
                             do_mask_loss = False
                             if res in args.cross_map_res:
                                 if 'down' in layer_name:
@@ -721,16 +720,11 @@ class NetworkTrainer:
                                             if batch['train_class_list'][0] == 1:
                                                 normal_position = torch.where((anormal_mask == 1) , 1, 0)
                                             else :
-                                                anormal_position = torch.where((anormal_mask == 1), 1, 0)
-                                                print(f'anormal_position : {anormal_position.shape}')
-                                                print(f'score_map : {score_map.shape}')
-                                                anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # anormal sample -> anormal position
+                                                anormal_position = torch.where((anormal_mask == 1), 1, 0) # head, pix_num
+                                                anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # head
                                                 total_score = torch.ones_like(anormal_trigger_activation)
-                                                print(f'total_score : {total_score.shape}')
                                                 if args.cls_training :
                                                     anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1) # anormal sample -> anormal position
-
-
 
                                             if batch['train_class_list'][0] == 1 : # normal data
                                                 trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
