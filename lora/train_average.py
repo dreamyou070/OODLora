@@ -668,6 +668,7 @@ class NetworkTrainer:
                             else :
                                 score_map = map
                             res = int(score_map.shape[1] ** 0.5)
+                            head_num = int(score_map.shape[0])
                             do_mask_loss = False
                             if res in args.cross_map_res:
                                 if 'down' in layer_name:
@@ -705,11 +706,11 @@ class NetworkTrainer:
                                         if part in args.trg_part :
                                             img_masks = batch["img_masks"][0][res].unsqueeze(0)         # [1,1,res,res], foreground = 1
                                             img_mask = img_masks.squeeze()                              # res,res
-                                            img_mask = torch.stack([img_mask.flatten() for i in range(8)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
+                                            img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
 
                                             anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                             mask = anormal_mask.squeeze()  # res,res
-                                            anormal_mask = torch.stack([mask.flatten() for i in range(8)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
+                                            anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
                                             back_position = torch.where((img_mask == 0) & (anormal_mask == 0), 1, 0)
                                             if batch['train_class_list'][0] == 1:
@@ -728,7 +729,7 @@ class NetworkTrainer:
                                             #if args.cls_training:
                                             #    back_cls_activation = (cls_map * back_position).sum(dim=-1) # normal sample -> normal position
 
-                                            total_score = torch.ones_like(mask)
+                                            total_score = torch.ones_like(anormal_mask)
 
                                             if batch['train_class_list'][0] == 1 : # normal data
                                                 trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
