@@ -4,9 +4,9 @@ class_name="foam"
 data_source='train_normal'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="1_2_res_64_up_16_up_down_no_back_cls_training"
+save_folder="1_1_res_64_up_16_up_no_back_cls_training"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-port_number=54955
+port_number=54954
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train_normal.py \
@@ -24,6 +24,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res [64,16] --detail_64_up --trg_position "['up','down']" --cls_training \
+  --cross_map_res [64,16] --detail_64_up --trg_position "['up']" --cls_training \
   --trg_part '["attn_2","attn_1","attn_0"]' \
   --truncate_pad --truncate_length 3
