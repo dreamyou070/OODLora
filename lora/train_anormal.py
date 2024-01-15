@@ -649,147 +649,134 @@ class NetworkTrainer:
                         task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
                         task_loss = task_loss * args.task_loss_weight
 
-                    # -------------------------------------------------------------------------------------------------- #
+                    # ------------------------------------- (2) attn loss ------------------------------------- #
                     attn_dict = attention_storer.step_store
                     attention_storer.reset()
-                    if args.attn_loss :
-                        attn_loss = 0
-                        average_mask_dict = {}
-                        for i, layer_name in enumerate(attn_dict.keys()):
-                            map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
-                            if args.cls_training :
+                    attn_loss = 0
+                    average_mask_dict = {}
+                    for i, layer_name in enumerate(attn_dict.keys()):
+                        map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
+                        if args.cls_training :
+                            cls_map, score_map = torch.chunk(map, 2, dim=-1)
+                            cls_map = cls_map.squeeze()
+                            score_map = score_map.squeeze()
+                        else :
+                            score_map = map
+                        res = int(score_map.shape[1] ** 0.5)
+                        head_num = int(score_map.shape[0])
+                        do_mask_loss = False
+                        if res in args.cross_map_res:
+                            if 'down' in layer_name:
+                                position = 'down'
+                            elif 'up' in layer_name:
+                                position = 'up'
+                            elif 'mid' in layer_name:
+                                position = 'mid'
+                            key_name = f'{position}_{res}'
+
+                            if 'attentions_0' in layer_name:
+                                part = 'attn_0'
+                            elif 'attentions_1' in layer_name:
+                                part = 'attn_1'
+                            else:
+                                part = 'attn_2'
+
+                            if res == 64:
+                                if args.detail_64_up:
+                                    if 'up' in layer_name:
+                                        do_mask_loss = True
+                                if args.detail_64_down:
+                                    if 'down' in layer_name:
+                                        do_mask_loss = True
+                            else:
+                                if position in args.trg_position:
+                                    do_mask_loss = True
+
+                            if do_mask_loss :
+
+                                if args.average_mask :
+                                    if key_name not in average_mask_dict.keys():
+                                        average_mask_dict[key_name] = []
+                                    average_mask_dict[key_name].append(map)
+                                else :
+                                    if part in args.trg_part :
+                                        img_masks = batch["img_masks"][0][res].unsqueeze(0)         # [1,1,res,res], foreground = 1
+                                        img_mask = img_masks.squeeze()                              # res,res
+                                        img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
+
+                                        anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                        mask = anormal_mask.squeeze()  # res,res
+                                        anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
+
+                                        if batch['train_class_list'][0] == 1:
+                                            anormal_position = torch.zeros_like(anormal_mask)
+                                        else :
+                                            anormal_position = torch.where((anormal_mask == 1), 1, 0) # head, pix_num
+                                        normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
+
+                                        anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # head
+                                        normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
+                                        total_score = torch.ones_like(anormal_trigger_activation)
+                                        if args.cls_training :
+                                            anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
+                                            normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
+                                        anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
+                                        normal_activation_loss = (1-(normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                        activation_loss = args.anormal_weight * anormal_activation_loss + args.normal_weight * normal_activation_loss
+                                        if args.cls_training:
+                                            anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
+                                            normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                            activation_loss += args.anormal_weight * anormal_cls_activation_loss + args.normal_weight * normal_cls_activation_loss
+                                        attn_loss += activation_loss
+
+                    if args.average_mask :
+
+                        for key_name in average_mask_dict.keys():
+                            attn_list = average_mask_dict[key_name]
+                            attn = torch.cat(attn_list, dim=0) # head = 24
+                            head_num = attn.shape[0]
+                            if args.cls_training:
+                                map = attn.squeeze()  # 8, res*res
                                 cls_map, score_map = torch.chunk(map, 2, dim=-1)
                                 cls_map = cls_map.squeeze()
                                 score_map = score_map.squeeze()
-                            else :
-                                score_map = map
-                            res = int(score_map.shape[1] ** 0.5)
-                            head_num = int(score_map.shape[0])
-                            do_mask_loss = False
-                            if res in args.cross_map_res:
-                                if 'down' in layer_name:
-                                    position = 'down'
-                                elif 'up' in layer_name:
-                                    position = 'up'
-                                elif 'mid' in layer_name:
-                                    position = 'mid'
-                                key_name = f'{position}_{res}'
+                            else:
+                                score_map = attn.squeeze()  # 8, res*res
 
-                                if 'attentions_0' in layer_name:
-                                    part = 'attn_0'
-                                elif 'attentions_1' in layer_name:
-                                    part = 'attn_1'
-                                else:
-                                    part = 'attn_2'
+                            img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                            img_mask = img_masks.squeeze()  # res,res
+                            img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],
+                                                   dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                if res == 64:
-                                    if args.detail_64_up:
-                                        if 'up' in layer_name:
-                                            do_mask_loss = True
-                                    if args.detail_64_down:
-                                        if 'down' in layer_name:
-                                            do_mask_loss = True
-                                else:
-                                    if position in args.trg_position:
-                                        do_mask_loss = True
+                            anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
+                                0)  # [1,1,res,res], foreground = 1
+                            mask = anormal_mask.squeeze()  # res,res
+                            anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
+                                                       dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                if do_mask_loss :
+                            if batch['train_class_list'][0] == 1:
+                                anormal_position = torch.zeros_like(anormal_mask)
+                            else:
+                                anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
+                            normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
 
-                                    if args.average_mask :
-                                        if key_name not in average_mask_dict.keys():
-                                            average_mask_dict[key_name] = []
-                                        average_mask_dict[key_name].append(map)
-                                    else :
-                                        if part in args.trg_part :
-                                            img_masks = batch["img_masks"][0][res].unsqueeze(0)         # [1,1,res,res], foreground = 1
-                                            img_mask = img_masks.squeeze()                              # res,res
-                                            img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
+                            anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # head
+                            normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
+                            total_score = torch.ones_like(anormal_trigger_activation)
+                            if args.cls_training:
+                                anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
+                                normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
+                            anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
+                            normal_activation_loss = (1 - (
+                                        normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                            activation_loss = args.anormal_weight * anormal_activation_loss + args.normal_weight * normal_activation_loss
+                            if args.cls_training:
+                                anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
+                                normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                activation_loss += args.anormal_weight * anormal_cls_activation_loss + args.normal_weight * normal_cls_activation_loss
+                            attn_loss += activation_loss
+                    attn_loss = attn_loss.mean()
 
-                                            anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                            mask = anormal_mask.squeeze()  # res,res
-                                            anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
-
-                                            if batch['train_class_list'][0] == 1:
-                                                normal_position = torch.where((anormal_mask == 1) , 1, 0)
-                                                normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
-                                                total_score = torch.ones_like(normal_trigger_activation)
-                                                if args.cls_training :
-                                                    normal_cls_activation = (cls_map * normal_position).sum(dim=-1) # anormal sample -> anormal position
-                                            else :
-                                                anormal_position = torch.where((anormal_mask == 1), 1, 0) # head, pix_num
-                                                anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # head
-                                                total_score = torch.ones_like(anormal_trigger_activation)
-                                                if args.cls_training :
-                                                    anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1) # anormal sample -> anormal position
-
-                                            if batch['train_class_list'][0] == 1 : # normal data
-                                                trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                                activation_loss = args.normal_weight * trigger_activation_loss
-                                                if args.cls_training :
-                                                    cls_activation_loss = (normal_cls_activation/total_score) ** 2
-                                                    activation_loss += args.normal_weight * cls_activation_loss
-                                            else:
-                                                anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                                                activation_loss = args.anormal_weight * anormal_activation_loss
-                                                if args.cls_training:
-                                                    anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                                    activation_loss += args.anormal_weight * anormal_cls_activation_loss
-                                            attn_loss += activation_loss
-
-                        if args.average_mask :
-
-                            for key_name in average_mask_dict.keys():
-                                attn_list = average_mask_dict[key_name]
-                                attn = torch.cat(attn_list, dim=0) # head = 24
-                                head_num = attn.shape[0]
-                                if args.cls_training:
-                                    map = attn.squeeze()  # 8, res*res
-                                    cls_map, score_map = torch.chunk(map, 2, dim=-1)
-                                    cls_map = cls_map.squeeze()
-                                    score_map = score_map.squeeze()
-                                else:
-                                    score_map = attn.squeeze()  # 8, res*res
-
-                                img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                img_mask = img_masks.squeeze()  # res,res
-                                img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
-
-                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                mask = anormal_mask.squeeze()  # res,res
-                                anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
-
-
-                                if batch['train_class_list'][0] == 1:
-                                    normal_position = torch.where((anormal_mask == 1), 1, 0)
-                                    normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
-                                    total_score = torch.ones_like(normal_trigger_activation)
-                                    if args.cls_training:
-                                        normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
-                                else:
-                                    anormal_position = torch.where((anormal_mask == 1), 1, 0)
-                                    anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # anormal sample -> anormal position
-                                    total_score = torch.ones_like(anormal_trigger_activation)
-                                    if args.cls_training:
-                                        anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)  # anormal sample -> anormal position
-
-                                if batch['train_class_list'][0] == 1:  # normal data
-                                    trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                    activation_loss = args.normal_weight * trigger_activation_loss
-                                    if args.cls_training:
-                                        cls_activation_loss = (normal_cls_activation / total_score) ** 2
-                                        activation_loss += args.normal_weight * cls_activation_loss
-                                else:
-                                    anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                                    activation_loss = args.anormal_weight * anormal_activation_loss
-                                    if args.cls_training:
-                                        anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                        activation_loss += args.anormal_weight * anormal_cls_activation_loss
-                                attn_loss += activation_loss
-
-
-
-
-                        attn_loss = attn_loss.mean()
                     # ------------------------------------------------------------------------------------------------- #
                     if batch['train_class_list'][0] == 1:
                         loss = task_loss
