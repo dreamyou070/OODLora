@@ -802,6 +802,8 @@ class NetworkTrainer:
                     # ------------------------------------------------------------------------------------------------- #
                     if is_main_process and batch['train_class_list'][0] == 1:
                         loss_dict["loss/task_loss"] = task_loss.item()
+                        if args.attn_loss :
+                            loss_dict["loss/attn_loss"] = attn_loss.item()
                     elif is_main_process and batch['train_class_list'][0] == 0:
                         loss_dict["loss/anormal_loss"] = attn_loss.item()
                     accelerator.backward(loss)
