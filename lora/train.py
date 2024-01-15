@@ -711,7 +711,7 @@ class NetworkTrainer:
                                     if batch['train_class_list'][0] == 1:
                                         normal_position = torch.where(img_mask == 1, 1, 0)
                                         total_position = back_position + normal_position
-                                        predict_total_position = torch.ones_like(total_position) * 2
+                                        predict_total_position = torch.ones_like(total_position)
                                         equal_check = torch.equal(total_position, predict_total_position)
                                         print(f'normal equal check : {equal_check}')
                                     else :
@@ -719,7 +719,7 @@ class NetworkTrainer:
                                         normal_position = torch.where((back_position == 0) & (anormal_position == 0), 1, 0)
 
                                         total_position = back_position + normal_position + anormal_position
-                                        predict_total_position = torch.ones_like(total_position) * 2
+                                        predict_total_position = torch.ones_like(total_position) 
                                         equal_check = torch.equal(total_position, predict_total_position)
                                         print(f'anormal equal check : {equal_check}')
 
