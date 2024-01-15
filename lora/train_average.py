@@ -776,7 +776,6 @@ class NetworkTrainer:
                                 attn_list = average_mask_dict[key_name]
                                 attn = torch.cat(attn_list, dim=0) # head = 24
                                 head_num = attn.shape[0]
-                                print(f'head_num : {head_num}')
                                 if args.cls_training:
                                     map = attn.squeeze()  # 8, res*res
                                     cls_map, score_map = torch.chunk(map, 2, dim=-1)
