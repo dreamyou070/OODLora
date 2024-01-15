@@ -13,7 +13,7 @@ start_epoch=0
 port_number=50401
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_2_res_64_up_16_up_down_no_back_cls_training"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_3_res_64_up_16_down_no_back_cls_training"
 network_weights="${output_dir}/models"
 
 
@@ -23,7 +23,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 \
   --prompt 'good' --sample_sampler ddim --resolution '512,512' --seed 42 \
-  --cross_map_res [64,32] \
+  --cross_map_res [64] \
   --trg_position "['up']" \
   --concept_image_folder "${concept_image_folder}" \
   --network_weights "${network_weights}" \
