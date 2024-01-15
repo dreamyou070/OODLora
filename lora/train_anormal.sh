@@ -8,7 +8,7 @@ save_folder="1_1_res_64_up_16_up_cls_training_from_37_epoch"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_1_res_64_up_16_up_no_back_cls_training/models/epoch-000042.safetensors"
 port_number=54946
-start_epoch=42
+start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port $port_number train_anormal.py \
   --process_title parksooyeon \
