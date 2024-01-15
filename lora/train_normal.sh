@@ -4,11 +4,10 @@ class_name="carrot"
 data_source='train_normal'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="1_res_64_up_down_32_up_down_no_back_cls_training"
+save_folder="1_2_res_64_up_down_32_up_down_no_back_cls_training_normal_code"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="${output_dir}/models/epoch-000042.safetensors"
 port_number=54942
-start_epoch=42
+start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port $port_number train_normal.py \
   --process_title parksooyeon \
