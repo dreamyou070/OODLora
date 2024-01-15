@@ -27,5 +27,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --cross_map_res [64] \
   --detail_64_down \
   --network_weights "../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/res_64_up_down_32_up_down/models/epoch-000040.safetensors" \
-  --trg_part '["attn_2","attn_1","attn_0"]' \
-  --truncate_pad --truncate_length 3
+  --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3
