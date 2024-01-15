@@ -9,7 +9,7 @@
 # conda activate venv_lora
 
 class_name="carrot"
-start_epoch=8
+start_epoch=0
 port_number=50314
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
@@ -24,7 +24,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_dim 64 --network_alpha 4 \
   --prompt 'good' --sample_sampler ddim --resolution '512,512' --seed 42 \
   --cross_map_res [64] \
-  --trg_position "['up']" \
+  --trg_position "['down']" \
   --concept_image_folder "${concept_image_folder}" \
   --network_weights "${network_weights}" \
   --truncate_length 2 \
