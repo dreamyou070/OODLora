@@ -23,7 +23,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 \
   --prompt 'good' --sample_sampler ddim --resolution '512,512' --seed 42 \
-  --cross_map_res [64] \
+  --cross_map_res [64,32] \
   --trg_position "['up','down']" \
   --concept_image_folder "${concept_image_folder}" \
   --network_weights "${network_weights}" \
