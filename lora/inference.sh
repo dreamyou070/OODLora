@@ -8,12 +8,12 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-class_name="carrot"
+class_name="foam"
 start_epoch=0
-port_number=50303
+port_number=50400
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_3_res_64_down_32_up_no_back_cls_training"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_1_res_64_up_16_up_no_back_cls_training"
 network_weights="${output_dir}/models"
 
 
