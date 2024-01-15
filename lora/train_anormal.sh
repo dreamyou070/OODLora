@@ -1,9 +1,9 @@
 #!bin/bash
 
 class_name="cookie"
-data_source='train_normal'
+data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
-normal_folder='normal'
+normal_folder='anormal'
 save_folder="1_res_64_up_16_up_no_back_cls_training"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 port_number=54941
