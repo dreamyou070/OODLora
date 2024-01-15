@@ -659,13 +659,13 @@ class NetworkTrainer:
                         attn_loss = 0
                         average_mask_dict = {}
                         for i, layer_name in enumerate(attn_dict.keys()):
+                            map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                             if args.cls_training :
-                                map = attn_dict[layer_name][0].squeeze()  # 8, res*res
                                 cls_map, score_map = torch.chunk(map, 2, dim=-1)
                                 cls_map = cls_map.squeeze()
                                 score_map = score_map.squeeze()
                             else :
-                                score_map = attn_dict[layer_name][0].squeeze()  # 8, res*res
+                                score_map = map
 
                             res = int(score_map.shape[1] ** 0.5)
                             do_mask_loss = False
@@ -703,8 +703,7 @@ class NetworkTrainer:
                                     if args.average_mask :
                                         if key_name not in average_mask_dict.keys():
                                             average_mask_dict[key_name] = []
-                                        else :
-                                            average_mask_dict[key_name].append(map)
+                                        average_mask_dict[key_name].append(map)
                                     else :
                                         if part in args.trg_part :
 
