@@ -8,12 +8,12 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-class_name="cookie"
-start_epoch=4
+class_name="carrot"
+start_epoch=25
 port_number=50333
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/1_1_res_64_up_16_up_cls_training_from_37_epoch"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_3_res_64_down_32_up_no_back_cls_training_from_1_1_42_epoch"
 network_weights="${output_dir}/models"
 
 
@@ -23,8 +23,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 \
   --prompt 'good' --sample_sampler ddim --resolution '512,512' --seed 42 \
-  --cross_map_res [64,16] \
-  --trg_position "['up']" \
+  --cross_map_res [64,32] \
+  --trg_position "['down']" \
   --concept_image_folder "${concept_image_folder}" \
   --network_weights "${network_weights}" \
   --truncate_length 2 \
