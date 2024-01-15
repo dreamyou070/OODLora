@@ -793,18 +793,17 @@ class NetworkTrainer:
                                 mask = anormal_mask.squeeze()  # res,res
                                 anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                back_position = torch.where((img_mask == 0) & (anormal_mask == 0), 1, 0)
+                                back_position = torch.where(img_mask == 0, 1, 0)
                                 if batch['train_class_list'][0] == 1:
                                     normal_position = torch.where(img_mask == 1, 1, 0)
                                     total_position = back_position + normal_position
                                     predict_total_position = torch.ones_like(total_position)
                                     equal_check = torch.equal(total_position, predict_total_position)
-                                    print(f'normal equal check : {equal_check}')
                                 else:
                                     anormal_position = torch.where((anormal_mask == 1), 1, 0)
-                                    normal_position = torch.where((anormal_mask == 0), 1, 0)
-                                    normal_position = torch.where((normal_position == 1) & (img_mask == 1), 1, 0)
-
+                                    non_normal_position = back_position + anormal_position
+                                    total_position = torch.ones_like(anormal_position)
+                                    normal_position = total_position - non_normal_position
 
                                     anormal_trigger_activation = (score_map * anormal_position).sum(
                                         dim=-1)  # anormal sample -> anormal position

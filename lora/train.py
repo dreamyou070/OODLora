@@ -716,7 +716,7 @@ class NetworkTrainer:
                                     else :
                                         anormal_position = torch.where((anormal_mask == 1), 1, 0)
                                         non_normal_position = back_position + anormal_position
-                                        total_position = torch.ones_like(total_position)
+                                        total_position = torch.ones_like(anormal_position)
                                         normal_position = total_position - non_normal_position
                                         predict_total_position = back_position + normal_position + anormal_position
                                         equal_check = torch.equal(total_position, predict_total_position)
