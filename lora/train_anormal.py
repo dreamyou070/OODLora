@@ -618,12 +618,8 @@ class NetworkTrainer:
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
                     with torch.set_grad_enabled(train_text_encoder):
-                        text_encoder_conds = self.get_text_cond(args,
-                                                                accelerator,
-                                                                batch,
-                                                                tokenizers,
-                                                                text_encoders,
-                                                                weight_dtype)
+                        text_encoder_conds = self.get_text_cond(args,accelerator,batch,tokenizers,
+                                                                text_encoders,weight_dtype)
                         if args.truncate_pad:
                             text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
 
@@ -651,12 +647,12 @@ class NetworkTrainer:
                         loss_weights = batch["loss_weights"]  # 各sampleごとのweight
                         loss = loss * loss_weights
                         task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-                        loss = task_loss * args.task_loss_weight
+                        task_loss = task_loss * args.task_loss_weight
 
-
+                    # -------------------------------------------------------------------------------------------------- #
                     attn_dict = attention_storer.step_store
                     attention_storer.reset()
-                    if batch['train_class_list'][0] == 0:
+                    if args.attn_loss :
                         attn_loss = 0
                         average_mask_dict = {}
                         for i, layer_name in enumerate(attn_dict.keys()):
@@ -700,13 +696,13 @@ class NetworkTrainer:
                                         do_mask_loss = True
 
                                 if do_mask_loss :
+
                                     if args.average_mask :
                                         if key_name not in average_mask_dict.keys():
                                             average_mask_dict[key_name] = []
                                         average_mask_dict[key_name].append(map)
                                     else :
                                         if part in args.trg_part :
-
                                             img_masks = batch["img_masks"][0][res].unsqueeze(0)         # [1,1,res,res], foreground = 1
                                             img_mask = img_masks.squeeze()                              # res,res
                                             img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
@@ -715,10 +711,12 @@ class NetworkTrainer:
                                             mask = anormal_mask.squeeze()  # res,res
                                             anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                            back_position = torch.where((img_mask == 0) & (anormal_mask == 0), 1, 0)
-
                                             if batch['train_class_list'][0] == 1:
                                                 normal_position = torch.where((anormal_mask == 1) , 1, 0)
+                                                normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
+                                                total_score = torch.ones_like(normal_trigger_activation)
+                                                if args.cls_training :
+                                                    normal_cls_activation = (cls_map * normal_position).sum(dim=-1) # anormal sample -> anormal position
                                             else :
                                                 anormal_position = torch.where((anormal_mask == 1), 1, 0) # head, pix_num
                                                 anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # head
@@ -729,40 +727,19 @@ class NetworkTrainer:
                                             if batch['train_class_list'][0] == 1 : # normal data
                                                 trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                                 activation_loss = args.normal_weight * trigger_activation_loss
-                                                if args.background_loss :
-                                                    back_loss = (back_trigger_activation / total_score) ** 2
-                                                    activation_loss += back_loss
                                                 if args.cls_training :
                                                     cls_activation_loss = (normal_cls_activation/total_score) ** 2
                                                     activation_loss += args.normal_weight * cls_activation_loss
-                                                    if args.background_loss :
-                                                        back_cls_activation_loss = (1-(back_cls_activation / total_score)) ** 2
-                                                        activation_loss += back_cls_activation_loss
-
-                                            else: # anormal data
-                                                #normal_activation_loss =  (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                            else:
                                                 anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                                                #if args.anormal_sample_normal_loss :
-                                                #    activation_loss = args.anormal_weight * anormal_activation_loss + args.normal_weight * normal_activation_loss
-                                                #else :
-                                                #    activation_loss = args.anormal_weight * anormal_activation_loss
                                                 activation_loss = args.anormal_weight * anormal_activation_loss
-                                                #if args.background_loss :
-                                                #    back_loss = (back_trigger_activation / total_score) ** 2
-                                                #    activation_loss += back_loss
                                                 if args.cls_training:
-                                                    #normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
                                                     anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                                    #if args.anormal_sample_normal_loss:
-                                                    #    activation_loss += args.anormal_weight * anormal_cls_activation_loss + args.normal_weight * normal_cls_activation_loss
-                                                    #else :
-                                                    #    activation_loss += args.normal_weight * normal_cls_activation_loss
                                                     activation_loss += args.anormal_weight * anormal_cls_activation_loss
-                                                    #if args.background_loss:
-                                                    #    back_cls_activation_loss = (1 - (back_cls_activation / total_score)) ** 2
-                                                    #    activation_loss += back_cls_activation_loss
+                                            attn_loss += activation_loss
 
                         if args.average_mask :
+
                             for key_name in average_mask_dict.keys():
                                 attn_list = average_mask_dict[key_name]
                                 attn = torch.cat(attn_list, dim=0) # head = 24
@@ -779,63 +756,48 @@ class NetworkTrainer:
                                 img_mask = img_masks.squeeze()  # res,res
                                 img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
-                                    0)  # [1,1,res,res], foreground = 1
+                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                 mask = anormal_mask.squeeze()  # res,res
                                 anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
 
-                                back_position = torch.where((img_mask == 0) & (anormal_mask == 0), 1, 0)
                                 if batch['train_class_list'][0] == 1:
                                     normal_position = torch.where((anormal_mask == 1), 1, 0)
+                                    normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
+                                    total_score = torch.ones_like(normal_trigger_activation)
+                                    if args.cls_training:
+                                        normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
                                 else:
                                     anormal_position = torch.where((anormal_mask == 1), 1, 0)
-                                    # normal_position = torch.where((back_position == 0) & (anormal_position == 0), 1, 0)
                                     anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # anormal sample -> anormal position
                                     total_score = torch.ones_like(anormal_trigger_activation)
                                     if args.cls_training:
                                         anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)  # anormal sample -> anormal position
 
                                 if batch['train_class_list'][0] == 1:  # normal data
-                                    trigger_activation_loss = (1 - (
-                                                normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                    trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                     activation_loss = args.normal_weight * trigger_activation_loss
-                                    if args.background_loss:
-                                        back_loss = (back_trigger_activation / total_score) ** 2
-                                        activation_loss += back_loss
                                     if args.cls_training:
                                         cls_activation_loss = (normal_cls_activation / total_score) ** 2
                                         activation_loss += args.normal_weight * cls_activation_loss
-                                        if args.background_loss:
-                                            back_cls_activation_loss = (1 - (back_cls_activation / total_score)) ** 2
-                                            activation_loss += back_cls_activation_loss
-
-                                else:  # anormal data
-                                    # normal_activation_loss =  (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                    anormal_activation_loss = (
-                                                                          anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                                    # if args.anormal_sample_normal_loss :
-                                    #    activation_loss = args.anormal_weight * anormal_activation_loss + args.normal_weight * normal_activation_loss
-                                    # else :
-                                    #    activation_loss = args.anormal_weight * anormal_activation_loss
+                                else:
+                                    anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
                                     activation_loss = args.anormal_weight * anormal_activation_loss
-                                    # if args.background_loss :
-                                    #    back_loss = (back_trigger_activation / total_score) ** 2
-                                    #    activation_loss += back_loss
                                     if args.cls_training:
-                                        # normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
                                         anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                        # if args.anormal_sample_normal_loss:
-                                        #    activation_loss += args.anormal_weight * anormal_cls_activation_loss + args.normal_weight * normal_cls_activation_loss
-                                        # else :
-                                        #    activation_loss += args.normal_weight * normal_cls_activation_loss
                                         activation_loss += args.anormal_weight * anormal_cls_activation_loss
-                                        # if args.background_loss:
-                                        #    back_cls_activation_loss = (1 - (back_cls_activation / total_score)) ** 2
-                                        #    activation_loss += back_cls_activation_loss
+                                attn_loss += activation_loss
 
-                        attn_loss += activation_loss
+
+
+
                         attn_loss = attn_loss.mean()
+                    # ------------------------------------------------------------------------------------------------- #
+                    if batch['train_class_list'][0] == 1:
+                        loss = task_loss
+                        if args.attn_loss :
+                            loss += attn_loss
+                    else :
                         loss = attn_loss
                     # ------------------------------------------------------------------------------------------------- #
                     if is_main_process and batch['train_class_list'][0] == 1:
@@ -1003,7 +965,7 @@ if __name__ == "__main__":
     parser.add_argument("--cls_training", action="store_true", )
     parser.add_argument("--background_loss", action="store_true")
     parser.add_argument("--average_mask", action="store_true",)
-
+    parser.add_argument("--attn_loss", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
