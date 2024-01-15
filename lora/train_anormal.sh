@@ -6,7 +6,7 @@ train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${dat
 normal_folder='normal'
 save_folder="1_1_res_64_up_down_32_up_down_no_back_cls_training"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="${output_dir}/models/epoch_000042.pt"
+network_weights="${output_dir}/models/epoch-000042.safetensors"
 port_number=54946
 start_epoch=42
 
