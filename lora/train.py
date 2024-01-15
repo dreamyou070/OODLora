@@ -48,14 +48,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_probs.to(value.dtype)
             if is_cross_attention and trg_indexs_list is not None :
 
-
                 if args.cls_training :
                     trg_map = attention_probs[:, :, :2]
                 else :
                     trg_map = attention_probs[:, :, 1]
                 controller.store(trg_map, layer_name)
-                #
-                #controller.store(cls_trigger_map, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
