@@ -624,7 +624,6 @@ def main(args) :
                                 # [2] saving c_score map
                                 c_score_np = np.array((c_score.cpu()) * 255).astype(np.uint8)
                                 c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
-                                print(f'cls saving')
                                 c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
 
                                 if args.truncate_length == 3:
@@ -641,7 +640,6 @@ def main(args) :
                                     # [2] saving p_score map
                                     p_score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
                                     p_score_img = Image.fromarray(p_score_np).resize((512, 512),Image.BILINEAR)
-                                    print(f'eos saving')
                                     p_score_img.save(os.path.join(trg_img_output_dir, f'pad_{name}_{title_name}.png'))
 
                                 normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
@@ -657,7 +655,6 @@ def main(args) :
                                 # [2] saving n_score map
                                 n_score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
                                 n_score_pil = Image.fromarray(n_score_np).resize((512, 512), Image.BILINEAR)
-                                print(f'trigger saving')
                                 n_score_pil.save(os.path.join(trg_img_output_dir,
                                                               f'{title_name}_res_{res}.png'))
                                 if 'down' in layer_name:
