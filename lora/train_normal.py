@@ -711,13 +711,13 @@ class NetworkTrainer:
                                             total_score = torch.ones_like(normal_trigger_activation)
                                             trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                             trigger_back_activation_loss = (back_trigger_activation / total_score) ** 2  # 8, res*res
-                                            activation_loss = args.normal_weight * trigger_activation_loss + args.back_weight * trigger_back_activation_loss
+                                            activation_loss = args.normal_weight * trigger_activation_loss + args.anormal_weight * trigger_back_activation_loss
                                             if args.cls_training :
                                                 normal_cls_activation = (cls_map * normal_position).sum(dim=-1) # anormal sample -> anormal position
                                                 back_cls_activation = (cls_map * back_position).sum(dim=-1) # anormal sample -> anormal position
                                                 cls_activation_loss =  (normal_cls_activation / total_score) ** 2
                                                 cls_back_activation_loss = (1 - (back_cls_activation / total_score)) ** 2
-                                                activation_loss += args.normal_weight * cls_activation_loss + args.back_weight * cls_back_activation_loss
+                                                activation_loss += args.normal_weight * cls_activation_loss + args.anormal_weight * cls_back_activation_loss
                                             attn_loss += activation_loss
                         if args.average_mask :
                             for key_name in average_mask_dict.keys():
@@ -744,7 +744,7 @@ class NetworkTrainer:
                                 trigger_activation_loss = (1 - (
                                             normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                 trigger_back_activation_loss = ( back_trigger_activation / total_score) ** 2  # 8, res*res
-                                activation_loss = args.normal_weight * trigger_activation_loss + args.back_weight * trigger_back_activation_loss
+                                activation_loss = args.normal_weight * trigger_activation_loss + args.anormal_weight * trigger_back_activation_loss
                                 if args.cls_training:
                                     normal_cls_activation = (cls_map * normal_position).sum(
                                         dim=-1)  # anormal sample -> anormal position
@@ -752,7 +752,7 @@ class NetworkTrainer:
                                         dim=-1)  # anormal sample -> anormal position
                                     cls_activation_loss = (normal_cls_activation / total_score) ** 2
                                     cls_back_activation_loss = (1 - (back_cls_activation / total_score)) ** 2
-                                    activation_loss += args.normal_weight * cls_activation_loss + args.back_weight * cls_back_activation_loss
+                                    activation_loss += args.normal_weight * cls_activation_loss + args.anormal_weight * cls_back_activation_loss
                                 attn_loss += activation_loss
 
                         attn_loss = attn_loss.mean()
