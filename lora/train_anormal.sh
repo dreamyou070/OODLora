@@ -28,4 +28,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --cross_map_res [64,32] --detail_64_up \
   --network_weights "$network_weights" \
   --trg_position "['up','down']" \
-  --trg_part '["attn_2","attn_1","attn_0"]' --cls_training --truncate_pad --pad_length 3
+  --trg_part '["attn_2","attn_1","attn_0"]' --cls_training --truncate_pad --truncate_length 3
