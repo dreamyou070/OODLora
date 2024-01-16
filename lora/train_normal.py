@@ -701,14 +701,22 @@ class NetworkTrainer:
                                         average_mask_dict[key_name].append(map)
                                     else :
                                         if part in args.trg_part :
+
                                             img_masks = batch["img_masks"][0][res].unsqueeze(0)         # [1,1,res,res], foreground = 1
                                             img_mask = img_masks.squeeze()                              # res,res
                                             img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
+
                                             normal_position = torch.where((img_mask == 1) , 1, 0)
                                             back_position = torch.where((img_mask != 1) , 1, 0)
-                                            normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
-                                            back_trigger_activation = (score_map * back_position).sum(dim=-1)  # head
+
+                                            normal_trigger_activation = (score_map * normal_position)
+                                            back_trigger_activation = (score_map * back_position)
                                             total_score = torch.ones_like(normal_trigger_activation)
+
+                                            normal_trigger_activation = normal_trigger_activation.sum(dim=-1) # 8, res*res
+                                            back_trigger_activation = back_trigger_activation.sum(dim=-1) # 8, res*res
+                                            total_score = total_score.sum(dim=-1) # 8, res*res
+
                                             trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                             activation_loss = args.normal_weight * trigger_activation_loss
                                             if args.background_loss :
@@ -736,21 +744,26 @@ class NetworkTrainer:
                                     score_map = score_map.squeeze()
                                 else:
                                     score_map = attn.squeeze()  # 8, res*res
+
                                 img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                 img_mask = img_masks.squeeze()  # res,res
                                 img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
                                 normal_position = torch.where((img_mask == 1), 1, 0)
                                 back_position = torch.where((img_mask != 1), 1, 0)
-                                normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
-                                back_trigger_activation = (score_map * back_position).sum(dim=-1)  # head
+
+                                normal_trigger_activation = (score_map * normal_position)
+                                back_trigger_activation = (score_map * back_position)
                                 total_score = torch.ones_like(normal_trigger_activation)
-                                trigger_activation_loss = (1 - (
-                                            normal_trigger_activation / total_score)) ** 2  # 8, res*res
+
+                                normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8, res*res
+                                back_trigger_activation = back_trigger_activation.sum(dim=-1)  # 8, res*res
+                                total_score = total_score.sum(dim=-1)  # 8, res*res
+
+                                trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                 activation_loss = args.normal_weight * trigger_activation_loss
                                 if args.background_loss:
-                                    trigger_back_activation_loss = (
-                                                                               back_trigger_activation / total_score) ** 2  # 8, res*res
+                                    trigger_back_activation_loss = (back_trigger_activation / total_score) ** 2  # 8, res*res
                                     activation_loss += args.anormal_weight * trigger_back_activation_loss
                                 if args.cls_training:
                                     normal_cls_activation = (cls_map * normal_position).sum(
