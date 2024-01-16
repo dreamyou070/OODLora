@@ -714,7 +714,7 @@ class NetworkTrainer:
                                             if batch['train_class_list'][0] == 1:
                                                 normal_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
                                             else :
-                                                normal_position = torch.where((img_mask == 1) & (anormal_position == 0), 1,0)
+                                                normal_position = torch.where((img_mask == 1) & (anormal_mask == 0), 1,0)
                                             anormal_position = torch.where((normal_position == 0), 1,0)
 
                                         else :
@@ -784,10 +784,9 @@ class NetworkTrainer:
                                 normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
                             elif args.anormal_with_background:
                                 if batch['train_class_list'][0] == 1:
-                                    normal_position = torch.where((img_mask == 1), 1,
-                                                                  0)  # head, pix_num
+                                    normal_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
                                 else:
-                                    normal_position = torch.where((img_mask == 1) & (anormal_position == 0), 1, 0)
+                                    normal_position = torch.where((img_mask == 1) & (anormal_mask == 0), 1, 0)
                                 anormal_position = torch.where((normal_position == 0), 1, 0)
 
                             else:
