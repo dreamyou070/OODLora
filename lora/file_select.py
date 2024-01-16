@@ -20,7 +20,7 @@ for folder in folders:
                         images = os.listdir(sub_cat_dir)
                         for img in images :
                             img_dir = os.path.join(sub_cat_dir, img)
-                            if 'rex_16' in img :
+                            if 'res_16' in img :
                                 os.remove(img_dir)
                             else :
                                 if 'cls' in img :
