@@ -710,14 +710,22 @@ class NetworkTrainer:
                                             else :
                                                 anormal_position = torch.where((anormal_mask == 1), 1, 0) # head, pix_num
                                             normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
+                                        elif args.anormal_with_background :
+                                            if batch['train_class_list'][0] == 1:
+                                                normal_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
+                                            else :
+                                                normal_position = torch.where((img_mask == 1) & (anormal_position == 0), 1,0)
+                                            anormal_position = torch.where((normal_position == 0), 1,0)
+
                                         else :
                                             if batch['train_class_list'][0] == 1:
                                                 normal_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
                                                 anormal_position = torch.zeros_like(normal_position)  # background also anormal
                                             else :
-                                                anormal_position = torch.where((anormal_mask == 1), 1,0)  # head, pix_num
-                                                object_position = torch.where((img_mask == 1), 1,0)  # head, pix_num
-                                                normal_position = torch.where((object_position == 1)&(anormal_position==0), 1,0)  # head, pix_num
+                                                normal_position = torch.where((img_mask == 1) & (anormal_position == 0),1, 0)
+                                                anormal_position = torch.where((anormal_mask == 1), 1,0)
+                                            total_position = torch.ones_like(normal_position)
+                                            back_position = total_position - normal_position - anormal_position
 
                                         anormal_trigger_activation = (score_map * anormal_position)
                                         normal_trigger_activation = (score_map * normal_position)
@@ -774,15 +782,23 @@ class NetworkTrainer:
                                 else:
                                     anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
                                 normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
+                            elif args.anormal_with_background:
+                                if batch['train_class_list'][0] == 1:
+                                    normal_position = torch.where((img_mask == 1), 1,
+                                                                  0)  # head, pix_num
+                                else:
+                                    normal_position = torch.where((img_mask == 1) & (anormal_position == 0), 1, 0)
+                                anormal_position = torch.where((normal_position == 0), 1, 0)
+
                             else:
                                 if batch['train_class_list'][0] == 1:
                                     normal_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
                                     anormal_position = torch.zeros_like(normal_position)  # background also anormal
                                 else:
-                                    anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-                                    object_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
-                                    normal_position = torch.where((object_position == 1) & (anormal_position == 0), 1,
-                                                                  0)  # head, pix_num
+                                    normal_position = torch.where((img_mask == 1) & (anormal_position == 0), 1, 0)
+                                    anormal_position = torch.where((anormal_mask == 1), 1, 0)
+                                total_position = torch.ones_like(normal_position)
+                                back_position = total_position - normal_position - anormal_position
 
                             anormal_trigger_activation = (score_map * anormal_position)
                             normal_trigger_activation = (score_map * normal_position)
@@ -982,6 +998,7 @@ if __name__ == "__main__":
     parser.add_argument("--average_mask", action="store_true",)
     parser.add_argument("--attn_loss", action="store_true", )
     parser.add_argument("--normal_with_background", action="store_true", )
+    parser.add_argument("--anormal_with_background", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
