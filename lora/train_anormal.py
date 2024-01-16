@@ -723,7 +723,7 @@ class NetworkTrainer:
                                                 normal_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
                                                 anormal_position = torch.zeros_like(normal_position)  # background also anormal
                                             else :
-                                                normal_position = torch.where((img_mask == 1) & (anormal_position == 0),1, 0)
+                                                normal_position = torch.where((img_mask == 1) & (anormal_mask == 0),1, 0)
                                                 anormal_position = torch.where((anormal_mask == 1), 1,0)
                                             total_position = torch.ones_like(normal_position)
                                             back_position = total_position - normal_position - anormal_position
@@ -795,7 +795,7 @@ class NetworkTrainer:
                                     normal_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
                                     anormal_position = torch.zeros_like(normal_position)  # background also anormal
                                 else:
-                                    normal_position = torch.where((img_mask == 1) & (anormal_position == 0), 1, 0)
+                                    normal_position = torch.where((img_mask == 1) & (anormal_mask == 0), 1, 0)
                                     anormal_position = torch.where((anormal_mask == 1), 1, 0)
                                 total_position = torch.ones_like(normal_position)
                                 back_position = total_position - normal_position - anormal_position
