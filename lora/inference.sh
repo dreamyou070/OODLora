@@ -8,12 +8,12 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-class_name="carrot"
+class_name="cookie"
 start_epoch=0
-port_number=50515
+port_number=50516
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_4_res_64_up_16_up_cls_training"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/1_1_res_64_up_16_up_cls_training_from_42_epoch_normal_without_background"
 network_weights="${output_dir}/models"
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} inference.py \
