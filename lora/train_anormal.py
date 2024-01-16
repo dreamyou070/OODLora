@@ -754,11 +754,21 @@ class NetworkTrainer:
                             anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
                                                        dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                            if batch['train_class_list'][0] == 1:
-                                anormal_position = torch.zeros_like(anormal_mask)
-                            else:
-                                anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-                            normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
+                            if args.normal_with_background :
+                                if batch['train_class_list'][0] == 1:
+                                    anormal_position = torch.zeros_like(anormal_mask)
+                                else:
+                                    anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
+                                normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
+                            else :
+                                if batch['train_class_list'][0] == 1:
+                                    normal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
+                                    anormal_position = torch.zeros_like(anormal_mask)
+                                else:
+                                    normal_position = torch.where((img_mask == 1) & (img_mask == 0), 1,0)  # head, pix_num
+                                    anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
+
+
 
                             anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # head
                             normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
@@ -952,6 +962,7 @@ if __name__ == "__main__":
     parser.add_argument("--background_loss", action="store_true")
     parser.add_argument("--average_mask", action="store_true",)
     parser.add_argument("--attn_loss", action="store_true", )
+    parser.add_argument("--normal_with_background", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
