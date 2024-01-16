@@ -16,7 +16,6 @@ concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_4_res_64_up_16_up_cls_training"
 network_weights="${output_dir}/models"
 
-
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} inference.py \
   --process_title parksooyeon \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
