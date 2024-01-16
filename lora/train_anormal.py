@@ -601,6 +601,7 @@ class NetworkTrainer:
             loss_dict = {}
 
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
+
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
             current_epoch.value = epoch + 1
             network.on_epoch_start(text_encoder, unet)
@@ -618,16 +619,13 @@ class NetworkTrainer:
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
                     with torch.set_grad_enabled(train_text_encoder):
-                        text_encoder_conds = self.get_text_cond(args,accelerator,batch,tokenizers,
-                                                                text_encoders,weight_dtype)
+                        text_encoder_conds = self.get_text_cond(args,accelerator,batch,tokenizers, text_encoders,weight_dtype)
                         if args.truncate_pad:
                             text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
-
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
                                                                                                        latents)
                     with accelerator.autocast():
-                        # -----------------------------------------------------------------------------------------------------------------------
                         noise_pred = self.call_unet(args,
                                                     accelerator,
                                                     unet,
@@ -636,7 +634,7 @@ class NetworkTrainer:
                                                     text_encoder_conds,
                                                     batch,
                                                     weight_dtype, 1, None)
-
+                    # ------------------------------------- (1) task loss ------------------------------------- #
                     if batch['train_class_list'][0] == 1:
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
@@ -673,14 +671,12 @@ class NetworkTrainer:
                             elif 'mid' in layer_name:
                                 position = 'mid'
                             key_name = f'{position}_{res}'
-
                             if 'attentions_0' in layer_name:
                                 part = 'attn_0'
                             elif 'attentions_1' in layer_name:
                                 part = 'attn_1'
                             else:
                                 part = 'attn_2'
-
                             if res == 64:
                                 if args.detail_64_up:
                                     if 'up' in layer_name:
@@ -708,11 +704,19 @@ class NetworkTrainer:
                                         mask = anormal_mask.squeeze()  # res,res
                                         anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                        if batch['train_class_list'][0] == 1:
-                                            anormal_position = torch.zeros_like(anormal_mask)
+                                        if args.normal_with_background :
+                                            if batch['train_class_list'][0] == 1:
+                                                anormal_position = torch.zeros_like(anormal_mask)
+                                            else :
+                                                anormal_position = torch.where((anormal_mask == 1), 1, 0) # head, pix_num
+                                            normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
                                         else :
-                                            anormal_position = torch.where((anormal_mask == 1), 1, 0) # head, pix_num
-                                        normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
+                                            if batch['train_class_list'][0] == 1:
+                                                normal_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
+                                                anormal_position = torch.zeros_like(anormal_mask)
+                                            else :
+                                                normal_position = torch.where((anormal_position == 0), 1,0)  # head, pix_num
+                                                anormal_position = torch.where((anormal_mask == 1), 1, 0) # head, pix_num
 
                                         anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # head
                                         normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
@@ -745,14 +749,11 @@ class NetworkTrainer:
 
                             img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                             img_mask = img_masks.squeeze()  # res,res
-                            img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],
-                                                   dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
+                            img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                            anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
-                                0)  # [1,1,res,res], foreground = 1
+                            anormal_mask = batch["anormal_masks"][0][res].unsqueeze( 0)  # [1,1,res,res], foreground = 1
                             mask = anormal_mask.squeeze()  # res,res
-                            anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
-                                                       dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
+                            anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
                             if args.normal_with_background :
                                 if batch['train_class_list'][0] == 1:
@@ -767,9 +768,6 @@ class NetworkTrainer:
                                 else:
                                     normal_position = torch.where((img_mask == 1) & (img_mask == 0), 1,0)  # head, pix_num
                                     anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-
-
-
                             anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # head
                             normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
                             total_score = torch.ones_like(anormal_trigger_activation)
@@ -777,8 +775,7 @@ class NetworkTrainer:
                                 anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
                                 normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
                             anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                            normal_activation_loss = (1 - (
-                                        normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                            normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                             activation_loss = args.anormal_weight * anormal_activation_loss + args.normal_weight * normal_activation_loss
                             if args.cls_training:
                                 anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
@@ -864,16 +861,12 @@ class NetworkTrainer:
                     save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch + 1)
                     remove_epoch_no = train_util.get_remove_epoch_no(args, epoch + 1)
                     if remove_epoch_no is not None:
-                        remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as,
-                                                                          remove_epoch_no)
+                        remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as,remove_epoch_no)
                         remove_model(remove_ckpt_name)
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
-
-            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
-                               text_encoder, unet)
+            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
             attention_storer.reset()
-
         if is_main_process:
             network = accelerator.unwrap_model(network)
         accelerator.end_training()
