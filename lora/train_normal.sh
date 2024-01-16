@@ -6,8 +6,9 @@ train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${dat
 normal_folder='normal'
 save_folder="1_3_res_64_up_16_down_no_back_cls_training"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
+network_weights="${output_dir}/models/epoch-000045.safetensors"
 port_number=54956
-start_epoch=0
+start_epoch=45
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train_normal.py \
   --process_title parksooyeon \
@@ -26,4 +27,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --output_dir "$output_dir" \
   --cross_map_res [64,16] --detail_64_up --trg_position "['down']" --cls_training \
   --trg_part '["attn_2","attn_1","attn_0"]' \
+  --network_weights "$network_weights" \
   --truncate_pad --truncate_length 3
