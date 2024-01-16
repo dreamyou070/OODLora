@@ -3,7 +3,7 @@ import argparse
 
 def main(args) :
 
-    base_folder = r'../result/MVTec3D-AD_experiment/carrot/lora_training/normal'
+    base_folder = r'../result/MVTec3D-AD_experiment/cookie/lora_training/anormal'
     folders = os.listdir(base_folder)
 
     for folder in folders:
@@ -40,6 +40,6 @@ def main(args) :
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--trg_word', type=str, default='inference_truncate_length_2')
-    parser.add_argument('--trg_folder', type=str, default='res_64_up_down_32_up_down')
+    parser.add_argument('--trg_folder', type=str, default='1_1_res_64_up_16_up_cls_training_from_37_epoch')
     args = parser.parse_args()
     main(args)
