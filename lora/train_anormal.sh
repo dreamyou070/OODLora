@@ -8,7 +8,7 @@ save_folder="1_1_res_64_up_16_up_cls_training_cls_training_anormal_with_backgrou
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_4_res_64_up_16_up_cls_training/models/epoch-000002.safetensors"
 
-port_number=54178
+port_number=54179
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port $port_number train_anormal.py \
