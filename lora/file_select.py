@@ -7,9 +7,8 @@ for folder in folders:
         folder_dir = os.path.join(base_folder, folder)
         files = os.listdir(folder_dir)
         for file in files :
-            #if file == 'res_64_up_16_up' :
             if 'length_2' in file :
-                file_dir_ = os.path.join(folder_dir,f'{file}' )
+                file_dir_ = os.path.join(folder_dir, file)
                 f_dir = os.path.join(file_dir_,'trg_res_check_cross_attention_map')
                 f_dir_ = os.path.join(f_dir, 'test_set_rearrange')
                 cats = os.listdir(f_dir_)
