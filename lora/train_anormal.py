@@ -713,14 +713,26 @@ class NetworkTrainer:
                                         else :
                                             if batch['train_class_list'][0] == 1:
                                                 normal_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
-                                                anormal_position = torch.zeros_like(anormal_mask)
+                                                anormal_position = torch.zeros_like(normal_position)
                                             else :
                                                 normal_position = torch.where((anormal_position == 0), 1,0)  # head, pix_num
                                                 anormal_position = torch.where((anormal_mask == 1), 1, 0) # head, pix_num
 
-                                        anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)  # head
-                                        normal_trigger_activation = (score_map * normal_position).sum(dim=-1)  # head
+                                        normal_position = torch.where((img_mask == 1), 1, 0)
+                                        back_position = torch.where((img_mask != 1), 1, 0)
+
+
+                                        print(f'normal_position : {normal_position.shape}')
+
+                                        anormal_trigger_activation = (score_map * anormal_position)
+                                        normal_trigger_activation = (score_map * normal_position)
+                                        print(f'normal_trigger_activation (head, pix_num): {normal_trigger_activation.shape}')
                                         total_score = torch.ones_like(anormal_trigger_activation)
+
+                                        anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
+                                        normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8
+                                        total_score = total_score.sum(dim=-1)  # 8
+
                                         if args.cls_training :
                                             anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
                                             normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
