@@ -4,12 +4,12 @@ class_name="cookie"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="2_1_res_64_up_16_up"
+save_folder="2_2_res_64_up_16_up"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}/models/epoch-000008.safetensors"
+network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}/models/epoch-000007.safetensors"
 
-port_number=54711
-start_epoch=8
+port_number=54712
+start_epoch=7
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port $port_number train_anormal.py \
   --process_title parksooyeon \
@@ -30,4 +30,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --network_weights "$network_weights" \
   --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3 --cls_training \
   --network_weights "$network_weights" \
-  --normal_with_background
+  --anormal_with_background
