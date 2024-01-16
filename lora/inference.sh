@@ -28,3 +28,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_weights "${network_weights}" \
   --truncate_length 2 \
   --start_epoch ${start_epoch}
+  
