@@ -6,7 +6,7 @@ train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${dat
 normal_folder='normal'
 save_folder="1_4_res_64_up_16_up_cls_training"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_4_res_64_up_16_up_no_cls_training/epoch_000029.safetensors"
+network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_4_res_64_up_16_up_no_cls_training/models/epoch_000029.safetensors"
 port_number=54104
 start_epoch=0
 
