@@ -4,13 +4,13 @@ class_name="carrot"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="1_2_res_64_up_32_up_down_no_back_cls_training"
+save_folder="1_3_res_64_down_32_up_no_back_cls_training"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_2_res_64_up_32_up_down_no_back_cls_training/models/epoch-000129.safetensors"
-port_number=54129
+network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/1_3_res_64_down_32_up_no_back_cls_training/models/epoch-000110.safetensors"
+port_number=54110
 start_epoch=0
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port $port_number train_anormal.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port $port_number train_anormal.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -25,7 +25,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res [64,32] --detail_64_up \
+  --cross_map_res [64,32] --detail_64_down \
   --network_weights "$network_weights" \
-  --trg_position "['up','down']" \
+  --trg_position "['up']" \
   --trg_part '["attn_2","attn_1","attn_0"]' --cls_training --truncate_pad --truncate_length 3
