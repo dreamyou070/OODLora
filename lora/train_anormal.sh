@@ -4,11 +4,11 @@ class_name="foam"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="2_2_res_64_up_16_up"
+save_folder="2_3_res_64_up_16_up"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 #network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/normal/3_20240116_res_64_up_16_up_cls_training/models/epoch-000005.safetensors"
 
-port_number=54172
+port_number=54173
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port $port_number train_anormal.py \
@@ -28,7 +28,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --output_dir "$output_dir" \
   --cross_map_res [64,16] --detail_64_up --trg_position "['up']" \
   --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3 --cls_training \
-  --anormal_with_background
+  #--anormal_with_background
   #--network_weights "$network_weights"
 
 
