@@ -719,9 +719,11 @@ class NetworkTrainer:
 
                                             trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                             activation_loss = args.normal_weight * trigger_activation_loss
+
                                             if args.background_loss :
                                                 trigger_back_activation_loss = (back_trigger_activation / total_score) ** 2  # 8, res*res
                                                 activation_loss += args.anormal_weight * trigger_back_activation_loss
+
                                             if args.cls_training :
                                                 normal_cls_activation = (cls_map * normal_position).sum(dim=-1) # anormal sample -> anormal position
                                                 cls_activation_loss = (normal_cls_activation / total_score) ** 2

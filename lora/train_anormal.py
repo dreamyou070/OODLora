@@ -718,10 +718,6 @@ class NetworkTrainer:
                                                 normal_position = torch.where((anormal_position == 0), 1,0)  # head, pix_num
                                                 anormal_position = torch.where((anormal_mask == 1), 1, 0) # head, pix_num
 
-                                        normal_position = torch.where((img_mask == 1), 1, 0)
-                                        back_position = torch.where((img_mask != 1), 1, 0)
-
-
                                         anormal_trigger_activation = (score_map * anormal_position)
                                         normal_trigger_activation = (score_map * normal_position)
                                         total_score = torch.ones_like(anormal_trigger_activation)
@@ -777,9 +773,6 @@ class NetworkTrainer:
                                 else:
                                     normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
                                     anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-
-                            normal_position = torch.where((img_mask == 1), 1, 0)
-                            back_position = torch.where((img_mask != 1), 1, 0)
 
                             anormal_trigger_activation = (score_map * anormal_position)
                             normal_trigger_activation = (score_map * normal_position)
