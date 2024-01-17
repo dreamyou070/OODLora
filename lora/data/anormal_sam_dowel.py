@@ -48,7 +48,7 @@ def main(args):
                                 np_mask = (mask * 1)
                                 np_mask = np.where(np_mask == 1, 0, 1) * 255
                                 sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                                sam_result_pil = sam_result_pil.resize((512,512))
+                                sam_result_pil = sam_result_pil.resize((512,512)).convert('L')
                                 np_sample = np.array(sam_result_pil)
                                 h, w = np_img.shape
                                 min_h, min_2_h, max_h, max_2_h = 0, h/10, h/10*9, h
