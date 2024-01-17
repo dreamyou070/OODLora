@@ -89,10 +89,6 @@ def main(args) :
     os.makedirs(record_output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
-    if args.process_title:
-        setproctitle(args.process_title)
-    else:
-        setproctitle('parksooyeon')
     train_util.verify_training_args(args)
     train_util.prepare_dataset_args(args, True)
     if args.seed is None:
@@ -113,14 +109,17 @@ def main(args) :
 
         output_dir = os.path.join(args.output_dir, f'{state}_set')
         os.makedirs(output_dir, exist_ok=True)
+
         best_find_dir = os.path.join(args.output_dir, f'{state}_set_best_find')
         os.makedirs(best_find_dir, exist_ok=True)
+
         state_record_output_dir = os.path.join(record_output_dir, f'{state}_set')
 
         network_weights = os.listdir(args.network_weights)
         total_score_list = []
 
         for weight in network_weights:
+
             weight_dir = os.path.join(args.network_weights, weight)
             parent, network_dir = os.path.split(weight_dir)
             model_name = os.path.splitext(network_dir)[0]
@@ -141,19 +140,14 @@ def main(args) :
                 text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
                                                                                                       unet_use_linear_projection_in_v2=False, )
                 text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-                print(f'len of text encoder : {len(text_encoders)}')
-                vae.to(device, dtype=vae_dtype)
 
-                print(f' (2.4) scheduler')
                 scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
                 scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
                                           beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
                 scheduler.set_timesteps(args.num_ddim_steps)
+                unet, text_encoder, vae = unet.to(device), text_encoder.to(device), vae.to(device, dtype=vae_dtype)
 
-                print(f' (2.4.+) model to accelerator device')
-                unet, text_encoder = unet.to(device), text_encoder.to(device)
-
-                print(f' (2.5) network')
+                print(f' (2.3) network')
                 sys.path.append(os.path.dirname(__file__))
                 network_module = importlib.import_module(args.network_module)
                 net_kwargs = {}
@@ -163,7 +157,7 @@ def main(args) :
                 if args.network_weights is not None: info = network.load_weights(weight_dir)
                 network.to(device)
 
-                print(f' (2.4.+) model to accelerator device')
+                print(f' (2.4) attention storer')
                 controller = AttentionStore()
                 register_attention_control(unet, controller)
 
@@ -213,8 +207,7 @@ def main(args) :
                         Image.open(mask_img_dir).convert('L').resize((int(trg_h),int(trg_w))).save(os.path.join(best_find_img_folder, f'{name}_mask{ext}'))
 
                         with torch.no_grad():
-                            org_img = load_image(test_img_dir, 512, 512)
-                            org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+                            org_vae_latent = image2latent(load_image(test_img_dir, 512, 512), vae, device, weight_dtype)
                             latent_dict = {}
                             latent_dict[0] = org_vae_latent
                             call_unet(unet, org_vae_latent, 0, con[:,:args.truncate_length,:], [[1]], None)
@@ -248,17 +241,15 @@ def main(args) :
                                         cls_score, normal_score, pad_score = attn.chunk(args.truncate_length, dim=-1) # head, pix_num
                                     else :
                                         cls_score, normal_score = attn.chunk(args.truncate_length,dim=-1)  # head, pix_num
-
+                                    mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                                    mask_np = np.where((np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
                                     h = cls_score.shape[0]
+
                                     # ----------------------------------------- get cls map ----------------------------------------- #
                                     cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
                                     singl_head_cls_score = cls_score.mean(dim=0)
                                     c_score = singl_head_cls_score.detach().cpu()
-                                    c_score = c_score / c_score.max()
-                                    c_score_np = np.array((c_score.cpu()) * 255).astype(np.uint8)
-                                    mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
-                                    mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                    c_score_np = np.array((c_score_np.cpu()) * 255).astype(np.uint8)
+                                    c_score_np = np.array((c_score / c_score.max()) * 255).astype(np.uint8)
                                     score_dict[f'cls_{title_name}'] = c_score_np * mask_np
                                     c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
                                     c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
@@ -284,14 +275,12 @@ def main(args) :
                                     normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
                                     singl_head_normal_score = normal_score.mean(dim=0)
                                     n_score = singl_head_normal_score.detach().cpu()
-                                    n_score = n_score / n_score.max()
-                                    n_score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
-                                    # anormal portion score
+                                    n_score_np = np.array((n_score / n_score.max()) * 255).astype(np.uint8)
                                     score_dict[title_name] = n_score_np * mask_np
-                                    n_score_np = np.array((n_score.cpu()) * 255).astype(np.uint8)
                                     n_score_pil = Image.fromarray(n_score_np).resize((512, 512),Image.BILINEAR)
                                     n_score_pil.save(os.path.join(trg_img_output_dir,f'{title_name}_res_{res}.png'))
                                     n_score_pil.save(os.path.join(best_find_img_folder,f'lora_epoch_{model_epoch}_{title_name}_res_{res}.png'))
+
                                     if 'down' in layer_name :
                                         key_name = f'down_{res}'
                                     elif 'up' in layer_name :
