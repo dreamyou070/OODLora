@@ -1,6 +1,6 @@
 #!bin/bash
 
-class_name="potato"
+class_name="rope"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
@@ -8,7 +8,7 @@ save_folder="2_1_res_64_up_16_up"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
 
-port_number=54562
+port_number=54563
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port $port_number train_anormal.py \
