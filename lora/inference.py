@@ -132,7 +132,7 @@ def main(args) :
                 epoch_title = 'last'
             print(f' (2.1) {model_epoch} epoch')
 
-            if int(model_epoch) == 20:
+            if int(model_epoch) > args.start_epoch :
 
                 epoch_elems = [f'epoch {str(epoch_title)}']
                 test_lora_dir = os.path.join(output_dir, f'lora_{model_epoch}')
