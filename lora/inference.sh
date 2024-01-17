@@ -8,7 +8,7 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-class_name="cookie"
+class_name="bagel"
 start_epoch=0
 port_number=50578
 
