@@ -28,25 +28,25 @@ def main(args):
 
             folders = os.listdir(train_rgb_dir)
             for folder in folders:
-                if 'cut' in folder:
+                if 'good' in folder:
                     rgb_folder_dir = os.path.join(train_rgb_dir, folder)
                     mask_folder_dir = os.path.join(train_pixel_mask_dir, folder)
                     os.makedirs(mask_folder_dir, exist_ok=True)
 
                     images = os.listdir(rgb_folder_dir)
                     for image in images:
-                        if 'cut_001' in image:
+                        if 'train_185' in image:
                             rgb_img_dir = os.path.join(rgb_folder_dir, image)
                             np_img = np.array(Image.open(rgb_img_dir))
                             predictor.set_image(np_img)
                             h, w, c = np_img.shape
-                            input_point = np.array([[int(h/2), 10]])
+                            input_point = np.array([[int(h/2), int(w/2),]])
                             input_label = np.array([1])
                             masks, scores, logits = predictor.predict(point_coords=input_point,
                                                                       point_labels=input_label,
                                                                       multimask_output=True, )
                             for i, (mask, score) in enumerate(zip(masks, scores)):
-                                if i == 2:
+                                if i == 1:
                                     np_mask = (mask * 1)
                                     np_mask = np.where(np_mask == 1, 0, 1) * 255
                                     sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
