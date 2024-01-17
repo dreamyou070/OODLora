@@ -340,12 +340,12 @@ def main(args) :
                     total_elem.append(total_dict[k])
                 records.append(total_elem)
                 total_score_list.append(total_elem)
-                record_csv_dir = os.path.join(state_record_output_dir, f'score_epoch_{model_epoch}.csv')
+                record_csv_dir = os.path.join(state_record_output_dir, f'score_epoch_{model_epoch}.xlsx')
 
                 with open(record_csv_dir, 'w', newline='') as f:
                     wr = csv.writer(f)
                     wr.writerows(records)
-        record_total_csv_dir = os.path.join(state_record_output_dir, f'score_total.csv')
+        record_total_csv_dir = os.path.join(state_record_output_dir, f'score_total.xlsx')
         with open(record_total_csv_dir, 'w', newline='') as f:
             wr = csv.writer(f)
             wr.writerows(total_score_list)
