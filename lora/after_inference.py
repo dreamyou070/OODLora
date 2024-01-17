@@ -21,5 +21,5 @@ if __name__ == '__main__' :
     parser.add_argument('--trg_word', type=str, default='val_')
     parser.add_argument('--base_folder', type=str,
                         default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
-    args = argparse.ArgumentParser()
+    args = parser.parse_args()
     main(args)
