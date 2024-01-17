@@ -39,14 +39,14 @@ def main(args):
                         np_img = np.array(Image.open(rgb_img_dir))
                         predictor.set_image(np_img)
                         h, w, c = np_img.shape
-                        input_point = np.array([[int(h/2),int(w/2)]])
+                        input_point = np.array([[10,10]])
                         input_label = np.array([1])
                         masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                                   multimask_output=True, )
                         for i, (mask, score) in enumerate(zip(masks, scores)):
-                            if i == 2:
+                            if i == 1 :
                                 np_mask = (mask * 1)
-                                np_mask = np.where(np_mask == 1, 0, 1) * 255
+                                np_mask = np.where(np_mask == 1, 1, 0) * 255
                                 sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                                 sam_result_pil = sam_result_pil.resize((512,512))
                                 """
