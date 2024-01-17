@@ -707,7 +707,6 @@ class NetworkTrainer:
                                         anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
                                         if args.normal_with_background:
-                                            print(f'normal_with_background')
                                             if batch['train_class_list'][0] == 1:
                                                 anormal_position = torch.zeros_like(anormal_mask)
                                             else:
@@ -791,7 +790,6 @@ class NetworkTrainer:
                                                        dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
                             if args.normal_with_background:
-                                print(f'normal_with_background')
                                 if batch['train_class_list'][0] == 1:
                                     anormal_position = torch.zeros_like(anormal_mask)
                                 else:
