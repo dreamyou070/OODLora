@@ -335,6 +335,7 @@ def main(args) :
                 for k in total_dict.keys() :
                     total_elem.append(total_dict[k])
                 records.append(total_elem)
+                total_score_list.append(total_elem)
                 record_csv_dir = os.path.join(state_record_output_dir, f'score_epoch_{model_epoch}.csv')
 
                 with open(record_csv_dir, 'w', newline='') as f:
@@ -344,6 +345,7 @@ def main(args) :
         with open(record_total_csv_dir, 'w', newline='') as f:
             wr = csv.writer(f)
             wr.writerows(total_score_list)
+            
     test_samples(args, 'test')
 
 if __name__ == "__main__":
