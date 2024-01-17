@@ -185,6 +185,8 @@ def main(args) :
                     trg_prompt = 'good'
                     if '_' in class_name :
                         c_name = class_name.split('_')[1]
+                    else :
+                        c_name = class_name
                     class_base_folder = os.path.join(test_lora_dir, class_name)
                     os.makedirs(class_base_folder, exist_ok=True)
                     best_find_class_dir = os.path.join(best_find_dir, class_name)
