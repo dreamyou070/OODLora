@@ -35,7 +35,7 @@ def main(args):
 
                     images = os.listdir(rgb_folder_dir)
                     for image in images:
-                        if 'train_185' in image:
+                        if 'train_196' in image:
                             rgb_img_dir = os.path.join(rgb_folder_dir, image)
                             np_img = np.array(Image.open(rgb_img_dir))
                             predictor.set_image(np_img)
@@ -66,7 +66,8 @@ def main(args):
                                                     np_sample[h_index, w_index] = 0
                                     im = Image.fromarray(np_sample.astype(np.uint8))
                                     """
-                                    sam_result_pil.save(os.path.join(mask_folder_dir, image))
+                                    name, ext = os.path.splitext(image)
+                                    sam_result_pil.save(os.path.join(mask_folder_dir, f'{name}_sam{ext}'))
 
 
 
