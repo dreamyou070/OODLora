@@ -1,15 +1,15 @@
 #!bin/bash
 
-class_name="cookie"
+class_name="carrot"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
 save_folder="2_1_res_64_up_16_up"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="${output_dir}/models/epoch-000010.safetensors"
 
-port_number=551010
-start_epoch=10
+
+port_number=55555
+start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port $port_number train_anormal.py \
   --process_title parksooyeon \
@@ -29,5 +29,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --cross_map_res [64,16] --detail_64_up --trg_position "['up']" \
   --anormal_with_background \
   --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3 --cls_training \
-  --network_weights "$network_weights" \
   --normal_with_background
