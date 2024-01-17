@@ -48,19 +48,19 @@ def main(args):
                                 np_mask = (mask * 1)
                                 np_mask = np.where(np_mask == 1, 0, 1) * 255
                                 sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                                sam_result_pil = sam_result_pil.resize((512,512)).convert('L')
+                                sam_result_pil = sam_result_pil.resize((512,512))
                                 np_sample = np.array(sam_result_pil)
-                                h, w = np_img.shape
+                                h, w, c = np_img.shape
                                 min_h, min_2_h, max_h, max_2_h = 0, h/10, h/10*9, h
                                 min_w, min_2_w, max_w, max_2_w = 0, w/10, w/10*9, w
                                 for h_index in range(h):
                                     for w_index in range(w):
                                         if h_index < min_2_h :
                                             if w_index < min_2_w or w_index > max_2_w :
-                                                np_sample[h_index, w_index] = 0
+                                                np_sample[h_index, w_index,:] = 0
                                         elif h_index > max_2_h :
                                             if w_index < min_2_w or w_index > max_2_w :
-                                                np_sample[h_index, w_index] = 0
+                                                np_sample[h_index, w_index,:] = 0
                                 Image.fromarray(np_sample.astype(np.uint8)).save(os.path.join(mask_folder_dir, image))
 
 
