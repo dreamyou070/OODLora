@@ -46,7 +46,7 @@ def main(args):
                                                                       point_labels=input_label,
                                                                       multimask_output=True, )
                             for i, (mask, score) in enumerate(zip(masks, scores)):
-                                if i == 1:
+                                if i == 2:
                                     np_mask = (mask * 1)
                                     np_mask = np.where(np_mask == 1, 0, 1) * 255
                                     sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
@@ -66,7 +66,7 @@ def main(args):
                                                     np_sample[h_index, w_index] = 0
                                     im = Image.fromarray(np_sample.astype(np.uint8))
                                     """
-                                    sam_result_pil.save(os.path.join(mask_folder_dir, image))
+                                    sam_result_pil.save(os.path.join(mask_folder_dir, 'mask.png'))
 
 
 
