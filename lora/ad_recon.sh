@@ -5,7 +5,10 @@ folder_name="2_1_res_64_up_16_up"
 lora_folder="epoch-000014.safetensors"
 network_weight_folder="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port 51201 ad_recon.py \
+port_number=50518
+
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
+  --main_process_port ${port_number} ad_recon.py \
   --process_title parksooyeon --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 \
