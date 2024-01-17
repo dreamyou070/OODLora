@@ -67,7 +67,7 @@ def main(args):
                                     im = Image.fromarray(np_sample.astype(np.uint8))
                                     """
                                     name, ext = os.path.splitext(image)
-                                    sam_result_pil.save(os.path.join(mask_folder_dir, f'{name}_sam{ext}'))
+                                    sam_result_pil.save(os.path.join(mask_folder_dir, image))
 
 
 
