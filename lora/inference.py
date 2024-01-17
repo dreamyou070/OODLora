@@ -131,7 +131,7 @@ def main(args) :
                 model_epoch = 10000
                 epoch_title = 'last'
 
-            if model_epoch > args.start_epoch :
+            if model_epoch > args.start_epoch and model_epoch <= args.end_epoch:
 
                 epoch_elems = [f'epoch {str(epoch_title)}']
                 test_lora_dir = os.path.join(output_dir, f'lora_{model_epoch}')
@@ -396,6 +396,8 @@ if __name__ == "__main__":
     parser.add_argument('--train_mid', nargs='+', type=int, help='use which res layers in U-Net mid', default=[8])
     parser.add_argument('--train_up', nargs='+', type=int, help='use which res layers in U-Net up', default=[16,32,64])
     parser.add_argument('--start_epoch',type=int, default=0)
+    parser.add_argument('--end_epoch', type=int, default=0)
+
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)

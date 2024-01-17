@@ -10,6 +10,7 @@
 
 class_name="foam"
 start_epoch=19
+end_epoch=20
 port_number=50551
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
