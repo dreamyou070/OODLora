@@ -130,8 +130,9 @@ def main(args) :
             else:
                 model_epoch = 10000
                 epoch_title = 'last'
+            print(f' (2.1) {model_epoch} epoch')
 
-            if model_epoch > args.start_epoch and model_epoch <= args.end_epoch:
+            if model_epoch > args.start_epoch and model_epoch < args.end_epoch:
 
                 epoch_elems = [f'epoch {str(epoch_title)}']
                 test_lora_dir = os.path.join(output_dir, f'lora_{model_epoch}')
