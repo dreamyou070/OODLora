@@ -314,7 +314,7 @@ def main(args) :
                                 n_score_pil = Image.fromarray(n_score).resize((512, 512), Image.BILINEAR)
                                 n_score_pil.save(os.path.join(trg_img_output_dir, f'normal_{key_name}.png'))
                                 n_score_pil.save(os.path.join(best_find_img_folder, f'lora_epoch_{model_epoch}_normal_{key_name}.png'))
-                        # ----------------------------------------------------------------------------------------------------- #
+                        # ---------------------------------------------------------------------------------------------------- #
                         if 'good' not in class_name :
                             record = [c_name, test_image]
                         for k in score_dict.keys(): # every position
