@@ -114,6 +114,7 @@ def main(args) :
         os.makedirs(best_find_dir, exist_ok=True)
 
         state_record_output_dir = os.path.join(record_output_dir, f'{state}_set')
+        os.makedirs(state_record_output_dir, exist_ok=True)
 
         network_weights = os.listdir(args.network_weights)
         total_score_list = []
@@ -335,6 +336,7 @@ def main(args) :
                     total_elem.append(total_dict[k])
                 records.append(total_elem)
                 record_csv_dir = os.path.join(state_record_output_dir, f'score_epoch_{model_epoch}.csv')
+
                 with open(record_csv_dir, 'w', newline='') as f:
                     wr = csv.writer(f)
                     wr.writerows(records)
