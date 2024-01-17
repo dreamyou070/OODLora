@@ -28,42 +28,46 @@ def main(args):
 
             folders = os.listdir(train_rgb_dir)
             for folder in folders:
-                rgb_folder_dir = os.path.join(train_rgb_dir, folder)
-                mask_folder_dir = os.path.join(train_pixel_mask_dir, folder)
-                os.makedirs(mask_folder_dir, exist_ok=True)
+                if 'cut' in folder:
+                    rgb_folder_dir = os.path.join(train_rgb_dir, folder)
+                    mask_folder_dir = os.path.join(train_pixel_mask_dir, folder)
+                    os.makedirs(mask_folder_dir, exist_ok=True)
 
-                images = os.listdir(rgb_folder_dir)
-                for image in images:
-                    rgb_img_dir = os.path.join(rgb_folder_dir, image)
-                    np_img = np.array(Image.open(rgb_img_dir))
-                    predictor.set_image(np_img)
-                    h, w, c = np_img.shape
-                    input_point = np.array([[10,10]])
-                    input_label = np.array([1])
-                    masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
-                                                              multimask_output=True, )
-                    for i, (mask, score) in enumerate(zip(masks, scores)):
-                        if i == 1 :
-                            np_mask = (mask * 1)
-                            np_mask = np.where(np_mask == 1, 0, 1) * 255
-                            sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                            sam_result_pil = sam_result_pil.resize((512,512))
-                            """
-                            np_sample = np.array(sam_result_pil)
+                    images = os.listdir(rgb_folder_dir)
+                    for image in images:
+                        if 'cut_001' in image:
+                            rgb_img_dir = os.path.join(rgb_folder_dir, image)
+                            np_img = np.array(Image.open(rgb_img_dir))
+                            predictor.set_image(np_img)
                             h, w, c = np_img.shape
-                            min_h, min_2_h, max_h, max_2_h = 0, h/10, h/10*9, h
-                            min_w, min_2_w, max_w, max_2_w = 0, w/10, w/10*9, w
-                            for h_index in range(h):
-                                for w_index in range(w):
-                                    if h_index < min_2_h :
-                                        if w_index < min_2_w or w_index > max_2_w :
-                                            np_sample[h_index, w_index] = 0
-                                    elif h_index > max_2_h :
-                                        if w_index < min_2_w or w_index > max_2_w :
-                                            np_sample[h_index, w_index] = 0
-                            im = Image.fromarray(np_sample.astype(np.uint8))
-                            """
-                            sam_result_pil.save(os.path.join(mask_folder_dir, image))
+                            input_point = np.array([[10, 10]])
+                            input_label = np.array([1])
+                            masks, scores, logits = predictor.predict(point_coords=input_point,
+                                                                      point_labels=input_label,
+                                                                      multimask_output=True, )
+                            for i, (mask, score) in enumerate(zip(masks, scores)):
+                                if i == 1:
+                                    np_mask = (mask * 1)
+                                    np_mask = np.where(np_mask == 1, 0, 1) * 255
+                                    sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
+                                    sam_result_pil = sam_result_pil.resize((512, 512))
+                                    """
+                                    np_sample = np.array(sam_result_pil)
+                                    h, w, c = np_img.shape
+                                    min_h, min_2_h, max_h, max_2_h = 0, h/10, h/10*9, h
+                                    min_w, min_2_w, max_w, max_2_w = 0, w/10, w/10*9, w
+                                    for h_index in range(h):
+                                        for w_index in range(w):
+                                            if h_index < min_2_h :
+                                                if w_index < min_2_w or w_index > max_2_w :
+                                                    np_sample[h_index, w_index] = 0
+                                            elif h_index > max_2_h :
+                                                if w_index < min_2_w or w_index > max_2_w :
+                                                    np_sample[h_index, w_index] = 0
+                                    im = Image.fromarray(np_sample.astype(np.uint8))
+                                    """
+                                    sam_result_pil.save(os.path.join(mask_folder_dir, image))
+
 
 
 if __name__ == "__main__":
