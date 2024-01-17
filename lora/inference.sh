@@ -8,9 +8,9 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-class_name="cookie"
+class_name="bagel"
 start_epoch=0
-port_number=50578
+port_number=50501
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/2_1_res_64_up_16_up"
