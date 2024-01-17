@@ -57,10 +57,10 @@ def main(args):
                                     for w_index in range(w):
                                         if h_index < min_2_h :
                                             if w_index < min_2_w or w_index > max_2_w :
-                                                np_sample[h_index, w_index,:] = 0
+                                                np_sample[h_index, w_index] = 0
                                         elif h_index > max_2_h :
                                             if w_index < min_2_w or w_index > max_2_w :
-                                                np_sample[h_index, w_index,:] = 0
+                                                np_sample[h_index, w_index] = 0
                                 Image.fromarray(np_sample.astype(np.uint8)).save(os.path.join(mask_folder_dir, image))
 
 
