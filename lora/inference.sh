@@ -8,7 +8,7 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-class_name="bagel"
+class_name="cable_gland"
 start_epoch=0
 port_number=50551
 
