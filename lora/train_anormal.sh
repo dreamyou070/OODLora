@@ -3,7 +3,7 @@
 class_name="peach"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
-normal_folder='peach'
+normal_folder='anormal'
 save_folder="2_1_res_64_up_16_up"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
