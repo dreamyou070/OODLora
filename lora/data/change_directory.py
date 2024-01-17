@@ -1,14 +1,11 @@
 from segment_anything import SamPredictor, sam_model_registry
 import argparse, os
 from PIL import Image
-import numpy as np
-import shutil
 import random
+
 trg_ratio = 0.8
+
 def main(args):
-
-    print(f'step 1. prepare model')
-
 
 
     print(f'step 2. prepare images')

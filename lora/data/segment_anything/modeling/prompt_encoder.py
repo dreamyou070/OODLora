@@ -23,7 +23,7 @@ class PromptEncoder(nn.Module):
         activation: Type[nn.Module] = nn.GELU,
     ) -> None:
         """
-        Encodes prompts for input to SAM's mask decoder.
+        Encodes prompts for input to data's mask decoder.
 
         Arguments:
           embed_dim (int): The prompts' embedding dimension

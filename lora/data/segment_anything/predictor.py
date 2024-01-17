@@ -20,7 +20,7 @@ class SamPredictor:
         sam_model: Sam,
     ) -> None:
         """
-        Uses SAM to calculate the image embedding for an image, and then
+        Uses data to calculate the image embedding for an image, and then
         allow repeated, efficient mask prediction given prompts.
 
         Arguments:
@@ -111,7 +111,7 @@ class SamPredictor:
             model, in XYXY format.
           mask_input (np.ndarray): A low resolution mask input to the model, typically
             coming from a previous prediction iteration. Has form 1xHxW, where
-            for SAM, H=W=256.
+            for data, H=W=256.
           multimask_output (bool): If true, the model will return three masks.
             For ambiguous input prompts (such as a single click), this will often
             produce better masks than a single prediction. If only a single
@@ -190,7 +190,7 @@ class SamPredictor:
             model, in XYXY format.
           mask_input (np.ndarray): A low resolution mask input to the model, typically
             coming from a previous prediction iteration. Has form Bx1xHxW, where
-            for SAM, H=W=256. Masks returned by a previous iteration of the
+            for data, H=W=256. Masks returned by a previous iteration of the
             predict method do not need further transformation.
           multimask_output (bool): If true, the model will return three masks.
             For ambiguous input prompts (such as a single click), this will often
@@ -246,7 +246,7 @@ class SamPredictor:
         """
         Returns the image embeddings for the currently set image, with
         shape 1xCxHxW, where C is the embedding dimension and (H,W) are
-        the embedding spatial dimension of SAM (typically C=256, H=W=64).
+        the embedding spatial dimension of data (typically C=256, H=W=64).
         """
         if not self.is_image_set:
             raise RuntimeError(

@@ -51,13 +51,13 @@ class SamAutomaticMaskGenerator:
         output_mode: str = "binary_mask",
     ) -> None:
         """
-        Using a SAM model, generates masks for the entire image.
+        Using a data model, generates masks for the entire image.
         Generates a grid of point prompts over the image, then filters
         low quality and duplicate masks. The default settings are chosen
-        for SAM with a ViT-H backbone.
+        for data with a ViT-H backbone.
 
         Arguments:
-          model (Sam): The SAM model to use for mask prediction.
+          model (Sam): The data model to use for mask prediction.
           points_per_side (int or None): The number of points to be sampled
             along one side of the image. The total number of points is
             points_per_side**2. If None, 'point_grids' must provide explicit

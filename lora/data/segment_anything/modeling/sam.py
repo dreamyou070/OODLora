@@ -28,7 +28,7 @@ class Sam(nn.Module):
         pixel_std: List[float] = [58.395, 57.12, 57.375],
     ) -> None:
         """
-        SAM predicts object masks from an image and input prompts.
+        data predicts object masks from an image and input prompts.
 
         Arguments:
           image_encoder (ImageEncoderViT): The backbone used to encode the
