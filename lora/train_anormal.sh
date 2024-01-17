@@ -1,16 +1,16 @@
 #!bin/bash
 
-class_name="cookie"
+class_name="peach"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
 save_folder="2_1_res_64_up_16_up"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="${output_dir}/models/epoch-000011.safetensors"
-port_number=54111
-start_epoch=11
+#network_weights="${output_dir}/models/epoch-000011.safetensors"
+port_number=54112
+start_epoch=0
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port $port_number train_anormal.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config --main_process_port $port_number train_anormal.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -27,4 +27,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --output_dir "$output_dir" \
   --cross_map_res [64,16] --detail_64_up --trg_position "['up']" \
   --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3 --cls_training \
-  --normal_with_background --network_weights "$network_weights"
+  --normal_with_background #--network_weights "$network_weights"
