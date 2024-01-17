@@ -39,10 +39,12 @@ def main(args):
                         np_img = np.array(Image.open(rgb_img_dir))
                         predictor.set_image(np_img)
                         h, w, c = np_img.shape
-                        trg_h_1, trg_w_1 = h / 2, w / 2
+                        trg_h_1, trg_w_1 = h / 10, w / 10
+                        trg_h_2, trg_w_2 = h * 9/10, w * 9/10
                         # trg_h_2, trg_w_2 = h * (2 / 3), w * (2 / 3)
-                        input_point = np.array([[0, 0]])
-                        input_label = np.array([0])
+                        input_point = np.array([[trg_h_1, trg_w_1],[trg_h_1, trg_w_2],
+                                                [trg_h_2, trg_w_1],[trg_h_2, trg_w_2]])
+                        input_label = np.array([0,0,0,0])
                         masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                                   multimask_output=True, )
                         for i, (mask, score) in enumerate(zip(masks, scores)):
