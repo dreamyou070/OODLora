@@ -149,16 +149,9 @@ def main(args) :
                 scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
                                           beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
                 scheduler.set_timesteps(args.num_ddim_steps)
-                inference_times = scheduler.timesteps
 
                 print(f' (2.4.+) model to accelerator device')
-                if len(text_encoders) > 1:
-                    unet, t_enc1, t_enc2 = unet.to(device), text_encoders[0].to(device), text_encoders[1].to(device)
-                    text_encoder = [t_enc1, t_enc2]
-                    del t_enc1, t_enc2
-                else:
-                    invers_unet, invers_text_encoder = invers_unet.to(device), invers_text_encoder.to(device)
-                    unet, text_encoder = unet.to(device), text_encoder.to(device)
+                unet, text_encoder = unet.to(device), text_encoder.to(device)
 
                 print(f' (2.5) network')
                 sys.path.append(os.path.dirname(__file__))
