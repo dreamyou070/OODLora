@@ -35,7 +35,7 @@ def main(args):
 
                     images = os.listdir(rgb_folder_dir)
                     for image in images:
-                        if 'train_196' in image:
+                        if 'train_197' in image or 'train_197' in image or 'train_198' in image or 'train_199' in image :
                             rgb_img_dir = os.path.join(rgb_folder_dir, image)
                             np_img = np.array(Image.open(rgb_img_dir))
                             predictor.set_image(np_img)
