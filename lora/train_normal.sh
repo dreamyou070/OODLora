@@ -1,12 +1,12 @@
 #!bin/bash
 
-class_name="foam"
+class_name="bagel"
 data_source='train_normal'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='normal'
 save_folder="res_64_up_16_up_cls_training"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-port_number=54115
+port_number=54111
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port $port_number train_anormal.py \
