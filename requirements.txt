@@ -14,7 +14,6 @@ huggingface-hub==0.15.1
 invisible-watermark==0.2.0
 lion-pytorch==0.0.6
 lycoris_lora==1.8.3
-# open clip for SDXL
 open-clip-torch==2.20.0
 opencv-python==4.7.0.68
 prodigyopt==1.0
