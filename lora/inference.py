@@ -183,6 +183,8 @@ def main(args) :
                 for class_name in classes:
                     kk += 1
                     trg_prompt = 'good'
+                    if '_' in class_name :
+                        c_name = class_name.split('_')[1]
                     class_base_folder = os.path.join(test_lora_dir, class_name)
                     os.makedirs(class_base_folder, exist_ok=True)
                     best_find_class_dir = os.path.join(best_find_dir, class_name)
@@ -311,7 +313,7 @@ def main(args) :
                                 n_score_pil.save(os.path.join(best_find_img_folder, f'lora_epoch_{model_epoch}_normal_{key_name}.png'))
                         # ----------------------------------------------------------------------------------------------------- #
                         if 'good' not in class_name :
-                            record = [trg_prompt, test_image]
+                            record = [c_name, test_image]
                         for k in score_dict.keys(): # every position
                             if 'good' not in class_name :
                                 trigger_score = score_dict[k]
@@ -326,12 +328,12 @@ def main(args) :
                         # ----------------------------------------------------------------------------------------------------- #
                         if j == 0 and kk == 1 :
                             records.append(first_elem)
-                            total_score_list.append(epoch_elems)
+                            #total_score_list.append(epoch_elems)
                             total_score_list.append(first_elem)
                         if 'good' not in class_name :
                             records.append(record)
-                            total_score_list.append(record)
-                total_elem = ['Total','']
+                            #total_score_list.append(record)
+                total_elem = [f'epoch_{model_epoch}','Total']
                 for k in total_dict.keys() :
                     total_elem.append(total_dict[k])
                 records.append(total_elem)
@@ -345,7 +347,7 @@ def main(args) :
         with open(record_total_csv_dir, 'w', newline='') as f:
             wr = csv.writer(f)
             wr.writerows(total_score_list)
-            
+
     test_samples(args, 'test')
 
 if __name__ == "__main__":
