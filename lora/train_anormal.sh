@@ -4,11 +4,11 @@ class_name="bagel"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="2_4_res_32_up"
+save_folder="2_5_res_64_up"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 start_epoch=0
 #network_weights="${output_dir}/models/epoch-000007.safetensors"
-port_number=50004
+port_number=50005
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train_anormal.py \
@@ -26,6 +26,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res [32] --detail_64_up --trg_position "['up']" \
+  --cross_map_res [64] --detail_64_up --trg_position "['up']" \
   --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3 --cls_training \
   --normal_with_background
