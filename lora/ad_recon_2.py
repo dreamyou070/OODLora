@@ -93,8 +93,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer/start_random_{args.start_with_random_noise}'
-                                           f'step_{args.num_ddim_steps}_'
+    args.output_dir = os.path.join(parent, f'recon_infer/step_{args.num_ddim_steps}_'
                                            f'cross_map_res_{args.cross_map_res[0]}_'
                                            f'inner_iter_{args.inner_iteration}_'
                                            f'trg_position_{args.trg_position[0]}_'
