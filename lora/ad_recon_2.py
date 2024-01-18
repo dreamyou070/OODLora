@@ -379,12 +379,12 @@ def main(args) :
                                         latents = pipeline.scheduler.step(noise_pred, t, latents,).prev_sample
 
                                         if args.use_pixel_mask :
-                                            z_latent = back_dict[int(t.item())]
+                                            z_latent = back_dict[t]
                                             latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
-                                        x_latent_dict[int(t.item())] = latents
+                                        x_latent_dict[t] = latents
                                         if not args.only_zero_save :
                                             image = pipeline.latents_to_image(latents)[0]
-                                            img_dir = f'test_{int(t.item())}.png'
+                                            img_dir = f'test_{t}.png'
                                             image.save(img_dir)
                                         controller.reset()
                                     image = pipeline.latents_to_image(latents)[0]
