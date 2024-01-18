@@ -661,6 +661,7 @@ class NetworkTrainer:
                         else :
                             score_map = map
                         res = int(score_map.shape[1] ** 0.5)
+                        print(f'res: {res}')
                         head_num = int(score_map.shape[0])
                         do_mask_loss = False
                         if res in args.cross_map_res:
