@@ -363,8 +363,7 @@ def main(args) :
                                                                                             device,None)
                                     latent_timestep = timesteps[:1].repeat(1)
                                     # (6)  init variables
-                                    latents, init_latents_orig, noise = pipeline.prepare_latents(image,
-                                                                                                 latent_timestep,1,
+                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None,latent_timestep,1,
                                                                                                  height,width,text_embeddings.dtype,
                                                                                                  device,None,latents,)
 
