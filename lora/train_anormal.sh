@@ -1,14 +1,13 @@
 #!bin/bash
 
-class_name="dowel"
+class_name="cable_gland"
 data_source='train_ex_2'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="2_1_res_64_up_16_up_good_3_anomal_5"
+save_folder="2_1_res_64_up_16_up_1_good_4_anormal"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-start_epoch=33
-network_weights="${output_dir}/models/epoch-000033.safetensors"
-port_number=50733
+start_epoch=0
+port_number=50033
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port $port_number train_anormal.py \
@@ -27,4 +26,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --start_epoch $start_epoch \
   --output_dir "$output_dir" --truncate_pad --truncate_length 3 \
   --cross_map_res [64,16] --detail_64_up --trg_position "['up']" --normal_with_background \
-  --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3 --cls_training --network_weights "${network_weights}"
+  --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3 --cls_training
