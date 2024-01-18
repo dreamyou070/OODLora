@@ -275,6 +275,7 @@ def main(args) :
 
 
                         if args.use_avg_mask:
+
                             for key_name in mask_dict_avg_sub:
                                 attn_list = mask_dict_avg_sub[key_name]
                                 attn = torch.cat(attn_list, dim=0)
@@ -313,7 +314,7 @@ def main(args) :
                         # inf_time = 0,20, ...
                         # time_steps = 999, 980, ..., 20, 0
 
-                        print(f'latent_mask : {latent_mask}')
+                        #print(f'latent_mask : {latent_mask}')
                         import math
                         def cosine_function(x):
                             x = math.pi * (x - 1)
@@ -325,7 +326,7 @@ def main(args) :
                         lambda x: cosine_function(x) if x > 0 else 0
                         latent_mask = latent_mask.detach().cpu().apply_(lambda x: cosine_function(x) if x > 0 else 0)
                         latent_mask = latent_mask.to(device)
-                        print(f'latent_mask : {latent_mask}')
+                        #print(f'latent_mask : {latent_mask}')
 
                         # ------------------------------[3] recon ------------------------------------------------- #
                         x_latent_dict = {}
