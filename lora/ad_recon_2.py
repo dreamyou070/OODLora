@@ -326,68 +326,41 @@ def main(args) :
                         lambda x: cosine_function(x) if x > 0 else 0
                         latent_mask = latent_mask.detach().cpu().apply_(lambda x: cosine_function(x) if x > 0 else 0)
                         latent_mask = latent_mask.to(device)
-                        #print(f'latent_mask : {latent_mask}')
 
-                        # ------------------------------[3] recon ------------------------------------------------- #
-                        x_latent_dict = {}
-                        if args.start_with_random_noise :
-                            x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape,).to(latent.device,
-                                                                                                           dtype=weight_dtype)
-                        else :
-                            x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
+                        from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
+                        pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae,
+                                              text_encoder=text_encoder,
+                                              tokenizer=tokenizer,
+                                              unet=unet,
+                                              scheduler=scheduler,
+                                              safety_checker=None,
+                                              feature_extractor=None,
+                                              requires_safety_checker=False, )
+                        # clip_skip=args.clip_skip,)
+                        pipeline.to(device)
+                        with torch.no_grad():
+                            if accelerator.is_main_process:
 
-                        for j, t in enumerate(time_steps[:-1]):
-                            prev_time = time_steps[j + 1]    # 998
-                            z_latent = back_dict[prev_time]  # 980
-                            x_latent = x_latent_dict[t]      # 999
-                            input_latent = torch.cat([z_latent, x_latent, x_latent], dim=0)
-                            if args.truncate_pad :
-                                input_cont = torch.cat([uncon, uncon, con], dim=0)[:,:2,:]
-                            else :
-                                input_cont = torch.cat([uncon, uncon, con], dim=0)
-                            noise_pred = call_unet(unet, input_latent, t, input_cont, None, None)
-                            controller.reset()
-                            z_noise_pred, x_noise_pred_uncon, x_noise_pred_con = noise_pred.chunk(3, dim=0)
-
-                            x_noise_pred = x_noise_pred_uncon + args.guidance_scale * (x_noise_pred_con - x_noise_pred_uncon)
-
-                            x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
-
-                            if args.use_pixel_mask :
-                                x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
-                            x_latent_dict[prev_time] = x_latent
-                            if args.only_zero_save :
-                                if prev_time == 0:
-                                    Image.fromarray(latent2image(x_latent, vae)).save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
-                            else :
-                                Image.fromarray(latent2image(x_latent, vae)).save(
-                                    os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
-
-                        # ------------------------------[4] inner loop ------------------------------ #
-                        """
-                        iter_latent_dict = {}
-                        iter_latent_dict[0] = x_latent
-                        import math
-                        def cosine_function(x):
-                            x = math.pi * (x - 1)
-                            result = math.cos(x)
-                            result = result * 0.5
-                            result = result + 0.5
-                            return result
-                        lambda x: cosine_function(x) if x > 0 else 0
-                        pixel_mask = latent_mask.detach().cpu()
-                        mask_torch = pixel_mask.apply_(lambda x: cosine_function(x) if x > 0 else 0)
-                        mask_torch = mask_torch.to(x_latent.device)
-
-                        for i in range(args.inner_iteration) :
-                            latent = iter_latent_dict[i]
-                            latent = org_vae_latent * mask_torch + latent * (1 - mask_torch)
-                            iter_latent_dict[i+1] = latent
-                        pil_img = Image.fromarray(latent2image(latent, vae))
-                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
-                        """
-                    break
-                break
+                                prompt = args.prompt
+                                negative_prompt = args.negative_prompt
+                                sample_steps = 30
+                                width = height = 512
+                                scale = 8.5
+                                seed = 42
+                                controlnet_image = None
+                                torch.manual_seed(seed)
+                                torch.cuda.manual_seed(seed)
+                                height = max(64, height - height % 8)  # round to divisible by 8
+                                width = max(64, width - width % 8)  # round to divisible by 8
+                                with accelerator.autocast():
+                                    latents = pipeline(prompt=prompt, height=height, width=width,
+                                                       num_inference_steps=sample_steps,
+                                                       guidance_scale=scale, negative_prompt=negative_prompt,
+                                                       controlnet=None, controlnet_image=controlnet_image, )
+                                image = pipeline.latents_to_image(latents)[0]
+                                controller.reset()
+                                img_dir = 'test.png'
+                                image.save(img_dir)
 
 
 if __name__ == "__main__":
