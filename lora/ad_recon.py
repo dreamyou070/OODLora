@@ -228,7 +228,7 @@ def main(args) :
                         pipeline.latents_to_image(org_vae_latent)[0].save(os.path.join(trg_img_output_dir, f'{name}_org_test_0{ext}'))
                         from utils.image_utils import latent2image
 
-                        pil_img = Image.fromarray(latent2image(latents, vae, return_type='np'))
+                        pil_img = Image.fromarray(latent2image(org_vae_latent, vae, return_type='np'))
                         pil_img.save(os.path.join(trg_img_output_dir, f'{name}_org_my_code{ext}'))
 
 
