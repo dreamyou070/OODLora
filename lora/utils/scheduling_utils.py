@@ -70,21 +70,7 @@ def prev_step(model_output: Union[torch.FloatTensor, np.ndarray],
     return prev_sample
 
 
-def normal_kl(mean1, logvar1, mean2, logvar2):
-    return 0.5 * (-1 + logvar2 - logvar1 + torch.exp(logvar1 - logvar2) + ((mean1 - mean2) ** 2) * torch.exp(-logvar2))
 
-def kl_divergence(model_mean, true_mean) :
-
-    kl = normal_kl(true_mean, model_mean)
-    return torch.sum(model_mean * torch.log(model_mean / true_mean) - model_mean + true_mean)
-
-
-
-def pred_x0 (model_output, timestep, sample, scheduler) :
-    alpha_prod_t = scheduler.alphas_cumprod[timestep] if timestep >= 0 else scheduler.final_alpha_cumprod
-    a = sample / ((alpha_prod_t)**0.5)
-    b = (((1-alpha_prod_t)/alpha_prod_t)**0.5) * model_output
-    return a - b
 
 @torch.no_grad()
 def ddim_loop(args, latent, context, inference_times, scheduler, unet, vae, final_time, base_folder_dir, name,):

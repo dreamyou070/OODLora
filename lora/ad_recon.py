@@ -225,10 +225,14 @@ def main(args) :
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
 
 
-                        pipeline.latents_to_image(org_vae_latent)[0].save(os.path.join(trg_img_output_dir, f'{name}_org_test_{t}{ext}'))
+                        pipeline.latents_to_image(org_vae_latent)[0].save(os.path.join(trg_img_output_dir, f'{name}_org_test_0{ext}'))
+                        from utils.image_utils import latent2image
+
+                        pil_img = Image.fromarray(latent2image(latents, vae, return_type='np'))
+                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_org_my_code{ext}'))
 
 
-                        
+
 
                         call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                         # ------------------------------[1] generate attn mask map ------------------------------ #
@@ -316,7 +320,11 @@ def main(args) :
                             back_dict[int(t)] = latent
                             time_steps.append(t)
                             if args.save_origin :
+                                # ---------------------------------------------------------
+                                #
                                 back_image = pipeline.latents_to_image(latent)[0]
+
+
                                 back_img_dir = os.path.join(trg_img_output_dir, f'{name}_org_{t}{ext}')
                                 back_image.save(back_img_dir)
 
