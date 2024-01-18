@@ -181,7 +181,8 @@ def main(args) :
 
             print(f' \n step 3. ground-truth image preparing')
             print(f' (3.1) prompt condition')
-            context = init_prompt(tokenizer, text_encoder, device, args.prompt)
+            context = init_prompt(tokenizer, text_encoder, device, args.prompt,
+                                  args.negative_prompt)
             uncon, con = torch.chunk(context, 2)
             uncon, con = uncon[:, :,:], con[:, :,:]
 
@@ -329,8 +330,8 @@ def main(args) :
                         # ------------------------------[3] recon ------------------------------------------------- #
                         x_latent_dict = {}
                         if args.start_with_random_noise :
-                            x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape).to(latent.device,
-                                                                                                          dtype=weight_dtype)
+                            x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape,).to(latent.device,
+                                                                                                           dtype=weight_dtype)
                         else :
                             x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
 
@@ -354,8 +355,8 @@ def main(args) :
                             print(f'lantent_mask : {latent_mask.shape}')
                             print(f'x_latent : {x_latent.shape}')
 
-
-                            #x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
+                            if args.use_pixel_mask :
+                                x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
                             x_latent_dict[prev_time] = x_latent
                             if args.only_zero_save :
                                 if prev_time == 0:
@@ -436,7 +437,7 @@ if __name__ == "__main__":
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--start_with_random_noise", action='store_true')
     parser.add_argument("--guidance_scale", type=float, default=8.5)
-
+    parser.add_argument("--use_pixel_mask", action='store_true')
 
     import ast
     def arg_as_list(arg):
@@ -447,5 +448,7 @@ if __name__ == "__main__":
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--trg_position", type=arg_as_list, default=['up'])
     parser.add_argument("--trg_lora_epoch", type=str)
+    parser.add_argument("--negative_prompt", type=str)
+
     args = parser.parse_args()
     main(args)

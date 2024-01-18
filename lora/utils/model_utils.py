@@ -10,8 +10,13 @@ def get_state_dict(dir):
         state_dict[k_] = v
     return state_dict
 
-def init_prompt(tokenizer, text_encoder, device, prompt: str):
-    uncond_input = tokenizer([""],
+def init_prompt(tokenizer, text_encoder, device, prompt: str,
+                negative_prompt: Union[str, None] = None):
+    if negative_prompt :
+        n_p = negative_prompt
+    else :
+        n_p = ""
+    uncond_input = tokenizer([n_p],
                              padding="max_length", max_length=tokenizer.model_max_length,
                              return_tensors="pt")
     uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
