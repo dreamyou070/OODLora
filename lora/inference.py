@@ -232,7 +232,7 @@ def main(args) :
                                 elif 'up' in layer_name:
                                     position = 'up'
                                 else:
-                                    position = 'middle'
+                                    position = 'mid'
                                 if res in args.cross_map_res and position in args.trg_position :
                                     res_key_name = f'res_{res}'
                                     if 'attentions_0' in layer_name :
