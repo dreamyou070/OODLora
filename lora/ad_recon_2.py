@@ -356,9 +356,10 @@ def main(args) :
                                 x_latent_dict = {}
 
                                 with accelerator.autocast():
-                                    text_embeddings = pipeline._encode_prompt(prompt, device, 1, do_classifier_free_guidance, negative_prompt, 3, )
-
-                                    latents, init_latents_orig, noise = pipeline.prepare_latents(image,None,1,height,width,weight_dtype,device,None,None)
+                                    #text_embeddings = pipeline._encode_prompt(prompt, device, 1, do_classifier_free_guidance, negative_prompt, 3, )
+                                    text_embeddings = init_prompt(tokenizer, text_encoder, device,args.prompt,args.negative_prompt)
+                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None,None,1,height,width,
+                                                                                                 weight_dtype,device,None,None)
                                     if args.start_from_origin:
                                         latent =back_dict[time_steps[0]]
 
