@@ -340,11 +340,13 @@ def main(args) :
                                 input_cont = torch.cat([uncon, uncon, con], dim=0)
                             noise_pred = call_unet(unet, input_latent, t, input_cont, None, None)
                             controller.reset()
-                            z_noise_pred, x_noise_pred_uncon, x_noise_pred_con = noise_pred.chunk(2, dim=0)
+                            z_noise_pred, x_noise_pred_uncon, x_noise_pred_con = noise_pred.chunk(3, dim=0)
 
                             x_noise_pred = x_noise_pred_uncon + args.guidance_scale * (x_noise_pred_con - x_noise_pred_uncon)
 
                             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
+
+
                             x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
                             x_latent_dict[prev_time] = x_latent
                             if args.only_zero_save :
