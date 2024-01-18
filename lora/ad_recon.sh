@@ -18,7 +18,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --concept_image_folder ../../../MyData/anomaly_detection/MVTec3D-AD/${class_name} \
   --seed 42 \
   --network_weights ${network_weight_folder}  \
-  --num_ddim_steps 15 \
+  --num_ddim_steps 4 \
   --trg_lora_epoch ${lora_folder} \
   --inner_iter 10 \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \
