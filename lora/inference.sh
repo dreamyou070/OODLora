@@ -8,12 +8,12 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-class_name="tire"
+class_name=peach
 start_epoch=0
-port_number=50857
+port_number=50858
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/2_1_res_64_up_16_up_good_6_anomal_80"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/2_1_res_64_up_16_up_good_2_anormal_10_cut_30"
 network_weights="${output_dir}/models"
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} inference.py \
