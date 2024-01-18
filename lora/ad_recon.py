@@ -301,7 +301,10 @@ def main(args) :
                             back_dict[int(t)] = latent
                             time_steps.append(t)
                             #noise_pred = call_unet(invers_unet, latent, t, inv_c, None, None)
-                            noise_pred = call_unet(unet, latent, t, con[:,:3,:], None, None)
+                            if args.truncate_pad :
+                                noise_pred = call_unet(unet, latent, t, con[:,:3,:], None, None)
+                            else :
+                                noise_pred = call_unet(unet, latent, t, con, None, None)
                             latent = next_step(noise_pred, int(t), latent, scheduler)
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
