@@ -360,8 +360,7 @@ def main(args) :
                                     text_embeddings = pipeline._encode_prompt(prompt, device, 1, do_classifier_free_guidance, negative_prompt, 3, )
                                     timesteps, num_inference_steps = pipeline.get_timesteps(args.num_ddim_steps,
                                                                                             strength,
-                                                                                            device,
-                                                                                            image is None)
+                                                                                            device,None)
                                     latent_timestep = timesteps[:1].repeat(1)
                                     # (6)  init variables
                                     latents, init_latents_orig, noise = pipeline.prepare_latents(image,
