@@ -13,7 +13,6 @@ start_epoch=0
 port_number=50101
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-class_name="potatocable_gland"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/"
 network_weights="${output_dir}/models"
 
