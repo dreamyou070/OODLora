@@ -92,11 +92,9 @@ def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
     args.output_dir = os.path.join(parent, f'recon_infer/step_{args.num_ddim_steps}_'
-                                           f'cross_map_res_{args.cross_map_res[0]}_'
-                                           f'inner_iter_{args.inner_iteration}_'
-                                           f'trg_position_{args.trg_position[0]}_'
                                            f'trg_part_{args.trg_part}_'
-                                           f'text_truncate_{args.truncate_pad}')
+                                           f'guidance_scale_{args.guidance_scale}_'
+                                           f'start_from_origin_{args.start_from_origin}')
 
     print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
@@ -381,7 +379,6 @@ def main(args) :
                                     image = pipeline.latents_to_image(latents)[0]
                                     img_dir = os.path.join(trg_img_output_dir, f'{name}_recon_{t}{ext}')
                                     image.save(img_dir)
-                                    break
 
 
 
