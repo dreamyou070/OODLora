@@ -7,8 +7,7 @@ normal_folder='anormal'
 save_folder="2_1_res_64_up_16_up_good_28_anomal_80_crack_combined_90"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 start_epoch=19
-epoch_name = 000019
-network_weights="${output_dir}/models/epoch-${epoch_name}.safetensors"
+network_weights="${output_dir}/models/epoch-000019.safetensors"
 port_number=54119
 
 
