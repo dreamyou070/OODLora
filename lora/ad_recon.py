@@ -341,7 +341,7 @@ def main(args) :
                             return result
 
                         lambda x: cosine_function(x) if x > 0 else 0
-                        for i in args.inner_iteration :
+                        for i in range(args.inner_iteration) :
                             latent_mask = latent_mask.detach().cpu().apply_(lambda x: cosine_function(x) if x > 0 else 0)
                             latent_mask = latent_mask.to(device)
 
