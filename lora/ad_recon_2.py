@@ -358,7 +358,10 @@ def main(args) :
 
                                 with accelerator.autocast():
                                     text_embeddings = pipeline._encode_prompt(prompt, device, 1, do_classifier_free_guidance, negative_prompt, 3, )
-                                    timesteps, num_inference_steps = pipeline.get_timesteps(num_inference_steps, strength,  device, image is None)
+                                    timesteps, num_inference_steps = pipeline.get_timesteps(args.num_ddim_steps,
+                                                                                            strength,
+                                                                                            device,
+                                                                                            image is None)
                                     latent_timestep = timesteps[:1].repeat(1)
                                     # (6)  init variables
                                     latents, init_latents_orig, noise = pipeline.prepare_latents(image,
@@ -368,6 +371,7 @@ def main(args) :
 
                                     # (7) denoising
                                     for i, t in enumerate(timesteps) :
+                                        print(f'[{i}] t : {t}')
                                         # expand the latents if we are doing classifier free guidance
                                         latent_model_input = torch.cat( [latents] * 2) if do_classifier_free_guidance else latents
                                         # predict the noise residual
@@ -380,14 +384,19 @@ def main(args) :
                                         # compute the previous noisy sample x_t -> x_t-1
                                         latents = pipeline.scheduler.step(noise_pred, t, latents,).prev_sample
 
-                                        #if args.use_pixel_mask :
-                                        #    latents = (init_latents_proper * mask) + (latents * (1 - mask))
+                                        if args.use_pixel_mask :
+                                            z_latent = back_dict[int(t.item())]
+                                            latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
+                                        x_latent_dict[int(t.item())] = latents
+                                        if not args.only_zero_save :
+                                            image = pipeline.latents_to_image(latents)[0]
+                                            img_dir = f'test_{int(t.item())}.png'
+                                            image.save(img_dir)
+                                        controller.reset()
+                                    image = pipeline.latents_to_image(latents)[0]
+                                    img_dir = f'test_{int(t.item())}.png'
+                                    image.save(img_dir)
 
-
-                                image = pipeline.latents_to_image(latents)[0]
-                                controller.reset()
-                                img_dir = 'test_2.png'
-                                image.save(img_dir)
 
 
 if __name__ == "__main__":
