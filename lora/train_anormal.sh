@@ -3,15 +3,15 @@
 class_name="cable_gland"
 data_source='train_ex_2'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
-normal_folder='normal'
-save_folder="1_1_res_64_up_16_up_1_good_4_anormal"
+normal_folder='anormal'
+save_folder="2_1_res_64_up_16_up_1_good_4_anormal"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-start_epoch=0
-#network_weights="${output_dir}/models/epoch-000007.safetensors"
-port_number=50707
+start_epoch=3
+network_weights="${output_dir}/models/epoch-000003.safetensors"
+port_number=50737
 
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config --main_process_port $port_number train_anormal.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port $port_number train_anormal.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
