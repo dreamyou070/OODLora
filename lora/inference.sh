@@ -8,12 +8,12 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-class_name=foam
-start_epoch=0
+class_name=carrot
+start_epoch=6
 port_number=50074
 
 concept_image_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/2_1_res_64_up_16_up_good_10_anomal_80_cut_100"
+output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/2_3_res_16_up_1_good_8_anormal"
 network_weights="${output_dir}/models"
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} inference.py \
@@ -22,8 +22,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 \
   --prompt 'good' --sample_sampler ddim --resolution '512,512' --seed 42 \
-  --cross_map_res [8] \
-  --trg_position "['mid']" \
+  --cross_map_res [16] \
+  --trg_position "['up']" \
   --concept_image_folder "${concept_image_folder}" \
   --network_weights "${network_weights}" \
   --truncate_length 2 \
