@@ -1,7 +1,7 @@
 #!bin/bash
 
 class_name="cable_gland"
-data_source='train_ex_2'
+data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
 save_folder="2_1_res_64_up_16_up_good_1_anormal_8_bent_12"
