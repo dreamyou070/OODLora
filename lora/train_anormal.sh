@@ -4,10 +4,10 @@ class_name="carrot"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="2_4_res_32_up_1_good_8_anormal"
+save_folder="2_2_res_32_up_1_good_8_anormal"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 #network_weights="${output_dir}/models/epoch-000011.safetensors"
-port_number=54132
+port_number=54108
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config --main_process_port $port_number train_anormal.py \
@@ -25,6 +25,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res [32] --detail_64_up --trg_position "['up']" \
+  --cross_map_res [8] --detail_64_up --trg_position "['mid']" \
   --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3 --cls_training \
   --normal_with_background #--network_weights "$network_weights"
