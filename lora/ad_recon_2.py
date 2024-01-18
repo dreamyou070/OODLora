@@ -366,11 +366,8 @@ def main(args) :
                                     latents, init_latents_orig, noise = pipeline.prepare_latents(None, latent_timestep,1,
                                                                                                  height,width,text_embeddings.dtype, device,None, None)
 
-                                    #latents =
-                                    #
-
-                                    #if latents is None:
-                                    #    latents = torch.randn((1,4,64,64),dtype=dtype).to(device)
+                                    if args.start_with_random_noise :
+                                        latents = torch.randn((1,4,64,64),dtype=weight_dtype).to(device)
 
                                     # (7) denoising
                                     for i, t in enumerate(timesteps) :
