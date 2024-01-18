@@ -8,7 +8,7 @@
 # cd ./Lora/OODLora/lora/
 # conda activate venv_lora
 
-class_name="tire"
+class_name="cookie"
 start_epoch=0
 port_number=50815
 
