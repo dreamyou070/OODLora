@@ -346,8 +346,8 @@ def main(args) :
                                 prompt = args.prompt
                                 negative_prompt = args.negative_prompt
                                 width = height = 512
-                                guidance_scale = 8.5
-                                seed = 42
+                                guidance_scale = args.guidance_scale
+                                seed = args.seed
                                 torch.manual_seed(seed)
                                 torch.cuda.manual_seed(seed)
                                 height = max(64, height - height % 8)  # round to divisible by 8
@@ -390,6 +390,7 @@ def main(args) :
                                     image = pipeline.latents_to_image(latents)[0]
                                     img_dir = f'test_{int(t.item())}.png'
                                     image.save(img_dir)
+                                    break
 
 
 
