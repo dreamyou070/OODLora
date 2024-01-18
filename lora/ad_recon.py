@@ -318,7 +318,7 @@ def main(args) :
 
                         lambda x: cosine_function(x) if x > 0 else 0
                         latent_mask = latent_mask.detach().cpu().apply_(lambda x: cosine_function(x) if x > 0 else 0)
-                        latent_mask = latent_mask.to(x_latent.device)
+                        latent_mask = latent_mask.to(device)
                         print(f'latent_mask : {latent_mask}')
 
                         # ------------------------------[3] recon ------------------------------------------------- #
