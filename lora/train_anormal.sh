@@ -1,14 +1,14 @@
 #!bin/bash
 
-class_name="cookie"
-data_source='train_ex'
+class_name="dowel"
+data_source='train_ex_2'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="2_1_res_64_up_16_up_good_28_anomal_80_crack_combined_90"
+save_folder="2_1_res_64_up_16_up_good_3_anomal_5"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-start_epoch=19
-network_weights="${output_dir}/models/epoch-000019.safetensors"
-port_number=54119
+start_epoch=0
+#network_weights="${output_dir}/models/epoch-000019.safetensors"
+port_number=54133
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port $port_number train_anormal.py \
@@ -28,4 +28,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --output_dir "$output_dir" \
   --cross_map_res [64,16] --detail_64_up --trg_position "['up']" \
   --trg_part '["attn_2","attn_1","attn_0"]' --truncate_pad --truncate_length 3 --cls_training \
-  --normal_with_background --network_weights "$network_weights"
+  --normal_with_background #--network_weights "$network_weights"
