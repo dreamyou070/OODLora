@@ -93,7 +93,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer/start_random_noise_ddim_step_{args.num_ddim_steps}_'
+    args.output_dir = os.path.join(parent, f'recon_infer/start_random_{args.start_with_random_noise}'
+                                           f'step_{args.num_ddim_steps}_'
                                            f'cross_map_res_{args.cross_map_res[0]}_'
                                            f'inner_iter_{args.inner_iteration}_'
                                            f'trg_position_{args.trg_position[0]}_'
@@ -308,8 +309,12 @@ def main(args) :
 
                         # ------------------------------[3] recon ------------------------------------------------- #
                         x_latent_dict = {}
-                        x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape).to(latent.device,
-                                                                                                      dtype=weight_dtype)
+                        if args.start_with_random_noise :
+                            x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape).to(latent.device,
+                                                                                                          dtype=weight_dtype)
+                        else :
+                            x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
+
                         for j, t in enumerate(time_steps[:-1]):
                             prev_time = time_steps[j + 1]
                             z_latent = back_dict[t]
@@ -353,7 +358,8 @@ def main(args) :
                             iter_latent_dict[i+1] = latent
                         pil_img = Image.fromarray(latent2image(latent, vae))
                         pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
-
+                    break
+                break
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
@@ -397,6 +403,8 @@ if __name__ == "__main__":
     parser.add_argument("--only_zero_save", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
+    parser.add_argument("--start_with_random_noise", action='store_true')
+
 
     import ast
     def arg_as_list(arg):

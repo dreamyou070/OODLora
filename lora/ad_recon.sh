@@ -21,6 +21,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --num_ddim_steps 50 \
   --trg_lora_epoch ${lora_folder} \
   --inner_iter 10 \
-  --only_zero_save \
   --truncate_length 2 --cross_map_res [64] --trg_position "['up']" \
-  --trg_part "attn_2"# --use_avg_mask
+  --trg_part "attn_2"
