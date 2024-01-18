@@ -1,13 +1,13 @@
 #!bin/bash
 
-class_name="peach"
+class_name="foam"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="2_1_res_64_up_16_up_good_2_anormal_10_cut_30"
+save_folder="2_1_res_64_up_16_up_good_10_anomal_30_cut_100"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 #network_weights="${output_dir}/models/epoch-000022.safetensors"
-port_number=54123
+port_number=54132
 start_epoch=0
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port $port_number train_anormal.py \
