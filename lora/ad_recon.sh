@@ -1,7 +1,7 @@
 #! /bin/bash
 
-class_name="bagel"
-folder_name="2_1_res_64_up_16_up"
+class_name="carrot"
+folder_name="2_1_res_64_up_16_up_1_good_8_anormal"
 lora_folder="epoch-000014.safetensors"
 network_weight_folder="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
 
@@ -22,6 +22,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --trg_lora_epoch ${lora_folder} \
   --inner_iter 10 \
   --only_zero_save \
-  --truncate_length 2 --cross_map_res [64] --trg_position "['up']" \
+  --truncate_length 2 --cross_map_res [16] --trg_position "['up']" \
   --use_avg_mask
   #--trg_part "attn_2" --use_avg_mask

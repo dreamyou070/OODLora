@@ -99,6 +99,7 @@ def main(args) :
                                            f'trg_position_{args.trg_position[0]}_'
                                            f'trg_part_{args.trg_part}_'
                                            f'text_truncate_{args.truncate_pad}')
+    
     print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -195,7 +196,6 @@ def main(args) :
             print(f' (2.4.+) model to accelerator device')
             controller = AttentionStore()
             register_attention_control(unet, controller)
-            #register_attention_control(invers_unet, controller)
 
             print(f' \n step 3. ground-truth image preparing')
             print(f' (3.1) prompt condition')
