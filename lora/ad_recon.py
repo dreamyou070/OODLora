@@ -308,6 +308,18 @@ def main(args) :
                         time_steps.reverse()
 
                         print(f'latent_mask : {latent_mask}')
+                        import math
+                        def cosine_function(x):
+                            x = math.pi * (x - 1)
+                            result = math.cos(x)
+                            result = result * 0.5
+                            result = result + 0.5
+                            return result
+
+                        lambda x: cosine_function(x) if x > 0 else 0
+                        latent_mask = latent_mask.detach().cpu().apply_(lambda x: cosine_function(x) if x > 0 else 0)
+                        latent_mask = latent_mask.to(x_latent.device)
+                        print(f'latent_mask : {latent_mask}')
 
                         # ------------------------------[3] recon ------------------------------------------------- #
                         x_latent_dict = {}
@@ -340,6 +352,7 @@ def main(args) :
                                     os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
 
                         # ------------------------------[4] inner loop ------------------------------ #
+                        """
                         iter_latent_dict = {}
                         iter_latent_dict[0] = x_latent
                         import math
@@ -360,6 +373,7 @@ def main(args) :
                             iter_latent_dict[i+1] = latent
                         pil_img = Image.fromarray(latent2image(latent, vae))
                         pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
+                        """
                     break
                 break
 
