@@ -348,8 +348,11 @@ def main(args) :
 
                             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
 
+                            print(f'lantent_mask : {latent_mask.shape}')
+                            print(f'x_latent : {x_latent.shape}')
 
-                            x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
+
+                            #x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
                             x_latent_dict[prev_time] = x_latent
                             if args.only_zero_save :
                                 if prev_time == 0:
