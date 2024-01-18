@@ -306,6 +306,8 @@ def main(args) :
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
                         time_steps.reverse()
+                        # inf_time = 0,20, ...
+                        # time_steps = 999, 980, ..., 20, 0
 
                         print(f'latent_mask : {latent_mask}')
                         import math
@@ -330,9 +332,9 @@ def main(args) :
                             x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
 
                         for j, t in enumerate(time_steps[:-1]):
-                            prev_time = time_steps[j + 1]
-                            z_latent = back_dict[t]
-                            x_latent = x_latent_dict[t]
+                            prev_time = time_steps[j + 1]    # 998
+                            z_latent = back_dict[prev_time]  # 980
+                            x_latent = x_latent_dict[t]      # 999
                             input_latent = torch.cat([z_latent, x_latent, x_latent], dim=0)
                             if args.truncate_pad :
                                 input_cont = torch.cat([uncon, uncon, con], dim=0)[:,:2,:]
