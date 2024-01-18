@@ -22,6 +22,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --trg_lora_epoch ${lora_folder} \
   --inner_iter 10 \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \
-  --guidance_scale 8.5 \
+  --guidance_scale 8.5 --save_origin \
   --truncate_length 2 --cross_map_res [64] --trg_position "['up']" \
   --trg_part "attn_2" --use_pixel_mask

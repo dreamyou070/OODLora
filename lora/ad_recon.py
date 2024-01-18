@@ -94,7 +94,8 @@ def main(args) :
     args.output_dir = os.path.join(parent, f'recon_infer/step_{args.num_ddim_steps}_'
                                            f'trg_part_{args.trg_part}_'
                                            f'guidance_scale_{args.guidance_scale}_'
-                                           f'start_from_origin_{args.start_from_origin}')
+                                           f'start_from_origin_{args.start_from_origin}_'
+                                           f'start_from_final_{args.start_from_final}')
 
     print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
@@ -210,6 +211,16 @@ def main(args) :
 
                     print(f' (2.3.1) inversion')
                     with torch.no_grad():
+
+                        pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae,
+                                                                              text_encoder=text_encoder,
+                                                                              tokenizer=tokenizer,
+                                                                              unet=unet,
+                                                                              scheduler=scheduler,
+                                                                              safety_checker=None,
+                                                                              feature_extractor=None,
+                                                                              requires_safety_checker=False, )
+
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                         call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
@@ -297,12 +308,20 @@ def main(args) :
                             time_steps.append(t)
                             back_dict[int(t)] = latent
                             time_steps.append(t)
-                            #noise_pred = call_unet(invers_unet, latent, t, inv_c, None, None)
+                            if args.save_origin :
+                                back_image = pipeline.latents_to_image(latent)[0]
+                                back_img_dir = os.path.join(trg_img_output_dir, f'{name}_org_{t}{ext}')
+                                back_image.save(back_img_dir)
+
                             if args.truncate_pad :
                                 noise_pred = call_unet(unet, latent, t, con[:,:3,:], None, None)
                             else :
                                 noise_pred = call_unet(unet, latent, t, con, None, None)
+
                             latent = next_step(noise_pred, int(t), latent, scheduler)
+
+
+
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
                         time_steps.reverse()
@@ -324,14 +343,7 @@ def main(args) :
 
 
 
-                        pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae,
-                                              text_encoder=text_encoder,
-                                              tokenizer=tokenizer,
-                                              unet=unet,
-                                              scheduler=scheduler,
-                                              safety_checker=None,
-                                              feature_extractor=None,
-                                              requires_safety_checker=False, )
+
 
                         # ----------------------------[3] generate image ------------------------------ #
                         pipeline.to(device)
@@ -352,13 +364,25 @@ def main(args) :
 
                                 with accelerator.autocast():
                                     text_embeddings = init_prompt(tokenizer, text_encoder, device,args.prompt,args.negative_prompt)
-                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None,None,1,height,width,
-                                                                                                 weight_dtype,device,None,None)
-                                    if args.start_from_origin:
-                                        latent =back_dict[time_steps[0]]
+
+                                    if args.start_from_final :
+                                        latents, init_latents_orig, noise = pipeline.prepare_latents(None,None,1,height,width,
+                                                                                                     weight_dtype,device,None,None)
+                                        if args.start_from_origin:
+                                            latent =back_dict[time_steps[0]]
+                                        recon_timesteps = time_steps
+
+                                    else :
+                                        total_len = len(time_steps) # 980, ,,, , 0
+                                        inf_len = int(total_len / 2)
+                                        recon_timesteps = time_steps[inf_len:]
+                                        latents = back_dict[recon_timesteps[0]]
+
+                                    x_latent_dict[recon_timesteps[0]] = latents
 
                                     # (7) denoising
-                                    for i, t in enumerate(time_steps) :
+                                    for i, t in enumerate(recon_timesteps) :
+                                        #prev_time = recon_timesteps[i + 1]
                                         latent_model_input = torch.cat( [latents] * 2) if do_classifier_free_guidance else latents
                                         # predict the noise residual
                                         noise_pred = unet(latent_model_input, t,encoder_hidden_states=text_embeddings).sample
@@ -370,15 +394,17 @@ def main(args) :
                                         if args.use_pixel_mask :
                                             z_latent = back_dict[t]
                                             latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
-                                        x_latent_dict[t] = latents
-                                        if not args.only_zero_save :
+
+                                        if args.only_zero_save and i == 0:
                                             image = pipeline.latents_to_image(latents)[0]
                                             img_dir = os.path.join(trg_img_output_dir,f'{name}_recon_{t}{ext}')
                                             image.save(img_dir)
+                                        else :
+                                            image = pipeline.latents_to_image(latents)[0]
+                                            img_dir = os.path.join(trg_img_output_dir, f'{name}_recon_{t}{ext}')
+                                            image.save(img_dir)
+
                                         controller.reset()
-                                    image = pipeline.latents_to_image(latents)[0]
-                                    img_dir = os.path.join(trg_img_output_dir, f'{name}_recon_{t}{ext}')
-                                    image.save(img_dir)
 
 
 
@@ -428,6 +454,9 @@ if __name__ == "__main__":
     parser.add_argument("--start_from_origin", action='store_true')
     parser.add_argument("--guidance_scale", type=float, default=8.5)
     parser.add_argument("--use_pixel_mask", action='store_true')
+    parser.add_argument("--start_from_final", action='store_true')
+    parser.add_argument("--save_origin", action='store_true')
+
 
     import ast
     def arg_as_list(arg):
