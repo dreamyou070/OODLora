@@ -1,8 +1,8 @@
 #! /bin/bash
 
-class_name="cable_gland"
-folder_name="2_1_res_64_up_16_up_good_1_anormal_8_bent_12"
-lora_folder="epoch-000019.safetensors"
+class_name="carrot"
+folder_name="2_1_res_64_up_16_up_1_good_8_anormal"
+lora_folder="epoch-000014.safetensors"
 network_weight_folder="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
 
 port_number=59999
