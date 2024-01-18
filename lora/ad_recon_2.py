@@ -358,19 +358,13 @@ def main(args) :
 
                                 with accelerator.autocast():
                                     text_embeddings = pipeline._encode_prompt(prompt, device, 1, do_classifier_free_guidance, negative_prompt, 3, )
-                                    timesteps, num_inference_steps = pipeline.get_timesteps(args.num_ddim_steps,
-                                                                                            strength,
-                                                                                            device,None)
-                                    latent_timestep = timesteps[:1].repeat(1)
-                                    # (6)  init variables
-                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None, latent_timestep,1,
-                                                                                                 height,width,text_embeddings.dtype, device,None, None)
 
-                                    if args.start_with_random_noise :
-                                        latents = torch.randn((1,4,64,64),dtype=weight_dtype).to(device)
+                                    latents, init_latents_orig, noise = pipeline.prepare_latents(image,None,1,height,width,weight_dtype,device,None,None)
+                                    if args.start_from_origin:
+                                        latent =back_dict[time_steps[0]]
 
                                     # (7) denoising
-                                    for i, t in enumerate(timesteps) :
+                                    for i, t in enumerate(time_steps) :
                                         print(f'[{i}] t : {t}')
                                         # expand the latents if we are doing classifier free guidance
                                         latent_model_input = torch.cat( [latents] * 2) if do_classifier_free_guidance else latents
@@ -442,7 +436,7 @@ if __name__ == "__main__":
     parser.add_argument("--only_zero_save", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
-    parser.add_argument("--start_with_random_noise", action='store_true')
+    parser.add_argument("--start_from_origin", action='store_true')
     parser.add_argument("--guidance_scale", type=float, default=8.5)
     parser.add_argument("--use_pixel_mask", action='store_true')
 
