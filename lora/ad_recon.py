@@ -99,30 +99,36 @@ def main(args) :
                                            f'trg_position_{args.trg_position[0]}_'
                                            f'trg_part_{args.trg_part}_'
                                            f'text_truncate_{args.truncate_pad}')
-    
+
     print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
-    if args.process_title:
-        setproctitle(args.process_title)
-    else:
-        setproctitle('parksooyeon')
     train_util.verify_training_args(args)
     train_util.prepare_dataset_args(args, True)
-    if args.seed is None:
-        args.seed = random.randint(0, 2 ** 32)
-
+    if args.seed is None: args.seed = random.randint(0, 2 ** 32)
     set_seed(args.seed)
 
-    print(f'\n step 3. preparing accelerator')
+    print(f'\n step 2. preparing accelerator')
     accelerator = train_util.prepare_accelerator(args)
-
-    print(f" (1.2) save directory and save config")
     weight_dtype, save_dtype = train_util.prepare_dtype(args)
     vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
 
-    print(f" (1.3) save dir")
+    print(f" (2.1) save dir")
+
+    def get_latent_mask(normalized_mask, trg_res):
+        pixel_save_mask_np = normalized_mask.cpu().numpy()
+        pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
+        latent_mask_pil = Image.fromarray(pixel_mask_img).resize(
+            (trg_res, trg_res,))
+        latent_mask_np = np.array(latent_mask_pil)
+        latent_mask_np = latent_mask_np / latent_mask_np.max()  # 64,64
+        latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device,
+                                                                dtype=weight_dtype)
+        latent_mask_torch = latent_mask_torch.unsqueeze(0).unsqueeze(0)
+        latent_mask = latent_mask_torch.repeat(1, 4, 1, 1)
+        return latent_mask_np, latent_mask
+
     output_dir = args.output_dir
     network_weights = os.listdir(args.network_weights)
     for weight in network_weights:
@@ -142,14 +148,8 @@ def main(args) :
             print(f' (2.1) tokenizer')
             tokenizer = train_util.load_tokenizer(args)
             print(f' (2.2) SD')
-            invers_text_encoder, vae, invers_unet, load_stable_diffusion_format = train_util._load_target_model(args,
-                                                                                                                weight_dtype,
-                                                                                                                device,
-                                                                                                                unet_use_linear_projection_in_v2=False, )
-            invers_text_encoders = invers_text_encoder if isinstance(invers_text_encoder, list) else [invers_text_encoder]
             text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
                                                                                                   unet_use_linear_projection_in_v2=False, )
-            text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
             vae.to(accelerator.device, dtype=vae_dtype)
 
             print(f' (2.4) scheduler')
@@ -160,28 +160,9 @@ def main(args) :
             inference_times = scheduler.timesteps
 
             print(f' (2.4.+) model to accelerator device')
-            if len(invers_text_encoders) > 1:
-                invers_unet, invers_t_enc1, invers_t_enc2 = invers_unet.to(device), invers_text_encoders[0].to(device), \
-                invers_text_encoders[1].to(device)
-                invers_text_encoder = [invers_t_enc1, invers_t_enc2]
-                del invers_t_enc1, invers_t_enc2
-                unet, t_enc1, t_enc2 = unet.to(device), text_encoders[0].to(device), text_encoders[1].to(device)
-                text_encoder = [t_enc1, t_enc2]
-                del t_enc1, t_enc2
-            else:
-                invers_unet, invers_text_encoder = invers_unet.to(device), invers_text_encoder.to(device)
-                unet, text_encoder = unet.to(device), text_encoder.to(device)
+            unet, text_encoder = unet.to(device), text_encoder.to(device)
 
             print(f' (2.5) network')
-            sys.path.append(os.path.dirname(__file__))
-            network_module = importlib.import_module(args.network_module)
-            print(f' (2.5.1) merging weights')
-            net_kwargs = {}
-            if args.network_args is not None:
-                for net_arg in args.network_args:
-                    key, value = net_arg.split("=")
-                    net_kwargs[key] = value
-            print(f' (2.5.2) make network')
             sys.path.append(os.path.dirname(__file__))
             network_module = importlib.import_module(args.network_module)
             net_kwargs = {}
@@ -203,41 +184,32 @@ def main(args) :
             uncon, con = torch.chunk(context, 2)
             uncon, con = uncon[:, :,:], con[:, :,:]
 
-            print(f' (3.2) train images')
-            trg_h, trg_w = args.resolution
-
-            print(f' (3.3) test images')
+            print(f' (3.2) test images')
             test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/rgb')
             test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/gt')
             classes = os.listdir(test_img_folder)
 
             for class_name in classes:
 
-                if '_' in class_name:
-                    trg_prompt = class_name.split('_')[-1]
-                else:
-                    trg_prompt = class_name
                 class_base_folder = os.path.join(save_dir, class_name)
                 os.makedirs(class_base_folder, exist_ok=True)
 
                 image_folder = os.path.join(test_img_folder, class_name)
                 mask_folder = os.path.join(test_mask_folder, class_name)
-                invers_context = init_prompt(tokenizer, invers_text_encoder, device, f'a photo of {trg_prompt}')
+
                 test_images = os.listdir(image_folder)
 
                 for j, test_image in enumerate(test_images):
 
                     name, ext = os.path.splitext(test_image)
                     trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
-
                     os.makedirs(trg_img_output_dir, exist_ok=True)
+
                     test_img_dir = os.path.join(image_folder, test_image)
-                    print(f'test_img_dir : {test_img_dir}')
                     Image.open(test_img_dir).convert('RGB').resize((512,512)).save(os.path.join(trg_img_output_dir,f'{name}_org{ext}'))
 
                     mask_img_dir = os.path.join(mask_folder, test_image)
-                    shutil.copy(mask_img_dir, os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
-
+                    Image.open(mask_img_dir).convert('L').resize((512, 512)).save(os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
 
                     print(f' (2.3.1) inversion')
                     with torch.no_grad():
@@ -248,9 +220,8 @@ def main(args) :
                         """ averaging values """
                         inf_time = inference_times.tolist()
                         inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
-                        if '999' not in inf_time:
-                            inf_time.append(999)
                         back_dict = {}
+
                         latent = org_vae_latent
                         mask_dict_avg = {}
                         back_dict[0] = latent
@@ -260,8 +231,8 @@ def main(args) :
                         for layer_name in attn_stores:
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res = int(attn.shape[1] ** 0.5)
-
                             if res in args.cross_map_res:
+
                                 if 'down' in layer_name:
                                     key_name = f'down_{res}'
                                     pos = 'down'
@@ -271,6 +242,7 @@ def main(args) :
                                 else:
                                     key_name = f'mid_{res}'
                                     pos = 'mid'
+
                                 if 'attentions_0' in layer_name:
                                     part = 'attn_0'
                                 elif 'attentions_1' in layer_name:
@@ -283,23 +255,21 @@ def main(args) :
                                         mask_dict_avg_sub[key_name] = []
                                     mask_dict_avg_sub[key_name].append(attn)
                                 else :
-
                                     if res in args.cross_map_res and pos in args.trg_position and part == args.trg_part:
                                         if args.truncate_length == 3 :
                                             cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                         else :
                                             cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
+
                                         h = trigger_score.shape[0]
                                         trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                         trigger_score = trigger_score.mean(dim=0)  # res, res
                                         pixel_mask = trigger_score / trigger_score.max()  # res, res
                                         # ------------------------------------------------------------------------------------------------------------------------
-                                        pixel_save_mask_np = pixel_mask.cpu().numpy()
-                                        pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
-                                        Image.fromarray(pixel_mask_img).resize((512, 512)).save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-                                        # ------------------------------------------------------------------------------------------------------------------------
-                                        latent_mask_torch = pixel_mask.unsqueeze(0).unsqueeze(0)
-                                        latent_mask = latent_mask_torch.repeat(1, 4, 1, 1)
+
+                                        latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64)
+                                        Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
+                                            os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
 
 
                         if args.use_avg_mask:
@@ -315,24 +285,13 @@ def main(args) :
                                 trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
                                 trigger_score = trigger_score.reshape(h, res, res)  # head, res, res
                                 trigger_score = trigger_score.mean(dim=0)  # res, res
-                                trigger = trigger_score / trigger_score.max()
-                                mask_dict_avg[key_name] = trigger  # up_64
+                                mask_dict_avg[key_name] = trigger_score / trigger_score.max()
 
                             for key in mask_dict_avg.keys():
                                 pixel_mask = mask_dict_avg[key].to(latent.device)
-                                # ------------------------------ generate pixel mask ------------------------------ #
-                                pixel_save_mask_np = pixel_mask.cpu().numpy()
-                                pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
-                                latent_mask_pil = Image.fromarray(pixel_mask_img).resize((64, 64,))
-                                latent_mask_np = np.array(latent_mask_pil)
-                                latent_mask_np = latent_mask_np / latent_mask_np.max()  # 64,64
-                                latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device,
-                                                                                        dtype=weight_dtype)
+                                latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64)
                                 Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
                                     os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-
-                                latent_mask_torch = latent_mask_torch.unsqueeze(0).unsqueeze(0)
-                                latent_mask = latent_mask_torch.repeat(1, 4, 1, 1)
 
                         # ----------------------------[2] generate background latent ------------------------------ #
                         time_steps = []
