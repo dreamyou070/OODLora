@@ -333,14 +333,17 @@ def main(args) :
                             prev_time = time_steps[j + 1]
                             z_latent = back_dict[t]
                             x_latent = x_latent_dict[t]
-                            input_latent = torch.cat([z_latent, x_latent], dim=0)
+                            input_latent = torch.cat([z_latent, x_latent, x_latent], dim=0)
                             if args.truncate_pad :
-                                input_cont = torch.cat([uncon[:,:3,:], con[:,:3,:]], dim=0)[:,:2,:]
+                                input_cont = torch.cat([uncon, uncon, con], dim=0)[:,:2,:]
                             else :
-                                input_cont = context
+                                input_cont = torch.cat([uncon, uncon, con], dim=0)
                             noise_pred = call_unet(unet, input_latent, t, input_cont, None, None)
                             controller.reset()
-                            z_noise_pred, x_noise_pred = noise_pred.chunk(2, dim=0)
+                            z_noise_pred, x_noise_pred_uncon, x_noise_pred_con = noise_pred.chunk(2, dim=0)
+
+                            x_noise_pred = x_noise_pred_uncon + args.guidance_scale * (x_noise_pred_con - x_noise_pred_uncon)
+
                             x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
                             x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
                             x_latent_dict[prev_time] = x_latent
@@ -422,6 +425,7 @@ if __name__ == "__main__":
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--start_with_random_noise", action='store_true')
+    parser.add_argument("--guidance_scale", type=float, default=8.5)
 
 
     import ast

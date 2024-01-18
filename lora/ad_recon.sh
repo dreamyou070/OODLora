@@ -22,4 +22,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --trg_lora_epoch ${lora_folder} \
   --inner_iter 10 \
   --truncate_length 2 --cross_map_res [64] --trg_position "['up']" \
-  --trg_part "attn_2"
+  --trg_part "attn_2" --guidance_scale 1
