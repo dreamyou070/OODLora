@@ -307,6 +307,8 @@ def main(args) :
                         time_steps.append(inf_time[-1])
                         time_steps.reverse()
 
+                        print(f'latent_mask : {latent_mask}')
+
                         # ------------------------------[3] recon ------------------------------------------------- #
                         x_latent_dict = {}
                         if args.start_with_random_noise :
@@ -360,6 +362,8 @@ def main(args) :
                         pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
                     break
                 break
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # step 1. setting
