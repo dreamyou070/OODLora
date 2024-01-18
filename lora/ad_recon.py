@@ -223,6 +223,13 @@ def main(args) :
 
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+
+
+                        pipeline.latents_to_image(org_vae_latent)[0].save(os.path.join(trg_img_output_dir, f'{name}_org_test_{t}{ext}'))
+
+
+                        
+
                         call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                         # ------------------------------[1] generate attn mask map ------------------------------ #
                         """ averaging values """
