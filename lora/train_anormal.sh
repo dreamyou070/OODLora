@@ -22,7 +22,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
   --max_train_steps 160000 --attn_loss --task_loss_weight 1.0 --seed 42 --class_caption 'good' \
-  --wandb_init_name "$class_name" \
+  --wandb_init_name "bagel_res_experiment" \
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
