@@ -95,7 +95,8 @@ def main(args) :
                                            f'trg_part_{args.trg_part}_'
                                            f'guidance_scale_{args.guidance_scale}_'
                                            f'start_from_origin_{args.start_from_origin}_'
-                                           f'start_from_final_{args.start_from_final}')
+                                           f'start_from_final_{args.start_from_final}_'
+                                           f'inner_iteration_{args.inner_iteration}')
 
     print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
@@ -224,16 +225,6 @@ def main(args) :
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
 
-
-                        pipeline.latents_to_image(org_vae_latent)[0].save(os.path.join(trg_img_output_dir, f'{name}_org_test_0{ext}'))
-                        from utils.image_utils import latent2image
-
-                        pil_img = Image.fromarray(latent2image(org_vae_latent, vae, return_type='np'))
-                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_org_my_code{ext}'))
-
-
-
-
                         call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                         # ------------------------------[1] generate attn mask map ------------------------------ #
                         """ averaging values """
@@ -334,9 +325,6 @@ def main(args) :
                                 noise_pred = call_unet(unet, latent, t, con, None, None)
 
                             latent = next_step(noise_pred, int(t), latent, scheduler)
-
-
-
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
                         time_steps.reverse()
@@ -353,11 +341,9 @@ def main(args) :
                             return result
 
                         lambda x: cosine_function(x) if x > 0 else 0
-                        latent_mask = latent_mask.detach().cpu().apply_(lambda x: cosine_function(x) if x > 0 else 0)
-                        latent_mask = latent_mask.to(device)
-
-
-
+                        for i in args.inner_iteration :
+                            latent_mask = latent_mask.detach().cpu().apply_(lambda x: cosine_function(x) if x > 0 else 0)
+                            latent_mask = latent_mask.to(device)
 
 
                         # ----------------------------[3] generate image ------------------------------ #

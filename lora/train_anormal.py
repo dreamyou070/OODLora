@@ -661,11 +661,9 @@ class NetworkTrainer:
                         else :
                             score_map = map
                         res = int(score_map.shape[1] ** 0.5)
-                        print(f'res: {res}')
                         head_num = int(score_map.shape[0])
                         do_mask_loss = False
                         if res in args.cross_map_res:
-                            print(f'layer_name: {layer_name}')
                             if 'down' in layer_name:
                                 position = 'down'
                             elif 'up' in layer_name:
