@@ -23,5 +23,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --inner_iter 10 \
   --only_zero_save \
   --truncate_length 2 --cross_map_res [16] --trg_position "['up']" \
-  --use_avg_mask
-  #--trg_part "attn_2" --use_avg_mask
+  --trg_part "attn_2"# --use_avg_mask
