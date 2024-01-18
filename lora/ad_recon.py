@@ -1,5 +1,6 @@
 import argparse
 from accelerate.utils import set_seed
+from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
 import os
 import random
 import library.train_util as train_util
@@ -12,11 +13,8 @@ import numpy as np
 from utils.image_utils import image2latent, customizing_image2latent, load_image
 from utils.scheduling_utils import get_scheduler, ddim_loop, recon_loop
 from utils.model_utils import get_state_dict, init_prompt
-import shutil
 from attention_store import AttentionStore
 import torch.nn as nn
-from utils.image_utils import latent2image
-from utils.scheduling_utils import prev_step
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -93,8 +91,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer/start_random_{args.start_with_random_noise}'
-                                           f'step_{args.num_ddim_steps}_'
+    args.output_dir = os.path.join(parent, f'recon_infer/step_{args.num_ddim_steps}_'
                                            f'cross_map_res_{args.cross_map_res[0]}_'
                                            f'inner_iter_{args.inner_iteration}_'
                                            f'trg_position_{args.trg_position[0]}_'
@@ -326,68 +323,66 @@ def main(args) :
                         lambda x: cosine_function(x) if x > 0 else 0
                         latent_mask = latent_mask.detach().cpu().apply_(lambda x: cosine_function(x) if x > 0 else 0)
                         latent_mask = latent_mask.to(device)
-                        #print(f'latent_mask : {latent_mask}')
 
-                        # ------------------------------[3] recon ------------------------------------------------- #
-                        x_latent_dict = {}
-                        if args.start_with_random_noise :
-                            x_latent_dict[time_steps[0]] = torch.randn(back_dict[time_steps[0]].shape,).to(latent.device,
-                                                                                                           dtype=weight_dtype)
-                        else :
-                            x_latent_dict[time_steps[0]] = back_dict[time_steps[0]]
 
-                        for j, t in enumerate(time_steps[:-1]):
-                            prev_time = time_steps[j + 1]    # 998
-                            z_latent = back_dict[prev_time]  # 980
-                            x_latent = x_latent_dict[t]      # 999
-                            input_latent = torch.cat([z_latent, x_latent, x_latent], dim=0)
-                            if args.truncate_pad :
-                                input_cont = torch.cat([uncon, uncon, con], dim=0)[:,:2,:]
-                            else :
-                                input_cont = torch.cat([uncon, uncon, con], dim=0)
-                            noise_pred = call_unet(unet, input_latent, t, input_cont, None, None)
-                            controller.reset()
-                            z_noise_pred, x_noise_pred_uncon, x_noise_pred_con = noise_pred.chunk(3, dim=0)
 
-                            x_noise_pred = x_noise_pred_uncon + args.guidance_scale * (x_noise_pred_con - x_noise_pred_uncon)
+                        pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae,
+                                              text_encoder=text_encoder,
+                                              tokenizer=tokenizer,
+                                              unet=unet,
+                                              scheduler=scheduler,
+                                              safety_checker=None,
+                                              feature_extractor=None,
+                                              requires_safety_checker=False, )
 
-                            x_latent = prev_step(x_noise_pred, int(t), x_latent, scheduler)
+                        # ----------------------------[3] generate image ------------------------------ #
+                        pipeline.to(device)
+                        with torch.no_grad():
+                            if accelerator.is_main_process:
 
-                            if args.use_pixel_mask :
-                                x_latent = z_latent * latent_mask + x_latent * (1 - latent_mask)
-                            x_latent_dict[prev_time] = x_latent
-                            if args.only_zero_save :
-                                if prev_time == 0:
-                                    Image.fromarray(latent2image(x_latent, vae)).save(os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
-                            else :
-                                Image.fromarray(latent2image(x_latent, vae)).save(
-                                    os.path.join(trg_img_output_dir, f'{name}_recon_{prev_time}{ext}'))
+                                prompt = args.prompt
+                                negative_prompt = args.negative_prompt
+                                width = height = 512
+                                guidance_scale = args.guidance_scale
+                                seed = args.seed
+                                torch.manual_seed(seed)
+                                torch.cuda.manual_seed(seed)
+                                height = max(64, height - height % 8)  # round to divisible by 8
+                                width = max(64, width - width % 8)  # round to divisible by 8
+                                do_classifier_free_guidance = guidance_scale > 1.0
+                                x_latent_dict = {}
 
-                        # ------------------------------[4] inner loop ------------------------------ #
-                        """
-                        iter_latent_dict = {}
-                        iter_latent_dict[0] = x_latent
-                        import math
-                        def cosine_function(x):
-                            x = math.pi * (x - 1)
-                            result = math.cos(x)
-                            result = result * 0.5
-                            result = result + 0.5
-                            return result
-                        lambda x: cosine_function(x) if x > 0 else 0
-                        pixel_mask = latent_mask.detach().cpu()
-                        mask_torch = pixel_mask.apply_(lambda x: cosine_function(x) if x > 0 else 0)
-                        mask_torch = mask_torch.to(x_latent.device)
+                                with accelerator.autocast():
+                                    text_embeddings = init_prompt(tokenizer, text_encoder, device,args.prompt,args.negative_prompt)
+                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None,None,1,height,width,
+                                                                                                 weight_dtype,device,None,None)
+                                    if args.start_from_origin:
+                                        latent =back_dict[time_steps[0]]
 
-                        for i in range(args.inner_iteration) :
-                            latent = iter_latent_dict[i]
-                            latent = org_vae_latent * mask_torch + latent * (1 - mask_torch)
-                            iter_latent_dict[i+1] = latent
-                        pil_img = Image.fromarray(latent2image(latent, vae))
-                        pil_img.save(os.path.join(trg_img_output_dir, f'{name}_iterloop_{i}{ext}'))
-                        """
-                    break
-                break
+                                    # (7) denoising
+                                    for i, t in enumerate(time_steps) :
+                                        latent_model_input = torch.cat( [latents] * 2) if do_classifier_free_guidance else latents
+                                        # predict the noise residual
+                                        noise_pred = unet(latent_model_input, t,encoder_hidden_states=text_embeddings).sample
+                                        # perform guidance
+                                        if do_classifier_free_guidance:
+                                            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                                            noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+                                        latents = pipeline.scheduler.step(noise_pred, t, latents,).prev_sample
+                                        if args.use_pixel_mask :
+                                            z_latent = back_dict[t]
+                                            latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
+                                        x_latent_dict[t] = latents
+                                        if not args.only_zero_save :
+                                            image = pipeline.latents_to_image(latents)[0]
+                                            img_dir = os.path.join(trg_img_output_dir,f'{name}_recon_{t}{ext}')
+                                            image.save(img_dir)
+                                        controller.reset()
+                                    image = pipeline.latents_to_image(latents)[0]
+                                    img_dir = os.path.join(trg_img_output_dir, f'{name}_recon_{t}{ext}')
+                                    image.save(img_dir)
+                                    break
+
 
 
 if __name__ == "__main__":
@@ -433,7 +428,7 @@ if __name__ == "__main__":
     parser.add_argument("--only_zero_save", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
-    parser.add_argument("--start_with_random_noise", action='store_true')
+    parser.add_argument("--start_from_origin", action='store_true')
     parser.add_argument("--guidance_scale", type=float, default=8.5)
     parser.add_argument("--use_pixel_mask", action='store_true')
 
