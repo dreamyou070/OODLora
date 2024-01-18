@@ -337,7 +337,8 @@ def main(args) :
                                               safety_checker=None,
                                               feature_extractor=None,
                                               requires_safety_checker=False, )
-                        # clip_skip=args.clip_skip,)
+
+                        # ----------------------------[3] generate image ------------------------------ #
                         pipeline.to(device)
                         with torch.no_grad():
                             if accelerator.is_main_process:
@@ -353,6 +354,7 @@ def main(args) :
                                 width = max(64, width - width % 8)  # round to divisible by 8
                                 do_classifier_free_guidance = guidance_scale > 1.0
                                 strength = 0.8
+                                x_latent_dict = {}
 
                                 with accelerator.autocast():
                                     text_embeddings = pipeline._encode_prompt(prompt, device, 1, do_classifier_free_guidance, negative_prompt, 3, )
@@ -364,12 +366,12 @@ def main(args) :
                                                                                                  height,width,text_embeddings.dtype,
                                                                                                  device,None,latents,)
 
-                                    # (7) denoising)
+                                    # (7) denoising
                                     for i, t in enumerate(timesteps) :
                                         # expand the latents if we are doing classifier free guidance
                                         latent_model_input = torch.cat( [latents] * 2) if do_classifier_free_guidance else latents
                                         # predict the noise residual
-                                        noise_pred = unet(latent_model_input, t,encoder_hidden_states=text_embeddings, {}).sample
+                                        noise_pred = unet(latent_model_input, t,encoder_hidden_states=text_embeddings).sample
                                         # perform guidance
                                         if do_classifier_free_guidance:
                                             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
