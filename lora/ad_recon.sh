@@ -8,7 +8,7 @@ network_weight_folder="../result/MVTec3D-AD_experiment/${class_name}/lora_traini
 port_number=50519
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
-  --main_process_port ${port_number} ad_recon.py \
+  --main_process_port ${port_number} ad_recon_2.py \
   --process_title parksooyeon --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 \
