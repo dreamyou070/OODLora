@@ -670,6 +670,7 @@ class NetworkTrainer:
                                 position = 'up'
                             elif 'mid' in layer_name:
                                 position = 'mid'
+
                             key_name = f'{position}_{res}'
                             if 'attentions_0' in layer_name:
                                 part = 'attn_0'
@@ -677,6 +678,7 @@ class NetworkTrainer:
                                 part = 'attn_1'
                             else:
                                 part = 'attn_2'
+
                             if res == 64:
                                 if args.detail_64_up:
                                     if 'up' in layer_name:
@@ -698,6 +700,7 @@ class NetworkTrainer:
                                 else :
 
                                     if part in args.trg_part or int(res) == 8 :
+                                        print(f'res 8 attn loss ... ')
                                         img_masks = batch["img_masks"][0][res].unsqueeze(0)         # [1,1,res,res], foreground = 1
                                         img_mask = img_masks.squeeze()                              # res,res
                                         img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
@@ -717,7 +720,6 @@ class NetworkTrainer:
 
                                         else:
                                             if args.anormal_with_background:
-                                                print(f'anormal_with_background')
                                                 if batch['train_class_list'][0] == 1:
                                                     normal_position = torch.where((img_mask == 1), 1,
                                                                                   0)  # head, pix_num
