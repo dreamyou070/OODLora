@@ -664,6 +664,7 @@ class NetworkTrainer:
                         head_num = int(score_map.shape[0])
                         do_mask_loss = False
                         if res in args.cross_map_res:
+                            print(f'layer_name: {layer_name}')
                             if 'down' in layer_name:
                                 position = 'down'
                             elif 'up' in layer_name:
@@ -700,7 +701,7 @@ class NetworkTrainer:
                                 else :
 
                                     if part in args.trg_part or int(res) == 8 :
-                                        print(f'res 8 attn loss ... ')
+
                                         img_masks = batch["img_masks"][0][res].unsqueeze(0)         # [1,1,res,res], foreground = 1
                                         img_mask = img_masks.squeeze()                              # res,res
                                         img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
