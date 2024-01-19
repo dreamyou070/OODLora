@@ -229,7 +229,7 @@ def main(args) :
                         # ------------------------------[1] generate attn mask map ------------------------------ #
                         """ averaging values """
                         inf_time = inference_times.tolist()
-                        inf_time.reverse()  # [0,20,40,60,80,100 , ... 980]
+                        inf_time.reverse()  # [0,250,500,750]
                         back_dict = {}
 
                         latent = org_vae_latent
@@ -306,30 +306,22 @@ def main(args) :
 
                         # ----------------------------[2] generate background latent ------------------------------ #
                         time_steps = []
+                        inf_time.append(999) # 0, 250, 500, 750, 999
                         for i, t in enumerate(inf_time[:-1]):
+
+                            # 0, 250, 500, 750,
                             time_steps.append(t)
                             back_dict[int(t)] = latent
                             time_steps.append(t)
                             if args.save_origin :
-                                # ---------------------------------------------------------
-                                #
                                 back_image = pipeline.latents_to_image(latent)[0]
-
-
                                 back_img_dir = os.path.join(trg_img_output_dir, f'{name}_org_{t}{ext}')
                                 back_image.save(back_img_dir)
-
-                            if args.truncate_pad :
-                                noise_pred = call_unet(unet, latent, t, con[:,:3,:], None, None)
-                            else :
-                                noise_pred = call_unet(unet, latent, t, con, None, None)
-
+                            noise_pred = call_unet(unet, latent, t, con, None, None)
                             latent = next_step(noise_pred, int(t), latent, scheduler)
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
-                        time_steps.reverse()
-                        # inf_time = 0,20, ...
-                        # time_steps = 999, 980, ..., 20, 0
+                        time_steps.reverse() # 999, 750, ..., 0
 
                         #print(f'latent_mask : {latent_mask}')
                         import math
@@ -370,7 +362,11 @@ def main(args) :
                                         latents, init_latents_orig, noise = pipeline.prepare_latents(None,None,1,height,width,
                                                                                                      weight_dtype,device,None,None)
                                         if args.start_from_origin:
-                                            latent =back_dict[time_steps[0]]
+                                            print(f'use original latent')
+                                            latents =back_dict[time_steps[0]]
+                                        else :
+                                            print(f'use random init latent')
+                                            latents = latents
                                         recon_timesteps = time_steps
 
                                     else :
@@ -382,8 +378,8 @@ def main(args) :
                                     x_latent_dict[recon_timesteps[0]] = latents
 
                                     # (7) denoising
-                                    for i, t in enumerate(recon_timesteps) :
-                                        #prev_time = recon_timesteps[i + 1]
+                                    for i, t in enumerate(recon_timesteps) : # 999, 750, ..., 250, 0
+                                        # 750, 500, 250, 0
                                         latent_model_input = torch.cat( [latents] * 2) if do_classifier_free_guidance else latents
                                         # predict the noise residual
                                         noise_pred = unet(latent_model_input, t,encoder_hidden_states=text_embeddings).sample
