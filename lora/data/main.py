@@ -46,7 +46,7 @@ def main(args):
 
             for image in images:
                 img_dir = os.path.join(good_train_dir, image)
-                Image.open(img_dir).resize(512,512).save(os.path.join(good_rgb_train_dir, image))
+                Image.open(img_dir).resize((512,512)).save(os.path.join(good_rgb_train_dir, image))
 
                 np_img = np.array(Image.open(img_dir))
                 predictor.set_image(np_img)
