@@ -33,13 +33,13 @@ def main(args):
             good_train_dir = os.path.join(train_dir, 'good')
 
             rgb_train_dir = os.path.join(train_ex_dir, f'rgb')
-            gt_train_dir = os.path.join(train_ex_dir, f'gt')
             os.makedirs(rgb_train_dir, exist_ok=True)
-            os.makedirs(gt_train_dir, exist_ok=True)
-
-            good_rgb_train_dir = os.path.join(good_train_dir, '10_good')
-            good_gt_train_dir = os.path.join(good_train_dir, 'mask')
+            good_rgb_train_dir = os.path.join(rgb_train_dir, '10_good')
             os.makedirs(good_rgb_train_dir, exist_ok=True)
+
+            gt_train_dir = os.path.join(train_ex_dir, f'gt')
+            os.makedirs(gt_train_dir, exist_ok=True)
+            good_gt_train_dir = os.path.join(gt_train_dir, '10_good')
             os.makedirs(good_gt_train_dir, exist_ok=True)
 
             images = os.listdir(good_train_dir)
@@ -52,10 +52,10 @@ def main(args):
                 predictor.set_image(np_img)
 
                 h, w, c = np_img.shape
-                trg_h_1, trg_w_1 = h / 3, w / 3
-                trg_h_2, trg_w_2 = h * (2 / 3), w * (2 / 3)
-                input_point = np.array([[trg_h_1, trg_w_1], [trg_h_2, trg_w_2]])
-                input_label = np.array([1, 1])
+                #trg_h_1, trg_w_1 = h / 3, w / 3
+                #trg_h_2, trg_w_2 = h * (2 / 3), w * (2 / 3)
+                input_point = np.array([[0,0]])
+                input_label = np.array([1])
                 masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
                                                           multimask_output=True, )
                 for i, (mask, score) in enumerate(zip(masks, scores)):
