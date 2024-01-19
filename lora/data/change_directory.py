@@ -54,8 +54,9 @@ def main(args):
                     total_num = len(test_images)
                     test_num = int(total_num * 0.2)
                     for i, t_img in enumerate(test_images) :
+                        name, ext = os.path.splitext(t_img)
                         org_rgb_dir = os.path.join(org_test_rgb_dir, t_img)
-                        org_gt_dir = os.path.join(org_test_gt_dir, t_img)
+                        org_gt_dir = os.path.join(org_test_gt_dir, f'{name}_mask{ext}')
 
                         if i < test_num :
                             new_rgb_dir = os.path.join(new_test_rgb_dir, t_img)
@@ -69,8 +70,9 @@ def main(args):
 
                 else :
                     for i, t_img in enumerate(test_images):
+                        name, ext = os.path.splitext(t_img)
                         org_rgb_dir = os.path.join(org_test_rgb_dir, t_img)
-                        org_gt_dir = os.path.join(org_test_gt_dir, t_img)
+                        org_gt_dir = os.path.join(org_test_gt_dir, f'{name}_mask{ext}')
                         new_rgb_dir = os.path.join(new_train_rgb_dir, t_img)
                         new_gt_dir = os.path.join(new_train_gt_dir, t_img)
                         Image.open(org_rgb_dir).resize((512, 512)).save(new_rgb_dir)
