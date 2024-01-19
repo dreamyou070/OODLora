@@ -47,7 +47,11 @@ def main(args):
             for image in images:
                 img_dir = os.path.join(good_train_dir, image)
                 Image.open(img_dir).resize((512,512)).save(os.path.join(good_rgb_train_dir, image))
+                mask_np = np.ones((512,512), dtype=np.uint8)
+                mask_pil = Image.fromarray(mask_np)
+                mask_pil.save(os.path.join(good_gt_train_dir, image))
 
+                """
                 np_img = np.array(Image.open(img_dir))
                 predictor.set_image(np_img)
 
@@ -64,6 +68,7 @@ def main(args):
                         np_mask = np.where(np_mask == 1, 0, 1) * 255
                         sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                         sam_result_pil.save(os.path.join(good_gt_train_dir, image))
+                """
             """
             # -------------------------------------------------------------------------------------------------------
             # (2) test
