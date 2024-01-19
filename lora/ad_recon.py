@@ -391,12 +391,12 @@ def main(args) :
                                             latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
 
                                         if args.only_zero_save :
-                                            if i == 0:
+                                            if t == 0:
                                                 image = pipeline.latents_to_image(latents)[0]
                                                 img_dir = os.path.join(trg_img_output_dir,f'{name}_recon_{t}{ext}')
                                                 image.save(img_dir)
                                         else :
-                                            if i == 999 :
+                                            if t == 999 :
                                                 image = pipeline.latents_to_image(latents)[0]
                                                 img_dir = os.path.join(trg_img_output_dir, f'{name}_test_final_recon_{t}{ext}')
                                                 image.save(img_dir)
