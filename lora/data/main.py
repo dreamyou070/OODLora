@@ -32,12 +32,22 @@ def main(args):
             # (1) train
             good_train_dir = os.path.join(train_dir, 'good')
 
-            sam_train_dir = os.path.join(train_dir, f'good_gt')
-            os.makedirs(sam_train_dir, exist_ok=True)
+            rgb_train_dir = os.path.join(train_ex_dir, f'rgb')
+            gt_train_dir = os.path.join(train_ex_dir, f'gt')
+            os.makedirs(rgb_train_dir, exist_ok=True)
+            os.makedirs(gt_train_dir, exist_ok=True)
+
+            good_rgb_train_dir = os.path.join(good_train_dir, '10_good')
+            good_gt_train_dir = os.path.join(good_train_dir, 'mask')
+            os.makedirs(good_rgb_train_dir, exist_ok=True)
+            os.makedirs(good_gt_train_dir, exist_ok=True)
+
             images = os.listdir(good_train_dir)
 
             for image in images:
                 img_dir = os.path.join(good_train_dir, image)
+                Image.open(img_dir).resize(512,512).save(os.path.join(good_rgb_train_dir, image))
+
                 np_img = np.array(Image.open(img_dir))
                 predictor.set_image(np_img)
 
@@ -53,7 +63,7 @@ def main(args):
                         np_mask = (mask * 1)
                         np_mask = np.where(np_mask == 1, 1, 0) * 255
                         sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
-                        sam_result_pil.save(os.path.join(sam_train_dir, image))
+                        sam_result_pil.save(os.path.join(good_gt_train_dir, image))
             """
             # -------------------------------------------------------------------------------------------------------
             # (2) test
