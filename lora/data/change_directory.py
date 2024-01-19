@@ -77,8 +77,8 @@ def main(args):
                         mask_img = np.zeros((512, 512)).astype('uint8')
                         mask_img = Image.fromarray(mask_img)
 
-                        new_rgb_dir = os.path.join(new_train_rgb_dir, t_img)
-                        new_gt_dir = os.path.join(new_train_gt_dir, t_img)
+                        new_rgb_dir = os.path.join(new_test_rgb_dir, t_img)
+                        new_gt_dir = os.path.join(new_test_gt_dir, t_img)
                         Image.open(org_rgb_dir).resize((512, 512)).save(new_rgb_dir)
                         mask_img.save(new_gt_dir)
 
