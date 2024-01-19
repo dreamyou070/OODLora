@@ -21,7 +21,8 @@ def main(args):
             cat_dir = os.path.join(base_folder, f'{cat}')
             train_dir = os.path.join(cat_dir, 'train')
             test_dir = os.path.join(cat_dir, 'test')
-            validation_dir = os.path.join(cat_dir, 'validation')
+
+            #validation_dir = os.path.join(cat_dir, 'validation')
 
             train_ex_dir = os.path.join(cat_dir, 'train_ex')
             test_ex_dir = os.path.join(cat_dir, 'test_ex')
@@ -29,10 +30,12 @@ def main(args):
             os.makedirs(test_ex_dir, exist_ok=True)
             # -------------------------------------------------------------------------------------------------------
             # (1) train
-            good_train_dir = os.path.join(train_dir, 'good/mask')
-            sam_train_dir = os.path.join(train_dir, f'good/gt')
+            good_train_dir = os.path.join(train_dir, 'good')
+
+            sam_train_dir = os.path.join(train_dir, f'good_gt')
             os.makedirs(sam_train_dir, exist_ok=True)
             images = os.listdir(good_train_dir)
+
             for image in images:
                 img_dir = os.path.join(good_train_dir, image)
                 np_img = np.array(Image.open(img_dir))
@@ -51,6 +54,7 @@ def main(args):
                         np_mask = np.where(np_mask == 1, 1, 0) * 255
                         sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                         sam_result_pil.save(os.path.join(sam_train_dir, image))
+            """
             # -------------------------------------------------------------------------------------------------------
             # (2) test
             good_test_dir = os.path.join(test_dir, 'good/mask')
@@ -101,10 +105,10 @@ def main(args):
                         np_mask = np.where(np_mask == 1, 1, 0) * 255
                         sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                         sam_result_pil.save(os.path.join(sam_validation_dir, image))
-
+            """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
-    parser.add_argument('--trg_cat', type=str, default='cookie')
+    parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec')
+    parser.add_argument('--trg_cat', type=str, default='bottle')
     args = parser.parse_args()
     main(args)
