@@ -241,7 +241,7 @@ def main(args) :
                                         part = 'attn_1'
                                     else :
                                         part = 'attn_2'
-                                    if part in trg_part :
+                                    if part in args.trg_part :
                                         title_name = f'res_{res}_{position}_{part}'
                                         # ----------------------------------------- get attn map ----------------------------------------- #
                                         if args.truncate_length == 3 :
