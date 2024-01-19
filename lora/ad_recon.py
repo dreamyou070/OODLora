@@ -322,6 +322,10 @@ def main(args) :
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
                         time_steps.reverse() # 999, 750, ..., 0
+                        if args.save_origin:
+                            back_image = pipeline.latents_to_image(latent)[0]
+                            back_img_dir = os.path.join(trg_img_output_dir, f'{name}_org_{inf_time[-1]}{ext}')
+                            back_image.save(back_img_dir)
 
                         #print(f'latent_mask : {latent_mask}')
                         import math
