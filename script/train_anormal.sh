@@ -1,13 +1,13 @@
 #!bin/bash
 
-class_name="cable_gland"
+class_name="dowel"
 data_source='train_ex_2'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="2_1_res_64_up_16_up_1_good_4_anormal"
+save_folder="2_2_res_64_up_good_3_anormal_5"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 start_epoch=0
-port_number=50033
+port_number=57951
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config --main_process_port $port_number train_anormal.py \

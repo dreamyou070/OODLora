@@ -10,11 +10,11 @@
 
 class_name='bagel'
 start_epoch=0
-port_number=53113
-folder_name="2_4_res_32_up"
+port_number=53115
+folder_name="2_3_res_16_up"
 concept_image_folder="../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 output_dir="result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${folder_name}"
-network_weights="${output_dir}/models"
+network_weights="${output_dir}/models/epoch-000026.safetensors"
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../gpu_config/gpu_0_config \
   --main_process_port ${port_number} lora/inference.py \

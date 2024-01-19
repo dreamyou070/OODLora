@@ -1,7 +1,7 @@
 #! /bin/bash
 
-class_name="carrot"
-folder_name="2_1_res_64_up_16_up_1_good_8_anormal"
+class_name="bagel"
+folder_name="2_5_res_64_up"
 lora_folder="epoch-000014.safetensors"
 network_weight_folder="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
 
