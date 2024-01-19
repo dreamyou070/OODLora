@@ -49,8 +49,8 @@ def main(args):
                 os.makedirs(new_train_rgb_dir, exist_ok=True)
                 os.makedirs(new_train_gt_dir, exist_ok=True)
 
+                test_images = os.listdir(org_test_rgb_dir)
                 if 'good' not in categor:
-                    test_images = os.listdir(org_test_rgb_dir)
                     total_num = len(test_images)
                     test_num = int(total_num * 0.2)
                     for i, t_img in enumerate(test_images) :
