@@ -241,62 +241,63 @@ def main(args) :
                                         part = 'attn_1'
                                     else :
                                         part = 'attn_2'
-                                    title_name = f'res_{res}_{position}_{part}'
-                                    # ----------------------------------------- get attn map ----------------------------------------- #
-                                    if args.truncate_length == 3 :
-                                        cls_score, normal_score, pad_score = attn.chunk(args.truncate_length, dim=-1) # head, pix_num
-                                    else :
-                                        cls_score, normal_score = attn.chunk(args.truncate_length,dim=-1)  # head, pix_num
-                                    mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
-                                    mask_np = np.where((np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                    h = cls_score.shape[0]
-
-                                    # ----------------------------------------- get cls map ----------------------------------------- #
-                                    cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
-                                    singl_head_cls_score = cls_score.mean(dim=0)
-                                    c_score = singl_head_cls_score.detach().cpu()
-                                    c_score_np = np.array((c_score / c_score.max()) * 255).astype(np.uint8)
-                                    score_dict[f'cls_{title_name}'] = c_score_np * mask_np
-                                    c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
-                                    c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
-                                    c_score_img.save(os.path.join(best_find_img_folder, f'lora_epoch_{model_epoch}_cls_{name}_{title_name}.png'))
-
-                                    if args.truncate_length == 3:
-                                        pad_score = pad_score.unsqueeze(-1).reshape(h, res, res)
-                                        singl_head_pad_score = pad_score.mean(dim=0)
-                                        p_score = singl_head_pad_score.detach().cpu()
-                                        p_score = p_score / p_score.max()
-                                        # [1] resizing for recording
-                                        score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
+                                    if part in trg_part :
+                                        title_name = f'res_{res}_{position}_{part}'
+                                        # ----------------------------------------- get attn map ----------------------------------------- #
+                                        if args.truncate_length == 3 :
+                                            cls_score, normal_score, pad_score = attn.chunk(args.truncate_length, dim=-1) # head, pix_num
+                                        else :
+                                            cls_score, normal_score = attn.chunk(args.truncate_length,dim=-1)  # head, pix_num
                                         mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
-                                        mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
-                                        # anormal portion score
-                                        #score_dict[title_name] = score_np * mask_np
-                                        # [2] saving p_score map
-                                        p_score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
-                                        p_score_img = Image.fromarray(p_score_np).resize((512, 512),Image.BILINEAR)
-                                        p_score_img.save(os.path.join(trg_img_output_dir, f'pad_{name}_{title_name}.png'))
+                                        mask_np = np.where((np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
+                                        h = cls_score.shape[0]
 
-                                    # ----------------------------------------- get normal map ----------------------------------------- #
-                                    normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
-                                    singl_head_normal_score = normal_score.mean(dim=0)
-                                    n_score = singl_head_normal_score.detach().cpu()
-                                    n_score_np = np.array((n_score / n_score.max()) * 255).astype(np.uint8)
-                                    score_dict[title_name] = n_score_np * mask_np
-                                    n_score_pil = Image.fromarray(n_score_np).resize((512, 512),Image.BILINEAR)
-                                    n_score_pil.save(os.path.join(trg_img_output_dir,f'{title_name}_res_{res}.png'))
-                                    n_score_pil.save(os.path.join(best_find_img_folder,f'lora_epoch_{model_epoch}_{title_name}_res_{res}.png'))
+                                        # ----------------------------------------- get cls map ----------------------------------------- #
+                                        cls_score = cls_score.unsqueeze(-1).reshape(h, res, res)
+                                        singl_head_cls_score = cls_score.mean(dim=0)
+                                        c_score = singl_head_cls_score.detach().cpu()
+                                        c_score_np = np.array((c_score / c_score.max()) * 255).astype(np.uint8)
+                                        score_dict[f'cls_{title_name}'] = c_score_np * mask_np
+                                        c_score_img = Image.fromarray(c_score_np).resize((512, 512),Image.BILINEAR)
+                                        c_score_img.save(os.path.join(trg_img_output_dir, f'cls_{name}_{title_name}.png'))
+                                        c_score_img.save(os.path.join(best_find_img_folder, f'lora_epoch_{model_epoch}_cls_{name}_{title_name}.png'))
 
-                                    if 'down' in layer_name :
-                                        key_name = f'down_{res}'
-                                    elif 'up' in layer_name :
-                                        key_name = f'up_{res}'
-                                    else : key_name = f'mid_{res}'
+                                        if args.truncate_length == 3:
+                                            pad_score = pad_score.unsqueeze(-1).reshape(h, res, res)
+                                            singl_head_pad_score = pad_score.mean(dim=0)
+                                            p_score = singl_head_pad_score.detach().cpu()
+                                            p_score = p_score / p_score.max()
+                                            # [1] resizing for recording
+                                            score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
+                                            mask_img = Image.open(mask_img_dir).convert("L").resize((res, res), Image.BICUBIC)
+                                            mask_np = np.where( (np.array(mask_img, np.uint8)) > 100, 1, 0)  # [res,res]
+                                            # anormal portion score
+                                            #score_dict[title_name] = score_np * mask_np
+                                            # [2] saving p_score map
+                                            p_score_np = np.array((p_score.cpu()) * 255).astype(np.uint8)
+                                            p_score_img = Image.fromarray(p_score_np).resize((512, 512),Image.BILINEAR)
+                                            p_score_img.save(os.path.join(trg_img_output_dir, f'pad_{name}_{title_name}.png'))
 
-                                    if key_name not in attn_dict.keys() : attn_dict[key_name] = []
-                                    attn_dict[key_name].append(attn)
-                                    if res_key_name not in res_avg_dict.keys() : res_avg_dict[res_key_name] = []
-                                    res_avg_dict[res_key_name].append(attn)
+                                        # ----------------------------------------- get normal map ----------------------------------------- #
+                                        normal_score = normal_score.unsqueeze(-1).reshape(h, res, res)
+                                        singl_head_normal_score = normal_score.mean(dim=0)
+                                        n_score = singl_head_normal_score.detach().cpu()
+                                        n_score_np = np.array((n_score / n_score.max()) * 255).astype(np.uint8)
+                                        score_dict[title_name] = n_score_np * mask_np
+                                        n_score_pil = Image.fromarray(n_score_np).resize((512, 512),Image.BILINEAR)
+                                        n_score_pil.save(os.path.join(trg_img_output_dir,f'{title_name}_res_{res}.png'))
+                                        n_score_pil.save(os.path.join(best_find_img_folder,f'lora_epoch_{model_epoch}_{title_name}_res_{res}.png'))
+
+                                        if 'down' in layer_name :
+                                            key_name = f'down_{res}'
+                                        elif 'up' in layer_name :
+                                            key_name = f'up_{res}'
+                                        else : key_name = f'mid_{res}'
+
+                                        if key_name not in attn_dict.keys() : attn_dict[key_name] = []
+                                        attn_dict[key_name].append(attn)
+                                        if res_key_name not in res_avg_dict.keys() : res_avg_dict[res_key_name] = []
+                                        res_avg_dict[res_key_name].append(attn)
                             # ------------------------------------------------------------------------------------------------ #
                             for key_name in attn_dict.keys() :
                                 attn_list = attn_dict[key_name]
@@ -405,6 +406,9 @@ if __name__ == "__main__":
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
+
+
+    parser.add_argument("--trg_part", type=arg_as_list, default=['attn_2','attn_1','attn_0'])
     parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--detail_64", action="store_true", )
