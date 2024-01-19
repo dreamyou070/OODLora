@@ -362,10 +362,8 @@ def main(args) :
                                         latents, init_latents_orig, noise = pipeline.prepare_latents(None,None,1,height,width,
                                                                                                      weight_dtype,device,None,None)
                                         if args.start_from_origin:
-                                            print(f'use original latent')
                                             latents =back_dict[time_steps[0]]
                                         else :
-                                            print(f'use random init latent')
                                             latents = latents
                                         recon_timesteps = time_steps
 
@@ -398,9 +396,10 @@ def main(args) :
                                                 img_dir = os.path.join(trg_img_output_dir,f'{name}_recon_{t}{ext}')
                                                 image.save(img_dir)
                                         else :
-                                            image = pipeline.latents_to_image(latents)[0]
-                                            img_dir = os.path.join(trg_img_output_dir, f'{name}_recon_{t}{ext}')
-                                            image.save(img_dir)
+                                            if i == 999 :
+                                                image = pipeline.latents_to_image(latents)[0]
+                                                img_dir = os.path.join(trg_img_output_dir, f'{name}_test_final_recon_{t}{ext}')
+                                                image.save(img_dir)
 
                                         controller.reset()
 
