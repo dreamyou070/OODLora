@@ -392,10 +392,11 @@ def main(args) :
                                             z_latent = back_dict[t]
                                             latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
 
-                                        if args.only_zero_save and i == 0:
-                                            image = pipeline.latents_to_image(latents)[0]
-                                            img_dir = os.path.join(trg_img_output_dir,f'{name}_recon_{t}{ext}')
-                                            image.save(img_dir)
+                                        if args.only_zero_save :
+                                            if i == 0:
+                                                image = pipeline.latents_to_image(latents)[0]
+                                                img_dir = os.path.join(trg_img_output_dir,f'{name}_recon_{t}{ext}')
+                                                image.save(img_dir)
                                         else :
                                             image = pipeline.latents_to_image(latents)[0]
                                             img_dir = os.path.join(trg_img_output_dir, f'{name}_recon_{t}{ext}')
