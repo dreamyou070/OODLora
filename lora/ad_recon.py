@@ -380,7 +380,7 @@ def main(args) :
                                     x_latent_dict[recon_timesteps[0]] = latents
 
                                     # (7) denoising
-                                    for i, t in enumerate(recon_timesteps) : # 999, 750, ..., 250, 0
+                                    for i, t in enumerate(recon_timesteps[1:]) : # 999, 750, ..., 250, 0
                                         # 750, 500, 250, 0
                                         latent_model_input = torch.cat( [latents] * 2) if do_classifier_free_guidance else latents
                                         # predict the noise residual
