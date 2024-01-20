@@ -76,14 +76,12 @@ def trapezoid(x, y, x_max=None):
 def generate_toy_dataset(num_images, image_width, image_height, gt_size):
     """
     Generate a toy dataset to test the evaluation script.
-
     Args:
         num_images:   Number of images that the toy dataset contains.
         image_width:  Width of the dataset images in pixels.
         image_height: Height of the dataset images in pixels.
         gt_size:      Size of rectangular ground truth regions that are
                       artificially generated on the dataset images.
-
     Returns:
         anomaly_maps:     List of numpy arrays that contain random anomaly maps.
         ground_truth_map: Corresponding list of numpy arrays that specify a
@@ -97,6 +95,7 @@ def generate_toy_dataset(num_images, image_width, image_height, gt_size):
     anomaly_maps = []
     ground_truth_maps = []
     for _ in range(num_images):
+
         # Sample a random anomaly maps.
         anomaly_map = np.random.random((image_height, image_width))
 

@@ -92,7 +92,6 @@ def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
     args.output_dir = os.path.join(parent, f'recon_infer/step_{args.num_ddim_steps}_'
-                                           f'trg_part_{args.trg_part}_'
                                            f'guidance_scale_{args.guidance_scale}_'
                                            f'start_from_origin_{args.start_from_origin}_'
                                            f'start_from_final_{args.start_from_final}_'
