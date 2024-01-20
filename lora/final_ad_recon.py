@@ -377,7 +377,7 @@ def main(args) :
                         recon_np = np.array(recon_image)/255
                         diff_np = np.abs(org_np - recon_np) # 512,512,1
                         diff_np = diff_np / diff_np.max() # if diff small -> good, else -> bad
-                        back_recorect_diff_np = np.where(diff_np < 0.3, 0, 1)  # 0 = good = black
+                        back_recorect_diff_np = np.where(diff_np < 0.2, 0, 1)  # 0 = good = black
                         Image.fromarray((back_recorect_diff_np * 255).astype(np.uint8)).save(os.path.join(class_base_folder, f'{name}_just_img_diff.png'))
 
 
