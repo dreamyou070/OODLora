@@ -380,6 +380,8 @@ def main(args) :
                         Image.fromarray((diff_np * 255).astype(np.uint8)).save(os.path.join(class_base_folder, f'{name}_just_img_diff.png'))
 
                         back_recorect_diff_np = np.where(diff_np < 0.5, 0, 1) # 0 = good = black
+
+                        mask_np = np.where((np.array(pixel_mask.resize((org_h, org_w)).convert('L')) / 255) < 0.5, 1, 0)
                         mask_np = np.where((back_recorect_diff_np * mask_np) != 0, 1, 0) * 255
                         anomaly_map = Image.fromarray(mask_np.astype(np.uint8)).resize((org_h, org_w))
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
