@@ -35,12 +35,12 @@ def main(args):
 
             rgb_train_dir = os.path.join(train_ex_dir, f'rgb')
             os.makedirs(rgb_train_dir, exist_ok=True)
-            good_rgb_train_dir = os.path.join(rgb_train_dir, '10_good')
+            good_rgb_train_dir = os.path.join(rgb_train_dir, '20_good')
             os.makedirs(good_rgb_train_dir, exist_ok=True)
 
             gt_train_dir = os.path.join(train_ex_dir, f'gt')
             os.makedirs(gt_train_dir, exist_ok=True)
-            good_gt_train_dir = os.path.join(gt_train_dir, '10_good')
+            good_gt_train_dir = os.path.join(gt_train_dir, '20_good')
             os.makedirs(good_gt_train_dir, exist_ok=True)
 
             images = os.listdir(good_train_dir)
