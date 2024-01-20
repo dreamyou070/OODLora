@@ -3,7 +3,7 @@ Utility functions that compute a ROC curve and integrate its area from a set
 of anomaly maps and corresponding ground truth classification labels.
 """
 import numpy as np
-
+from generic_util import trapezoid, generate_toy_dataset
 
 def compute_classification_roc(
         anomaly_maps,
@@ -77,16 +77,12 @@ def compute_classification_roc(
 
 def main():
 
-
-    """
-    Compute the area under the ROC curve for a toy dataset and an algorithm
-    that randomly assigns anomaly scores to each image pixel.
-    """
-
-    from generic_util import trapezoid, generate_toy_dataset
+    print(f'step 1. generate anomaly maps')
 
     # Generate a toy dataset.
     anomaly_maps, _ = generate_toy_dataset(num_images=10000, image_width=30, image_height=30, gt_size=0)
+
+    print(f'step 2. classifcation_labels')
 
     # Fix a random seed for reproducibility.
     np.random.seed(42)

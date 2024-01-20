@@ -225,12 +225,12 @@ def main(args) :
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
 
                         call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
-                        # ------------------------------[1] generate attn mask map ------------------------------ #
-                        """ averaging values """
+
+
+                        # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
                         inf_time = inference_times.tolist()
                         inf_time.reverse()  # [0,250,500,750]
                         back_dict = {}
-
                         latent = org_vae_latent
                         mask_dict_avg = {}
                         back_dict[0] = latent
@@ -241,7 +241,6 @@ def main(args) :
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res = int(attn.shape[1] ** 0.5)
                             if res in args.cross_map_res:
-
                                 if 'down' in layer_name:
                                     key_name = f'down_{res}'
                                     pos = 'down'
@@ -251,7 +250,6 @@ def main(args) :
                                 else:
                                     key_name = f'mid_{res}'
                                     pos = 'mid'
-
                                 if 'attentions_0' in layer_name:
                                     part = 'attn_0'
                                 elif 'attentions_1' in layer_name:
@@ -279,10 +277,7 @@ def main(args) :
                                         latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64)
                                         Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
                                             os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-
-
                         if args.use_avg_mask:
-
                             for key_name in mask_dict_avg_sub:
                                 attn_list = mask_dict_avg_sub[key_name]
                                 attn = torch.cat(attn_list, dim=0)
@@ -303,12 +298,11 @@ def main(args) :
                                 Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
                                     os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
 
-                        # ----------------------------[2] generate background latent ------------------------------ #
+
+                        # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
                         inf_time.append(999) # 0, 250, 500, 750, 999
                         for i, t in enumerate(inf_time[:-1]):
-
-                            # 0, 250, 500, 750,
                             time_steps.append(t)
                             back_dict[int(t)] = latent
                             time_steps.append(t)
@@ -316,6 +310,8 @@ def main(args) :
                                 back_image = pipeline.latents_to_image(latent)[0]
                                 back_img_dir = os.path.join(trg_img_output_dir, f'{name}_org_{t}{ext}')
                                 back_image.save(back_img_dir)
+                            if t == 0:
+                                org_input_image = pipeline.latents_to_image(latent)[0].resize((512, 512))
                             noise_pred = call_unet(unet, latent, t, con, None, None)
                             latent = next_step(noise_pred, int(t), latent, scheduler)
                         back_dict[inf_time[-1]] = latent
@@ -345,9 +341,6 @@ def main(args) :
                         pipeline.to(device)
                         with torch.no_grad():
                             if accelerator.is_main_process:
-
-                                prompt = args.prompt
-                                negative_prompt = args.negative_prompt
                                 width = height = 512
                                 guidance_scale = args.guidance_scale
                                 seed = args.seed
@@ -360,7 +353,6 @@ def main(args) :
 
                                 with accelerator.autocast():
                                     text_embeddings = init_prompt(tokenizer, text_encoder, device,args.prompt,args.negative_prompt)
-
                                     if args.start_from_final :
                                         latents, init_latents_orig, noise = pipeline.prepare_latents(None,None,1,height,width,
                                                                                                      weight_dtype,device,None,None)
@@ -369,15 +361,12 @@ def main(args) :
                                         else :
                                             latents = latents
                                         recon_timesteps = time_steps
-
                                     else :
                                         total_len = len(time_steps) # 980, ,,, , 0
                                         inf_len = int(total_len / 2)
                                         recon_timesteps = time_steps[inf_len:]
                                         latents = back_dict[recon_timesteps[0]]
-
                                     x_latent_dict[recon_timesteps[0]] = latents
-
                                     # (7) denoising
                                     for i, t in enumerate(recon_timesteps[1:]) : # 999, 750, ..., 250, 0
                                         # 750, 500, 250, 0
@@ -405,7 +394,20 @@ def main(args) :
                                                 image.save(img_dir)
 
                                         controller.reset()
+                        # ----------------------------[4] generate anomaly maps ------------------------------ #
+                        input = org_input_image
+                        input_np = np.array(input)
+                        reconstruction = image
+                        reconstruction_np = np.array(reconstruction)
+                        anomaly_maps = np.where(input_np != reconstruction_np, 1, 0)
+                        classification_result = np.sum(anomaly_maps)
+                        if classification_result > 0:
+                            label = 1
+                        else :
+                            label = 0
+                        Image.fromarray((anomaly_maps*255).astype(np.uint8)).convert('L').save(os.path.join(trg_img_output_dir, f'{name}_anomaly_map{ext}'))
 
+                        
 
 
 if __name__ == "__main__":
