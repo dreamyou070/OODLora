@@ -5,13 +5,14 @@ import numpy as np
 
 def main(args):
 
+    """
     print(f'step 1. prepare model')
 
     model_type = "vit_h"
     path_to_checkpoint= r'/home/dreamyou070/pretrained_stable_diffusion/sam_vit_h_4b8939.pth'
     sam = sam_model_registry[model_type](checkpoint=path_to_checkpoint)
     predictor = SamPredictor(sam)
-
+    """
     print(f'step 2. prepare images')
     base_folder = args.base_folder
     cats = os.listdir(base_folder)
