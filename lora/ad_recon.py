@@ -116,16 +116,14 @@ def main(args) :
     def get_latent_mask(normalized_mask, trg_res):
         pixel_save_mask_np = normalized_mask.cpu().numpy()
         pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
-        latent_mask_pil = Image.fromarray(pixel_mask_img).resize(
-            (trg_res, trg_res,))
+        latent_mask_pil = Image.fromarray(pixel_mask_img).resize((trg_res, trg_res,))
         latent_mask_np = np.array(latent_mask_pil)
         latent_mask_np = latent_mask_np / latent_mask_np.max()  # 64,64
         # ------------------------------------------------------------------------------------------ #
         # binarize
-        latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device,
-                                                                dtype=weight_dtype)
-        latent_mask_torch = latent_mask_torch.unsqueeze(0).unsqueeze(0)
-        latent_mask = latent_mask_torch.repeat(1, 4, 1, 1)
+        latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device, dtype=weight_dtype)
+        latent_mask = latent_mask_torch.unsqueeze(0).unsqueeze(0)
+        #latent_mask = latent_mask_torch.repeat(1, 4, 1, 1)
         return latent_mask_np, latent_mask
 
     output_dir = args.output_dir
@@ -313,9 +311,15 @@ def main(args) :
                             latent_mask = latent_mask.detach().cpu().apply_(
                                 lambda x: cosine_function(x) if x > 0 else 0)
                             latent_mask = latent_mask.to(device)
-                        latent_mask_np = np.where(latent_mask_np > 0.5, 1, 0)
+                        latent_mask = torch.where(latent_mask > 0.5, 1, 0)#
+                        # ----------------------------[2.5] binarize mask save ------------------------------ #
+                        latent_mask_np = latent_mask.detach().cpu().numpy()
                         Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
                             os.path.join(trg_img_output_dir, f'{name}_pixel_mask_{mask_i}{ext}'))
+                        latent_mask = latent_mask.repeat(1, 4, 1, 1) # [1,4,64,64] and binary
+
+                        one_channel_mask = latent_mask[:, 0, :, :].unsqueeze(1)
+                        print(f'latent_mask (one_channel) : {one_channel_mask}')
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
