@@ -229,6 +229,8 @@ def main(args) :
 
             for class_name in classes:
 
+                print(f' - class : {class_name}')
+
                 evaluate_class_dir = os.path.join(evaluate_output_dir, class_name)
                 os.makedirs(evaluate_class_dir, exist_ok=True)
 
@@ -250,7 +252,6 @@ def main(args) :
                     mask_img_dir = os.path.join(mask_folder, test_image)
                     Image.open(mask_img_dir).convert('L').save(os.path.join(class_base_folder, f'{name}_gt{ext}'))
 
-                    print(f' (2.3.1) inversion')
                     with torch.no_grad():
                         pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae,
                                                                               text_encoder=text_encoder,
