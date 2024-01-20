@@ -243,14 +243,18 @@ def main(args) :
                 for j, test_image in enumerate(test_images):
 
                     name, ext = os.path.splitext(test_image)
-
+                    trg_img_output_dir = os.path.join(class_base_folder, f'{name}')
+                    os.makedirs(trg_img_output_dir, exist_ok=True)
 
                     test_img_dir = os.path.join(image_folder, test_image)
                     org_h, org_w = Image.open(test_img_dir).size
+                    print(f'org_h : {org_h}, org_w : {org_w}')
+                    Image.open(test_img_dir).convert('RGB').save(os.path.join(trg_img_output_dir, f'{name}_org{ext}'))
 
                     mask_img_dir = os.path.join(mask_folder, test_image)
                     org_mask_h, org_mask_w = Image.open(mask_img_dir).size
-                    Image.open(mask_img_dir).convert('L').save(os.path.join(class_base_folder, f'{name}_gt{ext}'))
+                    print(f'org_mask_h : {org_mask_h}, org_mask_w : {org_mask_w}')
+                    Image.open(mask_img_dir).convert('L').save(os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
 
                     print(f' (2.3.1) inversion')
                     with torch.no_grad():
@@ -294,7 +298,8 @@ def main(args) :
                                 lambda x: cosine_function(x) if x > 0 else 0)
                             latent_mask = latent_mask.to(device)
                         latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)#
-                        latent_mask = latent_mask_.repeat(1, 4, 1, 1)
+                        latent_mask = latent_mask_.repeat(1, 4, 1, 1)  # [1,4,64,64] and binary
+                        #pixel_mask = save_pixel_mask(latent_mask_, trg_img_output_dir, f'{name}_pixel_mask{ext}')
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
@@ -302,15 +307,19 @@ def main(args) :
                         for i, t in enumerate(inf_time[:-1]):
                             back_dict[int(t)] = latent
                             time_steps.append(t)
-                            if t == 0 :
+                            if args.save_origin :
                                 back_image = pipeline.latents_to_image(latent)[0]
-                                back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
+                                back_img_dir = os.path.join(trg_img_output_dir, f'{name}_org_{t}{ext}')
                                 back_image.save(back_img_dir)
                             noise_pred = call_unet(unet, latent, t, con, None, None)
                             latent = next_step(noise_pred, int(t), latent, scheduler)
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
                         time_steps.reverse() # 999, 750, ..., 0
+                        if args.save_origin:
+                            back_image = pipeline.latents_to_image(latent)[0]
+                            back_img_dir = os.path.join(trg_img_output_dir, f'{name}_org_{inf_time[-1]}{ext}')
+                            back_image.save(back_img_dir)
 
                         # ----------------------------[3] generate image ------------------------------ #
                         pipeline.to(device)
@@ -360,8 +369,12 @@ def main(args) :
                                         if args.only_zero_save :
                                             if t == 0:
                                                 image = pipeline.latents_to_image(latents)[0]
-                                                img_dir = os.path.join(class_base_folder,f'{name}_recon{ext}')
+                                                img_dir = os.path.join(trg_img_output_dir,f'{name}_recon_{t}{ext}')
                                                 image.save(img_dir)
+                                        else :
+                                            image = pipeline.latents_to_image(latents)[0]
+                                            img_dir = os.path.join(trg_img_output_dir, f'{name}_test_final_recon_{t}{ext}')
+                                            image.resize((org_h, org_w)).save(img_dir)
                                         controller.reset()
 
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
@@ -382,7 +395,7 @@ def main(args) :
                         mask_np = np.where((diff_np * mask_np) != 0, 1, 0) * 255
                         anomaly_map = Image.fromarray(mask_np.astype(np.uint8))
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-                        anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
+                        anomaly_map.save(os.path.join(trg_img_output_dir, f'{name}.png'))
 
                         # ----------------------------- [6] AUC - ROC ------------------------------ #
                         #gt_map = Image.open(mask_img_dir).convert('L').resize((512, 512))
