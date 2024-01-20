@@ -120,6 +120,9 @@ def main(args) :
             (trg_res, trg_res,))
         latent_mask_np = np.array(latent_mask_pil)
         latent_mask_np = latent_mask_np / latent_mask_np.max()  # 64,64
+        # ------------------------------------------------------------------------------------------ #
+        # binarize
+        latent_mask_np = np.where(latent_mask_np > 0.5, 1, 0)
         latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device,
                                                                 dtype=weight_dtype)
         latent_mask_torch = latent_mask_torch.unsqueeze(0).unsqueeze(0)
@@ -211,7 +214,6 @@ def main(args) :
 
                     print(f' (2.3.1) inversion')
                     with torch.no_grad():
-
                         pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae,
                                                                               text_encoder=text_encoder,
                                                                               tokenizer=tokenizer,
@@ -277,6 +279,7 @@ def main(args) :
                                         latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64)
                                         Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
                                             os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
+
                         if args.use_avg_mask:
                             for key_name in mask_dict_avg_sub:
                                 attn_list = mask_dict_avg_sub[key_name]
@@ -398,7 +401,7 @@ def main(args) :
                         input_np = np.array(input)
                         reconstruction_np = np.array(reconstruction)
                         np_diff = np.abs(input_np - reconstruction_np)/255
-                        anomaly_maps = np.where(np_diff > 0.3, 255, 0)
+                        anomaly_maps = np.where(np_diff > 0.5, 255, 0)
                         classification_result = np.sum(anomaly_maps)
                         if classification_result > 0:
                             label = 1
