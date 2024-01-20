@@ -235,8 +235,8 @@ def main(args) :
                 class_base_folder = os.path.join(save_dir, class_name)
                 os.makedirs(class_base_folder, exist_ok=True)
 
-                image_folder = os.path.join(test_folder, 'rgb')
-                mask_folder = os.path.join(test_folder, 'gt')
+                image_folder = os.path.join(test_folder, f'{class_name}/rgb')
+                mask_folder = os.path.join(test_folder, f'{class_name}/gt')
 
                 test_images = os.listdir(image_folder)
 
