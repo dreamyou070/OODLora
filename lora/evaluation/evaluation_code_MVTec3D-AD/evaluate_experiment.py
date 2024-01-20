@@ -66,8 +66,8 @@ def parse_dataset_files(object_name, dataset_base_dir, anomaly_maps_dir):
                                       for file in listdir(gt_dir)])
 
     print(f"Parsed {len(gt_filenames)} ground truth image files.")
-    n_samples = np.array(labels).sum()
-    print(f'Normal data num = {n_samples}')
+    nok_samples = np.array(labels).sum()
+    print(f'anormal data num = {nok_samples}')
     return gt_filenames, prediction_filenames, labels
 
 
@@ -108,18 +108,16 @@ def calculate_au_pro_au_roc(gt_filenames,
 
     # Derive binary labels for each input image:
     # (0 = anomaly free, 1 = anomalous). # , labels
-    binary_labels = list(map(lambda x: int(np.any(x > 0)), ground_truth))
-    print(f'binary_labels : {binary_labels}')
+    #binary_labels = list(map(lambda x: int(np.any(x > 0)), ground_truth))
+    binary_labels = labels
+    #print(f'binary_labels : {binary_labels}')
 
+    # ------------------------------------------------------------------------------------------------------- #
     # Compute the PRO curve.
-    pro_curve = compute_pro(
-        anomaly_maps=predictions,
-        ground_truth_maps=ground_truth
-    )
-
+    pro_curve = compute_pro(anomaly_maps=predictions,
+                            ground_truth_maps=ground_truth)
     # Compute the area under the PRO curve.
-    au_pro = util.trapezoid(
-        pro_curve[0], pro_curve[1], x_max=integration_limit)
+    au_pro = util.trapezoid(pro_curve[0], pro_curve[1], x_max=integration_limit)
     au_pro /= integration_limit
     print(f"AU-PRO (FPR limit: {integration_limit}): {au_pro}")
 
