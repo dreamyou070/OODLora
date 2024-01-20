@@ -434,7 +434,7 @@ class VQDiffusionScheduler(SchedulerMixin, ConfigMixin):
         # Don't worry about what values this sets in the columns that mark transitions
         # to masked latent pixels. They are overwrote later with the `mask_class_mask`.
         #
-        # Looking at the below logspace formula in non-logspace, each value will evaluate to either
+        # Looking at the below logspace formula in non-logspace, each value will evaluation to either
         # `1 * a + b = a + b` where `log_Q_t` has the one hot value in the column
         # or
         # `0 * a + b = b` where `log_Q_t` has the 0 values in the column.
