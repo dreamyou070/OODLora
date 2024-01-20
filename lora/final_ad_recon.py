@@ -51,10 +51,10 @@ def get_position(layer_name, attn):
         part = 'attn_2'
     return res, pos, part
 
-def save_pixel_mask(mask, base_dir, save_name):
+def save_pixel_mask(mask, base_dir, save_name, org_h, org_w):
     mask_np = mask.squeeze().detach().cpu().numpy().astype(np.uint8)
     mask_np = mask_np * 255
-    pil_img = Image.fromarray(mask_np).resize((512, 512))
+    pil_img = Image.fromarray(mask_np).resize((org_h, org_w))
     pil_img.save(os.path.join(base_dir, save_name))
     return pil_img
 
@@ -247,10 +247,11 @@ def main(args) :
                     name, ext = os.path.splitext(test_image)
 
                     test_img_dir = os.path.join(image_folder, test_image)
-                    org_h, org_w = Image.open(test_img_dir).size
-
                     mask_img_dir = os.path.join(mask_folder, test_image)
-                    Image.open(mask_img_dir).convert('L').save(os.path.join(class_base_folder, f'{name}_gt{ext}'))
+                    org_h, org_w = Image.open(mask_img_dir).size
+                    print(f'mask size : {org_h}, {org_w}')
+
+                    Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(os.path.join(class_base_folder, f'{name}_gt{ext}'))
 
                     with torch.no_grad():
                         pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae,
@@ -294,7 +295,7 @@ def main(args) :
                             latent_mask = latent_mask.to(device)
                         latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)#
                         latent_mask = latent_mask_.repeat(1, 4, 1, 1)
-                        pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}')
+                        pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
@@ -303,7 +304,7 @@ def main(args) :
                             back_dict[int(t)] = latent
                             time_steps.append(t)
                             if t == 0 :
-                                back_image = pipeline.latents_to_image(latent)[0]
+                                back_image = pipeline.latents_to_image(latent)[0].resize((org_h, org_w))
                                 back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
                                 back_image.save(back_img_dir)
                             noise_pred = call_unet(unet, latent, t, con, None, None)
@@ -359,13 +360,12 @@ def main(args) :
                                         x_latent_dict[t] = latents
                                         if args.only_zero_save :
                                             if t == 0:
-                                                image = pipeline.latents_to_image(latents)[0]
+                                                image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                                                 img_dir = os.path.join(class_base_folder,f'{name}_recon{ext}')
                                                 image.save(img_dir)
                                         controller.reset()
 
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
-
                         org_latent = back_dict[0]
                         org_image_np = latent2image(org_latent, vae)
                         org_image = Image.fromarray(org_image_np.astype(np.uint8)).resize((org_h, org_w)).convert('L')
@@ -380,7 +380,7 @@ def main(args) :
                         # attentino score
                         mask_np = np.where((np.array(pixel_mask.resize((org_h, org_w)).convert('L')) / 255) < 0.5, 1, 0)
                         mask_np = np.where((diff_np * mask_np) != 0, 1, 0) * 255
-                        anomaly_map = Image.fromarray(mask_np.astype(np.uint8))
+                        anomaly_map = Image.fromarray(mask_np.astype(np.uint8)).resize((org_h, org_w))
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
 
