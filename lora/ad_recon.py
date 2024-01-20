@@ -21,6 +21,41 @@ except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
 from utils.model_utils import call_unet
 from utils.scheduling_utils import next_step
+import math
+def cosine_function(x):
+    x = math.pi * (x - 1)
+    result = math.cos(x)
+    result = result * 0.5
+    result = result + 0.5
+    return result
+
+
+def get_position(layer_name, attn):
+    res = int(attn.shape[1] ** 0.5)
+    if res in args.cross_map_res:
+        if 'down' in layer_name:
+            key_name = f'down_{res}'
+            pos = 'down'
+        elif 'up' in layer_name:
+            key_name = f'up_{res}'
+            pos = 'up'
+        else:
+            key_name = f'mid_{res}'
+            pos = 'mid'
+        if 'attentions_0' in layer_name:
+            part = 'attn_0'
+        elif 'attentions_1' in layer_name:
+            part = 'attn_1'
+        else:
+            part = 'attn_2'
+    return res, pos, part
+
+def save_pixel_mask(mask, base_dir, save_name):
+    mask_np = mask.squeeze().detach().cpu().numpy().astype(np.uint8)
+    mask_np = mask_np * 255
+    pil_img = Image.fromarray(mask_np).resize((512, 512))
+    pil_img.save(os.path.join(base_dir, save_name))
+    return pil_img
 
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
@@ -86,8 +121,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
 
-
-
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
@@ -124,6 +157,8 @@ def main(args) :
         latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device, dtype=weight_dtype)
         latent_mask = latent_mask_torch.unsqueeze(0).unsqueeze(0) # 1,1,64,64
         return latent_mask_np, latent_mask
+
+
 
     output_dir = args.output_dir
     network_weights = os.listdir(args.network_weights)
@@ -224,99 +259,35 @@ def main(args) :
 
                         call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
 
-
                         # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
                         inf_time = inference_times.tolist()
                         inf_time.reverse()  # [0,250,500,750]
                         back_dict = {}
                         latent = org_vae_latent
-                        mask_dict_avg = {}
                         back_dict[0] = latent
                         attn_stores = controller.step_store
                         controller.reset()
-                        mask_dict_avg_sub = {}
                         for layer_name in attn_stores:
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                            res = int(attn.shape[1] ** 0.5)
-                            if res in args.cross_map_res:
-                                if 'down' in layer_name:
-                                    key_name = f'down_{res}'
-                                    pos = 'down'
-                                elif 'up' in layer_name:
-                                    key_name = f'up_{res}'
-                                    pos = 'up'
-                                else:
-                                    key_name = f'mid_{res}'
-                                    pos = 'mid'
-                                if 'attentions_0' in layer_name:
-                                    part = 'attn_0'
-                                elif 'attentions_1' in layer_name:
-                                    part = 'attn_1'
-                                else:
-                                    part = 'attn_2'
-
-                                if args.use_avg_mask:
-                                    if key_name not in mask_dict_avg_sub:
-                                        mask_dict_avg_sub[key_name] = []
-                                    mask_dict_avg_sub[key_name].append(attn)
-                                else :
-                                    mask_i = 0
-                                    if res in args.cross_map_res and pos in args.trg_position and part == args.trg_part:
-                                        mask_i += 1
-                                        if args.truncate_length == 3 :
-                                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
-                                        else :
-                                            cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                        h = trigger_score.shape[0]
-                                        trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                                        trigger_score = trigger_score.mean(dim=0)  # res, res
-                                        pixel_mask = trigger_score / trigger_score.max()  # res, res
-                                        # ------------------------------------------------------------------------------------------------------------------------
-                                        latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64) # latent_mask = 1,1,64,64
-                        """
-                        if args.use_avg_mask:
-                            for key_name in mask_dict_avg_sub:
-                                attn_list = mask_dict_avg_sub[key_name]
-                                attn = torch.cat(attn_list, dim=0)
-                                if args.truncate_length == 3:
+                            res, pos, part = get_position(layer_name, attn)
+                            if res in args.cross_map_res and pos in args.trg_position and part == args.trg_part:
+                                if args.truncate_length == 3 :
                                     cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
-                                else:
+                                else :
                                     cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                res = int(trigger_score.shape[1] ** 0.5)
                                 h = trigger_score.shape[0]
-                                trigger_score = trigger_score.unsqueeze(-1)  # head, pix_num, 1
-                                trigger_score = trigger_score.reshape(h, res, res)  # head, res, res
+                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res
-                                mask_dict_avg[key_name] = trigger_score / trigger_score.max()
-
-                            for key in mask_dict_avg.keys():
-                                pixel_mask = mask_dict_avg[key].to(latent.device)
-                                latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64)
-                                Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
-                                    os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-                        """
-
-                        # ----------------------------[2.5] binarize mask ------------------------------ #
-                        import math
-                        def cosine_function(x):
-                            x = math.pi * (x - 1)
-                            result = math.cos(x)
-                            result = result * 0.5
-                            result = result + 0.5
-                            return result
-
+                                pixel_mask = trigger_score / trigger_score.max()  # res, res
+                                latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64) # latent_mask = 1,1,64,64
                         lambda x: cosine_function(x) if x > 0 else 0
                         for i in range(args.inner_iteration):
                             latent_mask = latent_mask.detach().cpu().apply_(
                                 lambda x: cosine_function(x) if x > 0 else 0)
                             latent_mask = latent_mask.to(device)
-                        latent_mask = torch.where(latent_mask > 0.5, 1, 0)#
-                        # ----------------------------[2.5] binarize mask save ------------------------------ #
-                        latent_mask_np = latent_mask.squeeze().detach().cpu().numpy().astype(np.uint8)
-                        latent_mask_np = latent_mask_np * 255
-                        Image.fromarray(latent_mask_np).resize((512, 512)).save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask_{mask_i}{ext}'))
-                        # -------------------------------------------------------------------------------------------------------------------------- #
-                        latent_mask = latent_mask.repeat(1, 4, 1, 1) # [1,4,64,64] and binary
+                        latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)#
+                        latent_mask = latent_mask_.repeat(1, 4, 1, 1)  # [1,4,64,64] and binary
+                        pixel_mask = save_pixel_mask(latent_mask_, trg_img_output_dir, f'{name}_pixel_mask{ext}')
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
@@ -334,7 +305,6 @@ def main(args) :
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
                         time_steps.reverse() # 999, 750, ..., 0
-                        print(f'time_steps : {time_steps}')
                         if args.save_origin:
                             back_image = pipeline.latents_to_image(latent)[0]
                             back_img_dir = os.path.join(trg_img_output_dir, f'{name}_org_{inf_time[-1]}{ext}')
@@ -342,8 +312,6 @@ def main(args) :
 
                         # ----------------------------[3] generate image ------------------------------ #
                         pipeline.to(device)
-
-                        print(f'Image Generating *** ')
                         with torch.no_grad():
                             if accelerator.is_main_process:
                                 width = height = 512
@@ -375,7 +343,6 @@ def main(args) :
                                     # (7) denoising
                                     for i, t in enumerate(recon_timesteps[1:]) : # 999, 750, ..., 250, 0
                                         # 750, 500, 250, 0
-                                        print(f'denoising time : {t}')
                                         latent_model_input = torch.cat( [latents] * 2) if do_classifier_free_guidance else latents
                                         # predict the noise residual
                                         noise_pred = unet(latent_model_input, t,encoder_hidden_states=text_embeddings).sample
@@ -404,22 +371,19 @@ def main(args) :
 
                         org_latent = back_dict[0]
                         org_image = latent2image(org_latent, vae)
-                        org_np = np.array(org_image)
-
                         recon_latent = x_latent_dict[0]
                         recon_image = latent2image(recon_latent, vae)
+
+                        org_np = np.array(org_image)
                         recon_np = np.array(recon_image)
+                        mask_np = np.array(latent_mask) / 255
 
                         diff_np = np.abs(org_np - recon_np)
-                        np_diff = diff_np * latent_mask.cpu().numpy()
+                        np_diff = diff_np * mask_np
                         normalized_np_diff = np_diff / np.max(np_diff)
-                        binary_mask = np.array(Image.fromarray(latent_mask_np).resize((512, 512))) / 255
-                        binary_mask = np.where(binary_mask > 0.5, 1, 0)
-                        normalized_np_diff = normalized_np_diff * binary_mask # np
-                        anomaly_maps = Image.fromarrau((normalized_np_diff * 255).astype(np.uint8))
+                        normalized_np_diff = (np.where(normalized_np_diff > 0.5, 1, 0))*255
+                        anomaly_maps = Image.fromarray(normalized_np_diff.astype(np.uint8))
                         anomaly_maps.save(os.path.join(trg_img_output_dir, f'{name}_anomal_map{ext}'))
-
-
                         classification_result = np.sum(anomaly_maps)
                         if classification_result > 0:
                             label = 1
