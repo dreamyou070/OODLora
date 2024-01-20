@@ -41,6 +41,7 @@ def parse_dataset_files(object_name, dataset_base_dir, anomaly_maps_dir):
     test_dir = path.join(dataset_base_dir, object_name, 'test')
 
     # List all ground truth and corresponding anomaly images.
+    labels = []
     for subdir in listdir(str(test_dir)):
         print(f'subdir : {subdir}')
 
@@ -51,6 +52,7 @@ def parse_dataset_files(object_name, dataset_base_dir, anomaly_maps_dir):
 
         # Add the gt files to the list of all gt filenames.
         gt_filenames.extend([path.join(gt_dir, file) for file in listdir(gt_dir) if path.splitext(file)[1] == '.png'])
+        labels.extend(0 if 'good' in subdir else 1)
 
         # Get the corresponding filenames of the anomaly images.
         prediction_filenames.extend( [path.join(anomaly_maps_dir, object_name, 'test',
@@ -58,13 +60,14 @@ def parse_dataset_files(object_name, dataset_base_dir, anomaly_maps_dir):
                                       for file in listdir(gt_dir)])
 
     print(f"Parsed {len(gt_filenames)} ground truth image files.")
-
-    return gt_filenames, prediction_filenames
+    n_samples = np.array(labels).sum()
+    print(f'Normal data num = {n_samples}')
+    return gt_filenames, prediction_filenames, labels
 
 
 def calculate_au_pro_au_roc(gt_filenames,
                             prediction_filenames,
-                            integration_limit
+                            integration_limit, labels
                             ):
     """
     Compute the area under the PRO curve for a set of ground truth images
@@ -98,8 +101,9 @@ def calculate_au_pro_au_roc(gt_filenames,
         predictions.append(tiff.imread(pred_name))
 
     # Derive binary labels for each input image:
-    # (0 = anomaly free, 1 = anomalous).
+    # (0 = anomaly free, 1 = anomalous). # , labels
     binary_labels = list(map(lambda x: int(np.any(x > 0)), ground_truth))
+    print(f'binary_labels : {binary_labels}')
 
     # Compute the PRO curve.
     pro_curve = compute_pro(
@@ -147,16 +151,15 @@ def main(args):
 
         # Parse the filenames of all ground truth and corresponding anomaly
         # images for this object.
-        gt_filenames, prediction_filenames = parse_dataset_files(object_name=obj,
+        gt_filenames, prediction_filenames, labels = parse_dataset_files(object_name=obj,
                                                                  dataset_base_dir=args.dataset_base_dir,
                                                                  anomaly_maps_dir=args.anomaly_maps_dir)
 
         # Calculate the PRO and ROC curves.
-        au_pro, au_roc, pro_curve, roc_curve = \
-            calculate_au_pro_au_roc(
-                gt_filenames,
-                prediction_filenames,
-                args.pro_integration_limit)
+        au_pro, au_roc, pro_curve, roc_curve = calculate_au_pro_au_roc(gt_filenames,
+                                                                       prediction_filenames,
+                                                                       args.pro_integration_limit, labels)
+
 
         evaluation_dict[obj]['au_pro'] = au_pro
         evaluation_dict[obj]['au_roc'] = au_roc
