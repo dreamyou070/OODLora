@@ -8,7 +8,7 @@ img_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 port_number=50000
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
-  --main_process_port ${port_number} ../lora/ad_recon.py \
+  --main_process_port ${port_number} ../lora/rec_infer.py \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --sample_sampler ddim \
   --seed 42 \
@@ -18,7 +18,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_dim 64 \
   --network_alpha 4 \
   --network_weights ${network_weight_folder}  \
-  --trg_lora_epoch ${lora_folder} \
   --cross_map_res [64] \
   --trg_position "['up']" \
   --trg_part "attn_2" \
