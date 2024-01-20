@@ -376,12 +376,11 @@ def main(args) :
                         org_np = np.array(org_image)
                         recon_np = np.array(recon_image)
                         diff_np = np.abs(org_np - recon_np) # 512,512,1
+                        diff_np = diff_np / diff_np.max() # if diff small -> good, else -> bad
+                        Image.fromarray((diff_np * 255).astype(np.uint8)).save(os.path.join(class_base_folder, f'{name}_just_img_diff.png'))
 
-                        # attentino score
-                        mask_np = np.where((np.array(pixel_mask.resize((org_h, org_w)).convert('L')) / 255) < 0.5, 1, 0)
-                        Image.fromarray((mask_np*255).astype(np.uint8)).resize((org_h, org_w)).save(os.path.join(class_base_folder, f'{name}_just_img_diff.png'))
-
-                        mask_np = np.where((diff_np * mask_np) != 0, 1, 0) * 255
+                        back_recorect_diff_np = np.where(diff_np < 0.5, 0, 1) # 0 = good = black
+                        mask_np = np.where((back_recorect_diff_np * mask_np) != 0, 1, 0) * 255
                         anomaly_map = Image.fromarray(mask_np.astype(np.uint8)).resize((org_h, org_w))
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
