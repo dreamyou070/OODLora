@@ -39,15 +39,17 @@ def main(args):
                 org_test_rgb_dir = os.path.join(test_rgb_dir, categor)
                 org_test_gt_dir =  os.path.join(test_gt_dir, categor)
 
-                new_test_rgb_dir = os.path.join(test_ex_rgb_dir, categor)
-                new_test_gt_dir = os.path.join(test_ex_gt_dir, categor)
+                new_test_rgb_dir = os.path.join(test_ex_rgb_dir, f'80_{categor}')
+                new_test_gt_dir = os.path.join(test_ex_gt_dir,  f'80_{categor}')
                 os.makedirs(new_test_rgb_dir, exist_ok=True)
                 os.makedirs(new_test_gt_dir, exist_ok=True)
+                
+                if 'good' not in categor:
 
-                new_train_rgb_dir = os.path.join(train_ex_rgb_dir, categor)
-                new_train_gt_dir = os.path.join(train_ex_gt_dir, categor)
-                os.makedirs(new_train_rgb_dir, exist_ok=True)
-                os.makedirs(new_train_gt_dir, exist_ok=True)
+                    new_train_rgb_dir = os.path.join(train_ex_rgb_dir, f'80_{categor}')
+                    new_train_gt_dir = os.path.join(train_ex_gt_dir, f'80_{categor}')
+                    os.makedirs(new_train_rgb_dir, exist_ok=True)
+                    os.makedirs(new_train_gt_dir, exist_ok=True)
 
                 test_images = os.listdir(org_test_rgb_dir)
                 if 'good' not in categor:
