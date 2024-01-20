@@ -379,7 +379,7 @@ def main(args) :
                         org_np = np.array(org_image)
                         recon_np = np.array(recon_image)
                         diff_np = np.abs(org_np - recon_np) # 512,512,1
-                        mask_np = np.where((np.array(pixel_mask.convert('RGB')) / 255) > 0.5, 1, 0)
+                        mask_np = np.where((np.array(pixel_mask.convert('L')) / 255) > 0.5, 1, 0)
                         mask_np = np.where((diff_np * mask_np) != 0, 1, 0) * 255
                         anomaly_map = Image.fromarray(mask_np.astype(np.uint8))
                         anomaly_map.save(os.path.join(trg_img_output_dir, f'{name}_anomal_map{ext}'))
