@@ -275,11 +275,10 @@ def main(args) :
                                         trigger_score = trigger_score.mean(dim=0)  # res, res
                                         pixel_mask = trigger_score / trigger_score.max()  # res, res
                                         # ------------------------------------------------------------------------------------------------------------------------
-
                                         latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64)
                                         Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
                                             os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-
+                        """
                         if args.use_avg_mask:
                             for key_name in mask_dict_avg_sub:
                                 attn_list = mask_dict_avg_sub[key_name]
@@ -300,7 +299,7 @@ def main(args) :
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64)
                                 Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
                                     os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
-
+                        """
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
@@ -313,8 +312,6 @@ def main(args) :
                                 back_image = pipeline.latents_to_image(latent)[0]
                                 back_img_dir = os.path.join(trg_img_output_dir, f'{name}_org_{t}{ext}')
                                 back_image.save(back_img_dir)
-                            if t == 0:
-                                org_input_image = pipeline.latents_to_image(latent)[0].resize((512, 512))
                             noise_pred = call_unet(unet, latent, t, con, None, None)
                             latent = next_step(noise_pred, int(t), latent, scheduler)
                         back_dict[inf_time[-1]] = latent
@@ -342,6 +339,8 @@ def main(args) :
 
                         # ----------------------------[3] generate image ------------------------------ #
                         pipeline.to(device)
+
+                        print(f'Image Generating *** ')
                         with torch.no_grad():
                             if accelerator.is_main_process:
                                 width = height = 512
@@ -373,6 +372,7 @@ def main(args) :
                                     # (7) denoising
                                     for i, t in enumerate(recon_timesteps[1:]) : # 999, 750, ..., 250, 0
                                         # 750, 500, 250, 0
+                                        print(f'denoising time : {t}')
                                         latent_model_input = torch.cat( [latents] * 2) if do_classifier_free_guidance else latents
                                         # predict the noise residual
                                         noise_pred = unet(latent_model_input, t,encoder_hidden_states=text_embeddings).sample
@@ -383,7 +383,6 @@ def main(args) :
                                         latents = pipeline.scheduler.step(noise_pred, t, latents,).prev_sample
                                         if args.use_pixel_mask :
                                             z_latent = back_dict[t]
-                                            print(f'latent_mask : {latent_mask}')
                                             latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
                                         x_latent_dict[t] = latents
                                         if args.only_zero_save :
@@ -412,7 +411,7 @@ def main(args) :
                             label = 1
                         else :
                             label = 0
-                        Image.fromarray((anomaly_maps).astype(np.uint8)).convert('L').save(os.path.join(trg_img_output_dir, f'{name}_anomaly_map{ext}'))
+                        Image.fromarray((anomaly_maps).astype(np.uint8)).save(os.path.join(trg_img_output_dir, f'{name}_anomaly_map{ext}'))
 
 
 
