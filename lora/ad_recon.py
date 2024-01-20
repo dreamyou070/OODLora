@@ -313,9 +313,10 @@ def main(args) :
                             latent_mask = latent_mask.to(device)
                         latent_mask = torch.where(latent_mask > 0.5, 1, 0)#
                         # ----------------------------[2.5] binarize mask save ------------------------------ #
-                        latent_mask_np = latent_mask.detach().cpu().numpy()
-                        Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
-                            os.path.join(trg_img_output_dir, f'{name}_pixel_mask_{mask_i}{ext}'))
+                        latent_mask_np = latent_mask.detach().cpu().numpy().astype(np.uint8)
+                        latent_mask_np = latent_mask_np * 255
+                        Image.fromarray(latent_mask_np).resize((512, 512)).save(os.path.join(trg_img_output_dir, f'{name}_pixel_mask_{mask_i}{ext}'))
+                        # -------------------------------------------------------------------------------------------------------------------------- #
                         latent_mask = latent_mask.repeat(1, 4, 1, 1) # [1,4,64,64] and binary
 
                         one_channel_mask = latent_mask[:, 0, :, :].unsqueeze(1)
@@ -402,23 +403,34 @@ def main(args) :
                                             img_dir = os.path.join(trg_img_output_dir, f'{name}_test_final_recon_{t}{ext}')
                                             image.save(img_dir)
                                         controller.reset()
-                                    reconstruction = pipeline.latents_to_image(latents)[0]
 
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
                         from utils.image_utils import latent2image
 
-                        org_np = latent2image(back_dict[0], vae)
-                        recon_np = latent2image(x_latent_dict[0], vae)
-                        np_diff = np.abs(org_np - recon_np)/255
-                        print(f'org_np : {org_np.shape} | recon_np : {recon_np.shape} | np_diff : {np_diff.shape}')
-                        anomaly_maps = np.where(np_diff > 0.5, 255, 0)
-                        print(f'anomaly_maps : {anomaly_maps}')
+                        org_latent = back_dict[0]
+                        org_image = latent2image(org_latent, vae)
+                        org_np = np.array(org_image)
+
+                        recon_latent = x_latent_dict[0]
+                        recon_image = latent2image(recon_latent, vae)
+                        recon_np = np.array(recon_image)
+
+                        diff_np = np.abs(org_np - recon_np)
+                        np_diff = diff_np * latent_mask
+                        normalized_np_diff = np_diff / np.max(np_diff)
+                        binary_mask = np.array(Image.fromarray(latent_mask_np).resize((512, 512))) / 255
+                        binary_mask = np.where(binary_mask > 0.5, 1, 0)
+                        normalized_np_diff = normalized_np_diff * binary_mask
+                        anomaly_maps = Image.fromarrau((normalized_np_diff * 255).astype(np.uint8))
+                        anomaly_maps.save(os.path.join(trg_img_output_dir, f'{name}_anomal_map{ext}'))
+
+
                         classification_result = np.sum(anomaly_maps)
                         if classification_result > 0:
                             label = 1
                         else :
                             label = 0
-                        Image.fromarray((anomaly_maps).astype(np.uint8)).save(os.path.join(trg_img_output_dir, f'{name}_anomaly_map{ext}'))
+                        
 
 
 
