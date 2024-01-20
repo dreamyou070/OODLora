@@ -2,7 +2,7 @@ import os
 from PIL import Image
 import numpy as np
 
-base_img_dir = '/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD/foam/test/hole/gt/000.png'
+base_img_dir = '/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD/foam/test/cut/gt/000.png'
 h,w = Image.open(base_img_dir).size
 
 base_folder = r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD/foam/test/good/rgb'
