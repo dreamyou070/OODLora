@@ -19,6 +19,55 @@ from pro_curve_util import compute_pro
 from roc_curve_util import compute_classification_roc
 
 
+def parse_user_arguments():
+    """
+    Parse user arguments for the evaluation of a method on the MVTec 3D-AD
+    dataset.
+
+    returns:
+        Parsed user arguments.
+    """
+    parser = argparse.ArgumentParser(description="""Parse user arguments.""")
+
+    parser.add_argument('--anomaly_maps_dir',
+                        required=True,
+                        help="""Path to the directory that contains the anomaly
+                                maps of the evaluated method.""")
+
+    parser.add_argument('--dataset_base_dir',
+                        required=True,
+                        help="""Path to the directory that contains the dataset
+                                images of the MVTec 3D-AD dataset.""")
+
+    parser.add_argument('--output_dir',
+                        help="""Path to the directory to store evaluation
+                                results. If no output directory is specified,
+                                the results are not written to drive.""")
+
+    parser.add_argument('--pro_integration_limit',
+                        type=float,
+                        default=0.3,
+                        help="""Integration limit to compute the area under
+                                the PRO curve. Must lie within the interval
+                                of (0.0, 1.0].""")
+
+    parser.add_argument('--evaluated_objects',
+                        nargs='+',
+                        help="""List of objects to be evaluated. By default,
+                                all dataset objects will be evaluated.""",
+                        default=util.OBJECT_NAMES)
+
+    args = parser.parse_args()
+
+    # Check that the PRO integration limit is within the valid range.
+    assert 0.0 < args.pro_integration_limit <= 1.0
+
+    # Check that the objects to be evaluated are actually available.
+    for obj in args.evaluated_objects:
+        assert obj in util.OBJECT_NAMES
+
+    return args
+
 
 def parse_dataset_files(object_name, dataset_base_dir, anomaly_maps_dir):
     """
@@ -41,44 +90,37 @@ def parse_dataset_files(object_name, dataset_base_dir, anomaly_maps_dir):
     test_dir = path.join(dataset_base_dir, object_name, 'test')
 
     # List all ground truth and corresponding anomaly images.
-    labels = []
     for subdir in listdir(str(test_dir)):
-        print(f'subdir : {subdir}')
-
-        # subdir --> contamination, good ...
-
         # Ground truth images are located here.
         gt_dir = path.join(test_dir, subdir, 'gt')
 
         # Add the gt files to the list of all gt filenames.
-        gt_filenames.extend([path.join(gt_dir, file) for file in listdir(gt_dir) if path.splitext(file)[1] == '.png'])
-        for file in listdir(gt_dir) :
-            if 'good' in subdir :
-                l = 0
-            else :
-                l = 1
-            labels.append(l)
-
+        gt_filenames.extend(
+            [path.join(gt_dir, file)
+             for file
+             in listdir(gt_dir)
+             if path.splitext(file)[1] == '.png'])
 
         # Get the corresponding filenames of the anomaly images.
-        prediction_filenames.extend( [path.join(anomaly_maps_dir, object_name, 'test',
-                                                subdir, path.splitext(file)[0] + '.tiff')
-                                      for file in listdir(gt_dir)])
+        prediction_filenames.extend(
+            [path.join(anomaly_maps_dir, object_name, 'test',
+                       subdir, path.splitext(file)[0] + '.tiff')
+             for file in listdir(gt_dir)])
 
     print(f"Parsed {len(gt_filenames)} ground truth image files.")
-    nok_samples = np.array(labels).sum()
-    print(f'anormal data num = {nok_samples}')
-    return gt_filenames, prediction_filenames, labels
+
+    return gt_filenames, prediction_filenames
 
 
 def calculate_au_pro_au_roc(gt_filenames,
                             prediction_filenames,
-                            integration_limit, labels
+                            integration_limit
                             ):
     """
     Compute the area under the PRO curve for a set of ground truth images
     and corresponding anomaly images. In addition, the function computes the
     area under the ROC curve for image level classification.
+
     Args:
         gt_filenames:         List of filenames that contain the ground truth
                               images for a single dataset object.
@@ -86,12 +128,14 @@ def calculate_au_pro_au_roc(gt_filenames,
                               anomaly images for each ground truth image.
         integration_limit:    Integration limit to use when computing the area
                               under the PRO curve.
+
     Returns:
         au_pro:    Area under the PRO curve computed up to the given integration
                    limit.
         au_roc:    Area under the ROC curve.
         pro_curve: PRO curve values for localization (fpr,pro).
         roc_curve: ROC curve values for image level classifiction (fpr,tpr).
+
     """
     # Read all ground truth and anomaly images.
     ground_truth = []
@@ -99,32 +143,22 @@ def calculate_au_pro_au_roc(gt_filenames,
 
     print("Read ground truth files and corresponding predictions..")
     for (gt_name, pred_name) in tqdm(zip(gt_filenames, prediction_filenames), total=len(gt_filenames)):
-        a = np.asarray(Image.open(gt_name))
-        print(f'np.asarray gt_name : {a}')
-        ground_truth.append(a)
+        ground_truth.append(np.asarray(Image.open(gt_name)))
         predictions.append(tiff.imread(pred_name))
 
     # Derive binary labels for each input image:
     # (0 = anomaly free, 1 = anomalous).
-
     binary_labels = list(map(lambda x: int(np.any(x > 0)), ground_truth))
 
-    binary_labels = labels
-    #print(f'binary_labels : {binary_labels}')
-
-    # ------------------------------------------------------------------------------------------------------- #
     # Compute the PRO curve.
-    pro_curve = compute_pro(anomaly_maps=predictions,
-                            ground_truth_maps=ground_truth)
-
-
-
-
-
-
+    pro_curve = compute_pro(
+        anomaly_maps=predictions,
+        ground_truth_maps=ground_truth
+    )
 
     # Compute the area under the PRO curve.
-    au_pro = util.trapezoid(pro_curve[0], pro_curve[1], x_max=integration_limit)
+    au_pro = util.trapezoid(
+        pro_curve[0], pro_curve[1], x_max=integration_limit)
     au_pro /= integration_limit
     print(f"AU-PRO (FPR limit: {integration_limit}): {au_pro}")
 
@@ -142,11 +176,13 @@ def calculate_au_pro_au_roc(gt_filenames,
     return au_pro, au_roc, pro_curve, roc_curve
 
 
-def main(args):
+def main():
     """
     Calculate the performance metrics for a single experiment on the
     MVTec 3D-AD dataset.
     """
+    # Parse user arguments.
+    args = parse_user_arguments()
 
     # Store evaluation results in this dictionary.
     evaluation_dict = dict()
@@ -160,13 +196,20 @@ def main(args):
         print(f"=== Evaluate {obj} ===")
         evaluation_dict[obj] = dict()
 
-        gt_filenames, prediction_filenames, labels = parse_dataset_files(object_name=obj,dataset_base_dir=args.dataset_base_dir,anomaly_maps_dir=args.anomaly_maps_dir)
+        # Parse the filenames of all ground truth and corresponding anomaly
+        # images for this object.
+        gt_filenames, prediction_filenames = \
+            parse_dataset_files(
+                object_name=obj,
+                dataset_base_dir=args.dataset_base_dir,
+                anomaly_maps_dir=args.anomaly_maps_dir)
 
         # Calculate the PRO and ROC curves.
-        au_pro, au_roc, pro_curve, roc_curve = calculate_au_pro_au_roc(gt_filenames,
-                                                                       prediction_filenames,
-                                                                       args.pro_integration_limit, labels)
-
+        au_pro, au_roc, pro_curve, roc_curve = \
+            calculate_au_pro_au_roc(
+                gt_filenames,
+                prediction_filenames,
+                args.pro_integration_limit)
 
         evaluation_dict[obj]['au_pro'] = au_pro
         evaluation_dict[obj]['au_roc'] = au_roc
@@ -196,26 +239,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="""Parse user arguments.""")
-    parser.add_argument('--anomaly_maps_dir', required=True,
-                        help="""Path to the directory that contains the anomaly maps of the evaluated method.""")
-    parser.add_argument('--dataset_base_dir', required=True,
-                        help="""Path to the directory that contains the dataset images of the MVTec 3D-AD dataset.""")
-    parser.add_argument('--output_dir',
-                        help="""Path to the directory to store evaluation
-                        results. If no output directory is specified, the results are not written to drive.""")
-    parser.add_argument('--pro_integration_limit',
-                        type=float,
-                        default=0.3,
-                        help="""Integration limit to compute the area under
-                            the PRO curve. Must lie within the interval of (0.0, 1.0].""")
-    parser.add_argument('--evaluated_objects', nargs='+',
-                        help="""List of objects to be evaluated. By default, all dataset objects will be evaluated.""",
-                        default=util.OBJECT_NAMES)
-    args = parser.parse_args()
-    assert 0.0 < args.pro_integration_limit <= 1.0
-
-    # Check that the objects to be evaluated are actually available.
-    for obj in args.evaluated_objects:
-        assert obj in util.OBJECT_NAMES
-    main(args)
+    main()
