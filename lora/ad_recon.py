@@ -375,7 +375,7 @@ def main(args) :
 
                         org_np = np.array(org_image)
                         recon_np = np.array(recon_image)
-                        mask_np = np.array(latent_mask) / 255
+                        mask_np = np.where((np.array(pixel_mask) / 255) > 0.5, 1, 0)
 
                         diff_np = np.abs(org_np - recon_np)
                         np_diff = diff_np * mask_np
