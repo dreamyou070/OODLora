@@ -88,7 +88,7 @@ def main():
     np.random.seed(42)
 
     # Assign a random classification label to each image.
-    labels = np.random.randint(2, size=len(anomaly_maps))
+    labels = 1
 
     # Compute the ROC curve.
 

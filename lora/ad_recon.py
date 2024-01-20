@@ -15,13 +15,15 @@ from utils.scheduling_utils import get_scheduler, ddim_loop, recon_loop
 from utils.model_utils import get_state_dict, init_prompt
 from attention_store import AttentionStore
 import torch.nn as nn
+from utils.model_utils import call_unet
+from utils.scheduling_utils import next_step
+import math
+from utils.image_utils import latent2image
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
-from utils.model_utils import call_unet
-from utils.scheduling_utils import next_step
-import math
+
 def cosine_function(x):
     x = math.pi * (x - 1)
     result = math.cos(x)
@@ -123,7 +125,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer/step_{args.num_ddim_steps}_'
+    args.output_dir = os.path.join(parent, f'recon_infer/map_test_step_{args.num_ddim_steps}_'
                                            f'guidance_scale_{args.guidance_scale}_'
                                            f'start_from_origin_{args.start_from_origin}_'
                                            f'start_from_final_{args.start_from_final}_'
@@ -156,7 +158,6 @@ def main(args) :
         latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device, dtype=weight_dtype)
         latent_mask = latent_mask_torch.unsqueeze(0).unsqueeze(0) # 1,1,64,64
         return latent_mask_np, latent_mask
-
 
 
     output_dir = args.output_dir
@@ -216,8 +217,8 @@ def main(args) :
             uncon, con = uncon[:, :,:], con[:, :,:]
 
             print(f' (3.2) test images')
-            test_img_folder = os.path.join(args.concept_image_folder, 'test_ex/rgb')
-            test_mask_folder = os.path.join(args.concept_image_folder, 'test_ex/gt')
+            test_img_folder = os.path.join(args.concept_image_folder, 'test/rgb')
+            test_mask_folder = os.path.join(args.concept_image_folder, 'test/gt')
             classes = os.listdir(test_img_folder)
 
             for class_name in classes:
@@ -237,10 +238,11 @@ def main(args) :
                     os.makedirs(trg_img_output_dir, exist_ok=True)
 
                     test_img_dir = os.path.join(image_folder, test_image)
-                    Image.open(test_img_dir).convert('RGB').resize((512,512)).save(os.path.join(trg_img_output_dir,f'{name}_org{ext}'))
+                    org_h, org_w = Image.open(test_img_dir).size
+                    Image.open(test_img_dir).convert('RGB').save(os.path.join(trg_img_output_dir, f'{name}_org{ext}'))
 
                     mask_img_dir = os.path.join(mask_folder, test_image)
-                    Image.open(mask_img_dir).convert('L').resize((512, 512)).save(os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
+                    Image.open(mask_img_dir).convert('L').save(os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
 
                     print(f' (2.3.1) inversion')
                     with torch.no_grad():
@@ -255,7 +257,6 @@ def main(args) :
 
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-
                         call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
 
                         # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
@@ -290,8 +291,7 @@ def main(args) :
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
-                        inf_time.append(999) # 0, 250, 500, 750, 999
-                        print(f'inf_time : {inf_time}')
+                        inf_time.append(999)
                         for i, t in enumerate(inf_time[:-1]):
                             back_dict[int(t)] = latent
                             time_steps.append(t)
@@ -362,35 +362,41 @@ def main(args) :
                                         else :
                                             image = pipeline.latents_to_image(latents)[0]
                                             img_dir = os.path.join(trg_img_output_dir, f'{name}_test_final_recon_{t}{ext}')
-                                            image.save(img_dir)
+                                            image.resize((org_h, org_w)).save(img_dir)
                                         controller.reset()
 
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
-                        from utils.image_utils import latent2image
 
                         org_latent = back_dict[0]
                         org_image_np = latent2image(org_latent, vae)
-                        org_image = Image.fromarray(org_image_np.astype(np.uint8)).convert('L')
+                        org_image = Image.fromarray(org_image_np.astype(np.uint8)).resize((org_h, org_w)).convert('L')
 
                         recon_latent = x_latent_dict[0]
                         recon_image_np = latent2image(recon_latent, vae)
-                        recon_image = Image.fromarray(recon_image_np.astype(np.uint8)).convert('L')
+                        recon_image = Image.fromarray(recon_image_np.astype(np.uint8)).resize((org_h, org_w)).convert('L')
 
                         org_np = np.array(org_image)
                         recon_np = np.array(recon_image)
                         diff_np = np.abs(org_np - recon_np) # 512,512,1
                         # attentino score
-                        mask_np = np.where((np.array(pixel_mask.convert('L')) / 255) < 0.5, 1, 0)
+                        mask_np = np.where((np.array(pixel_mask.resize((org_h, org_w)).convert('L')) / 255) < 0.5, 1, 0)
                         mask_np = np.where((diff_np * mask_np) != 0, 1, 0) * 255
                         anomaly_map = Image.fromarray(mask_np.astype(np.uint8))
-                        anomaly_map.save(os.path.join(trg_img_output_dir, f'{name}_anomal_map{ext}'))
+                        anomaly_map.save(os.path.join(trg_img_output_dir, f'{name}.tiff'))
+                        anomaly_map.save(os.path.join(trg_img_output_dir, f'{name}.png'))
+
+                        # ----------------------------- [6] AUC - ROC ------------------------------ #
+                        #gt_map = Image.open(mask_img_dir).convert('L').resize((512, 512))
+                        #gt_np = np.array(gt_map)
+                        #true_position_num = np.sum(np.where((gt_np != 0 ) and (mask_np != 0), 1, 0))
+                        #false_position_num = np.sum(np.where((gt_np == 0 ) and (mask_np != 0), 1, 0))
+                        #true_negative_num = np.sum(np.where((gt_np == 0 ) and (mask_np == 0), 1, 0))
+                        #false_negative_num = np.sum(np.where((gt_np != 0 ) and (mask_np == 0), 1, 0))
                         #classification_result = np.sum(anomaly_map)
                         #if classification_result > 0:
                         #    label = 1
                         #else :
                         #    label = 0
-
-
 
 
 
