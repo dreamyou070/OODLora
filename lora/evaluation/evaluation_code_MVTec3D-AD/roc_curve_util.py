@@ -35,6 +35,7 @@ def compute_classification_roc(
 
     # Compute the number of OK and NOK samples from the ground truth.
     ground_truth_labels_np = np.array(ground_truth_labels)
+
     num_nok = ground_truth_labels_np[ground_truth_labels_np != 0].size
     num_ok = ground_truth_labels_np[ground_truth_labels_np == 0].size
     print(f' trueth good number : {num_ok}')
@@ -92,6 +93,7 @@ def main():
 
     # Assign a random classification label to each image.
     labels = np.random.randint(2, size=len(anomaly_maps))
+    print(f'labels : {labels}')
 
     # Compute the ROC curve.
 

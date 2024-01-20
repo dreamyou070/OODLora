@@ -42,21 +42,20 @@ def parse_dataset_files(object_name, dataset_base_dir, anomaly_maps_dir):
 
     # List all ground truth and corresponding anomaly images.
     for subdir in listdir(str(test_dir)):
+        print(f'subdir : {subdir}')
+
+        # subdir --> contamination, good ...
+
         # Ground truth images are located here.
         gt_dir = path.join(test_dir, subdir, 'gt')
 
         # Add the gt files to the list of all gt filenames.
-        gt_filenames.extend(
-            [path.join(gt_dir, file)
-             for file
-             in listdir(gt_dir)
-             if path.splitext(file)[1] == '.png'])
+        gt_filenames.extend([path.join(gt_dir, file) for file in listdir(gt_dir) if path.splitext(file)[1] == '.png'])
 
         # Get the corresponding filenames of the anomaly images.
-        prediction_filenames.extend(
-            [path.join(anomaly_maps_dir, object_name, 'test',
-                       subdir, path.splitext(file)[0] + '.tiff')
-             for file in listdir(gt_dir)])
+        prediction_filenames.extend( [path.join(anomaly_maps_dir, object_name, 'test',
+                                                subdir, path.splitext(file)[0] + '.tiff')
+                                      for file in listdir(gt_dir)])
 
     print(f"Parsed {len(gt_filenames)} ground truth image files.")
 
@@ -148,11 +147,9 @@ def main(args):
 
         # Parse the filenames of all ground truth and corresponding anomaly
         # images for this object.
-        gt_filenames, prediction_filenames = \
-            parse_dataset_files(
-                object_name=obj,
-                dataset_base_dir=args.dataset_base_dir,
-                anomaly_maps_dir=args.anomaly_maps_dir)
+        gt_filenames, prediction_filenames = parse_dataset_files(object_name=obj,
+                                                                 dataset_base_dir=args.dataset_base_dir,
+                                                                 anomaly_maps_dir=args.anomaly_maps_dir)
 
         # Calculate the PRO and ROC curves.
         au_pro, au_roc, pro_curve, roc_curve = \
