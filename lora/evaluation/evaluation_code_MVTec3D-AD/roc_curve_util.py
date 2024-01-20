@@ -28,20 +28,23 @@ def compute_classification_roc(
 
     # -------------------------------------------------------------------------------------------------- #
     # Compute the anomaly score for each anomaly map.
-    anomaly_scores = map(scoring_function, anomaly_maps) # map(np.max, anomaly_maps)
-    print(f'anomaly_scores : {anomaly_scores}')
+    anomaly_scores = map(scoring_function, anomaly_maps) # map(np.max, anomaly_maps) # map function
+
     num_scores = len(anomaly_maps)
 
     # Sort samples by anomaly score. Keep track of ground truth label.
-    sorted_samples = sorted(zip(anomaly_scores, ground_truth_labels), key=lambda x: x[0])
+    sorted_samples = sorted(zip(anomaly_scores,
+                                ground_truth_labels), key=lambda x: x[0])
+    print(f'sorted_samples : {sorted_samples}')
+
 
     # Compute the number of OK and NOK samples from the ground truth.
     ground_truth_labels_np = np.array(ground_truth_labels)
-
     num_nok = ground_truth_labels_np[ground_truth_labels_np != 0].size
     num_ok = ground_truth_labels_np[ground_truth_labels_np == 0].size
     print(f' trueth good number : {num_ok}')
     print(f' trueth bad number : {num_nok}')
+
     # Initially, every NOK sample is correctly classified as anomalous
     # (tpr = 1.0), and every OK sample is incorrectly classified as anomalous
     # (fpr = 1.0).
