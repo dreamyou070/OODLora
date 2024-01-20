@@ -56,7 +56,7 @@ def save_pixel_mask(mask, base_dir, save_name, org_h, org_w):
     pil_img.save(os.path.join(base_dir, save_name))
     return pil_img
 
-def get_latent_mask(normalized_mask, trg_res):
+def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     pixel_save_mask_np = normalized_mask.cpu().numpy()
     pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
     latent_mask_pil = Image.fromarray(pixel_mask_img).resize((trg_res, trg_res,))
@@ -64,7 +64,7 @@ def get_latent_mask(normalized_mask, trg_res):
     latent_mask_np = latent_mask_np / latent_mask_np.max()  # 64,64
     # ------------------------------------------------------------------------------------------ #
     # binarize
-    latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device, dtype=weight_dtype)
+    latent_mask_torch = torch.from_numpy(latent_mask_np).to(device, dtype=weight_dtype)
     latent_mask = latent_mask_torch.unsqueeze(0).unsqueeze(0) # 1,1,64,64
     return latent_mask_np, latent_mask
 
@@ -267,7 +267,7 @@ def main(args) :
                             trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                             trigger_score = trigger_score.mean(dim=0)  # res, res
                             pixel_mask = trigger_score / trigger_score.max()  # res, res
-                            latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64)  # latent_mask = 1,1,64,64
+                            latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64, device, weight_dtype)  # latent_mask = 1,1,64,64
                     lambda x: cosine_function(x) if x > 0 else 0
                     for i in range(args.inner_iteration):
                         latent_mask = latent_mask.detach().cpu().apply_(
