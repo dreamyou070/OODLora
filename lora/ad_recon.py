@@ -248,12 +248,10 @@ def main(args) :
 
                     test_img_dir = os.path.join(image_folder, test_image)
                     org_h, org_w = Image.open(test_img_dir).size
-                    print(f'org_h : {org_h}, org_w : {org_w}')
                     Image.open(test_img_dir).convert('RGB').save(os.path.join(trg_img_output_dir, f'{name}_org{ext}'))
 
                     mask_img_dir = os.path.join(mask_folder, test_image)
                     org_mask_h, org_mask_w = Image.open(mask_img_dir).size
-                    print(f'org_mask_h : {org_mask_h}, org_mask_w : {org_mask_w}')
                     Image.open(mask_img_dir).convert('L').save(os.path.join(trg_img_output_dir, f'{name}_mask{ext}'))
 
                     print(f' (2.3.1) inversion')
@@ -299,7 +297,7 @@ def main(args) :
                             latent_mask = latent_mask.to(device)
                         latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)#
                         latent_mask = latent_mask_.repeat(1, 4, 1, 1)  # [1,4,64,64] and binary
-                        #pixel_mask = save_pixel_mask(latent_mask_, trg_img_output_dir, f'{name}_pixel_mask{ext}')
+                        pixel_mask = save_pixel_mask(latent_mask_, trg_img_output_dir, f'{name}_pixel_mask{ext}')
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
