@@ -2,10 +2,13 @@ import os
 from PIL import Image
 import numpy as np
 
-base_folder = r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD/cookie/test/good/rgb'
-gt_folder = r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD/cookie/test/good/gt'
+base_img_dir = '/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD/carrot/test/crack/gt/000.png'
+h,w = Image.open(base_img_dir).size
+
+base_folder = r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD/carrot/test/good/rgb'
+gt_folder = r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD/carrot/test/good/gt'
 images = os.listdir(base_folder)
 for image in images:
-    base = np.zeros((500,500))
+    base = np.zeros((h,w))
     mask = Image.fromarray(base.astype(np.uint8))
     mask.save(os.path.join(gt_folder, image))
