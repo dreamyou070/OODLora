@@ -249,7 +249,6 @@ def main(args) :
                     test_img_dir = os.path.join(image_folder, test_image)
                     mask_img_dir = os.path.join(mask_folder, test_image)
                     org_h, org_w = Image.open(mask_img_dir).size
-                    print(f'mask size : {org_h}, {org_w}')
 
                     Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(os.path.join(class_base_folder, f'{name}_gt{ext}'))
 
@@ -377,25 +376,16 @@ def main(args) :
                         org_np = np.array(org_image)
                         recon_np = np.array(recon_image)
                         diff_np = np.abs(org_np - recon_np) # 512,512,1
+
                         # attentino score
                         mask_np = np.where((np.array(pixel_mask.resize((org_h, org_w)).convert('L')) / 255) < 0.5, 1, 0)
+                        Image.fromarray(mask_np.astype(np.uint8)).resize((org_h, org_w)).save(os.path.join(class_base_folder, f'{name}_just_img_diff.png'))
+
                         mask_np = np.where((diff_np * mask_np) != 0, 1, 0) * 255
                         anomaly_map = Image.fromarray(mask_np.astype(np.uint8)).resize((org_h, org_w))
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
 
-                        # ----------------------------- [6] AUC - ROC ------------------------------ #
-                        #gt_map = Image.open(mask_img_dir).convert('L').resize((512, 512))
-                        #gt_np = np.array(gt_map)
-                        #true_position_num = np.sum(np.where((gt_np != 0 ) and (mask_np != 0), 1, 0))
-                        #false_position_num = np.sum(np.where((gt_np == 0 ) and (mask_np != 0), 1, 0))
-                        #true_negative_num = np.sum(np.where((gt_np == 0 ) and (mask_np == 0), 1, 0))
-                        #false_negative_num = np.sum(np.where((gt_np != 0 ) and (mask_np == 0), 1, 0))
-                        #classification_result = np.sum(anomaly_map)
-                        #if classification_result > 0:
-                        #    label = 1
-                        #else :
-                        #    label = 0
 
 
 

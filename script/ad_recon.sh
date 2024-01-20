@@ -3,7 +3,7 @@
 class_name="cable_gland"
 folder_name="2_2_res_64_up_attn2_good_2_anormal_8"
 lora_folder="epoch-000014.safetensors"
-network_weight_folder="./OODLora/result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
+network_weight_folder="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 
 port_number=59999
