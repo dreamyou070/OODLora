@@ -19,55 +19,6 @@ from pro_curve_util import compute_pro
 from roc_curve_util import compute_classification_roc
 
 
-def parse_user_arguments():
-    """
-    Parse user arguments for the evaluation of a method on the MVTec 3D-AD
-    dataset.
-
-    returns:
-        Parsed user arguments.
-    """
-    parser = argparse.ArgumentParser(description="""Parse user arguments.""")
-
-    parser.add_argument('--anomaly_maps_dir',
-                        required=True,
-                        help="""Path to the directory that contains the anomaly
-                                maps of the evaluated method.""")
-
-    parser.add_argument('--dataset_base_dir',
-                        required=True,
-                        help="""Path to the directory that contains the dataset
-                                images of the MVTec 3D-AD dataset.""")
-
-    parser.add_argument('--output_dir',
-                        help="""Path to the directory to store evaluation
-                                results. If no output directory is specified,
-                                the results are not written to drive.""")
-
-    parser.add_argument('--pro_integration_limit',
-                        type=float,
-                        default=0.3,
-                        help="""Integration limit to compute the area under
-                                the PRO curve. Must lie within the interval
-                                of (0.0, 1.0].""")
-
-    parser.add_argument('--evaluated_objects',
-                        nargs='+',
-                        help="""List of objects to be evaluated. By default,
-                                all dataset objects will be evaluated.""",
-                        default=util.OBJECT_NAMES)
-
-    args = parser.parse_args()
-
-    # Check that the PRO integration limit is within the valid range.
-    assert 0.0 < args.pro_integration_limit <= 1.0
-
-    # Check that the objects to be evaluated are actually available.
-    for obj in args.evaluated_objects:
-        assert obj in util.OBJECT_NAMES
-
-    return args
-
 
 def parse_dataset_files(object_name, dataset_base_dir, anomaly_maps_dir):
     """
@@ -177,13 +128,11 @@ def calculate_au_pro_au_roc(gt_filenames,
     return au_pro, au_roc, pro_curve, roc_curve
 
 
-def main():
+def main(args):
     """
     Calculate the performance metrics for a single experiment on the
     MVTec 3D-AD dataset.
     """
-    # Parse user arguments.
-    args = parse_user_arguments()
 
     # Store evaluation results in this dictionary.
     evaluation_dict = dict()
@@ -240,4 +189,38 @@ def main():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="""Parse user arguments.""")
+    parser.add_argument('--anomaly_maps_dir', required=True,
+                        help="""Path to the directory that contains the anomaly
+                                    maps of the evaluated method.""")
+
+    parser.add_argument('--dataset_base_dir',
+                        required=True,
+                        help="""Path to the directory that contains the dataset
+                                    images of the MVTec 3D-AD dataset.""")
+
+    parser.add_argument('--output_dir',
+                        help="""Path to the directory to store evaluation
+                                    results. If no output directory is specified,
+                                    the results are not written to drive.""")
+
+    parser.add_argument('--pro_integration_limit',
+                        type=float,
+                        default=0.3,
+                        help="""Integration limit to compute the area under
+                                    the PRO curve. Must lie within the interval
+                                    of (0.0, 1.0].""")
+
+    parser.add_argument('--evaluated_objects',
+                        nargs='+',
+                        help="""List of objects to be evaluated. By default,
+                                    all dataset objects will be evaluated.""",
+                        default=util.OBJECT_NAMES)
+    args = parser.parse_args()
+    # Check that the PRO integration limit is within the valid range.
+    assert 0.0 < args.pro_integration_limit <= 1.0
+
+    # Check that the objects to be evaluated are actually available.
+    for obj in args.evaluated_objects:
+        assert obj in util.OBJECT_NAMES
     main()
