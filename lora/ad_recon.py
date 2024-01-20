@@ -369,25 +369,22 @@ def main(args) :
                         from utils.image_utils import latent2image
 
                         org_latent = back_dict[0]
-                        org_image = latent2image(org_latent, vae)
+                        org_image = latent2image(org_latent, vae).convert('L')
                         recon_latent = x_latent_dict[0]
-                        recon_image = latent2image(recon_latent, vae)
+                        recon_image = latent2image(recon_latent, vae).convert('L')
 
                         org_np = np.array(org_image)
                         recon_np = np.array(recon_image)
-                        mask_np = np.where((np.array(pixel_mask) / 255) > 0.5, 1, 0)
-
-                        diff_np = np.abs(org_np - recon_np)
-                        np_diff = diff_np * mask_np
-                        normalized_np_diff = np_diff / np.max(np_diff)
-                        normalized_np_diff = (np.where(normalized_np_diff > 0.5, 1, 0))*255
-                        anomaly_maps = Image.fromarray(normalized_np_diff.astype(np.uint8))
-                        anomaly_maps.save(os.path.join(trg_img_output_dir, f'{name}_anomal_map{ext}'))
-                        classification_result = np.sum(anomaly_maps)
-                        if classification_result > 0:
-                            label = 1
-                        else :
-                            label = 0
+                        diff_np = np.abs(org_np - recon_np) # 512,512,1
+                        mask_np = np.where((np.array(pixel_mask.convert('RGB')) / 255) > 0.5, 1, 0)
+                        mask_np = np.where((diff_np * mask_np) != 0, 1, 0) * 255
+                        anomaly_map = Image.fromarray(mask_np.astype(np.uint8))
+                        anomaly_map.save(os.path.join(trg_img_output_dir, f'{name}_anomal_map{ext}'))
+                        #classification_result = np.sum(anomaly_map)
+                        #if classification_result > 0:
+                        #    label = 1
+                        #else :
+                        #    label = 0
 
 
 
