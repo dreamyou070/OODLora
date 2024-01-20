@@ -392,12 +392,11 @@ def main(args) :
                                                 image = pipeline.latents_to_image(latents)[0]
                                                 img_dir = os.path.join(trg_img_output_dir, f'{name}_test_final_recon_{t}{ext}')
                                                 image.save(img_dir)
-
                                         controller.reset()
+                                    reconstruction = image = pipeline.latents_to_image(latents)[0]
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
                         input = org_input_image
                         input_np = np.array(input)
-                        reconstruction = image
                         reconstruction_np = np.array(reconstruction)
                         anomaly_maps = np.where(input_np != reconstruction_np, 1, 0)
                         classification_result = np.sum(anomaly_maps)
@@ -407,7 +406,7 @@ def main(args) :
                             label = 0
                         Image.fromarray((anomaly_maps*255).astype(np.uint8)).convert('L').save(os.path.join(trg_img_output_dir, f'{name}_anomaly_map{ext}'))
 
-                        
+
 
 
 if __name__ == "__main__":
