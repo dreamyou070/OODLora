@@ -395,20 +395,6 @@ def main(args) :
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         anomaly_map.save(os.path.join(trg_img_output_dir, f'{name}.png'))
 
-                        # ----------------------------- [6] AUC - ROC ------------------------------ #
-                        #gt_map = Image.open(mask_img_dir).convert('L').resize((512, 512))
-                        #gt_np = np.array(gt_map)
-                        #true_position_num = np.sum(np.where((gt_np != 0 ) and (mask_np != 0), 1, 0))
-                        #false_position_num = np.sum(np.where((gt_np == 0 ) and (mask_np != 0), 1, 0))
-                        #true_negative_num = np.sum(np.where((gt_np == 0 ) and (mask_np == 0), 1, 0))
-                        #false_negative_num = np.sum(np.where((gt_np != 0 ) and (mask_np == 0), 1, 0))
-                        #classification_result = np.sum(anomaly_map)
-                        #if classification_result > 0:
-                        #    label = 1
-                        #else :
-                        #    label = 0
-
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
