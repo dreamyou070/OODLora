@@ -405,6 +405,7 @@ def main(args) :
                         np_diff = np.abs(org_np - recon_np)/255
                         print(f'org_np : {org_np.shape} | recon_np : {recon_np.shape} | np_diff : {np_diff.shape}')
                         anomaly_maps = np.where(np_diff > 0.5, 255, 0)
+                        print(f'anomaly_maps : {anomaly_maps}')
                         classification_result = np.sum(anomaly_maps)
                         if classification_result > 0:
                             label = 1
