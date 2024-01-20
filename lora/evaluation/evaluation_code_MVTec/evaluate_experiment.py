@@ -142,8 +142,7 @@ def calculate_au_pro_au_roc(gt_filenames,
     predictions = []
 
     print("Read ground truth files and corresponding predictions..")
-    for (gt_name, pred_name) in tqdm(zip(gt_filenames, prediction_filenames),
-                                     total=len(gt_filenames)):
+    for (gt_name, pred_name) in tqdm(zip(gt_filenames, prediction_filenames), total=len(gt_filenames)):
         ground_truth.append(np.asarray(Image.open(gt_name)))
         predictions.append(tiff.imread(pred_name))
 

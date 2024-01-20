@@ -99,12 +99,16 @@ def calculate_au_pro_au_roc(gt_filenames,
 
     print("Read ground truth files and corresponding predictions..")
     for (gt_name, pred_name) in tqdm(zip(gt_filenames, prediction_filenames), total=len(gt_filenames)):
-        ground_truth.append(np.asarray(Image.open(gt_name)))
+        a = np.asarray(Image.open(gt_name))
+        print(f'np.asarray gt_name : {a}')
+        ground_truth.append(a)
         predictions.append(tiff.imread(pred_name))
 
     # Derive binary labels for each input image:
-    # (0 = anomaly free, 1 = anomalous). # , labels
-    #binary_labels = list(map(lambda x: int(np.any(x > 0)), ground_truth))
+    # (0 = anomaly free, 1 = anomalous).
+
+    binary_labels = list(map(lambda x: int(np.any(x > 0)), ground_truth))
+
     binary_labels = labels
     #print(f'binary_labels : {binary_labels}')
 

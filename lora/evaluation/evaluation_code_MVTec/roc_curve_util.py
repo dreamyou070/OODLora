@@ -9,24 +9,7 @@ def compute_classification_roc(
         anomaly_maps,
         scoring_function,
         ground_truth_labels):
-    """
-    Compute the ROC curve for anomaly classification on the image level.
 
-    Args:
-        anomaly_maps:        List of anomaly maps (2D numpy arrays) that contain
-                             a real-valued anomaly score at each pixel.
-        scoring_function:    Function that turns anomaly maps into a single
-                             real valued anomaly score.
-
-        ground_truth_labels: List of integers that indicate the ground truth
-                             class for each input image. 0 corresponds to an
-                             anomaly-free sample while a value != 0 indicates
-                             an anomalous sample.
-
-    Returns:
-        fprs: List of false positive rates.
-        tprs: List of correspoding true positive rates.
-    """
     assert len(anomaly_maps) == len(ground_truth_labels)
 
     # Compute the anomaly score for each anomaly map.
