@@ -400,8 +400,8 @@ def main(args) :
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
                         from utils.image_utils import latent2image
 
-                        org_np = latent2image(back_dict[0])
-                        recon_np = latent2image(x_latent_dict[0])
+                        org_np = latent2image(back_dict[0], vae)
+                        recon_np = latent2image(x_latent_dict[0], vae)
                         np_diff = np.abs(org_np - recon_np)/255
                         print(f'org_np : {org_np.shape} | recon_np : {recon_np.shape} | np_diff : {np_diff.shape}')
                         anomaly_maps = np.where(np_diff > 0.5, 255, 0)
