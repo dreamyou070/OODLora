@@ -318,14 +318,11 @@ def main(args) :
                         # -------------------------------------------------------------------------------------------------------------------------- #
                         latent_mask = latent_mask.repeat(1, 4, 1, 1) # [1,4,64,64] and binary
 
-                        one_channel_mask = latent_mask[:, 0, :, :].unsqueeze(1)
-                        print(f'latent_mask (one_channel) : {one_channel_mask}')
-
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
                         inf_time.append(999) # 0, 250, 500, 750, 999
+                        print(f'inf_time : {inf_time}')
                         for i, t in enumerate(inf_time[:-1]):
-                            time_steps.append(t)
                             back_dict[int(t)] = latent
                             time_steps.append(t)
                             if args.save_origin :
@@ -337,12 +334,11 @@ def main(args) :
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
                         time_steps.reverse() # 999, 750, ..., 0
+                        print(f'time_steps : {time_steps}')
                         if args.save_origin:
                             back_image = pipeline.latents_to_image(latent)[0]
                             back_img_dir = os.path.join(trg_img_output_dir, f'{name}_org_{inf_time[-1]}{ext}')
                             back_image.save(back_img_dir)
-
-
 
                         # ----------------------------[3] generate image ------------------------------ #
                         pipeline.to(device)
@@ -415,11 +411,11 @@ def main(args) :
                         recon_np = np.array(recon_image)
 
                         diff_np = np.abs(org_np - recon_np)
-                        np_diff = diff_np * latent_mask
+                        np_diff = diff_np * latent_mask.cpu().numpy()
                         normalized_np_diff = np_diff / np.max(np_diff)
                         binary_mask = np.array(Image.fromarray(latent_mask_np).resize((512, 512))) / 255
                         binary_mask = np.where(binary_mask > 0.5, 1, 0)
-                        normalized_np_diff = normalized_np_diff * binary_mask
+                        normalized_np_diff = normalized_np_diff * binary_mask # np
                         anomaly_maps = Image.fromarrau((normalized_np_diff * 255).astype(np.uint8))
                         anomaly_maps.save(os.path.join(trg_img_output_dir, f'{name}_anomal_map{ext}'))
 
