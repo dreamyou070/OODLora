@@ -55,7 +55,7 @@ def save_pixel_mask(mask, base_dir, save_name):
     mask_np = mask.squeeze().detach().cpu().numpy().astype(np.uint8)
     mask_np = mask_np * 255
     pil_img = Image.fromarray(mask_np).resize((512, 512))
-    #pil_img.save(os.path.join(base_dir, save_name))
+    pil_img.save(os.path.join(base_dir, save_name))
     return pil_img
 
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
