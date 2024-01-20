@@ -328,6 +328,9 @@ def main(args) :
 
                                 with accelerator.autocast():
                                     text_embeddings = init_prompt(tokenizer, text_encoder, device,args.prompt,args.negative_prompt)
+                                    if not do_classifier_free_guidance:
+                                        _, text_embeddings = text_embeddings.chunk(2, dim=0)
+
                                     if args.start_from_final :
                                         latents, init_latents_orig, noise = pipeline.prepare_latents(None,None,1,height,width,
                                                                                                      weight_dtype,device,None,None)
