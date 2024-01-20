@@ -191,33 +191,21 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="""Parse user arguments.""")
     parser.add_argument('--anomaly_maps_dir', required=True,
-                        help="""Path to the directory that contains the anomaly
-                                    maps of the evaluated method.""")
-
-    parser.add_argument('--dataset_base_dir',
-                        required=True,
-                        help="""Path to the directory that contains the dataset
-                                    images of the MVTec 3D-AD dataset.""")
-
+                        help="""Path to the directory that contains the anomaly maps of the evaluated method.""")
+    parser.add_argument('--dataset_base_dir', required=True,
+                        help="""Path to the directory that contains the dataset images of the MVTec 3D-AD dataset.""")
     parser.add_argument('--output_dir',
                         help="""Path to the directory to store evaluation
-                                    results. If no output directory is specified,
-                                    the results are not written to drive.""")
-
+                        results. If no output directory is specified, the results are not written to drive.""")
     parser.add_argument('--pro_integration_limit',
                         type=float,
                         default=0.3,
                         help="""Integration limit to compute the area under
-                                    the PRO curve. Must lie within the interval
-                                    of (0.0, 1.0].""")
-
-    parser.add_argument('--evaluated_objects',
-                        nargs='+',
-                        help="""List of objects to be evaluated. By default,
-                                    all dataset objects will be evaluated.""",
+                            the PRO curve. Must lie within the interval of (0.0, 1.0].""")
+    parser.add_argument('--evaluated_objects', nargs='+',
+                        help="""List of objects to be evaluated. By default, all dataset objects will be evaluated.""",
                         default=util.OBJECT_NAMES)
     args = parser.parse_args()
-    # Check that the PRO integration limit is within the valid range.
     assert 0.0 < args.pro_integration_limit <= 1.0
 
     # Check that the objects to be evaluated are actually available.
