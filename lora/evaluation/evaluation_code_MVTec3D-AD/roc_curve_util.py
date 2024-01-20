@@ -37,7 +37,8 @@ def compute_classification_roc(
     ground_truth_labels_np = np.array(ground_truth_labels)
     num_nok = ground_truth_labels_np[ground_truth_labels_np != 0].size
     num_ok = ground_truth_labels_np[ground_truth_labels_np == 0].size
-
+    print(f' trueth good number : {num_ok}')
+    print(f' trueth bad number : {num_nok}')
     # Initially, every NOK sample is correctly classified as anomalous
     # (tpr = 1.0), and every OK sample is incorrectly classified as anomalous
     # (fpr = 1.0).
