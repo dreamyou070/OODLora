@@ -125,11 +125,17 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args) :
 
     parent = os.path.split(args.network_weights)[0] # unique_folder,
-    args.output_dir = os.path.join(parent, f'recon_infer/map_test_step_{args.num_ddim_steps}_'
+    import datetime
+    date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    args.output_dir = os.path.join(parent, f'recon_infer/{date_time}_step_{args.num_ddim_steps}_'
                                            f'guidance_scale_{args.guidance_scale}_'
                                            f'start_from_origin_{args.start_from_origin}_'
                                            f'start_from_final_{args.start_from_final}_'
                                            f'inner_iteration_{args.inner_iteration}')
+    evaluate_output_dir = os.path.join(parent, f'recon_infer/{date_time}/{args.class_name}/test')
+    os.makedirs(evaluate_output_dir, exist_ok=True)
+
 
     print(f'saving will be on {args.output_dir}')
     os.makedirs(args.output_dir, exist_ok=True)
@@ -222,6 +228,9 @@ def main(args) :
             classes = os.listdir(test_img_folder)
 
             for class_name in classes:
+
+                evaluate_class_dir = os.path.join(evaluate_output_dir, class_name)
+                os.makedirs(evaluate_class_dir, exist_ok=True)
 
                 class_base_folder = os.path.join(save_dir, class_name)
                 os.makedirs(class_base_folder, exist_ok=True)
@@ -382,7 +391,7 @@ def main(args) :
                         mask_np = np.where((np.array(pixel_mask.resize((org_h, org_w)).convert('L')) / 255) < 0.5, 1, 0)
                         mask_np = np.where((diff_np * mask_np) != 0, 1, 0) * 255
                         anomaly_map = Image.fromarray(mask_np.astype(np.uint8))
-                        anomaly_map.save(os.path.join(trg_img_output_dir, f'{name}.tiff'))
+                        anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         anomaly_map.save(os.path.join(trg_img_output_dir, f'{name}.png'))
 
                         # ----------------------------- [6] AUC - ROC ------------------------------ #
@@ -438,7 +447,7 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_timesteps", type=int, default=1000)
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
     parser.add_argument("--inner_iteration", type=int, default=10)
-    parser.add_argument("--use_avg_mask", action='store_true')
+    parser.add_argument("--class_name", type=str, default="bagel")
     parser.add_argument("--trg_part", type = str)
     parser.add_argument("--only_zero_save", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
