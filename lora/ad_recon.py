@@ -122,7 +122,6 @@ def main(args) :
         latent_mask_np = latent_mask_np / latent_mask_np.max()  # 64,64
         # ------------------------------------------------------------------------------------------ #
         # binarize
-        latent_mask_np = np.where(latent_mask_np > 0.5, 1, 0)
         latent_mask_torch = torch.from_numpy(latent_mask_np).to(latent.device,
                                                                 dtype=weight_dtype)
         latent_mask_torch = latent_mask_torch.unsqueeze(0).unsqueeze(0)
@@ -264,20 +263,19 @@ def main(args) :
                                         mask_dict_avg_sub[key_name] = []
                                     mask_dict_avg_sub[key_name].append(attn)
                                 else :
+                                    mask_i = 0
                                     if res in args.cross_map_res and pos in args.trg_position and part == args.trg_part:
+                                        mask_i += 1
                                         if args.truncate_length == 3 :
                                             cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                         else :
                                             cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-
                                         h = trigger_score.shape[0]
                                         trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                         trigger_score = trigger_score.mean(dim=0)  # res, res
                                         pixel_mask = trigger_score / trigger_score.max()  # res, res
                                         # ------------------------------------------------------------------------------------------------------------------------
                                         latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64)
-                                        Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
-                                            os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
                         """
                         if args.use_avg_mask:
                             for key_name in mask_dict_avg_sub:
@@ -301,6 +299,24 @@ def main(args) :
                                     os.path.join(trg_img_output_dir, f'{name}_pixel_mask{ext}'))
                         """
 
+                        # ----------------------------[2.5] binarize mask ------------------------------ #
+                        import math
+                        def cosine_function(x):
+                            x = math.pi * (x - 1)
+                            result = math.cos(x)
+                            result = result * 0.5
+                            result = result + 0.5
+                            return result
+
+                        lambda x: cosine_function(x) if x > 0 else 0
+                        for i in range(args.inner_iteration):
+                            latent_mask = latent_mask.detach().cpu().apply_(
+                                lambda x: cosine_function(x) if x > 0 else 0)
+                            latent_mask = latent_mask.to(device)
+                        latent_mask_np = np.where(latent_mask_np > 0.5, 1, 0)
+                        Image.fromarray((latent_mask_np * 255).astype(np.uint8)).resize((512, 512)).save(
+                            os.path.join(trg_img_output_dir, f'{name}_pixel_mask_{mask_i}{ext}'))
+
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
                         inf_time.append(999) # 0, 250, 500, 750, 999
@@ -322,19 +338,6 @@ def main(args) :
                             back_img_dir = os.path.join(trg_img_output_dir, f'{name}_org_{inf_time[-1]}{ext}')
                             back_image.save(back_img_dir)
 
-                        #print(f'latent_mask : {latent_mask}')
-                        import math
-                        def cosine_function(x):
-                            x = math.pi * (x - 1)
-                            result = math.cos(x)
-                            result = result * 0.5
-                            result = result + 0.5
-                            return result
-
-                        lambda x: cosine_function(x) if x > 0 else 0
-                        for i in range(args.inner_iteration) :
-                            latent_mask = latent_mask.detach().cpu().apply_(lambda x: cosine_function(x) if x > 0 else 0)
-                            latent_mask = latent_mask.to(device)
 
 
                         # ----------------------------[3] generate image ------------------------------ #
