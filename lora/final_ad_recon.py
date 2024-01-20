@@ -376,10 +376,7 @@ def main(args) :
                         recon_image_np = latent2image(recon_latent, vae)
                         recon_image = Image.fromarray(recon_image_np.astype(np.uint8)).resize((org_h, org_w)).convert('L')
 
-                        #org_np = np.array(org_image) / 255
-                        #recon_np = np.array(recon_image) / 255
-                        #diff_np = np.abs(org_np - recon_np) # 512,512,1
-                        #back_recorect_diff_np = np.where(diff_np < 0.5, 0, 1)  # 0 = good = black
+
                         mask_np = np.where((np.array(pixel_mask.resize((org_h, org_w)).convert('L')) / 255) < 0.5, 1, 0)
                         #mask_np = np.where((back_recorect_diff_np * mask_np) != 0, 1, 0) * 255
                         anomaly_map = Image.fromarray((mask_np*255).astype(np.uint8)).resize((org_h, org_w))
