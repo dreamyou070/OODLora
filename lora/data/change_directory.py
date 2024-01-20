@@ -35,6 +35,7 @@ def main(args):
 
             categoriess = os.listdir(test_rgb_dir)
             for categor in categoriess:
+                print(f'categor : {categor}')
 
                 org_test_rgb_dir = os.path.join(test_rgb_dir, categor)
                 org_test_gt_dir =  os.path.join(test_gt_dir, categor)
