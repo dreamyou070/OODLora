@@ -48,6 +48,10 @@ def compute_pro(anomaly_maps, ground_truth_maps):
     for gt_ind, gt_map in enumerate(ground_truth_maps):
 
         # Compute the connected components in the ground truth map.
+
+        # if really zero, labeld zero
+        # 즉, labeled 에서 0 이면 검정색이므로, 정상 픽셀임을 의미한다.
+
         labeled, n_components = label(gt_map, structure)
         num_gt_regions += n_components
 

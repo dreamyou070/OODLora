@@ -79,7 +79,6 @@ def calculate_au_pro_au_roc(gt_filenames,
     Compute the area under the PRO curve for a set of ground truth images
     and corresponding anomaly images. In addition, the function computes the
     area under the ROC curve for image level classification.
-
     Args:
         gt_filenames:         List of filenames that contain the ground truth
                               images for a single dataset object.
@@ -87,22 +86,19 @@ def calculate_au_pro_au_roc(gt_filenames,
                               anomaly images for each ground truth image.
         integration_limit:    Integration limit to use when computing the area
                               under the PRO curve.
-
     Returns:
         au_pro:    Area under the PRO curve computed up to the given integration
                    limit.
         au_roc:    Area under the ROC curve.
         pro_curve: PRO curve values for localization (fpr,pro).
         roc_curve: ROC curve values for image level classifiction (fpr,tpr).
-
     """
     # Read all ground truth and anomaly images.
     ground_truth = []
     predictions = []
 
     print("Read ground truth files and corresponding predictions..")
-    for (gt_name, pred_name) in tqdm(zip(gt_filenames, prediction_filenames),
-                                     total=len(gt_filenames)):
+    for (gt_name, pred_name) in tqdm(zip(gt_filenames, prediction_filenames), total=len(gt_filenames)):
         ground_truth.append(np.asarray(Image.open(gt_name)))
         predictions.append(tiff.imread(pred_name))
 
@@ -116,6 +112,13 @@ def calculate_au_pro_au_roc(gt_filenames,
     # Compute the PRO curve.
     pro_curve = compute_pro(anomaly_maps=predictions,
                             ground_truth_maps=ground_truth)
+
+
+
+
+
+
+
     # Compute the area under the PRO curve.
     au_pro = util.trapezoid(pro_curve[0], pro_curve[1], x_max=integration_limit)
     au_pro /= integration_limit
@@ -153,11 +156,7 @@ def main(args):
         print(f"=== Evaluate {obj} ===")
         evaluation_dict[obj] = dict()
 
-        # Parse the filenames of all ground truth and corresponding anomaly
-        # images for this object.
-        gt_filenames, prediction_filenames, labels = parse_dataset_files(object_name=obj,
-                                                                 dataset_base_dir=args.dataset_base_dir,
-                                                                 anomaly_maps_dir=args.anomaly_maps_dir)
+        gt_filenames, prediction_filenames, labels = parse_dataset_files(object_name=obj,dataset_base_dir=args.dataset_base_dir,anomaly_maps_dir=args.anomaly_maps_dir)
 
         # Calculate the PRO and ROC curves.
         au_pro, au_roc, pro_curve, roc_curve = calculate_au_pro_au_roc(gt_filenames,

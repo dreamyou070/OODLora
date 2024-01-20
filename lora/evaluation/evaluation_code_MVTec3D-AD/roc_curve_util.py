@@ -26,8 +26,10 @@ def compute_classification_roc(
     """
     assert len(anomaly_maps) == len(ground_truth_labels)
 
+    # -------------------------------------------------------------------------------------------------- #
     # Compute the anomaly score for each anomaly map.
     anomaly_scores = map(scoring_function, anomaly_maps) # map(np.max, anomaly_maps)
+    print(f'anomaly_scores : {anomaly_scores}')
     num_scores = len(anomaly_maps)
 
     # Sort samples by anomaly score. Keep track of ground truth label.
