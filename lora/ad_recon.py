@@ -384,7 +384,7 @@ def main(args) :
                                         if args.use_pixel_mask :
                                             z_latent = back_dict[t]
                                             latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
-
+                                        x_latent_dict[t] = latents
                                         if args.only_zero_save :
                                             if t == 0:
                                                 image = pipeline.latents_to_image(latents)[0]
@@ -396,11 +396,14 @@ def main(args) :
                                             image.save(img_dir)
                                         controller.reset()
                                     reconstruction = pipeline.latents_to_image(latents)[0]
+
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
-                        input = org_input_image
-                        input_np = np.array(input)
-                        reconstruction_np = np.array(reconstruction)
-                        np_diff = np.abs(input_np - reconstruction_np)/255
+                        from utils.image_utils import latent2image
+
+                        org_np = latent2image(back_dict[0])
+                        recon_np = latent2image(x_latent_dict[0])
+                        np_diff = np.abs(org_np - recon_np)/255
+                        print(f'org_np : {org_np.shape} | recon_np : {recon_np.shape} | np_diff : {np_diff.shape}')
                         anomaly_maps = np.where(np_diff > 0.5, 255, 0)
                         classification_result = np.sum(anomaly_maps)
                         if classification_result > 0:
