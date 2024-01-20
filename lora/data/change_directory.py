@@ -43,7 +43,7 @@ def main(args):
                 new_test_gt_dir = os.path.join(test_ex_gt_dir,  f'80_{categor}')
                 os.makedirs(new_test_rgb_dir, exist_ok=True)
                 os.makedirs(new_test_gt_dir, exist_ok=True)
-                
+
                 if 'good' not in categor:
 
                     new_train_rgb_dir = os.path.join(train_ex_rgb_dir, f'80_{categor}')
