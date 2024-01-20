@@ -373,8 +373,8 @@ def main(args) :
                         recon_image_np = latent2image(recon_latent, vae)
                         recon_image = Image.fromarray(recon_image_np.astype(np.uint8)).resize((org_h, org_w)).convert('L')
 
-                        org_np = np.array(org_image)
-                        recon_np = np.array(recon_image)
+                        org_np = np.array(org_image)/255
+                        recon_np = np.array(recon_image)/255
                         diff_np = np.abs(org_np - recon_np) # 512,512,1
                         diff_np = diff_np / diff_np.max() # if diff small -> good, else -> bad
                         back_recorect_diff_np = np.where(diff_np < 0.5, 0, 1)  # 0 = good = black
