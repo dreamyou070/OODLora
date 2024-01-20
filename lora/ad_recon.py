@@ -223,9 +223,9 @@ def main(args) :
             uncon, con = uncon[:, :,:], con[:, :,:]
 
             print(f' (3.2) test images')
-            test_img_folder = os.path.join(args.concept_image_folder, 'test/rgb')
-            test_mask_folder = os.path.join(args.concept_image_folder, 'test/gt')
-            classes = os.listdir(test_img_folder)
+            test_folder = os.path.join(args.concept_image_folder, 'test')
+            #test_mask_folder = os.path.join(args.concept_image_folder, 'test/gt')
+            classes = os.listdir(test_folder)
 
             for class_name in classes:
 
@@ -235,8 +235,8 @@ def main(args) :
                 class_base_folder = os.path.join(save_dir, class_name)
                 os.makedirs(class_base_folder, exist_ok=True)
 
-                image_folder = os.path.join(test_img_folder, class_name)
-                mask_folder = os.path.join(test_mask_folder, class_name)
+                image_folder = os.path.join(test_folder, 'rgb')
+                mask_folder = os.path.join(test_folder, 'gt')
 
                 test_images = os.listdir(image_folder)
 
