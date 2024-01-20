@@ -369,9 +369,12 @@ def main(args) :
                         from utils.image_utils import latent2image
 
                         org_latent = back_dict[0]
-                        org_image = latent2image(org_latent, vae).convert('L')
+                        org_image_np = latent2image(org_latent, vae)
+                        org_image = Image.fromarray(org_image_np.astype(np.uint8)).convert('L')
+
                         recon_latent = x_latent_dict[0]
-                        recon_image = latent2image(recon_latent, vae).convert('L')
+                        recon_image_np = latent2image(recon_latent, vae)
+                        recon_image = Image.fromarray(recon_image_np.astype(np.uint8)).convert('L')
 
                         org_np = np.array(org_image)
                         recon_np = np.array(recon_image)
