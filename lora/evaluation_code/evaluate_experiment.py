@@ -223,4 +223,4 @@ if __name__ == "__main__":
     # Check that the objects to be evaluated are actually available.
     for obj in args.evaluated_objects:
         assert obj in util.OBJECT_NAMES
-    main()
+    main(args)
