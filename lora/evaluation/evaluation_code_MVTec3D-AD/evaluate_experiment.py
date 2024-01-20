@@ -52,7 +52,13 @@ def parse_dataset_files(object_name, dataset_base_dir, anomaly_maps_dir):
 
         # Add the gt files to the list of all gt filenames.
         gt_filenames.extend([path.join(gt_dir, file) for file in listdir(gt_dir) if path.splitext(file)[1] == '.png'])
-        labels.extend(0 if 'good' in subdir else 1)
+        for file in listdir(gt_dir) :
+            if 'good' in subdir :
+                l = 0
+            else :
+                l = 1
+            labels.append(l)
+
 
         # Get the corresponding filenames of the anomaly images.
         prediction_filenames.extend( [path.join(anomaly_maps_dir, object_name, 'test',
