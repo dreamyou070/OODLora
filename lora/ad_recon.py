@@ -32,22 +32,21 @@ def cosine_function(x):
 
 def get_position(layer_name, attn):
     res = int(attn.shape[1] ** 0.5)
-    if res in args.cross_map_res:
-        if 'down' in layer_name:
-            key_name = f'down_{res}'
-            pos = 'down'
-        elif 'up' in layer_name:
-            key_name = f'up_{res}'
-            pos = 'up'
-        else:
-            key_name = f'mid_{res}'
-            pos = 'mid'
-        if 'attentions_0' in layer_name:
-            part = 'attn_0'
-        elif 'attentions_1' in layer_name:
-            part = 'attn_1'
-        else:
-            part = 'attn_2'
+    if 'down' in layer_name:
+        key_name = f'down_{res}'
+        pos = 'down'
+    elif 'up' in layer_name:
+        key_name = f'up_{res}'
+        pos = 'up'
+    else:
+        key_name = f'mid_{res}'
+        pos = 'mid'
+    if 'attentions_0' in layer_name:
+        part = 'attn_0'
+    elif 'attentions_1' in layer_name:
+        part = 'attn_1'
+    else:
+        part = 'attn_2'
     return res, pos, part
 
 def save_pixel_mask(mask, base_dir, save_name):
