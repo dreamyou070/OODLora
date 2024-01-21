@@ -267,13 +267,18 @@ def main(args) :
                             h = trigger_score.shape[0]
                             trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                             trigger_score = trigger_score.mean(dim=0)  # res, res
-                            pixel_mask = trigger_score / trigger_score.max()  # res, res
+
+                            # -------------------------------------------- code change---------------------------------------------- #
+                            #pixel_mask = trigger_score / trigger_score.max()  # res, res
+                            pixel_mask = trigger_score
                             latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64, device, weight_dtype)  # latent_mask = 1,1,64,64
                     lambda x: cosine_function(x) if x > 0 else 0
                     for i in range(args.inner_iteration):
                         latent_mask = latent_mask.detach().cpu().apply_(
                             lambda x: cosine_function(x) if x > 0 else 0)
                         latent_mask = latent_mask.to(device)
+
+
                     latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
                     latent_mask = latent_mask_.repeat(1, 4, 1, 1)
                     pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
