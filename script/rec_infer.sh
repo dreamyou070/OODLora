@@ -4,7 +4,7 @@ class_name="tire"
 folder_name="2_2_res_64_up_attn2_t_2_data_21"
 network_weight_folder="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
-
+sh re 
 port_number=53210
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
