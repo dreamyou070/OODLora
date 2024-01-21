@@ -94,7 +94,7 @@ def main(args):
             # ---------------------------------------------------------------------------------------- #
             print(f'total_good_num : {total_good_num}')
             print(f'total_defect_num : {total_defect_num}')
-            repeat_num = int(total_defect_num / total_good_num)
+            repeat_num = int(total_good_num / total_defect_num)
             train_ex_defects = os.listdir(train_ex_rgb_dir)
             for t_defect in train_ex_defects:
                 rgb_t_defect_dir = os.path.join(train_ex_rgb_dir, t_defect)
