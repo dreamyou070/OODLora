@@ -227,7 +227,7 @@ def main(args) :
 
                 name, ext = os.path.splitext(test_image)
 
-                test_img_dir = os.path.join(class_base_folder, test_image)
+                test_img_dir = os.path.join(test_img_class_folder, test_image)
                 org_h, org_w = Image.open(test_img_dir).size
                 if 'good' not in class_name :
                     mask_img_dir = os.path.join(test_gt_class_folder, f'{name}_mask{ext}')
