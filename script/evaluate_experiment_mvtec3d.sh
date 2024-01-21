@@ -4,7 +4,7 @@ class_name="rope"
 dataset_cat="MVTec3D-AD"
 dataset_dir="../../../MyData/anomaly_detection/${dataset_cat}"
 
-sub_folder="2_2_res_64_up_attn2_t_2"
+sub_folder="2_2_res_64_up_attn2_t_2_20240121"
 base_dir="../result/${dataset_cat}_experiment/${class_name}/lora_training/anormal/${sub_folder}/reconstruction"
 anomaly_maps_dir="step_4_guidance_scale_8.5_start_from_origin_False_start_from_final_True_"
 output_dir="metrics"
