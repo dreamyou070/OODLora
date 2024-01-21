@@ -11,9 +11,12 @@ def main(args):
     cats = os.listdir(base_folder)
     for cat in cats:
         if cat == args.trg_cat:
+
             cat_dir = os.path.join(base_folder, f'{cat}')
 
             train_dir = os.path.join(cat_dir, 'train')
+
+            print(f'make train ex dir')
 
             train_ex_dir = os.path.join(train_dir, 'train_ex')
             os.makedirs(train_ex_dir, exist_ok=True)
