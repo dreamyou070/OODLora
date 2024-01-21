@@ -1,8 +1,8 @@
 #! /bin/bash
 
-class_name="carrot"
+class_name="tire"
 condition_folder='step_4_guidance_scale_8.5_start_from_origin_False_start_from_final_True_'
-second_folder_name='2_2_res_64_up_attn2_t_2_20240121'
+second_folder_name=''
 
 python ../lora/evaluation/get_all_metrics.py \
   --class_name ${class_name} \
