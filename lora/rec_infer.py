@@ -166,7 +166,6 @@ def main(args) :
             model_epoch = 10000
         test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
         os.makedirs(test_lora_dir, exist_ok=True)
-
         condition_save_dir = os.path.join(test_lora_dir, f'step_{args.num_ddim_steps}_'
                                                          f'guidance_scale_{args.guidance_scale}_'
                                                          f'start_from_origin_{args.start_from_origin}_'
@@ -275,7 +274,7 @@ def main(args) :
                         latent_mask = latent_mask.to(device)
                     latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
                     latent_mask = latent_mask_.repeat(1, 4, 1, 1)
-                    pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
+                    pixel_mask = save_pixel_mask(latent_mask_, my_inference_output_dir, f'{name}_pixel_mask{ext}', org_h, org_w)
 
                     # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                     time_steps = []
@@ -285,7 +284,7 @@ def main(args) :
                         time_steps.append(t)
                         if t == 0:
                             back_image = pipeline.latents_to_image(latent)[0].resize((org_h, org_w))
-                            back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
+                            back_img_dir = os.path.join(my_inference_output_dir, f'{name}_org{ext}')
                             back_image.save(back_img_dir)
                         noise_pred = call_unet(unet, latent, t, con, None, None)
                         controller.reset()
@@ -352,7 +351,7 @@ def main(args) :
                                     if args.only_zero_save:
                                         if t == 0:
                                             image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
-                                            img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
+                                            img_dir = os.path.join(my_inference_output_dir, f'{name}_recon{ext}')
                                             image.save(img_dir)
 
                     # ----------------------------[4] generate anomaly maps ------------------------------ #
@@ -368,7 +367,7 @@ def main(args) :
                     # mask_np = np.where((back_recorect_diff_np * mask_np) != 0, 1, 0) * 255
                     anomaly_map = Image.fromarray((mask_np * 255).astype(np.uint8)).resize((org_h, org_w))
                     anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-                    anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
+                    anomaly_map.save(os.path.join(my_inference_output_dir, f'{name}.png'))
 
 
 if __name__ == "__main__":
