@@ -7,7 +7,7 @@ def main(args) :
     class_name = args.class_name
 
     base_save_dir = f'/home/dreamyou070/Lora/OODLora/result/MVTec3D-AD_experiment/{class_name}/lora_training/anormal/{second_folder_name}'
-    total_matric_save_dir = os.path.join(base_save_dir, 'total_metrics.csv')
+    total_matric_save_dir = os.path.join(base_save_dir, f'{class_name}_total_metrics.csv')
 
     metric_base_folder = os.path.join(base_save_dir, 'reconstruction')
     lora_folders = os.listdir(metric_base_folder)
@@ -17,7 +17,7 @@ def main(args) :
     total_metrics.append(title)
     for lora_folder in lora_folders:
         lora_dir = os.path.join(metric_base_folder, lora_folder)
-        metric_dir = os.path.join(lora_dir, f'{condition_folder}/metrics/{class_name}_metrics.json')
+        metric_dir = os.path.join(lora_dir, f'{condition_folder}/metrics/metrics.json')
         with open(metric_dir, 'r') as f:
             content = json.load(f)
         metric = content[args.class_name]
