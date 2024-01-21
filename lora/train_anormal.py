@@ -701,46 +701,21 @@ class NetworkTrainer:
 
                                     if part in args.trg_part or int(res) == 8 :
 
-                                        img_masks = batch["img_masks"][0][res].unsqueeze(0)         # [1,1,res,res], foreground = 1
-                                        img_mask = img_masks.squeeze()                              # res,res
-                                        img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0) #.unsqueeze(-1)  # 8, res*res, 1
+
 
                                         anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                         mask = anormal_mask.squeeze()  # res,res
                                         anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                        if args.normal_with_background:
-                                            if batch['train_class_list'][0] == 1:
-                                                anormal_position = torch.zeros_like(anormal_mask)
-                                            else:
-                                                anormal_position = torch.where((anormal_mask == 1), 1,
-                                                                               0)  # head, pix_num
-                                            normal_position = torch.where((anormal_position == 0), 1,
-                                                                          0)  # head, pix_num
 
+                                        if batch['train_class_list'][0] == 1:
+                                            anormal_position = torch.zeros_like(anormal_mask)
                                         else:
-                                            if args.anormal_with_background:
-                                                if batch['train_class_list'][0] == 1:
-                                                    normal_position = torch.where((img_mask == 1), 1,
-                                                                                  0)  # head, pix_num
-                                                else:
-                                                    normal_position = torch.where((img_mask == 1) & (anormal_mask == 0),
-                                                                                  1, 0)
-                                                anormal_position = torch.where((normal_position == 0), 1, 0)
+                                            anormal_position = torch.where((anormal_mask == 1), 1,
+                                                                           0)  # head, pix_num
+                                        normal_position = torch.where((anormal_position == 0), 1,
+                                                                      0)  # head, pix_num
 
-                                            else:
-                                                print(f'nothing')
-                                                if batch['train_class_list'][0] == 1:
-                                                    normal_position = torch.where((img_mask == 1), 1,
-                                                                                  0)  # head, pix_num
-                                                    anormal_position = torch.zeros_like(
-                                                        normal_position)  # background also anormal
-                                                else:
-                                                    normal_position = torch.where((img_mask == 1) & (anormal_mask == 0),
-                                                                                  1, 0)
-                                                    anormal_position = torch.where((anormal_mask == 1), 1, 0)
-                                                total_position = torch.ones_like(normal_position)
-                                                back_position = total_position - normal_position - anormal_position
 
                                         anormal_trigger_activation = (score_map * anormal_position)
                                         normal_trigger_activation = (score_map * normal_position)
@@ -781,42 +756,17 @@ class NetworkTrainer:
                             else:
                                 score_map = attn.squeeze()  # 8, res*res
 
-                            img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                            img_mask = img_masks.squeeze()  # res,res
-                            img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],
-                                                   dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
                             anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                             mask = anormal_mask.squeeze()  # res,res
                             anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
                                                        dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                            if args.normal_with_background:
-                                if batch['train_class_list'][0] == 1:
-                                    anormal_position = torch.zeros_like(anormal_mask)
-                                else:
-                                    anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-                                normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
-
+                            if batch['train_class_list'][0] == 1:
+                                anormal_position = torch.zeros_like(anormal_mask)
                             else:
-                                if args.anormal_with_background:
-                                    print(f'anormal_with_background')
-                                    if batch['train_class_list'][0] == 1:
-                                        normal_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
-                                    else:
-                                        normal_position = torch.where((img_mask == 1) & (anormal_mask == 0), 1, 0)
-                                    anormal_position = torch.where((normal_position == 0), 1, 0)
-
-                                else:
-                                    print(f'nothing')
-                                    if batch['train_class_list'][0] == 1:
-                                        normal_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
-                                        anormal_position = torch.zeros_like(normal_position)  # background also anormal
-                                    else:
-                                        normal_position = torch.where((img_mask == 1) & (anormal_mask == 0), 1, 0)
-                                        anormal_position = torch.where((anormal_mask == 1), 1, 0)
-                                    total_position = torch.ones_like(normal_position)
-                                    back_position = total_position - normal_position - anormal_position
+                                anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
+                            normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
 
                             anormal_trigger_activation = (score_map * anormal_position)
                             normal_trigger_activation = (score_map * normal_position)
