@@ -4,7 +4,7 @@ Compute evaluation metrics for a single experiment.
 
 __author__ = "Paul Bergmann, David Sattlegger"
 __copyright__ = "2021, MVTec Software GmbH"
-
+import os
 import json
 from os import listdir, makedirs, path
 
@@ -184,58 +184,68 @@ def main():
     # Parse user arguments.
     args = parse_user_arguments()
 
-    # Store evaluation results in this dictionary.
-    evaluation_dict = dict()
+    base_anomaly_maps_dir = args.anomaly_maps_dir
+    base_save_dir = args.output_dir
 
-    # Keep track of the mean performance measures.
-    mean_au_pro = 0.0
-    mean_au_roc = 0.0
+    lora_folders = os.listdir(args.base_folder)
+    for lora_folder in lora_folders:
+        lora_dir = os.path.join(args.base_folder, lora_folder)
+        args.anomaly_maps_dir = os.path.join(lora_dir, base_anomaly_maps_dir)
+        args.output_dir = os.path.join(args.anomaly_maps_dir, base_save_dir)
 
-    # Evaluate each dataset object separately.
-    for obj in args.evaluated_objects:
-        print(f"=== Evaluate {obj} ===")
-        evaluation_dict[obj] = dict()
 
-        # Parse the filenames of all ground truth and corresponding anomaly
-        # images for this object.
-        gt_filenames, prediction_filenames = \
-            parse_dataset_files(
-                object_name=obj,
-                dataset_base_dir=args.dataset_base_dir,
-                anomaly_maps_dir=args.anomaly_maps_dir)
-
-        # Calculate the PRO and ROC curves.
-        au_pro, au_roc, pro_curve, roc_curve = \
-            calculate_au_pro_au_roc(
-                gt_filenames,
-                prediction_filenames,
-                args.pro_integration_limit)
-
-        evaluation_dict[obj]['au_pro'] = au_pro
-        evaluation_dict[obj]['au_roc'] = au_roc
-
-        evaluation_dict[obj]['roc_curve_fpr'] = roc_curve[0]
-        evaluation_dict[obj]['roc_curve_tpr'] = roc_curve[1]
+        # Store evaluation results in this dictionary.
+        evaluation_dict = dict()
 
         # Keep track of the mean performance measures.
-        mean_au_pro += au_pro
-        mean_au_roc += au_roc
+        mean_au_pro = 0.0
+        mean_au_roc = 0.0
 
-        print("")
-        print("")
+        # Evaluate each dataset object separately.
+        for obj in args.evaluated_objects:
+            print(f"=== Evaluate {obj} ===")
+            evaluation_dict[obj] = dict()
 
-    # Compute the mean of the performance measures.
-    evaluation_dict['mean_au_pro'] = mean_au_pro / len(args.evaluated_objects)
-    evaluation_dict['mean_au_roc'] = mean_au_roc / len(args.evaluated_objects)
+            # Parse the filenames of all ground truth and corresponding anomaly
+            # images for this object.
+            gt_filenames, prediction_filenames = \
+                parse_dataset_files(
+                    object_name=obj,
+                    dataset_base_dir=args.dataset_base_dir,
+                    anomaly_maps_dir=args.anomaly_maps_dir)
 
-    # If required, write evaluation metrics to drive.
-    if args.output_dir is not None:
-        makedirs(args.output_dir, exist_ok=True)
+            # Calculate the PRO and ROC curves.
+            au_pro, au_roc, pro_curve, roc_curve = \
+                calculate_au_pro_au_roc(
+                    gt_filenames,
+                    prediction_filenames,
+                    args.pro_integration_limit)
 
-        with open(path.join(args.output_dir, 'metrics.json'), 'w') as file:
-            json.dump(evaluation_dict, file, indent=4)
+            evaluation_dict[obj]['au_pro'] = au_pro
+            evaluation_dict[obj]['au_roc'] = au_roc
 
-        print(f"Wrote metrics to {path.join(args.output_dir, 'metrics.json')}")
+            evaluation_dict[obj]['roc_curve_fpr'] = roc_curve[0]
+            evaluation_dict[obj]['roc_curve_tpr'] = roc_curve[1]
+
+            # Keep track of the mean performance measures.
+            mean_au_pro += au_pro
+            mean_au_roc += au_roc
+
+            print("")
+            print("")
+
+        # Compute the mean of the performance measures.
+        evaluation_dict['mean_au_pro'] = mean_au_pro / len(args.evaluated_objects)
+        evaluation_dict['mean_au_roc'] = mean_au_roc / len(args.evaluated_objects)
+
+        # If required, write evaluation metrics to drive.
+        if args.output_dir is not None:
+            makedirs(args.output_dir, exist_ok=True)
+
+            with open(path.join(args.output_dir, 'metrics.json'), 'w') as file:
+                json.dump(evaluation_dict, file, indent=4)
+
+            print(f"Wrote metrics to {path.join(args.output_dir, 'metrics.json')}")
 
 
 if __name__ == "__main__":
