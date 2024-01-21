@@ -134,6 +134,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
     controller.num_att_layers = cross_att_count
 def main(args) :
 
+    print(f'{args.clss_name} inference ... ')
+
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
     args.output_dir = os.path.join(parent,'reconstruction')
     os.makedirs(args.output_dir, exist_ok=True)
