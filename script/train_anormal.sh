@@ -1,17 +1,17 @@
 #! /bin/bash
 
-class_name="cookie"
+class_name="foam"
 data_source='train_ex'
 train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="2_2_res_64_up_attn2_t_2_data_12"
+save_folder="2_2_res_64_up_attn2_t_2_data_38_10"
 output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="${output_dir}/models/epoch-000013.safetensors"
-start_epoch=13
-port_number=50944
+network_weights="${output_dir}/models/epoch-000011.safetensors"
+start_epoch=11
+port_number=50114
 
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
   --main_process_port $port_number ../lora/train_anormal.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
