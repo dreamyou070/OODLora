@@ -13,9 +13,11 @@ def main(args) :
     lora_folders = os.listdir(metric_base_folder)
 
     total_metrics = []
+    title = ['lora_folder', 'au_pro', 'au_roc', 'roc_curve_fpr', '','','roc_curve_tpr','','']
+    total_metrics.append(title)
     for lora_folder in lora_folders:
         lora_dir = os.path.join(metric_base_folder, lora_folder)
-        metric_dir = os.path.join(lora_dir, f'{condition_folder}/metrics/metrics.json')
+        metric_dir = os.path.join(lora_dir, f'{condition_folder}/metrics/{class_name}_metrics.json')
         with open(metric_dir, 'r') as f:
             content = json.load(f)
         metric = content[args.class_name]
