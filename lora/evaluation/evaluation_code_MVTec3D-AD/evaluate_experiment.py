@@ -67,7 +67,6 @@ def parse_user_arguments():
 
     return args
 
-
 def parse_dataset_files(object_name, dataset_base_dir, anomaly_maps_dir):
     """
     Parse the filenames for one object of the MVTec 3D-AD dataset.
