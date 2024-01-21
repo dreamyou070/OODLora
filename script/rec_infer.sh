@@ -1,7 +1,7 @@
 #! /bin/bash
 
-class_name="potato"
-folder_name="2_2_res_64_up_attn2_t_2_data_12"
+class_name="foam"
+folder_name="2_2_res_64_up_attn2_t_2_data_38_10"
 network_weight_folder="../result/MVTec3D-AD_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}"
 
