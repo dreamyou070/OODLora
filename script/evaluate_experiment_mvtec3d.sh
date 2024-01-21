@@ -16,4 +16,3 @@ python ../lora/evaluation/evaluation_code_MVTec3D-AD/evaluate_experiment.py \
      --output_dir "${output_dir}" \
      --evaluated_objects "${class_name}" \
      --pro_integration_limit 0.3
-
