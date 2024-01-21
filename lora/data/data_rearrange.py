@@ -16,9 +16,7 @@ def main(args):
 
             train_dir = os.path.join(cat_dir, 'train')
 
-            print(f'make train ex dir')
-
-            train_ex_dir = os.path.join(train_dir, 'train_ex')
+            train_ex_dir = os.path.join(cat_dir, 'train_ex')
             os.makedirs(train_ex_dir, exist_ok=True)
             train_good_dir = os.path.join(train_dir, 'good')
 
