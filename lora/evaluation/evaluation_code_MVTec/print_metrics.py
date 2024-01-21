@@ -1,5 +1,4 @@
-"""
-Print the key metrics of multiple experiments to the standard output.
+"""Print the key metrics of multiple experiments to the standard output.
 """
 
 __author__ = "Paul Bergmann, David Sattlegger"
@@ -17,8 +16,7 @@ from generic_util import OBJECT_NAMES
 
 
 def parse_user_arguments():
-    """
-    Parse user arguments.
+    """Parse user arguments.
 
     Returns: Parsed arguments.
     """
@@ -33,22 +31,21 @@ def parse_user_arguments():
 
 
 def extract_table_rows(metrics_folder, metric):
-    """
-    Extract all rows to create a table that displays a given metric for each
+    """Extract all rows to create a table that displays a given metric for each
     evaluated experiment.
 
     Args:
         metrics_folder: Base folder that contains evaluation results.
-        metric:         Name of the metric to be extracted. Choose between
-                        'au_pro' for localization and
-                        'au_roc' for classification.
+        metric: Name of the metric to be extracted. Choose between
+          'au_pro' for localization and
+          'classification_au_roc' for classification.
 
     Returns:
         List of table rows. Each row contains the experiment name and the
           extracted metrics for each evaluated object as well as the mean
           performance.
     """
-    assert metric in ['au_pro', 'au_roc']
+    assert metric in ['au_pro', 'classification_au_roc']
 
     # Iterate each experiment.
     exp_ids = os.listdir(metrics_folder)
@@ -90,15 +87,14 @@ def extract_table_rows(metrics_folder, metric):
 
 
 def main():
-    """
-    Print the key metrics of multiple experiments to the standard output.
+    """Print the key metrics of multiple experiments to the standard output.
     """
     # Parse user arguments.
     args = parse_user_arguments()
 
     # Create the table rows. One row for each experiment.
     rows_pro = extract_table_rows(args.metrics_folder, 'au_pro')
-    rows_roc = extract_table_rows(args.metrics_folder, 'au_roc')
+    rows_roc = extract_table_rows(args.metrics_folder, 'classification_au_roc')
 
     # Print localization result table.
     print("\nAU PRO (localization)")

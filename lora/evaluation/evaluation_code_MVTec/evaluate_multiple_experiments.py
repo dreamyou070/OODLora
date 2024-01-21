@@ -1,5 +1,4 @@
-"""
-Run the evaluation script for multiple experiments.
+"""Run the evaluation script for multiple experiments.
 
 This is a wrapper around evaluate_experiments.py which is called once for each
 experiment specified in the config file passed to this script.
@@ -15,8 +14,7 @@ from os import path
 
 
 def parse_user_arguments():
-    """
-    Parse user arguments.
+    """Parse user arguments.
 
     Returns: Parsed arguments.
     """
@@ -31,7 +29,7 @@ def parse_user_arguments():
     parser.add_argument('--dataset_base_dir',
                         required=True,
                         help="""Path to the directory that contains the dataset
-                                images of the MVTec 3D-AD dataset.""")
+                                images of the MVTec AD dataset.""")
 
     parser.add_argument('--output_dir',
                         default='metrics/',
@@ -56,9 +54,7 @@ def parse_user_arguments():
 
 
 def main():
-    """
-    Run the evaluation script for multiple experiments.
-    """
+    """Run the evaluation script for multiple experiments."""
     # Parse user arguments.
     args = parse_user_arguments()
 
@@ -86,7 +82,7 @@ def main():
         if args.dry_run == 'False':
             subprocess.run(call, check=True)
         else:
-            print(f"Would call: {call}\n")
+            print(f"Would call: {' '.join(call)}\n")
 
 
 if __name__ == "__main__":

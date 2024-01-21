@@ -1,6 +1,5 @@
-"""
-Utility functions that compute a PRO curve and its definite integral, given
-pairs of anomaly and ground truth maps.
+"""Utility function that computes a PRO curve, given pairs of anomaly and ground
+truth maps.
 
 The PRO curve can also be integrated up to a constant integration limit.
 """
@@ -9,19 +8,17 @@ from scipy.ndimage.measurements import label
 
 
 def compute_pro(anomaly_maps, ground_truth_maps):
-    """
-    Compute the PRO curve for a set of anomaly maps with
-    corresponding ground truth maps.
+    """Compute the PRO curve for a set of anomaly maps with corresponding ground
+    truth maps.
 
     Args:
-        anomaly_maps:      List of anomaly maps (2D numpy arrays) that contain a
-                           real-valued anomaly score at each pixel.
+        anomaly_maps: List of anomaly maps (2D numpy arrays) that contain a
+          real-valued anomaly score at each pixel.
 
         ground_truth_maps: List of ground truth maps (2D numpy arrays) that
-                           contain binary-valued ground truth labels for each
-                           pixel.
-                           0 indicates that a pixel is anomaly-free.
-                           1 indicates that a pixel contains an anomaly.
+          contain binary-valued ground truth labels for each pixel.
+          0 indicates that a pixel is anomaly-free.
+          1 indicates that a pixel contains an anomaly.
 
     Returns:
         fprs: numpy array of false positive rates.

@@ -5,11 +5,14 @@ Various utility functions for:
     - generating a toy dataset to test the evaluation script.
 """
 from bisect import bisect
+import os
 
 import numpy as np
+import tifffile as tiff
 
-OBJECT_NAMES = ['bagel', 'cable_gland', 'carrot', 'cookie', 'dowel', 'foam',
-                'peach', 'potato', 'rope', 'tire']
+OBJECT_NAMES = ['bottle', 'cable', 'capsule', 'carpet', 'grid',
+                'hazelnut', 'leather', 'metal_nut', 'pill', 'screw',
+                'tile', 'toothbrush', 'transistor', 'wood', 'zipper']
 
 
 def trapezoid(x, y, x_max=None):
@@ -23,14 +26,14 @@ def trapezoid(x, y, x_max=None):
     warning.
 
     Args:
-        x:     Samples from the domain of the function to integrate
-               Need to be sorted in ascending order. May contain the same value
-               multiple times. In that case, the order of the corresponding
-               y values will affect the integration with the trapezoidal rule.
-        y:     Values of the function corresponding to x values.
+        x: Samples from the domain of the function to integrate
+          Need to be sorted in ascending order. May contain the same value
+          multiple times. In that case, the order of the corresponding
+          y values will affect the integration with the trapezoidal rule.
+        y: Values of the function corresponding to x values.
         x_max: Upper limit of the integration. The y value at max_x will be
-               determined by interpolating between its neighbors. Must not lie
-               outside of the range of x.
+          determined by interpolating between its neighbors. Must not lie
+          outside of the range of x.
 
     Returns:
         Area under the curve.
@@ -40,8 +43,8 @@ def trapezoid(x, y, x_max=None):
     y = np.asarray(y)
     finite_mask = np.logical_and(np.isfinite(x), np.isfinite(y))
     if not finite_mask.all():
-        print("""WARNING: Not all x and y values passed to trapezoid(...)
-                 are finite. Will continue with only the finite values.""")
+        print("WARNING: Not all x and y values passed to trapezoid(...)"
+              " are finite. Will continue with only the finite values.")
     x = x[finite_mask]
     y = y[finite_mask]
 
@@ -73,21 +76,54 @@ def trapezoid(x, y, x_max=None):
     return np.sum(0.5 * (y[1:] + y[:-1]) * (x[1:] - x[:-1])) + correction
 
 
-def generate_toy_dataset(num_images, image_width, image_height, gt_size):
-    """
-    Generate a toy dataset to test the evaluation script.
+def read_tiff(file_path_no_ext, exts=('.tif', '.tiff', '.TIF', '.TIFF')):
+    """Read a TIFF file from a given path without the TIFF extension.
 
     Args:
-        num_images:   Number of images that the toy dataset contains.
-        image_width:  Width of the dataset images in pixels.
+        file_path_no_ext: Path to the TIFF file without a file extension.
+        exts: TIFF extensions to consider when searching for the file.
+
+    Raises:
+        FileNotFoundError: The given file path does not exist with any of the
+          given extensions.
+        IOError: The given file path exists with multiple of the given
+          extensions.
+    """
+    # Get all file paths that exist
+    file_paths = []
+    for ext in exts:
+        # Make sure the file path does not already end with a tiff extension.
+        assert not file_path_no_ext.endswith(ext)
+        file_path = file_path_no_ext + ext
+        if os.path.exists(file_path):
+            file_paths.append(file_path)
+
+    if len(file_paths) == 0:
+        raise FileNotFoundError('Could not find a file with a TIFF extension'
+                                f' at {file_path_no_ext}')
+    elif len(file_paths) > 1:
+        raise IOError('Found multiple files with a TIFF extension at'
+                      f' {file_path_no_ext}'
+                      '\nPlease specify which TIFF extension to use via the'
+                      ' `exts` parameter of this function.')
+
+    return tiff.imread(file_paths[0])
+
+
+def generate_toy_dataset(num_images, image_width, image_height, gt_size):
+    """Generate a toy dataset to test the evaluation script.
+
+    Args:
+        num_images: Number of images that the toy dataset contains.
+        image_width: Width of the dataset images in pixels.
         image_height: Height of the dataset images in pixels.
-        gt_size:      Size of rectangular ground truth regions that are
-                      artificially generated on the dataset images.
+        gt_size: Size of rectangular ground truth regions that are
+          artificially generated on the dataset images.
 
     Returns:
-        anomaly_maps:     List of numpy arrays that contain random anomaly maps.
+        anomaly_maps: List of numpy arrays that contain random anomaly maps.
         ground_truth_map: Corresponding list of numpy arrays that specify a
-                          rectangular ground truth region at a random location.
+          rectangular ground truth region.
     """
     # Fix a random seed for reproducibility.
     np.random.seed(1338)
@@ -97,10 +133,10 @@ def generate_toy_dataset(num_images, image_width, image_height, gt_size):
     anomaly_maps = []
     ground_truth_maps = []
     for _ in range(num_images):
-        # Sample a random anomaly maps.
+        # Sample a random anomaly map.
         anomaly_map = np.random.random((image_height, image_width))
 
-        # Construct a fixed ground truth maps.
+        # Construct a fixed ground truth map.
         ground_truth_map = np.zeros((image_height, image_width))
         ground_truth_map[0:gt_size, 0:gt_size] = 1
 
