@@ -185,7 +185,7 @@ def main():
     base_anomaly_maps_dir = args.anomaly_maps_dir
     base_save_dir = args.output_dir
 
-    lora_folders = os.listdir(args.base_folder)
+    lora_folders = os.listdir(args.base_dir)
     for lora_folder in lora_folders:
         lora_dir = os.path.join(args.base_folder, lora_folder)
         args.anomaly_maps_dir = os.path.join(lora_dir, base_anomaly_maps_dir)
