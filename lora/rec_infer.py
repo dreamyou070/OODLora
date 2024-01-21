@@ -288,6 +288,7 @@ def main(args) :
                             back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
                             back_image.save(back_img_dir)
                         noise_pred = call_unet(unet, latent, t, con, None, None)
+                        controller.reset()
                         latent = next_step(noise_pred, int(t), latent, scheduler)
                     back_dict[inf_time[-1]] = latent
                     time_steps.append(inf_time[-1])
@@ -337,6 +338,7 @@ def main(args) :
                                     # predict the noise residual
                                     noise_pred = unet(latent_model_input, t,
                                                       encoder_hidden_states=text_embeddings).sample
+                                    controller.reset()
                                     # perform guidance
                                     if do_classifier_free_guidance:
                                         noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
@@ -352,7 +354,6 @@ def main(args) :
                                             image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                                             img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                             image.save(img_dir)
-                                    controller.reset()
 
                     # ----------------------------[4] generate anomaly maps ------------------------------ #
                     org_latent = back_dict[0]
