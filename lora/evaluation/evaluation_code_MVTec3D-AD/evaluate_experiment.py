@@ -56,9 +56,8 @@ def parse_user_arguments():
                         help="""List of objects to be evaluated. By default,
                                 all dataset objects will be evaluated.""",
                         default=util.OBJECT_NAMES)
-
+    parser.add_argument('--base_dir', type=str)
     args = parser.parse_args()
-
     # Check that the PRO integration limit is within the valid range.
     assert 0.0 < args.pro_integration_limit <= 1.0
 
