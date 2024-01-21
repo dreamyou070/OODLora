@@ -32,6 +32,8 @@ def main(args):
 
             train_good_rgb_dir = os.path.join(train_good_dir, 'rgb')
             images = os.listdir(train_good_rgb_dir)
+
+            train_good_num = len(images)
             for image in images:
                 org_img_dir = os.path.join(train_good_rgb_dir, image)
                 new_img_dir = os.path.join(train_ex_good_rgb_dir, image)
@@ -46,6 +48,7 @@ def main(args):
             validation_good_dir = os.path.join(validation_dir, 'good')
             validation_good_rgb_dir = os.path.join(validation_good_dir, 'rgb')
             images = os.listdir(validation_good_rgb_dir)
+            val_good_num = len(images)
             for image in images:
                 name, ext = os.path.splitext(image)
                 org_img_dir = os.path.join(validation_good_rgb_dir, image)
@@ -56,32 +59,41 @@ def main(args):
                 mask_pil_dir = os.path.join(train_ex_good_gt_dir, f'val_{name}{ext}')
                 rgb_pil.save(new_img_dir)
                 mask_pil.save(mask_pil_dir)
+
+            total_good_num = train_good_num + val_good_num
             # ---------------------------------------------------------------------------------------- #
             test_dir = os.path.join(cat_dir, 'test')
             defets = os.listdir(test_dir)
-            for defet in defets:
-                org_defect_dir = os.path.join(test_dir, defet)
-                org_defect_rgb_dir = os.path.join(org_defect_dir, 'rgb')
-                org_defect_gt_dir = os.path.join(org_defect_dir, 'gt')
+            total_defect_num = 0
+            for defect in defets:
+                if 'good' not in defect:
+                    org_defect_dir = os.path.join(test_dir, defect)
+                    org_defect_rgb_dir = os.path.join(org_defect_dir, 'rgb')
+                    org_defect_gt_dir = os.path.join(org_defect_dir, 'gt')
 
-                train_defect_rgb_dir = os.path.join(train_ex_rgb_dir, defet)
-                os.makedirs(train_defect_rgb_dir, exist_ok=True)
-                train_defect_gt_dir = os.path.join(train_ex_gt_dir, defet)
-                os.makedirs(train_defect_gt_dir, exist_ok=True)
+                    train_defect_rgb_dir = os.path.join(train_ex_rgb_dir, defect)
+                    os.makedirs(train_defect_rgb_dir, exist_ok=True)
+                    train_defect_gt_dir = os.path.join(train_ex_gt_dir, defect)
+                    os.makedirs(train_defect_gt_dir, exist_ok=True)
 
-                rgb_images = os.listdir(org_defect_rgb_dir)
-                train_num = int(len(rgb_images) * 0.8)
-                for i, image in enumerate(rgb_images) :
-                    org_img_dir = os.path.join(org_defect_rgb_dir, image)
-                    mask_img_dir = os.path.join(org_defect_gt_dir, image)
-                    if i < train_num:
-                        new_img_dir = os.path.join(train_defect_rgb_dir, image)
-                        new_mask_dir = os.path.join(train_defect_gt_dir, image)
+                    rgb_images = os.listdir(org_defect_rgb_dir)
+                    train_num = int(len(rgb_images) * 0.8)
+                    for i, image in enumerate(rgb_images) :
+                        org_img_dir = os.path.join(org_defect_rgb_dir, image)
+                        mask_img_dir = os.path.join(org_defect_gt_dir, image)
+                        if i < train_num:
+                            total_defect_num += 1
+                            new_img_dir = os.path.join(train_defect_rgb_dir, image)
+                            new_mask_dir = os.path.join(train_defect_gt_dir, image)
 
-                        rgb_pil = Image.open(org_img_dir)
-                        mask_pil = Image.open(mask_img_dir)
-                        rgb_pil.save(new_img_dir)
-                        mask_pil.save(new_mask_dir)
+                            rgb_pil = Image.open(org_img_dir)
+                            mask_pil = Image.open(mask_img_dir)
+                            rgb_pil.save(new_img_dir)
+                            mask_pil.save(new_mask_dir)
+
+            # ---------------------------------------------------------------------------------------- #
+            print(f'total_good_num : {total_good_num}')
+            print(f'total_defect_num : {total_defect_num}')
 
 
 
