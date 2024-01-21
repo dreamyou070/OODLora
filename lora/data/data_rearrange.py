@@ -94,6 +94,20 @@ def main(args):
             # ---------------------------------------------------------------------------------------- #
             print(f'total_good_num : {total_good_num}')
             print(f'total_defect_num : {total_defect_num}')
+            repeat_num = int(total_defect_num / total_good_num)
+            train_ex_defects = os.listdir(train_ex_rgb_dir)
+            for t_defect in train_ex_defects:
+                rgb_t_defect_dir = os.path.join(train_ex_rgb_dir, t_defect)
+                gt_t_defect_dir = os.path.join(train_ex_gt_dir, t_defect)
+                if 'good' not in t_defect:
+                    new_rgb_t_defect_dir = os.path.join(train_ex_rgb_dir, f'{repeat_num}_{t_defect}')
+                    new_gt_t_defect_dir = os.path.join(train_ex_gt_dir, f'{repeat_num}_{t_defect}')
+                else :
+                    new_rgb_t_defect_dir = os.path.join(train_ex_rgb_dir, f'1_{t_defect}')
+                    new_gt_t_defect_dir = os.path.join(train_ex_gt_dir, f'1_{t_defect}')
+                os.rename(rgb_t_defect_dir, new_rgb_t_defect_dir)
+                os.rename(gt_t_defect_dir, new_gt_t_defect_dir)
+
 
 
 
