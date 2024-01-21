@@ -9,7 +9,7 @@ def main(args) :
     base_save_dir = f'/home/dreamyou070/Lora/OODLora/result/MVTec3D-AD_experiment/{class_name}/lora_training/anormal/{second_folder_name}'
     total_matric_save_dir = os.path.join(base_save_dir, 'total_metrics.csv')
 
-    metric_base_folder = os.path.join(base_save_dir, 'reconstruction_1')
+    metric_base_folder = os.path.join(base_save_dir, 'reconstruction')
     lora_folders = os.listdir(metric_base_folder)
 
     total_metrics = []
