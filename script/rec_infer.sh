@@ -1,12 +1,13 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_up_attn012_t_2_only_normal"
+folder_name="res_64_up_attn2_t_2_attn2"
 data_folder="MVTec3D-AD"
-network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/normal/${folder_name}/models"
+normality_folder='anormal'
+network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
-port_number=56538
+port_number=56701
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port ${port_number} ../lora/rec_infer.py \
@@ -21,7 +22,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_weights ${network_weight_folder}  \
   --cross_map_res [64] \
   --trg_position "['up']" \
-  --trg_part "['attn_2','attn_1','attn_0']" \
+  --trg_part "['attn_2']" \
   --num_ddim_steps 4 \
   --inner_iter 10 \
   --prompt 'good' \
