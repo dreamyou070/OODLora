@@ -2,6 +2,7 @@ from segment_anything import SamPredictor, sam_model_registry
 import argparse, os
 from PIL import Image
 import numpy as np
+import shutil
 
 def main(args):
 
@@ -9,22 +10,24 @@ def main(args):
     base_folder = args.base_folder
     cats = os.listdir(base_folder)
     for cat in cats:
-        if cat == args.trg_cat:
-            cat_dir = os.path.join(base_folder, f'{cat}')
+        cat_dir = os.path.join(base_folder, f'{cat}')
+        train_normal_dir = os.path.join(cat_dir, 'train_normal')
+        folders = os.listdir(train_normal_dir)
+        for folder in folders:
+            folder_dir = os.path.join(train_normal_dir, f'{folder}')
+            sub_folders = os.listdir(folder_dir)
+            for sub_folder in sub_folders:
+                sub_folder_dir = os.path.join(folder_dir, f'{sub_folder}')
+                if 'good' not in sub_folder_dir:
+                    shutil.rmtree(sub_folder_dir)
+                else :
+                    r_num, name = sub_folder.split('_')
+                    new_name = f'40_{name}'
+                    new_sub_folder_dir = os.path.join(folder_dir, f'{new_name}')
+                    os.rename(sub_folder_dir, new_sub_folder_dir)
 
-            train_ex_dir = os.path.join(cat_dir, 'train_ex')
-            train_ex_gt_dir = os.path.join(train_ex_dir, 'gt')
-            train_ex_rgb_dir = os.path.join(train_ex_dir, 'mask')
-            folders = os.listdir(train_ex_rgb_dir)
-            for folder in folders:
-                folder_gt_dir = os.path.join(train_ex_gt_dir, folder)
-                folder_rgb_dir = os.path.join(train_ex_rgb_dir, folder)
-                images = os.listdir(folder_rgb_dir)
-                for image in images:
-                    img_gt_dir = os.path.join(folder_gt_dir, image)
-                    img_rgb_dir = os.path.join(folder_rgb_dir, image)
-                    Image.open(img_gt_dir).resize((512,512)).convert('L').save(img_gt_dir)
-                    Image.open(img_rgb_dir).resize((512,512)).save(img_rgb_dir)
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
