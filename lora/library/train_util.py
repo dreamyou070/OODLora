@@ -1040,7 +1040,7 @@ class BaseDataset(torch.utils.data.Dataset):
         train_class_list = []
         mask_dirs = []
         caption_attention_masks = []
-        anormal_masks = []
+        img_masks, anormal_masks = [], []
 
         for J, image_key in enumerate(bucket[image_index : image_index + bucket_batch_size ]):
 
@@ -1056,7 +1056,7 @@ class BaseDataset(torch.utils.data.Dataset):
             super_parent, class_name = os.path.split(parent) # class_name = 120_good
             super_super_parent, change = os.path.split(super_parent) # dir = 120
             anormal_mask_dir = os.path.join(super_super_parent, 'gt', class_name, name)
-
+            pixel_mask_dir = os.path.join(super_super_parent, 'mask', class_name, name)
 
             # second code : if higher than 0, be 1 other 0
             # third, if higher than 0.5, than 1 else 0
@@ -1072,6 +1072,21 @@ class BaseDataset(torch.utils.data.Dataset):
             anormal_mask_dict = {64 : anormal_mask_64,
                                  32 : anormal_mask_32,16 : anormal_mask_16,8 : anormal_mask_8}
             anormal_masks.append(anormal_mask_dict)
+
+            pixel_mask_64 = transforms.ToTensor()(
+                Image.open(pixel_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
+            pixel_mask_64 = torch.where(pixel_mask_64 > p, 1, 0).float()
+            pixel_mask_32 = transforms.ToTensor()(
+                Image.open(pixel_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
+            pixel_mask_32 = torch.where(pixel_mask_32 > p, 1, 0).float()
+            pixel_mask_16 = transforms.ToTensor()(
+                Image.open(pixel_mask_dir).convert('L').resize((16, 16), Image.BICUBIC))
+            pixel_mask_16 = torch.where(pixel_mask_16 > p, 1, 0).float()
+            pixel_mask_8 = transforms.ToTensor()(Image.open(pixel_mask_dir).convert('L').resize((8, 8), Image.BICUBIC))
+            pixel_mask_8 = torch.where(pixel_mask_8 > p, 1, 0).float()
+            pixel_mask_dict = {64: pixel_mask_64, 32: pixel_mask_32, 16: pixel_mask_16, 8: pixel_mask_8}
+            img_masks.append(pixel_mask_dict)
+
 
 
 
@@ -1275,6 +1290,7 @@ class BaseDataset(torch.utils.data.Dataset):
             mask_imgs = None
 
         example["anormal_masks"] = anormal_masks
+        example["img_masks"] = img_masks
         example["mask_dirs"] = mask_dirs
         example["trg_indexs_list"] = trg_indexs_list  ##########################################################
         example["train_class_list"] = train_class_list

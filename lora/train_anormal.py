@@ -701,21 +701,28 @@ class NetworkTrainer:
 
                                     if part in args.trg_part or int(res) == 8 :
 
-
+                                        img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                        img_mask = img_masks.squeeze()  # res,res
+                                        img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)
 
                                         anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                         mask = anormal_mask.squeeze()  # res,res
                                         anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-
-                                        if batch['train_class_list'][0] == 1:
-                                            anormal_position = torch.zeros_like(anormal_mask)
+                                        if part == 'attn_2' :
+                                            if batch['train_class_list'][0] == 1:
+                                                anormal_position = torch.zeros_like(anormal_mask)
+                                            else:
+                                                anormal_position = torch.where((anormal_mask == 1), 1,
+                                                                               0)  # head, pix_num
+                                            normal_position = torch.where((anormal_position == 0), 1,
+                                                                          0)  # head, pix_num
                                         else:
-                                            anormal_position = torch.where((anormal_mask == 1), 1,
-                                                                           0)  # head, pix_num
-                                        normal_position = torch.where((anormal_position == 0), 1,
-                                                                      0)  # head, pix_num
+                                            object_position = torch.torch.where((img_mask == 1), 1,0)  # head, pix_num
+                                            back_position = torch.torch.where((img_mask == 1), 0,1)  # head, pix_num
 
+                                            normal_position = torch.zeros_like(object_position)
+                                            anormal_position = back_position
 
                                         anormal_trigger_activation = (score_map * anormal_position)
                                         normal_trigger_activation = (score_map * normal_position)
