@@ -62,6 +62,7 @@ def parse_user_arguments():
     assert 0.0 < args.pro_integration_limit <= 1.0
 
     # Check that the objects to be evaluated are actually available.
+    print(f'util.OBJECT_NAMES : {util.OBJECT_NAMES}')
     for obj in args.evaluated_objects:
         assert obj in util.OBJECT_NAMES
 
