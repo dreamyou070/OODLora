@@ -288,7 +288,8 @@ def main(args) :
                             background_mask = pixel_mask_dict['attn_1']
                         else :
                             background_mask = pixel_mask_dict['attn_0']
-                        latent_mask = torch.where((background_mask == 1) & (normal_mask == 1), 1, 0)
+                        not_copy_mask = torch.where((background_mask == 0) & (normal_mask == 0), 1, 0)
+                        latent_mask = torch.where((not_copy_mask==0), 1, 0)
                         latent_mask = latent_mask.repeat(1, 4, 1, 1)
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
 
