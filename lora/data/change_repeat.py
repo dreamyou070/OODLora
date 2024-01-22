@@ -37,8 +37,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str,
                         default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD-org')
-    parser.add_argument('--trg_cat', type=str, default='carrot')
-    parser.add_argument('--new_ok_repeat', type=int, default=60)
-    parser.add_argument('--new_nok_repeat', type=int, default=60)
+    parser.add_argument('--trg_cat', type=str, default='bagel')
+    parser.add_argument('--new_ok_repeat', type=int, default=30)
+    parser.add_argument('--new_nok_repeat', type=int, default=180)
     args = parser.parse_args()
     main(args)
