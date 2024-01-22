@@ -175,7 +175,7 @@ def main(args) :
         os.makedirs(condition_save_dir, exist_ok=True)
         evaluate_output_dir = os.path.join(condition_save_dir, f'{args.class_name}/test')
         os.makedirs(evaluate_output_dir, exist_ok=True)
-        my_inference_output_dir = os.path.join(condition_save_dir, f'my_inference')
+        my_inference_output_dir = os.path.join(condition_save_dir, f'my_inference_lora_{model_epoch}')
         os.makedirs(my_inference_output_dir, exist_ok=True)
 
         print(f' (3.2) SD')
