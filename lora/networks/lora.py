@@ -29,25 +29,6 @@ def gcd(a, b):
         if a % i == 0 and b % i == 0:
             return i
 
-"""
-BLOCKS = ["text_model",
-          "unet_down_blocks_0_attentions_0","unet_down_blocks_0_attentions_1","unet_down_blocks_0_resnets",
-          "unet_down_blocks_1_attentions_0","unet_down_blocks_1_attentions_1","unet_down_blocks_1_resnets",
-          "unet_down_blocks_2_attentions_0","unet_down_blocks_2_attentions_1","unet_down_blocks_2_resnets",
-          "unet_down_blocks_3",
-          "unet_mid_block_attentions_0", "unet_mid_block_resnets",
-          "unet_up_blocks_0_resnets",
-          "unet_up_blocks_1_attentions_0","unet_up_blocks_1_attentions_1","unet_up_blocks_1_attentions_2","unet_up_blocks_1_resnets",
-          "unet_up_blocks_2_attentions_0","unet_up_blocks_2_attentions_1","unet_up_blocks_2_attentions_2","unet_up_blocks_2_resnets",
-          "unet_up_blocks_3_attentions_0","unet_up_blocks_3_attentions_1","unet_up_blocks_3_attentions_2","unet_up_blocks_3_resnets",]
-"""
-
-#-------------------------------------------#
-# block index                               #
-# 1,2,(3) / 4,5,(6) / 7,8,(9) / (10,11)     #
-# 12, (13,14,15)                            #
-# 16,17,18 / 19,20,21 / 22,23,24            #
-#-------------------------------------------#
 
 class LoRAModule(torch.nn.Module):
     """
@@ -118,7 +99,6 @@ class LoRAModule(torch.nn.Module):
     def apply_to(self):
         self.org_forward = self.org_module.forward
         self.org_module.forward = self.forward
-        #del self.org_module
 
     def forward(self, x):
         org_forwarded = self.org_forward(x)
@@ -145,8 +125,6 @@ class LoRAModule(torch.nn.Module):
             scale = self.scale
         lx = self.lora_up(lx)
         lora_value = lx * self.multiplier * scale
-
-
 
         return org_forwarded + lx * self.multiplier * scale
 

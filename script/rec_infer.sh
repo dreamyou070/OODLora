@@ -1,9 +1,9 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_up_attn2_t_2_attn2_attn1_attn0"
+folder_name="res_64_up_attn2_t_2_attn2_normal_with_background"
 data_folder="MVTec3D-AD"
-network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
+network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/normal/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
 port_number=56538
@@ -31,4 +31,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --start_from_final \
   --only_zero_save \
   --use_pixel_mask \
-  --class_name ${class_name}
+  --class_name ${class_name} \
+  --only_normal_infer

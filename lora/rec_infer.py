@@ -212,177 +212,182 @@ def main(args) :
         classes = os.listdir(test_folder)
 
         for class_name in classes:
-            print(f' - class : {class_name}')
-            evaluate_class_dir = os.path.join(evaluate_output_dir, class_name)
-            os.makedirs(evaluate_class_dir, exist_ok=True)
+            flag = True
+            if args.only_normal_infer :
+                if 'good' not in class_name :
+                    flag = False
+            if flag :
+                print(f' - class : {class_name}')
+                evaluate_class_dir = os.path.join(evaluate_output_dir, class_name)
+                os.makedirs(evaluate_class_dir, exist_ok=True)
 
-            class_base_folder = os.path.join(my_inference_output_dir, class_name)
-            os.makedirs(class_base_folder, exist_ok=True)
-            image_folder = os.path.join(test_folder, f'{class_name}/rgb')
-            mask_folder = os.path.join(test_folder, f'{class_name}/gt')
+                class_base_folder = os.path.join(my_inference_output_dir, class_name)
+                os.makedirs(class_base_folder, exist_ok=True)
+                image_folder = os.path.join(test_folder, f'{class_name}/rgb')
+                mask_folder = os.path.join(test_folder, f'{class_name}/gt')
 
-            test_images = os.listdir(image_folder)
+                test_images = os.listdir(image_folder)
 
-            for j, test_image in enumerate(test_images):
+                for j, test_image in enumerate(test_images):
 
-                name, ext = os.path.splitext(test_image)
+                    name, ext = os.path.splitext(test_image)
 
-                test_img_dir = os.path.join(image_folder, test_image)
-                mask_img_dir = os.path.join(mask_folder, test_image)
-                org_h, org_w = Image.open(mask_img_dir).size
+                    test_img_dir = os.path.join(image_folder, test_image)
+                    mask_img_dir = os.path.join(mask_folder, test_image)
+                    org_h, org_w = Image.open(mask_img_dir).size
 
-                Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(
-                    os.path.join(class_base_folder, f'{name}_gt{ext}'))
+                    Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(
+                        os.path.join(class_base_folder, f'{name}_gt{ext}'))
 
-                with torch.no_grad():
-                    pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae,
-                                                                          text_encoder=text_encoder,
-                                                                          tokenizer=tokenizer,
-                                                                          unet=unet,
-                                                                          scheduler=scheduler,
-                                                                          safety_checker=None,
-                                                                          feature_extractor=None,
-                                                                          requires_safety_checker=False, )
-
-                    org_img = load_image(test_img_dir, 512, 512)
-                    org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-                    call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
-
-                    # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
-                    inf_time = inference_times.tolist()
-                    inf_time.reverse()  # [0,250,500,750]
-                    back_dict = {}
-                    latent = org_vae_latent
-                    back_dict[0] = latent
-                    attn_stores = controller.step_store
-                    controller.reset()
-                    for layer_name in attn_stores:
-                        attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                        res, pos, part = get_position(layer_name, attn)
-                        if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
-                            if args.truncate_length == 3:
-                                cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
-                            else:
-                                cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                            h = trigger_score.shape[0]
-                            trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                            trigger_score = trigger_score.mean(dim=0)  # res, res
-
-                            # -------------------------------------------- code change---------------------------------------------- #
-                            #pixel_mask = trigger_score / trigger_score.max()  # res, res
-                            pixel_mask = trigger_score
-
-
-                            latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64, device, weight_dtype)  # latent_mask = 1,1,64,64
-                            latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
-                            pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
-                                                         f'{name}_pixel_mask_{part}{ext}',
-                                                         org_h, org_w)
-
-                    lambda x: cosine_function(x) if x > 0 else 0
-                    for i in range(args.inner_iteration):
-                        latent_mask = latent_mask.detach().cpu().apply_(
-                            lambda x: cosine_function(x) if x > 0 else 0)
-                        latent_mask = latent_mask.to(device)
-
-
-                    latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
-                    latent_mask = latent_mask_.repeat(1, 4, 1, 1)
-                    pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
-
-                    # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
-                    time_steps = []
-                    inf_time.append(999)
-                    for i, t in enumerate(inf_time[:-1]):
-                        back_dict[int(t)] = latent
-                        time_steps.append(t)
-                        if t == 0:
-                            back_image = pipeline.latents_to_image(latent)[0].resize((org_h, org_w))
-                            back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
-                            back_image.save(back_img_dir)
-                        noise_pred = call_unet(unet, latent, t, con, None, None)
-                        controller.reset()
-                        latent = next_step(noise_pred, int(t), latent, scheduler)
-                    back_dict[inf_time[-1]] = latent
-                    time_steps.append(inf_time[-1])
-                    time_steps.reverse()  # 999, 750, ..., 0
-
-                    # ----------------------------[3] generate image ------------------------------ #
-                    pipeline.to(device)
                     with torch.no_grad():
-                        if accelerator.is_main_process:
-                            width = height = 512
-                            guidance_scale = args.guidance_scale
-                            seed = args.seed
-                            torch.manual_seed(seed)
-                            torch.cuda.manual_seed(seed)
-                            height = max(64, height - height % 8)  # round to divisible by 8
-                            width = max(64, width - width % 8)  # round to divisible by 8
-                            do_classifier_free_guidance = guidance_scale > 1.0
-                            x_latent_dict = {}
+                        pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae,
+                                                                              text_encoder=text_encoder,
+                                                                              tokenizer=tokenizer,
+                                                                              unet=unet,
+                                                                              scheduler=scheduler,
+                                                                              safety_checker=None,
+                                                                              feature_extractor=None,
+                                                                              requires_safety_checker=False, )
 
-                            with accelerator.autocast():
-                                text_embeddings = init_prompt(tokenizer, text_encoder, device, args.prompt,
-                                                              args.negative_prompt)
-                                if not do_classifier_free_guidance:
-                                    _, text_embeddings = text_embeddings.chunk(2, dim=0)
+                        org_img = load_image(test_img_dir, 512, 512)
+                        org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+                        call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
 
-                                if args.start_from_final:
-                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1, height,
-                                                                                                 width,
-                                                                                                 weight_dtype, device,
-                                                                                                 None, None)
-                                    if args.start_from_origin:
-                                        latents = back_dict[time_steps[0]]
-                                    else:
-                                        latents = latents
-                                    recon_timesteps = time_steps
+                        # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
+                        inf_time = inference_times.tolist()
+                        inf_time.reverse()  # [0,250,500,750]
+                        back_dict = {}
+                        latent = org_vae_latent
+                        back_dict[0] = latent
+                        attn_stores = controller.step_store
+                        controller.reset()
+                        for layer_name in attn_stores:
+                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                            res, pos, part = get_position(layer_name, attn)
+                            if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
+                                if args.truncate_length == 3:
+                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                 else:
-                                    total_len = len(time_steps)  # 980, ,,, , 0
-                                    inf_len = int(total_len / 2)
-                                    recon_timesteps = time_steps[inf_len:]
-                                    latents = back_dict[recon_timesteps[0]]
-                                x_latent_dict[recon_timesteps[0]] = latents
-                                # (7) denoising
-                                for i, t in enumerate(recon_timesteps[1:]):  # 999, 750, ..., 250, 0
-                                    # 750, 500, 250, 0
-                                    latent_model_input = torch.cat(
-                                        [latents] * 2) if do_classifier_free_guidance else latents
-                                    # predict the noise residual
-                                    noise_pred = unet(latent_model_input, t,
-                                                      encoder_hidden_states=text_embeddings).sample
-                                    controller.reset()
-                                    # perform guidance
-                                    if do_classifier_free_guidance:
-                                        noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                                        noise_pred = noise_pred_uncond + guidance_scale * (
-                                                    noise_pred_text - noise_pred_uncond)
-                                    latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
-                                    if args.use_pixel_mask:
-                                        z_latent = back_dict[t]
-                                        latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
-                                    x_latent_dict[t] = latents
-                                    if args.only_zero_save:
-                                        if t == 0:
-                                            image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
-                                            img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
-                                            image.save(img_dir)
+                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
+                                h = trigger_score.shape[0]
+                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
+                                trigger_score = trigger_score.mean(dim=0)  # res, res
 
-                    # ----------------------------[4] generate anomaly maps ------------------------------ #
-                    org_latent = back_dict[0]
-                    org_image_np = latent2image(org_latent, vae)
-                    #org_image = Image.fromarray(org_image_np.astype(np.uint8)).resize((org_h, org_w)).convert('L')
+                                # -------------------------------------------- code change---------------------------------------------- #
+                                #pixel_mask = trigger_score / trigger_score.max()  # res, res
+                                pixel_mask = trigger_score
 
-                    recon_latent = x_latent_dict[0]
-                    recon_image_np = latent2image(recon_latent, vae)
-                    #recon_image = Image.fromarray(recon_image_np.astype(np.uint8)).resize((org_h, org_w)).convert('L')
 
-                    mask_np = np.where((np.array(pixel_mask.resize((org_h, org_w)).convert('L')) / 255) < 0.5, 1, 0)
-                    # mask_np = np.where((back_recorect_diff_np * mask_np) != 0, 1, 0) * 255
-                    anomaly_map = Image.fromarray((mask_np * 255).astype(np.uint8)).resize((org_h, org_w))
-                    anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-                    anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
-        del unet, text_encoder, vae, pipeline, controller, scheduler, network
+                                latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64, device, weight_dtype)  # latent_mask = 1,1,64,64
+                                latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
+                                pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
+                                                             f'{name}_pixel_mask_{part}{ext}',
+                                                             org_h, org_w)
+
+                        lambda x: cosine_function(x) if x > 0 else 0
+                        for i in range(args.inner_iteration):
+                            latent_mask = latent_mask.detach().cpu().apply_(
+                                lambda x: cosine_function(x) if x > 0 else 0)
+                            latent_mask = latent_mask.to(device)
+
+
+                        latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
+                        latent_mask = latent_mask_.repeat(1, 4, 1, 1)
+                        pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
+
+                        # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
+                        time_steps = []
+                        inf_time.append(999)
+                        for i, t in enumerate(inf_time[:-1]):
+                            back_dict[int(t)] = latent
+                            time_steps.append(t)
+                            if t == 0:
+                                back_image = pipeline.latents_to_image(latent)[0].resize((org_h, org_w))
+                                back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
+                                back_image.save(back_img_dir)
+                            noise_pred = call_unet(unet, latent, t, con, None, None)
+                            controller.reset()
+                            latent = next_step(noise_pred, int(t), latent, scheduler)
+                        back_dict[inf_time[-1]] = latent
+                        time_steps.append(inf_time[-1])
+                        time_steps.reverse()  # 999, 750, ..., 0
+
+                        # ----------------------------[3] generate image ------------------------------ #
+                        pipeline.to(device)
+                        with torch.no_grad():
+                            if accelerator.is_main_process:
+                                width = height = 512
+                                guidance_scale = args.guidance_scale
+                                seed = args.seed
+                                torch.manual_seed(seed)
+                                torch.cuda.manual_seed(seed)
+                                height = max(64, height - height % 8)  # round to divisible by 8
+                                width = max(64, width - width % 8)  # round to divisible by 8
+                                do_classifier_free_guidance = guidance_scale > 1.0
+                                x_latent_dict = {}
+
+                                with accelerator.autocast():
+                                    text_embeddings = init_prompt(tokenizer, text_encoder, device, args.prompt,
+                                                                  args.negative_prompt)
+                                    if not do_classifier_free_guidance:
+                                        _, text_embeddings = text_embeddings.chunk(2, dim=0)
+
+                                    if args.start_from_final:
+                                        latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1, height,
+                                                                                                     width,
+                                                                                                     weight_dtype, device,
+                                                                                                     None, None)
+                                        if args.start_from_origin:
+                                            latents = back_dict[time_steps[0]]
+                                        else:
+                                            latents = latents
+                                        recon_timesteps = time_steps
+                                    else:
+                                        total_len = len(time_steps)  # 980, ,,, , 0
+                                        inf_len = int(total_len / 2)
+                                        recon_timesteps = time_steps[inf_len:]
+                                        latents = back_dict[recon_timesteps[0]]
+                                    x_latent_dict[recon_timesteps[0]] = latents
+                                    # (7) denoising
+                                    for i, t in enumerate(recon_timesteps[1:]):  # 999, 750, ..., 250, 0
+                                        # 750, 500, 250, 0
+                                        latent_model_input = torch.cat(
+                                            [latents] * 2) if do_classifier_free_guidance else latents
+                                        # predict the noise residual
+                                        noise_pred = unet(latent_model_input, t,
+                                                          encoder_hidden_states=text_embeddings).sample
+                                        controller.reset()
+                                        # perform guidance
+                                        if do_classifier_free_guidance:
+                                            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                                            noise_pred = noise_pred_uncond + guidance_scale * (
+                                                        noise_pred_text - noise_pred_uncond)
+                                        latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
+                                        if args.use_pixel_mask:
+                                            z_latent = back_dict[t]
+                                            latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
+                                        x_latent_dict[t] = latents
+                                        if args.only_zero_save:
+                                            if t == 0:
+                                                image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
+                                                img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
+                                                image.save(img_dir)
+
+                        # ----------------------------[4] generate anomaly maps ------------------------------ #
+                        org_latent = back_dict[0]
+                        org_image_np = latent2image(org_latent, vae)
+                        #org_image = Image.fromarray(org_image_np.astype(np.uint8)).resize((org_h, org_w)).convert('L')
+
+                        recon_latent = x_latent_dict[0]
+                        recon_image_np = latent2image(recon_latent, vae)
+                        #recon_image = Image.fromarray(recon_image_np.astype(np.uint8)).resize((org_h, org_w)).convert('L')
+
+                        mask_np = np.where((np.array(pixel_mask.resize((org_h, org_w)).convert('L')) / 255) < 0.5, 1, 0)
+                        # mask_np = np.where((back_recorect_diff_np * mask_np) != 0, 1, 0) * 255
+                        anomaly_map = Image.fromarray((mask_np * 255).astype(np.uint8)).resize((org_h, org_w))
+                        anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
+                        anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
+            del unet, text_encoder, vae, pipeline, controller, scheduler, network
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -432,6 +437,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_pixel_mask", action='store_true')
     parser.add_argument("--start_from_final", action='store_true')
     parser.add_argument("--save_origin", action='store_true')
+    parser.add_argument("--only_normal_infer", action='store_true')
 
 
     import ast
