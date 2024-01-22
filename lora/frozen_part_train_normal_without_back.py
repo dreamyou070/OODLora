@@ -307,10 +307,16 @@ class NetworkTrainer:
         unet_loras = network.unet_loras
         for unet_lora in unet_loras:
             lora_name = unet_lora.lora_name
-            if 'up' in lora_name and 'blocks_3' in lora_name:
+
+            if args.only_kv_training :
                 if 'to_k' in lora_name or 'to_v' in lora_name:
                     print(f' training layer : {lora_name}')
                     params.extend(unet_lora.parameters())
+            else :
+                if 'up' in lora_name and 'blocks_3' in lora_name:
+                    if 'to_k' in lora_name or 'to_v' in lora_name:
+                        print(f' training layer : {lora_name}')
+                        params.extend(unet_lora.parameters())
         trainable_params = [{"params": params, "lr": args.unet_lr}]
 
         if args.text_encoder_training :
@@ -1005,7 +1011,7 @@ if __name__ == "__main__":
     parser.add_argument("--normal_with_background", action="store_true", )
     parser.add_argument("--anormal_with_background", action="store_true", )
     parser.add_argument("--text_encoder_training", action="store_true", )
-
+    parser.add_argument("--only_kv_training", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
