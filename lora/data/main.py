@@ -30,7 +30,7 @@ def main(args):
             for folder in folders:
                 rgb_folder_dir = os.path.join(train_rgb_dir, folder)
                 gt_folder_dir = os.path.join(train_gt_dir, folder)
-                os.makedirs(rgb_folder_dir, exist_ok=True)
+                os.makedirs(gt_folder_dir, exist_ok=True)
 
                 images = os.listdir(rgb_folder_dir)
                 for image in images:
