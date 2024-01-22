@@ -735,20 +735,9 @@ class NetworkTrainer:
                                         else:
                                             anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
 
-
-                                        if args.background_training :
-                                            """ 현재 training """
-                                            anormal_position = back_position + anormal_position
-                                            anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
-                                            normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
-
-                                        else :
-                                            anormal_position = anormal_position
-                                            not_normal_position = back_position + anormal_position
-                                            not_normal_position = torch.where((not_normal_position != 0), 1, 0)  # head, pix_num
-                                            normal_position = torch.where((not_normal_position == 0), 1,0)
-
-
+                                        anormal_position = back_position + anormal_position
+                                        anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
+                                        normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
 
                                         anormal_trigger_activation = (score_map * anormal_position)
                                         normal_trigger_activation = (score_map * normal_position)
