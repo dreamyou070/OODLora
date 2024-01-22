@@ -19,26 +19,20 @@ def main(args):
             train_ex_gt_dir = os.path.join(train_ex_dir, 'gt')
             folders = os.listdir(train_ex_rgb_dir)
 
-
-    for cat in cats:
-        if cat == args.trg_cat:
-            cat_dir = os.path.join(base_folder, f'{cat}')
-            train_ex_dir = os.path.join(cat_dir, 'train_ex')
-            train_ex_rgb_dir = os.path.join(train_ex_dir, 'rgb')
-            train_ex_gt_dir = os.path.join(train_ex_dir, 'gt')
             for folder in folders:
                 repeat, name = folder.split('_')
-                org_folder = os.path.join(train_ex_rgb_dir, folder)
-                org_gt_folder = os.path.join(train_ex_gt_dir, folder)
+                org_rgb_folder = os.path.join(train_ex_rgb_dir, folder)
+                org_gt_folder  = os.path.join(train_ex_gt_dir, folder)
                 if 'good' not in name:
                     new_repeat = args.new_nok_repeat
                 if 'good' in name:
                     new_repeat = args.new_ok_repeat
                 new_folder = f'{new_repeat}_{name}'
-                new_folder = os.path.join(train_ex_rgb_dir, new_folder)
+
+                new_rgb_folder = os.path.join(train_ex_rgb_dir, new_folder)
                 new_gt_folder = os.path.join(train_ex_gt_dir, new_folder)
 
-                os.rename(org_folder, new_folder)
+                os.rename(org_rgb_folder, new_rgb_folder)
                 os.rename(org_gt_folder, new_gt_folder)
 
 if __name__ == "__main__":
