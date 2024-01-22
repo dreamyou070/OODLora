@@ -3,7 +3,7 @@
 class_name="bagel"
 folder_name="res_64_up_attn012_t_2_only_normal"
 data_folder="MVTec3D-AD"
-network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
+network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/normal/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
 port_number=56538
