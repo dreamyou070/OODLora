@@ -9,7 +9,7 @@ save_folder="res_64_up_attn2_t_2_attn210"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
 start_epoch=0
-port_number=50001
+port_number=50002
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
