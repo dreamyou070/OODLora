@@ -27,5 +27,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" --truncate_pad --truncate_length 2  \
-  --cross_map_res [64] --detail_64_up detail_64_down --trg_position "['up']" \
+  --cross_map_res [64] --detail_64_up --trg_position "['up']" \
   --trg_part '["attn_2","attn_1","attn_0"]' --cls_training  # --normal_with_background #  --network_weights "$network_weights"
