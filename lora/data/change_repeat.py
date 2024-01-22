@@ -35,9 +35,9 @@ def main(args):
             new_gt_folder = os.path.join(train_ex_gt_dir, new_folder)
             new_mask_folder = os.path.join(train_ex_mask_dir, new_folder)
 
-            #os.rename(org_rgb_folder, new_rgb_folder)
-            #os.rename(org_gt_folder, new_gt_folder)
-            #os.mkdir(new_mask_folder)
+            os.rename(org_rgb_folder, new_rgb_folder)
+            os.rename(org_gt_folder, new_gt_folder)
+            os.mkdir(new_mask_folder)
 
 # 20 + 120 = 140
 # 40 + 160 = 200
