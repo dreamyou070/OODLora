@@ -307,8 +307,9 @@ class NetworkTrainer:
         unet_loras = network.unet_loras
         for unet_lora in unet_loras:
             lora_name = unet_lora.lora_name
-            if 'up' in lora_name :
+            if 'up' in lora_name and 'blocks_3' in lora_name:
                 if 'to_k' in lora_name or 'to_v' in lora_name:
+                    print(f' training layer : {lora_name}')
                     params.extend(unet_lora.parameters())
         trainable_params = [{"params": params, "lr": args.unet_lr}]
 
