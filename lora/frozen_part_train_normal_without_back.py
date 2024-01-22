@@ -310,6 +310,12 @@ class NetworkTrainer:
                 if 'to_k' in lora_name or 'to_v' in lora_name:
                     params.extend(unet_lora.parameters())
         trainable_params = [{"params": params, "lr": args.unet_lr}]
+
+        if args.text_encoder_training :
+            params = []
+            for text_lora in network.text_encoder_loras:
+                params.extend(text_lora.parameters())
+            trainable_params.append({"params": params, "lr": args.text_encoder_lr})
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         print(f' step 7. dataloader')
@@ -984,6 +990,8 @@ if __name__ == "__main__":
     parser.add_argument("--attn_loss", action="store_true", )
     parser.add_argument("--normal_with_background", action="store_true", )
     parser.add_argument("--anormal_with_background", action="store_true", )
+    parser.add_argument("--text_encoder_training", action="store_true", )
+
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
