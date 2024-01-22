@@ -47,9 +47,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
 
-            res = attention_probs.shape[1]
-            if res == 64 * 64 :
-                print(f' res 64 layer_name  : {layer_name}')
             if is_cross_attention and trg_indexs_list is not None:
 
                 if args.cls_training:
