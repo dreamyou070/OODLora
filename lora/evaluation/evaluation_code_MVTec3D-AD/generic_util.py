@@ -9,7 +9,7 @@ from bisect import bisect
 import numpy as np
 
 OBJECT_NAMES = ['bagel', 'cable_gland', 'carrot', 'cookie', 'dowel', 'foam',
-                'peach', 'potato', 'rope', 'tire', 'carrot_test' ]
+                'peach', 'potato', 'rope', 'tire', 'carrot_test','tire_org' ]
 
 
 def trapezoid(x, y, x_max=None):
