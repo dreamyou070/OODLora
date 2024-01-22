@@ -9,7 +9,7 @@ save_folder="res_64_up_attn2_t_2_attn2_attn1_attn0"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="${output_dir}/models/epoch-000013.safetensors"
 start_epoch=0
-port_number=56578
+port_number=56668
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
