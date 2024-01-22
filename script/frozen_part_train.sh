@@ -5,12 +5,12 @@ data_source='train_ex'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="res_64_up_attn2_t_2_attn2"
+save_folder="res_64_up_attn2_t_2_attn2_from_normal_frozen_only_small_update"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/normal/res_64_up_attn2_t_2_attn2_normal_with_background/models/epoch-000003.safetensors"
 
 start_epoch=0
-port_number=50001
+port_number=50002
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
