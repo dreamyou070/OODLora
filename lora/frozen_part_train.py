@@ -308,10 +308,11 @@ class NetworkTrainer:
         unet_loras = network.unet_loras
         for unet_lora in unet_loras:
             lora_name = unet_lora.lora_name
-            print(f' lora_name : {lora_name}')
-            if 'up' in lora_name and 'attention_2' in lora_name :
-                params.extend(unet_lora.parameters())
-
+            if 'blocks_3' in lora_name and 'attentions_2' in lora_name :
+                if 'to_k' in lora_name or 'to_v' in lora_name :
+                    params.extend(unet_lora.parameters())
+                    print(f' lora_name : {lora_name}')
+    
 
         """
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
