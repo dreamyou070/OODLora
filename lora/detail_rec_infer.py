@@ -283,6 +283,7 @@ def main(args) :
                                     latent_mask_ = torch.where(latent_mask < 0.5, 1, 0)  #
                                 pixel_mask_dict[part] = latent_mask_
 
+
                         normal_mask = pixel_mask_dict['attn_2']
                         if 'attn_1' in pixel_mask_dict.keys():
                             background_mask = pixel_mask_dict['attn_1']
@@ -291,7 +292,7 @@ def main(args) :
                         not_copy_mask = torch.where((background_mask == 0) & (normal_mask == 0), 1, 0)
                         latent_mask = torch.where((not_copy_mask==0), 1, 0)
                         latent_mask = latent_mask.repeat(1, 4, 1, 1)
-                        pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
+                        pixel_mask = save_pixel_mask(latent_mask, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
