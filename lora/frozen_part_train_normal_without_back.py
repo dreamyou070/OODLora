@@ -312,7 +312,6 @@ class NetworkTrainer:
             lora_name = unet_lora.lora_name
             if 'up' in lora_name :
                 if 'to_k' in lora_name or 'to_v' in lora_name:
-                    print(f' (6.1) {lora_name} : {args.unet_lr}')
                     params.extend(unet_lora.parameters())
         trainable_params = [{"params": params, "lr": args.unet_lr}]
 

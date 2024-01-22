@@ -8,7 +8,7 @@ normal_folder='anormal'
 save_folder="res_64_up_attn12_t_2_from_normal_frozen_normal_high_score"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
-network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000003.safetensors"
+network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000004.safetensors"
 
 start_epoch=0
 port_number=50004
