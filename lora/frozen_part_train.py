@@ -923,8 +923,7 @@ class NetworkTrainer:
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
-        """
-
+            
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
