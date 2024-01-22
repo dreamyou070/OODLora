@@ -1,9 +1,9 @@
 #! /bin/bash
 
-class_name="bagel"
-folder_name="res_64_up_attn12_from_normal_self_cross_attn"
+class_name="tire"
+folder_name="res_64_up_attn012_t_2_only_normal"
 data_folder="MVTec3D-AD"
-normality_folder='anormal'
+normality_folder='normal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
@@ -32,4 +32,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --start_from_final \
   --only_zero_save \
   --use_pixel_mask \
+  --only_normal_infer \
   --class_name ${class_name}
