@@ -33,7 +33,6 @@ def main(args):
                 os.rename(org_folder, new_folder)
                 os.rename(org_gt_folder, new_gt_folder)
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str,
