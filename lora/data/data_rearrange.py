@@ -14,31 +14,112 @@ def main(args):
 
             cat_dir = os.path.join(base_folder, f'{cat}')
 
-            train_ex_dir = os.path.join(cat_dir, 'train_ex')
-            train_ex_rgb_dir = os.path.join(train_ex_dir, 'rgb')
-            train_ex_gt_dir = os.path.join(train_ex_dir, 'gt')
+            train_dir = os.path.join(cat_dir, 'train')
 
-            folders = os.listdir(train_ex_rgb_dir)
-            for folder in folders:
-                repeat, name = folder.split('_')
-                if 'good' not in name:
-                    new_repeat = args.new_nok_repeat
-                if 'good' in name:
-                    new_repeat = args.new_ok_repeat
-                new_folder = f'{new_repeat}_{name}'
-                org_folder = os.path.join(train_ex_rgb_dir, folder)
-                new_folder = os.path.join(train_ex_rgb_dir, new_folder)
-                org_gt_folder = os.path.join(train_ex_gt_dir, folder)
-                new_gt_folder = os.path.join(train_ex_gt_dir, new_folder)
-                os.rename(org_folder, new_folder)
-                os.rename(org_gt_folder, new_gt_folder)
+            train_ex_dir = os.path.join(cat_dir, 'train_ex')
+            os.makedirs(train_ex_dir, exist_ok=True)
+            train_good_dir = os.path.join(train_dir, 'good')
+
+            train_ex_rgb_dir = os.path.join(train_ex_dir, 'rgb')
+            os.makedirs(train_ex_rgb_dir, exist_ok=True)
+            train_ex_gt_dir = os.path.join(train_ex_dir, 'gt')
+            os.makedirs(train_ex_gt_dir, exist_ok=True)
+
+            train_ex_good_rgb_dir = os.path.join(train_ex_rgb_dir, 'good')
+            os.makedirs(train_ex_good_rgb_dir, exist_ok=True)
+            train_ex_good_gt_dir = os.path.join(train_ex_gt_dir, 'good')
+            os.makedirs(train_ex_good_gt_dir, exist_ok=True)
+
+            train_good_rgb_dir = os.path.join(train_good_dir, 'rgb')
+            images = os.listdir(train_good_rgb_dir)
+
+            train_good_num = len(images)
+            for image in images:
+                org_img_dir = os.path.join(train_good_rgb_dir, image)
+                new_img_dir = os.path.join(train_ex_good_rgb_dir, image)
+                rgb_pil = Image.open(org_img_dir)
+                org_h, org_w = rgb_pil.size
+                mask_pil = Image.fromarray((np.zeros((org_h, org_w))).astype(np.uint8))
+                mask_pil_dir = os.path.join(train_ex_good_gt_dir, image)
+                rgb_pil.save(new_img_dir)
+                mask_pil.save(mask_pil_dir)
+            # ---------------------------------------------------------------------------------------- #
+            validation_dir = os.path.join(cat_dir, 'validation')
+            validation_good_dir = os.path.join(validation_dir, 'good')
+            validation_good_rgb_dir = os.path.join(validation_good_dir, 'rgb')
+            images = os.listdir(validation_good_rgb_dir)
+            val_good_num = len(images)
+            for image in images:
+                name, ext = os.path.splitext(image)
+                org_img_dir = os.path.join(validation_good_rgb_dir, image)
+                new_img_dir = os.path.join(train_ex_good_rgb_dir, f'val_{name}{ext}')
+                rgb_pil = Image.open(org_img_dir)
+                org_h, org_w = rgb_pil.size
+                mask_pil = Image.fromarray((np.zeros((org_h, org_w))).astype(np.uint8))
+                mask_pil_dir = os.path.join(train_ex_good_gt_dir, f'val_{name}{ext}')
+                rgb_pil.save(new_img_dir)
+                mask_pil.save(mask_pil_dir)
+
+            total_good_num = train_good_num + val_good_num
+            # ---------------------------------------------------------------------------------------- #
+            test_dir = os.path.join(cat_dir, 'test')
+            defets = os.listdir(test_dir)
+            total_defect_num = 0
+            for defect in defets:
+                if 'good' not in defect:
+                    org_defect_dir = os.path.join(test_dir, defect)
+                    org_defect_rgb_dir = os.path.join(org_defect_dir, 'rgb')
+                    org_defect_gt_dir = os.path.join(org_defect_dir, 'gt')
+
+                    train_defect_rgb_dir = os.path.join(train_ex_rgb_dir, defect)
+                    os.makedirs(train_defect_rgb_dir, exist_ok=True)
+                    train_defect_gt_dir = os.path.join(train_ex_gt_dir, defect)
+                    os.makedirs(train_defect_gt_dir, exist_ok=True)
+
+                    rgb_images = os.listdir(org_defect_rgb_dir)
+                    train_num = int(len(rgb_images) * 0.8)
+                    for i, image in enumerate(rgb_images) :
+                        org_img_dir = os.path.join(org_defect_rgb_dir, image)
+                        mask_img_dir = os.path.join(org_defect_gt_dir, image)
+                        if i < train_num:
+                            total_defect_num += 1
+                            new_img_dir = os.path.join(train_defect_rgb_dir, image)
+                            new_mask_dir = os.path.join(train_defect_gt_dir, image)
+
+                            rgb_pil = Image.open(org_img_dir)
+                            mask_pil = Image.open(mask_img_dir)
+                            rgb_pil.save(new_img_dir)
+                            mask_pil.save(new_mask_dir)
+
+            # ---------------------------------------------------------------------------------------- #
+            print(f'total_good_num : {total_good_num}')
+            print(f'total_defect_num : {total_defect_num}')
+            repeat_num = int(total_good_num / total_defect_num) * 20
+            train_ex_defects = os.listdir(train_ex_rgb_dir)
+            for t_defect in train_ex_defects:
+                rgb_t_defect_dir = os.path.join(train_ex_rgb_dir, t_defect)
+                gt_t_defect_dir = os.path.join(train_ex_gt_dir, t_defect)
+                if 'good' not in t_defect:
+                    new_rgb_t_defect_dir = os.path.join(train_ex_rgb_dir, f'{repeat_num}_{t_defect}')
+                    new_gt_t_defect_dir = os.path.join(train_ex_gt_dir, f'{repeat_num}_{t_defect}')
+                else :
+                    new_rgb_t_defect_dir = os.path.join(train_ex_rgb_dir, f'10_{t_defect}')
+                    new_gt_t_defect_dir = os.path.join(train_ex_gt_dir, f'10_{t_defect}')
+                os.rename(rgb_t_defect_dir, new_rgb_t_defect_dir)
+                os.rename(gt_t_defect_dir, new_gt_t_defect_dir)
+
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str,
                         default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD-org')
     parser.add_argument('--trg_cat', type=str, default='carrot')
-    parser.add_argument('--new_ok_repeat', type=int, default=60)
-    parser.add_argument('--new_nok_repeat', type=int, default=60)
     args = parser.parse_args()
     main(args)
