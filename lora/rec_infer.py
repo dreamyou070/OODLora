@@ -274,6 +274,7 @@ def main(args) :
 
 
                             latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64, device, weight_dtype)  # latent_mask = 1,1,64,64
+                            latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
                             pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
                                                          f'{name}_pixel_mask_{part}{ext}',
                                                          org_h, org_w)
