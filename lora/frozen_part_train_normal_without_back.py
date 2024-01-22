@@ -732,9 +732,21 @@ class NetworkTrainer:
                                             anormal_position = torch.zeros_like(anormal_mask)
                                         else:
                                             anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-                                        anormal_position = back_position + anormal_position
-                                        anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
-                                        normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
+
+
+                                        if args.background_training :
+                                            """ 현재 training """
+                                            anormal_position = back_position + anormal_position
+                                            anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
+                                            normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
+
+                                        else :
+                                            anormal_position = anormal_position
+                                            not_normal_position = back_position + anormal_position
+                                            not_normal_position = torch.where((not_normal_position != 0), 1, 0)  # head, pix_num
+                                            normal_position = torch.where((not_normal_position == 0), 1,0)
+
+
 
                                         anormal_trigger_activation = (score_map * anormal_position)
                                         normal_trigger_activation = (score_map * normal_position)
@@ -987,7 +999,7 @@ if __name__ == "__main__":
     parser.add_argument('--normal_weight', type=float, default=1.0)
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--cls_training", action="store_true", )
-    parser.add_argument("--background_loss", action="store_true")
+    parser.add_argument("--background_training", action="store_true")
     parser.add_argument("--average_mask", action="store_true", )
     parser.add_argument("--attn_loss", action="store_true", )
     parser.add_argument("--normal_with_background", action="store_true", )
