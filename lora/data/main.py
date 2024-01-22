@@ -32,6 +32,7 @@ def main(args):
                 images = os.listdir(rgb_folder_dir)
                 for image in images:
                     rgb_img_dir = os.path.join(rgb_folder_dir, image)
+                    gt_img_dir = os.path.join(gt_folder_dir, image)
                     pil_img = Image.open(rgb_img_dir)
                     org_h, org_w = pil_img.size
 
@@ -49,7 +50,8 @@ def main(args):
                             np_mask = np.where(np_mask == 1, 0, 1) * 255
                             sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                             sam_result_pil = sam_result_pil.resize((org_h, org_w))
-                            sam_result_pil.save(os.path.join(gt_folder_dir, image))
+                            
+                            sam_result_pil.save(gt_img_dir)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
