@@ -1,9 +1,9 @@
 #! /bin/bash
 
-class_name="bagel"
-folder_name="res_64_up_attn12_from_normal_self_cross_attn"
+class_name="potato"
+folder_name="res_64_up_attn012_t_2_only_normal"
 data_folder="MVTec3D-AD"
-normality_folder='anormal'
+normality_folder='normal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
