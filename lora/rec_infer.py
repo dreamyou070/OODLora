@@ -259,7 +259,7 @@ def main(args) :
                     for layer_name in attn_stores:
                         attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                         res, pos, part = get_position(layer_name, attn)
-                        if res in args.cross_map_res and pos in args.trg_position and part == args.trg_part:
+                        if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
                             if args.truncate_length == 3:
                                 cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                             else:
@@ -416,7 +416,7 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
     parser.add_argument("--inner_iteration", type=int, default=10)
     parser.add_argument("--class_name", type=str, default="bagel")
-    parser.add_argument("--trg_part", type = str)
+
     parser.add_argument("--only_zero_save", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
@@ -435,6 +435,7 @@ if __name__ == "__main__":
         return v
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--trg_position", type=arg_as_list, default=['up'])
+    parser.add_argument("--trg_part", type=arg_as_list, default=['attn_2','attn_1','attn_0'])
     parser.add_argument("--trg_lora_epoch", type=str)
     parser.add_argument("--negative_prompt", type=str)
 
