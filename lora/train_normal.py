@@ -663,6 +663,7 @@ class NetworkTrainer:
                         res = int(score_map.shape[1] ** 0.5)
                         head_num = int(score_map.shape[0])
                         do_mask_loss = False
+
                         if res in args.cross_map_res:
                             if 'down' in layer_name:
                                 position = 'down'
@@ -700,6 +701,8 @@ class NetworkTrainer:
                                 else :
 
                                     if part in args.trg_part or int(res) == 8 :
+
+                                        print(f'make attn loss !')
 
                                         img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                         img_mask = img_masks.squeeze()  # res,res
