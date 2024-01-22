@@ -5,11 +5,11 @@ data_source='train_ex'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="res_64_up_attn2_t_2_attn2_attn1_attn0"
+save_folder="res_64_up_attn2_t_2_attn2_attn1_attn0_submodule_only_normal"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="${output_dir}/models/epoch-000013.safetensors"
 start_epoch=0
-port_number=56668
+port_number=52222
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
