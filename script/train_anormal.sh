@@ -1,14 +1,15 @@
 #! /bin/bash
 
-class_name="cookie"
+class_name="bagel"
 data_source='train_ex'
-train_data_dir="../../../MyData/anomaly_detection/MVTec3D-AD/${class_name}/${data_source}/rgb"
+data_folder='MVTec3D-AD-org'
+train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="2_2_res_64_up_attn2_t_2_data_12"
-output_dir="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
+save_folder="res_64_up_attn2_t_2_data_12"
+output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="${output_dir}/models/epoch-000013.safetensors"
-start_epoch=13
-port_number=52214
+start_epoch=0
+port_number=51295
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
@@ -28,4 +29,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --start_epoch $start_epoch \
   --output_dir "$output_dir" --truncate_pad --truncate_length 2  \
   --cross_map_res [64] --detail_64_up --trg_position "['up']" --normal_with_background \
-  --trg_part '["attn_2"]' --cls_training --network_weights "$network_weights"
+  --trg_part '["attn_2"]' --cls_training # --network_weights "$network_weights"
