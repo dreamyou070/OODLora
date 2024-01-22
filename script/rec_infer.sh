@@ -1,8 +1,8 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_up_attn2_t_2"
-data_folder="MVTec3D-AD-org"
+folder_name="res_64_up_attn2_t_2_attn2_attn1_attn0"
+data_folder="MVTec3D-AD"
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 

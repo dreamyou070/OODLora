@@ -746,15 +746,34 @@ class NetworkTrainer:
 
                                         normal_activation_loss = (1-(normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                         activation_loss = args.normal_weight * normal_activation_loss
-                                        if batch['train_class_list'][0] == 0 :
-                                            anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                                            activation_loss += args.anormal_weight * anormal_activation_loss
-                                        if args.cls_training:
-                                            normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
-                                            activation_loss += args.normal_weight * normal_cls_activation_loss
-                                            if batch['train_class_list'][0] == 0:
-                                                anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                                activation_loss += args.anormal_weight * anormal_cls_activation_loss
+
+
+                                        if args.all_same_learning :
+                                            if batch['train_class_list'][0] == 0 :
+                                                anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
+                                                activation_loss += args.anormal_weight * anormal_activation_loss
+                                            if args.cls_training:
+                                                normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                                activation_loss += args.normal_weight * normal_cls_activation_loss
+                                                if batch['train_class_list'][0] == 0:
+                                                    anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
+                                                    activation_loss += args.anormal_weight * anormal_cls_activation_loss
+                                        else :
+                                            if part == 'attn_2' :
+                                                if batch['train_class_list'][0] == 0 :
+                                                    anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
+                                                    activation_loss += args.anormal_weight * anormal_activation_loss
+                                                if args.cls_training:
+                                                    normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                                    activation_loss += args.normal_weight * normal_cls_activation_loss
+                                                    if batch['train_class_list'][0] == 0:
+                                                        anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
+                                                        activation_loss += args.anormal_weight * anormal_cls_activation_loss
+                                            else :
+                                                if args.cls_training:
+                                                    normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                                    activation_loss += args.normal_weight * normal_cls_activation_loss
+
                                         attn_loss += activation_loss
 
                     if args.average_mask :
@@ -964,7 +983,7 @@ if __name__ == "__main__":
     parser.add_argument("--detail_64_up", action='store_true')
     parser.add_argument("--detail_64_down", action='store_true')
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
-
+    parser.add_argument("--all_same_learning", action='store_true')
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
