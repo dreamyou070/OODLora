@@ -1,17 +1,17 @@
 #! /bin/bash
 
-class_name="cable_gland"
+class_name="tire"
 data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="res_64_down_up_attn012_t_2_only_normal"
+save_folder="res_64_up_attn012_t_2_only_normal"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
 start_epoch=0
-port_number=50005
+port_number=50010
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
   --main_process_port $port_number ../lora/train_normal.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
