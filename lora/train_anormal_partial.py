@@ -310,9 +310,17 @@ class NetworkTrainer:
             lora_name = unet_lora.lora_name
             if 'up' in lora_name and 'blocks_3' in lora_name :
                 if 'attentions_1' in lora_name or 'attentions_2' in lora_name :
-                    if 'to_k' in lora_name or 'to_v' in lora_name:
-                        print(f' training layer : {lora_name}')
-                        params.extend(unet_lora.parameters())
+                    if args.only_cross_training :
+                        if 'attn_2' in lora_name :
+                            trainable = True
+                        else :
+                            trainable = False
+                    else :
+                        trainable = True
+                    if trainable :
+                        if 'to_k' in lora_name or 'to_v' in lora_name:
+                            print(f' training layer : {lora_name}')
+                            params.extend(unet_lora.parameters())
         trainable_params = [{"params": params, "lr": args.unet_lr}]
 
         if args.text_encoder_training :
@@ -974,9 +982,8 @@ if __name__ == "__main__":
     parser.add_argument("--detail_64_down", action='store_true')
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
     parser.add_argument("--all_same_learning", action='store_true')
+    parser.add_argument("--only_cross_training", action='store_true')
     import ast
-
-
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
