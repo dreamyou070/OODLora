@@ -37,7 +37,7 @@ def main(args):
 
             os.rename(org_rgb_folder, new_rgb_folder)
             os.rename(org_gt_folder, new_gt_folder)
-            os.mkdir(new_mask_folder)
+            os.rename(new_mask_folder)
 
 # 20 + 120 = 140
 # 40 + 160 = 200
