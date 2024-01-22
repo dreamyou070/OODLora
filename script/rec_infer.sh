@@ -1,13 +1,13 @@
 #! /bin/bash
 
-class_name="potato"
+class_name="foam"
 folder_name="res_64_up_attn012_t_2_only_normal"
 data_folder="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
-port_number=56901
+port_number=56903
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port ${port_number} ../lora/rec_infer.py \
@@ -32,4 +32,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --start_from_final \
   --only_zero_save \
   --use_pixel_mask \
-  --class_name ${class_name}
+  --class_name ${class_name} --only_normal_infer
