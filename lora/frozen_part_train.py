@@ -285,6 +285,9 @@ class NetworkTrainer:
                                                     **net_kwargs, )
         if network is None:
             return
+
+
+
         print(' (5.3) lora with unet and text encoder')
         train_unet = not args.network_train_text_encoder_only
         train_text_encoder = not args.network_train_unet_only
@@ -301,10 +304,16 @@ class NetworkTrainer:
             network.enable_gradient_checkpointing()  # may have no effect
 
         print(f'\n step 6. optimizer')
-        try:
-            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
-        except:
-            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+        params = []
+        unet_loras = network.unet_loras
+        for unet_lora in unet_loras:
+            lora_name = unet_lora.lora_name
+            print(f' lora_name : {lora_name}')
+            if 'up' in lora_name and 'attention_2' in lora_name :
+                params.extend(unet_lora.parameters())
+
+
+        """
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         print(f' step 7. dataloader')
@@ -718,12 +727,12 @@ class NetworkTrainer:
                                             normal_position = torch.where((anormal_position == 0), 1,
                                                                           0)  # head, pix_num
                                         else:
-                                            """
-                                            object_position = torch.torch.where((img_mask == 1), 1,0)  # head, pix_num
-                                            back_position = torch.torch.where((img_mask == 1), 0,1)  # head, pix_num
-                                            normal_position = torch.zeros_like(object_position)
-                                            anormal_position = back_position
-                                            """
+                                            
+                                            #object_position = torch.torch.where((img_mask == 1), 1,0)  # head, pix_num
+                                            #back_position = torch.torch.where((img_mask == 1), 0,1)  # head, pix_num
+                                            #normal_position = torch.zeros_like(object_position)
+                                            #anormal_position = back_position
+                                            
                                             if batch['train_class_list'][0] == 1:
                                                 anormal_position = torch.zeros_like(anormal_mask)
                                             else:
@@ -916,6 +925,7 @@ class NetworkTrainer:
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
+        """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
