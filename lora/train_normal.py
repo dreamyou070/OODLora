@@ -702,8 +702,6 @@ class NetworkTrainer:
 
                                     if part in args.trg_part or int(res) == 8 :
 
-                                        print(f'make attn loss !')
-
                                         img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                         img_mask = img_masks.squeeze()  # res,res
                                         img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)
