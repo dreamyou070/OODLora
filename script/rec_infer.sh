@@ -22,7 +22,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_weights ${network_weight_folder}  \
   --cross_map_res [64] \
   --trg_position "['up']" \
-  --trg_part "['attn_2']" \
+  --trg_part "['attn_2','attn_1','attn_0']" \
   --num_ddim_steps 4 \
   --inner_iter 10 \
   --prompt 'good' \
