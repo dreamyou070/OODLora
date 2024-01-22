@@ -287,10 +287,7 @@ def main(args) :
 
 
                         normal_mask = pixel_mask_dict['attn_2']
-                        if 'attn_1' in pixel_mask_dict.keys():
-                            background_mask = pixel_mask_dict['attn_1']
-                        else :
-                            background_mask = pixel_mask_dict['attn_0']
+                        background_mask = pixel_mask_dict['attn_0']
                         not_copy_mask = torch.where((background_mask == 0) & (normal_mask == 0), 1, 0)
                         latent_mask_ = torch.where((not_copy_mask==0), 1, 0)
                         latent_mask = latent_mask_.repeat(1, 4, 1, 1)
