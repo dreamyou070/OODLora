@@ -387,7 +387,7 @@ def main(args) :
                         anomaly_map = Image.fromarray((mask_np * 255).astype(np.uint8)).resize((org_h, org_w))
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
-                del unet, text_encoder, vae, pipeline, controller, scheduler, network
+            del unet, text_encoder, vae, pipeline, controller, scheduler, network
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

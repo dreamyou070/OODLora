@@ -719,12 +719,12 @@ class NetworkTrainer:
                                         anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
                                                                    dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                        back_position  = torch.where((img_mask == 0),1,0)  # head, pix_num
+                                        back_position = torch.where((img_mask == 0),1,0)  # head, pix_num
                                         if batch['train_class_list'][0] == 1:
                                             anormal_position = torch.zeros_like(anormal_mask)
                                         else:
                                             anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-                                        anormal_position = back_position  + anormal_position
+                                        anormal_position = back_position + anormal_position
                                         anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
                                         normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
 
@@ -742,7 +742,6 @@ class NetworkTrainer:
 
                                         normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                         activation_loss = args.normal_weight * normal_activation_loss
-
                                         if batch['train_class_list'][0] == 0:
                                             anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
                                             activation_loss += args.anormal_weight * anormal_activation_loss
