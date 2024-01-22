@@ -275,7 +275,7 @@ def main(args) :
                                 pixel_mask = trigger_score.mean(dim=0)  # res, res
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64, device, weight_dtype)  # latent_mask = 1,1,64,64
 
-                                if part == 'attn2' :
+                                if part == 'attn_2' :
                                     """ only normal be white """
                                     latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
                                 else :
@@ -283,11 +283,11 @@ def main(args) :
                                     latent_mask_ = torch.where(latent_mask < 0.5, 1, 0)  #
                                 pixel_mask_dict[part] = latent_mask_
 
-                        normal_mask = pixel_mask_dict['attn2']
-                        if 'attn1' in pixel_mask_dict.keys():
-                            background_mask = pixel_mask_dict['attn1']
+                        normal_mask = pixel_mask_dict['attn_2']
+                        if 'attn_1' in pixel_mask_dict.keys():
+                            background_mask = pixel_mask_dict['attn_1']
                         else :
-                            background_mask = pixel_mask_dict['attn0']
+                            background_mask = pixel_mask_dict['attn_0']
                         latent_mask = torch.where((background_mask == 1) & (normal_mask == 1), 1, 0)
                         latent_mask = latent_mask.repeat(1, 4, 1, 1)
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
