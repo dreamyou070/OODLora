@@ -13,6 +13,7 @@ def main(args):
         #if cat == args.trg_cat:
 
         cat_dir = os.path.join(base_folder, f'{cat}')
+        print(f'cat_dir: {cat_dir}'')
 
         train_ex_dir = os.path.join(cat_dir, 'train_normal')
         train_ex_rgb_dir = os.path.join(train_ex_dir, 'rgb')
