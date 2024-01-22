@@ -311,7 +311,7 @@ class NetworkTrainer:
             if 'blocks_3' in lora_name and 'attentions_2' in lora_name :
                 if 'to_k' in lora_name or 'to_v' in lora_name :
                     params.extend(unet_lora.parameters())
-        trainable_params = {"params": params, "lr": args.unet_lr}
+        trainable_params = [{"params": params, "lr": args.unet_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         print(f' step 7. dataloader')
@@ -923,7 +923,7 @@ class NetworkTrainer:
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
-            
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
