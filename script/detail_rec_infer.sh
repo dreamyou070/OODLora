@@ -1,13 +1,13 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_up_attn12_from_normal_self_binary_mask_no_normal"
+folder_name="res_64_up_attn12_from_normal_self_mask"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
-port_number=56966
+port_number=56964
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port ${port_number} ../lora/detail_rec_infer.py \
