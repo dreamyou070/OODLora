@@ -677,6 +677,7 @@ class NetworkTrainer:
                     attn_loss = 0
                     average_mask_dict = {}
                     for i, layer_name in enumerate(attn_dict.keys()):
+                        print(f'layer_name: {layer_name}')
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         if args.cls_training:
                             cls_map, score_map = torch.chunk(map, 2, dim=-1)
