@@ -290,7 +290,7 @@ def main(args) :
                                     if part == 'attn_0' :
                                         print(f' - {part} : {pixel_mask}')
                                         print(f' - {part} : {pixel_mask.max()}')
-                                    latent_mask_ = torch.where(pixel_mask > 0.5, 1, 0)  #
+                                    latent_mask_ = torch.where(pixel_mask==1, 1, 0)  #
                                 pixel_mask_dict[part] = latent_mask_
 
                                 pixel_mask_img = ((latent_mask_.cpu().numpy()) * 255).astype(np.uint8)
