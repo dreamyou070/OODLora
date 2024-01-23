@@ -280,7 +280,7 @@ def main(args) :
                                     latent_mask_ = torch.where(latent_mask < 0.5, 1, 0)  #
                                 else :
                                     """ object = 1 """
-                                    latent_mask_ = torch.where(latent_mask > 0.8, 1, 0)  #
+                                    latent_mask_ = torch.where(latent_mask > 0.99, 1, 0)  #
                                 pixel_mask_dict[part] = latent_mask_
                                 save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask_part_{part}{ext}', org_h,
                                                 org_w)
