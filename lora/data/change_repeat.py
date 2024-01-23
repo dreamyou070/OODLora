@@ -15,7 +15,7 @@ def main(args):
             cat_dir = os.path.join(base_folder, f'{cat}')
             print(f'cat_dir: {cat_dir}')
 
-            train_ex_dir = os.path.join(cat_dir, 'train_normal')
+            train_ex_dir = os.path.join(cat_dir, 'train_ex')
             print(f'train_ex_dir: {train_ex_dir}')
             train_ex_rgb_dir = os.path.join(train_ex_dir, 'rgb')
             train_ex_gt_dir = os.path.join(train_ex_dir, 'gt')
