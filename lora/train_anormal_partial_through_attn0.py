@@ -694,7 +694,7 @@ class NetworkTrainer:
                     h = score_map.shape[0]
                     trigger_score = score_map.unsqueeze(-1).reshape(h, res, res)
                     object_position = trigger_score.mean(dim=0)  # res, res (must lower than 1) -> backgounrd = 0
-                    object_position = torch.triu(object_position, min = 0, max = 1)
+                    object_position = torch.trim(object_position, min = 0, max = 1)
 
                     # ------------------------------------------------ binary mask ------------------------------------------------ #
                     object_position = torch.where(object_position > 0.5, 1, 0)
