@@ -26,6 +26,7 @@ def main(args):
                 repeat, name = folder.split('_')
                 org_rgb_folder = os.path.join(train_ex_rgb_dir, folder)
                 org_gt_folder  = os.path.join(train_ex_gt_dir, folder)
+                org_mask_folder = os.path.join(train_ex_mask_dir, folder)
                 if 'good' in name:
                     new_repeat = args.new_ok_repeat
                 new_folder = f'{new_repeat}_{name}'
@@ -37,7 +38,7 @@ def main(args):
 
                 os.rename(org_rgb_folder, new_rgb_folder)
                 os.rename(org_gt_folder, new_gt_folder)
-                os.rename(new_mask_folder)
+                os.rename(org_mask_folder, new_mask_folder)
 
 # 20 + 120 = 140
 # 40 + 160 = 200
