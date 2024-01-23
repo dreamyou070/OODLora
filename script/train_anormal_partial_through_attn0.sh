@@ -14,7 +14,7 @@ start_epoch=0
 port_number=50081
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config \
-  --main_process_port $port_number ../lora/train_anormal_partial.py \
+  --main_process_port $port_number ../lora/train_anormal_partial_through_attn0.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
