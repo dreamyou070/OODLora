@@ -317,10 +317,47 @@ class NetworkTrainer:
                             trainable = False
                     else:
                         trainable = True
-                    if trainable:
-                        if 'to_k' in lora_name or 'to_v' in lora_name:
-                            print(f' training layer : {lora_name}')
-                            params.extend(unet_lora.parameters())
+            if args.down_training :
+                if 'down' in lora_name and 'blocks_0' in lora_name :
+                    if args.only_cross_training:
+                        if 'attn_2' in lora_name:
+                            trainable = True
+                        else:
+                            trainable = False
+                    else:
+                        trainable = True
+
+            if trainable:
+                if 'to_k' in lora_name or 'to_v' in lora_name:
+                    print(f' training layer : {lora_name}')
+                    params.extend(unet_lora.parameters())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         trainable_params = [{"params": params, "lr": args.unet_lr}]
 
         if args.text_encoder_training:
@@ -1000,6 +1037,7 @@ if __name__ == "__main__":
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
     parser.add_argument("--all_same_learning", action='store_true')
     parser.add_argument("--only_cross_training", action='store_true')
+    parser.add_argument("--down_training", action='store_true')
     import ast
 
 
