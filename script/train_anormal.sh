@@ -1,15 +1,15 @@
 #! /bin/bash
 
-class_name="foam"
+class_name="dowel"
 data_source='train_ex'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
 save_folder="res_64_up_attn2_t_2_attn2"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-
-start_epoch=0
-port_number=50019
+network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}/models/epoch-000004.safetensors"
+start_epoch=4
+port_number=50015
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
@@ -29,4 +29,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --start_epoch $start_epoch \
   --output_dir "$output_dir" --truncate_pad --truncate_length 2  \
   --cross_map_res [64] --detail_64_up --trg_position "['up']" --normal_with_background \
-  --trg_part '["attn_2"]' --cls_training --all_same_learning #  --network_weights "$network_weights"
+  --trg_part '["attn_2"]' --cls_training --all_same_learning --network_weights "$network_weights"
