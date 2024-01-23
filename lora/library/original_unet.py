@@ -1,11 +1,3 @@
-# Diffusers 0.10.2からStable Diffusionに必要な部分だけを持ってくる
-# 条件分岐等で不要な部分は削除している
-# コードの多くはDiffusersからコピーしている
-# 制約として、モデルのstate_dictがDiffusers 0.10.2のものと同じ形式である必要がある
-
-# Copy from Diffusers 0.10.2 for Stable Diffusion. Most of the code is copied from Diffusers.
-# Unnecessary parts are deleted by condition branching.
-# As a constraint, the state_dict of the model must be in the same format as that of Diffusers 0.10.2
 
 """
 v1.5とv2.1の相違点は
@@ -1530,13 +1522,11 @@ class UNet2DConditionModel(nn.Module):
         sample = self.conv_in(sample)
 
         # ------------------------------------------------------------------------------------------
-        # 2.1 mask image
-
-        # ------------------------------------------------------------------------------------------
         # 3. down
         # encoder_hidden_states = [4,277,768]
         down_block_res_samples = (sample,)
-        for downsample_block in self.down_blocks:
+        print(f'after conv_in, down_block_res_samples : {len(down_block_res_samples)}')
+        for i, downsample_block in enumerate(self.down_blocks) :
             if downsample_block.has_cross_attention:
                 sample, res_samples = downsample_block(hidden_states=sample,
                                                        temb=emb,
@@ -1546,6 +1536,7 @@ class UNet2DConditionModel(nn.Module):
             else:
                 sample, res_samples = downsample_block(hidden_states=sample, temb=emb)
             down_block_res_samples += res_samples
+            print(f'after {i} downblock, down_block_res_samples : {len(down_block_res_samples)}')
 
         # skip connectionにControlNetの出力を追加する
         if down_block_additional_residuals is not None:
@@ -1567,7 +1558,7 @@ class UNet2DConditionModel(nn.Module):
         # 5. up
         for i, upsample_block in enumerate(self.up_blocks):
             is_final_block = i == len(self.up_blocks) - 1
-            res_samples = down_block_res_samples[-len(upsample_block.resnets) :]
+            res_samples = down_block_res_samples[-len(upsample_block.resnets) :] # -3
             down_block_res_samples = down_block_res_samples[: -len(upsample_block.resnets)]  # skip connection
             if not is_final_block and forward_upsample_size:
                 upsample_size = down_block_res_samples[-1].shape[2:]
@@ -1585,6 +1576,7 @@ class UNet2DConditionModel(nn.Module):
                                         temb=emb,
                                         res_hidden_states_tuple=res_samples,
                                         upsample_size=upsample_size)
+            print(f'after {i} upblock, down_block_res_samples : {len(down_block_res_samples)}')
 
         # 6. post-process
         sample = self.conv_norm_out(sample)
