@@ -688,7 +688,7 @@ class NetworkTrainer:
                     trigger_score = score_map.unsqueeze(-1).reshape(h, res, res)
                     object_position = trigger_score.mean(dim=0)  # res, res (must lower than 1) -> backgounrd = 0
                     back_position = 1 - object_position
-                    print(f'object_position (64,64): {object_position.shape}')
+                    #print(f'object_position (64,64): {object_position.shape}')
                     # ---------------------------------------------- (3) mask loss ---------------------------------------------- #
                     for i, layer_name in enumerate(attn_dict.keys()):
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
@@ -744,7 +744,7 @@ class NetworkTrainer:
 
                                         anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                         anormal_mask = anormal_mask.squeeze()  # res,res
-                                        print(f'anormal_mask: {anormal_mask.shape}')
+                                        #print(f'anormal_mask: {anormal_mask.shape}')
                                         #anormal_mask = torch.stack([mask.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
                                         # back_position = torch.where((img_mask == 0),1,0)  # head, pix_num
@@ -755,7 +755,7 @@ class NetworkTrainer:
                                         anormal_position = torch.clamp((back_position + anormal_position), min=0, max=1.0)
 
                                         anormal_position = torch.stack([anormal_position.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
-                                        print(f'flatten and head repeat, anormal_position: {anormal_position.shape}')
+                                        #print(f'flatten and head repeat, anormal_position: {anormal_position.shape}')
                                         normal_position = 1 - anormal_position
 
 
