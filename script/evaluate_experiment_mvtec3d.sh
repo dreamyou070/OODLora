@@ -1,9 +1,9 @@
 #! /bin/bash
 
 class_name="tire"
-dataset_cat="_1_res_64_up_attn2_t_2_data_38"
+dataset_cat="MVTec3D-AD"
 dataset_dir="../../../MyData/anomaly_detection/${dataset_cat}"
-sub_folder="1_res_64_up_16_up_good_6_anomal_80"
+sub_folder="_1_res_64_up_attn2_t_2_data_38"
 base_dir="../result/${dataset_cat}_experiment/${class_name}/lora_training/anormal/${sub_folder}/reconstruction"
 anomaly_maps_dir="step_4_guidance_scale_8.5_start_from_origin_False_start_from_final_True_"
 output_dir="metrics"
