@@ -1,11 +1,11 @@
 #! /bin/bash
 
 class_name="bagel"
-data_source='train_ex'
+data_source='train_ex2'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="res_64_up_attn12_from_normal_self_cross_attn_use_self_mask"
+save_folder="res_64_up_attn12_from_normal_self_cross_attn_use_self_mask_high_anormal_sample"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
 network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000007.safetensors"
