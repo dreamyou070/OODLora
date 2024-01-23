@@ -308,22 +308,22 @@ class NetworkTrainer:
         """ self and cross attn """
         for unet_lora in unet_loras:
             lora_name = unet_lora.lora_name
-            if 'up' in lora_name and 'blocks_3' in lora_name :
-                if 'attentions_1' in lora_name or 'attentions_2' in lora_name :
-                    if args.only_cross_training :
-                        if 'attn_2' in lora_name :
+            if 'up' in lora_name and 'blocks_3' in lora_name:
+                if 'attentions_1' in lora_name or 'attentions_2' in lora_name:
+                    if args.only_cross_training:
+                        if 'attn_2' in lora_name:
                             trainable = True
-                        else :
+                        else:
                             trainable = False
-                    else :
+                    else:
                         trainable = True
-                    if trainable :
+                    if trainable:
                         if 'to_k' in lora_name or 'to_v' in lora_name:
                             print(f' training layer : {lora_name}')
                             params.extend(unet_lora.parameters())
         trainable_params = [{"params": params, "lr": args.unet_lr}]
 
-        if args.text_encoder_training :
+        if args.text_encoder_training:
             params = []
             for text_lora in network.text_encoder_loras:
                 params.extend(text_lora.parameters())
@@ -684,11 +684,12 @@ class NetworkTrainer:
                             score_map = score_map.squeeze()
                         else:
                             score_map = map
-                        if 'blocks_3' in lora_name and 'up' in layer_name and 'attentions_0' in layer_name :
+                        if 'blocks_3' in lora_name and 'up' in layer_name and 'attentions_0' in layer_name:
                             res = int((score_map.shape[1]) ** 0.5)
                             h = score_map.shape[0]
                             trigger_score = score_map.unsqueeze(-1).reshape(h, res, res)
-                            object_position = trigger_score.mean(dim=0)  # res, res (must lower than 1) -> backgounrd = 0
+                            object_position = trigger_score.mean(
+                                dim=0)  # res, res (must lower than 1) -> backgounrd = 0
                             back_position = 1 - object_position
 
                     for i, layer_name in enumerate(attn_dict.keys()):
@@ -739,9 +740,9 @@ class NetworkTrainer:
                                 else:
                                     if part in args.trg_part or int(res) == 8:
 
-                                        #img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                        #img_mask = img_masks.squeeze()  # res,res
-                                        #img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)
+                                        # img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                        # img_mask = img_masks.squeeze()  # res,res
+                                        # img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)
 
                                         anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
                                             0)  # [1,1,res,res], foreground = 1
@@ -749,16 +750,15 @@ class NetworkTrainer:
                                         anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
                                                                    dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                        #back_position = torch.where((img_mask == 0),1,0)  # head, pix_num
-
+                                        # back_position = torch.where((img_mask == 0),1,0)  # head, pix_num
                                         if batch['train_class_list'][0] == 1:
                                             anormal_position = torch.zeros_like(anormal_mask)
                                         else:
                                             anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-
-                                        anormal_position = back_position + anormal_position
-                                        anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
-                                        normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
+                                        anormal_position = torch.clamp((back_position + anormal_position), min=0, max=1.0)
+                                        normal_position = 1 - back_position
+                                        #anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
+                                        #normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
 
                                         anormal_trigger_activation = (score_map * anormal_position)
                                         normal_trigger_activation = (score_map * normal_position)
@@ -772,16 +772,19 @@ class NetworkTrainer:
                                             anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
                                             normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
 
-                                        normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                        normal_activation_loss = (1 - (
+                                                    normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                         activation_loss = args.normal_weight * normal_activation_loss
                                         if batch['train_class_list'][0] == 0:
-                                            anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
+                                            anormal_activation_loss = (
+                                                                                  anormal_trigger_activation / total_score) ** 2  # 8, res*res
                                             activation_loss += args.anormal_weight * anormal_activation_loss
                                         if args.cls_training:
                                             normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
                                             activation_loss += args.normal_weight * normal_cls_activation_loss
                                             if batch['train_class_list'][0] == 0:
-                                                anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
+                                                anormal_cls_activation_loss = (1 - (
+                                                            anormal_cls_activation / total_score)) ** 2
                                                 activation_loss += args.anormal_weight * anormal_cls_activation_loss
                                         attn_loss += activation_loss
 
@@ -997,6 +1000,8 @@ if __name__ == "__main__":
     parser.add_argument("--all_same_learning", action='store_true')
     parser.add_argument("--only_cross_training", action='store_true')
     import ast
+
+
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
