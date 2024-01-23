@@ -276,19 +276,19 @@ def main(args) :
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64, device, weight_dtype)  # latent_mask = 1,1,64,64
 
                                 if part == 'attn_2' :
-                                    """ only normal be white """
-                                    latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
-                                else :
-                                    """ background be white"""
+                                    """ anormal = 1 """
                                     latent_mask_ = torch.where(latent_mask < 0.5, 1, 0)  #
+                                else :
+                                    """ object = 1 """
+                                    latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
                                 pixel_mask_dict[part] = latent_mask_
                                 save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask_part_{part}{ext}', org_h,
                                                 org_w)
 
 
-                        normal_mask = pixel_mask_dict['attn_2']
-                        background_mask = pixel_mask_dict['attn_0']
-                        not_copy_mask = torch.where((background_mask == 0) & (normal_mask == 0), 1, 0)
+                        anormal_mask = pixel_mask_dict['attn_2']
+                        object_mask = pixel_mask_dict['attn_0']
+                        not_copy_mask = torch.where((anormal_mask == 1) & (object_mask == 1), 1, 0)
                         latent_mask_ = torch.where((not_copy_mask==0), 1, 0)
                         latent_mask = latent_mask_.repeat(1, 4, 1, 1)
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
