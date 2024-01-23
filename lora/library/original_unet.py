@@ -1526,7 +1526,7 @@ class UNet2DConditionModel(nn.Module):
         # 3. down
         # encoder_hidden_states = [4,277,768]
         down_block_res_samples = (sample,)
-        print(f'after conv_in, down_block_res_samples : {len(down_block_res_samples)}')
+        #print(f'after conv_in, down_block_res_samples : {len(down_block_res_samples)}')
         for i, downsample_block in enumerate(self.down_blocks) :
             if downsample_block.has_cross_attention:
                 sample, res_samples = downsample_block(hidden_states=sample,
@@ -1537,7 +1537,7 @@ class UNet2DConditionModel(nn.Module):
             else:
                 sample, res_samples = downsample_block(hidden_states=sample, temb=emb)
             down_block_res_samples += res_samples
-            print(f'after {i} downblock, down_block_res_samples : {len(down_block_res_samples)}')
+            #print(f'after {i} downblock, down_block_res_samples : {len(down_block_res_samples)}')
 
         # skip connectionにControlNetの出力を追加する
         if down_block_additional_residuals is not None:
@@ -1577,7 +1577,7 @@ class UNet2DConditionModel(nn.Module):
                                         temb=emb,
                                         res_hidden_states_tuple=res_samples,
                                         upsample_size=upsample_size)
-            print(f'after {i} upblock, down_block_res_samples : {len(down_block_res_samples)}')
+            #print(f'after {i} upblock, down_block_res_samples : {len(down_block_res_samples)}')
 
         # 6. post-process
         sample = self.conv_norm_out(sample)
