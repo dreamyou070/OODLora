@@ -699,7 +699,7 @@ class NetworkTrainer:
                     # ------------------------------------------------ binary mask ------------------------------------------------ #
                     object_position = torch.where(object_position > 0.5, 1, 0)
                     back_position = 1 - object_position
-                    #print(f'back_position: {back_position}')
+
                     # ---------------------------------------------- (3) mask loss ---------------------------------------------- #
                     for i, layer_name in enumerate(attn_dict.keys()):
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
@@ -755,6 +755,7 @@ class NetworkTrainer:
 
                                         anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                         anormal_mask = anormal_mask.squeeze()  # res,res
+
                                         #print(f'anormal_mask: {anormal_mask.shape}')
                                         #anormal_mask = torch.stack([mask.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
@@ -763,14 +764,11 @@ class NetworkTrainer:
                                             anormal_position = torch.zeros_like(anormal_mask)
                                         else:
                                             anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-                                        anormal_position = torch.clamp((back_position + anormal_position), min=0, max=1.0)
+                                        anormal_position = torch.clamp((back_position + anormal_position), min=0, max=1.0) # also background
 
                                         anormal_position = torch.stack([anormal_position.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
                                         #print(f'flatten and head repeat, anormal_position: {anormal_position.shape}')
                                         normal_position = 1 - anormal_position
-
-
-
                                         #anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
                                         #normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
 
@@ -786,8 +784,7 @@ class NetworkTrainer:
                                             anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
                                             normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
 
-                                        normal_activation_loss = (1 - (
-                                                    normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                        normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                         activation_loss = args.normal_weight * normal_activation_loss
                                         if batch['train_class_list'][0] == 0:
                                             anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
@@ -850,7 +847,6 @@ class NetworkTrainer:
                                     activation_loss += args.anormal_weight * anormal_cls_activation_loss
                             attn_loss += activation_loss
                     attn_loss = attn_loss.mean()
-
                     # ------------------------------------------------------------------------------------------------- #
                     if batch['train_class_list'][0] == 1:
                         loss = task_loss
