@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="dowel"
+class_name="tire"
 data_source='train_ex'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
@@ -13,7 +13,7 @@ network_weights="../result/${data_folder}_experiment/${class_name}/lora_training
 start_epoch=0
 port_number=50010
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
   --main_process_port $port_number ../lora/train_anormal_partial.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
