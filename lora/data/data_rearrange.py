@@ -16,6 +16,8 @@ def main(args):
 
             train_dir = os.path.join(cat_dir, 'train')
 
+            print(f'make train ex folder')
+
             train_ex_dir = os.path.join(cat_dir, 'train_ex')
             os.makedirs(train_ex_dir, exist_ok=True)
             train_good_dir = os.path.join(train_dir, 'good')
@@ -107,12 +109,6 @@ def main(args):
                     new_gt_t_defect_dir = os.path.join(train_ex_gt_dir, f'50_{t_defect}')
                 os.rename(rgb_t_defect_dir, new_rgb_t_defect_dir)
                 os.rename(gt_t_defect_dir, new_gt_t_defect_dir)
-
-
-
-
-
-
 
 
 
