@@ -218,7 +218,7 @@ def main(args) :
                 if 'good' not in class_name :
                     flag = False
             if flag :
-                print(f' - class : {class_name}')
+                print(f' ----- class : {class_name}')
                 evaluate_class_dir = os.path.join(evaluate_output_dir, class_name)
                 os.makedirs(evaluate_class_dir, exist_ok=True)
 
