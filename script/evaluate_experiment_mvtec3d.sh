@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="bagle"
+class_name="bagel"
 dataset_cat="MVTec3D-AD"
 dataset_dir="../../../MyData/anomaly_detection/${dataset_cat}"
 sub_folder="res_64_up_attn12_from_normal_self_cross_attn"
