@@ -287,6 +287,9 @@ def main(args) :
                                     latent_mask_ = torch.where(pixel_mask < 0.5, 1, 0)  #
                                 else :
                                     """ object = 1 """
+                                    if part == 'attn_0' :
+                                        print(f' - {part} : {pixel_mask}')
+                                        print(f' - {part} : {pixel_mask.max()}')
                                     latent_mask_ = torch.where(pixel_mask > 0.5, 1, 0)  #
                                 pixel_mask_dict[part] = latent_mask_
 
