@@ -282,7 +282,7 @@ def main(args) :
                                     os.path.join(class_base_folder, f'{name}_pixel_mask_part_{part}{ext}'))
                                 if part == 'attn_2' :
                                     """ anormal = 1 """
-                                    latent_mask_ = torch.where(pixel_mask == 0, 1, 0)  #
+                                    latent_mask_ = torch.where(pixel_mask < 0.5, 1, 0)  #
                                 else :
                                     """ object = 1 """
                                     #if part == 'attn_0' :
