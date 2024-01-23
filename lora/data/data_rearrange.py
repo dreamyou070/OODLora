@@ -96,7 +96,8 @@ def main(args):
             # ---------------------------------------------------------------------------------------- #
             print(f'total_good_num : {total_good_num}')
             print(f'total_defect_num : {total_defect_num}')
-            repeat_num = int(total_good_num / total_defect_num) * 40
+            #repeat_num = int(total_good_num / total_defect_num) * 40
+            repeat_num = 80
             train_ex_defects = os.listdir(train_ex_rgb_dir)
             for t_defect in train_ex_defects:
                 rgb_t_defect_dir = os.path.join(train_ex_rgb_dir, t_defect)
@@ -105,8 +106,8 @@ def main(args):
                     new_rgb_t_defect_dir = os.path.join(train_ex_rgb_dir, f'{repeat_num}_{t_defect}')
                     new_gt_t_defect_dir = os.path.join(train_ex_gt_dir, f'{repeat_num}_{t_defect}')
                 else :
-                    new_rgb_t_defect_dir = os.path.join(train_ex_rgb_dir, f'120_{t_defect}')
-                    new_gt_t_defect_dir = os.path.join(train_ex_gt_dir, f'120_{t_defect}')
+                    new_rgb_t_defect_dir = os.path.join(train_ex_rgb_dir, f'80_{t_defect}')
+                    new_gt_t_defect_dir = os.path.join(train_ex_gt_dir, f'80_{t_defect}')
                 os.rename(rgb_t_defect_dir, new_rgb_t_defect_dir)
                 os.rename(gt_t_defect_dir, new_gt_t_defect_dir)
 
@@ -116,6 +117,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str,
                         default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD-org')
-    parser.add_argument('--trg_cat', type=str, default='peachpotato')
+    parser.add_argument('--trg_cat', type=str, default='foam')
     args = parser.parse_args()
     main(args)
