@@ -32,4 +32,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --start_from_final \
   --only_zero_save \
   --use_pixel_mask \
-  --class_name ${class_name}
+  --class_name ${class_name} --normal_only_infer
