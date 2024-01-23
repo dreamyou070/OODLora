@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="foam"
+class_name="bagel"
 folder_name="res_64_up_attn12_from_normal_self_cross_attn"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
