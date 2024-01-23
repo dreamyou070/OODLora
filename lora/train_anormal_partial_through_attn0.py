@@ -319,11 +319,12 @@ class NetworkTrainer:
             else :
                 if args.down_training :
                     if 'down_blocks_0' in lora_name :
-                        if args.only_cross_training:
-                            if 'attn_2' in lora_name:
+                        if 'attentions_0' in lora_name :
+                            if args.only_cross_training:
+                                if 'attn_2' in lora_name:
+                                    trainable = True
+                            else:
                                 trainable = True
-                        else:
-                            trainable = True
             if trainable :
                 if 'to_k' in lora_name or 'to_v' in lora_name:
                     print(f' training layer : {lora_name}')

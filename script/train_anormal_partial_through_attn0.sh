@@ -5,13 +5,13 @@ data_source='train_ex2'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='anormal'
-save_folder="res_64_up_attn12_from_normal_self_binary_mask_no_normal"
+save_folder="res_64_up_attn12_from_normal_self_binary_mask_no_normal_down_trainning"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
 network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000007.safetensors"
 
 start_epoch=0
-port_number=51182
+port_number=51190
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
   --main_process_port $port_number ../lora/train_anormal_partial_through_attn0.py \
@@ -30,4 +30,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --start_epoch $start_epoch \
   --output_dir "$output_dir" --truncate_pad --truncate_length 2  \
   --cross_map_res [64] --detail_64_up --trg_position "['up']" \
-  --trg_part '["attn_2"]' --cls_training --all_same_learning --network_weights "${network_weights}" # --down_training
+  --trg_part '["attn_2"]' --cls_training --all_same_learning --network_weights "${network_weights}" --down_training
