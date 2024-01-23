@@ -676,42 +676,19 @@ class NetworkTrainer:
                     attention_storer.reset()
                     attn_loss = 0
                     average_mask_dict = {}
-
-                    """
-                    for i, layer_name in enumerate(attn_dict.keys()):
-                        print(f'layer_name: {layer_name}')
-                        map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
-                        if args.cls_training:
-                            cls_map, score_map = torch.chunk(map, 2, dim=-1)
-                            cls_map = cls_map.squeeze()
-                            score_map = score_map.squeeze()
-                        else:
-                            score_map = map
-                        if 'blocks_3' in lora_name and 'up' in layer_name and 'attentions_0' in layer_name:
-                            res = int((score_map.shape[1]) ** 0.5)
-                            h = score_map.shape[0]
-                            trigger_score = score_map.unsqueeze(-1).reshape(h, res, res)
-                            object_position = trigger_score.mean(
-                                dim=0)  # res, res (must lower than 1) -> backgounrd = 0
-                            back_position = 1 - object_position
-                    """
-                    print(f'attn_dict: {attn_dict.keys()}')
-                    """
-                    map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
+                    map = attn_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze()  # 8, res*res, c
                     if args.cls_training:
                         cls_map, score_map = torch.chunk(map, 2, dim=-1)
                         cls_map = cls_map.squeeze()
                         score_map = score_map.squeeze()
                     else:
                         score_map = map
-                    if 'blocks_3' in lora_name and 'up' in layer_name and 'attentions_0' in layer_name:
-                        res = int((score_map.shape[1]) ** 0.5)
-                        h = score_map.shape[0]
-                        trigger_score = score_map.unsqueeze(-1).reshape(h, res, res)
-                        object_position = trigger_score.mean(
-                            dim=0)  # res, res (must lower than 1) -> backgounrd = 0
-                        back_position = 1 - object_position
-                    """
+                    res = int((score_map.shape[1]) ** 0.5)
+                    h = score_map.shape[0]
+                    trigger_score = score_map.unsqueeze(-1).reshape(h, res, res)
+                    object_position = trigger_score.mean(dim=0)  # res, res (must lower than 1) -> backgounrd = 0
+                    back_position = 1 - object_position
+                    # ---------------------------------------------- (3) mask loss ---------------------------------------------- #
                     for i, layer_name in enumerate(attn_dict.keys()):
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         if args.cls_training:
@@ -776,9 +753,7 @@ class NetworkTrainer:
                                         else:
                                             anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
 
-                                        anormal_position = torch.clamp((anormal_position), min=0,
-                                                                       max=1.0)
-                                        #anormal_position = torch.clamp((back_position + anormal_position), min=0, max=1.0)
+                                        anormal_position = torch.clamp((back_position + anormal_position), min=0, max=1.0)
                                         normal_position = 1 - back_position
                                         #anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
                                         #normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
@@ -799,15 +774,13 @@ class NetworkTrainer:
                                                     normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                         activation_loss = args.normal_weight * normal_activation_loss
                                         if batch['train_class_list'][0] == 0:
-                                            anormal_activation_loss = (
-                                                                                  anormal_trigger_activation / total_score) ** 2  # 8, res*res
+                                            anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
                                             activation_loss += args.anormal_weight * anormal_activation_loss
                                         if args.cls_training:
                                             normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
                                             activation_loss += args.normal_weight * normal_cls_activation_loss
                                             if batch['train_class_list'][0] == 0:
-                                                anormal_cls_activation_loss = (1 - (
-                                                            anormal_cls_activation / total_score)) ** 2
+                                                anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
                                                 activation_loss += args.anormal_weight * anormal_cls_activation_loss
                                         attn_loss += activation_loss
 
