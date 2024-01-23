@@ -400,8 +400,8 @@ def main(args) :
                         call_unet(unet, recon_latent, 0, con[:, :args.truncate_length, :], None, None)
                         recon_attn_stores = controller.step_store
                         controller.reset()
-                        for layer_name in attn_stores:
-                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                        for layer_name in recon_attn_stores :
+                            attn = recon_attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res, pos, part = get_position(layer_name, attn)
                             if res in args.cross_map_res and pos in args.trg_position and part == 'attn_2' :
                                 if args.truncate_length == 3:
