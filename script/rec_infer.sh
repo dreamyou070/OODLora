@@ -1,13 +1,13 @@
 #! /bin/bash
 
 class_name="tire"
-folder_name="1_res_64_up_attn2_t_2"
+folder_name="2_2_res_64_up_attn2_t_2_data_11"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
-port_number=56102
+port_number=56104
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port ${port_number} ../lora/rec_infer.py \
