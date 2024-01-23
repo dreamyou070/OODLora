@@ -694,15 +694,8 @@ class NetworkTrainer:
                     res = int((score_map.shape[1]) ** 0.5)
                     h = score_map.shape[0]
                     trigger_score = score_map.unsqueeze(-1).reshape(h, res, res)
-                    object_position = trigger_score.mean(dim=0)  # res, res (must lower than 1) -> backgounrd = 0
-                    object_position = torch.clamp(object_position, min = 0, max = 1)
-
-                    # ------------------------------------------------ binary mask ------------------------------------------------ #
-                    object_position = torch.where(object_position > 0.5, 1, 0)
-                    back_position = 1 - object_position
-                    print(f'num of object: {torch.sum(object_position)}')
-                    print(f'num of background: {torch.sum(back_position)}')
-                    print(f'mask res : {res}')
+                    object_position = trigger_score.mean(dim=0)
+                    back_position = torch.where(object_position < 0.5, 1, 0)
 
                     # ---------------------------------------------- (3) mask loss ---------------------------------------------- #
                     for i, layer_name in enumerate(attn_dict.keys()):
@@ -753,28 +746,20 @@ class NetworkTrainer:
                                 else:
                                     if part in args.trg_part or int(res) == 8:
 
-                                        # img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                        # img_mask = img_masks.squeeze()  # res,res
-                                        # img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)
+                                        back_position = torch.stack([back_position.flatten() for i in range(head_num)],dim=0) # head, pix_num
 
                                         anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                        anormal_mask = anormal_mask.squeeze()  # res,res
+                                        mask = anormal_mask.squeeze()  # res,res
+                                        anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                        #print(f'anormal_mask: {anormal_mask.shape}')
-                                        #anormal_mask = torch.stack([mask.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
-
-                                        # back_position = torch.where((img_mask == 0),1,0)  # head, pix_num
                                         if batch['train_class_list'][0] == 1:
                                             anormal_position = torch.zeros_like(anormal_mask)
                                         else:
                                             anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-                                        anormal_position = torch.clamp((back_position + anormal_position), min=0, max=1.0) # also background
-
-                                        anormal_position = torch.stack([anormal_position.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
-                                        #print(f'flatten and head repeat, anormal_position: {anormal_position.shape}')
-                                        normal_position = 1 - anormal_position
-                                        #anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
-                                        #normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
+                                        anormal_position = back_position + anormal_position
+                                        anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
+                                        normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
+                                        
 
                                         anormal_trigger_activation = (score_map * anormal_position)
                                         normal_trigger_activation = (score_map * normal_position)

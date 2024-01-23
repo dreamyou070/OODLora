@@ -689,7 +689,6 @@ class NetworkTrainer:
                             h = score_map.shape[0]
                             trigger_score = score_map.unsqueeze(-1).reshape(h, res, res)
                             object_position = trigger_score.mean(dim=0)  # res, res (must lower than 1) -> backgounrd = 0
-                            back_position = 1 - object_position
 
                     for i, layer_name in enumerate(attn_dict.keys()):
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
@@ -739,9 +738,10 @@ class NetworkTrainer:
                                 else:
                                     if part in args.trg_part or int(res) == 8:
 
-                                        #img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                        #img_mask = img_masks.squeeze()  # res,res
-                                        #img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)
+                                        img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                        img_mask = img_masks.squeeze()  # res,res
+                                        img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],
+                                                               dim=0)  # .unsqueeze(-1)
 
                                         anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
                                             0)  # [1,1,res,res], foreground = 1
@@ -749,8 +749,7 @@ class NetworkTrainer:
                                         anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
                                                                    dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
-                                        #back_position = torch.where((img_mask == 0),1,0)  # head, pix_num
-
+                                        back_position = torch.where((img_mask == 0),1,0)  # head, pix_num
                                         if batch['train_class_list'][0] == 1:
                                             anormal_position = torch.zeros_like(anormal_mask)
                                         else:
