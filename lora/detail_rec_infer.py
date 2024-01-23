@@ -277,7 +277,7 @@ def main(args) :
 
                                 if part == 'attn_2' :
                                     """ anormal = 1 """
-                                    latent_mask_ = torch.where(latent_mask < 0.5, 1, 0)  #
+                                    latent_mask_ = torch.where(latent_mask < 0.2, 1, 0)  #
                                 else :
                                     """ object = 1 """
                                     latent_mask_ = torch.where(latent_mask != 1, 0, 1)  #
