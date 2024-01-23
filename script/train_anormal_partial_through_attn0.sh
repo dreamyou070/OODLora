@@ -11,9 +11,9 @@ output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${no
 network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000007.safetensors"
 
 start_epoch=0
-port_number=51190
+port_number=51177
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port $port_number ../lora/train_anormal_partial_through_attn0.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
