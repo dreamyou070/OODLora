@@ -55,7 +55,7 @@ def save_pixel_mask(mask, base_dir, save_name, org_h, org_w):
     pil_img = Image.fromarray(mask_np).resize((org_h, org_w))
     pil_img.save(os.path.join(base_dir, save_name))
     return pil_img
-
+"""
 def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     pixel_save_mask_np = normalized_mask.cpu().numpy()
     pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
@@ -67,6 +67,7 @@ def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     latent_mask_torch = torch.from_numpy(latent_mask_np).to(device, dtype=weight_dtype)
     latent_mask = latent_mask_torch.unsqueeze(0).unsqueeze(0) # 1,1,64,64
     return latent_mask_np, latent_mask
+"""
 
 
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
@@ -272,18 +273,30 @@ def main(args) :
                                     cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                                pixel_mask = trigger_score.mean(dim=0)  # res, res
-                                latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64, device, weight_dtype)  # latent_mask = 1,1,64,64
+                                pixel_mask = trigger_score.mean(dim=0)  # res, res (must lower than 1)
+
+                                pixel_mask_img = ((pixel_mask.cpu().numpy()) * 255).astype(np.uint8)
+                                pixel_mask_img = Image.fromarray(pixel_mask_img)
+                                pixel_mask_img = pixel_mask_img.resize((org_h, org_w))
+                                pixel_mask_img.save(
+                                    os.path.join(class_base_folder, f'{name}_pixel_mask_part_{part}{ext}'))
+
 
                                 if part == 'attn_2' :
                                     """ anormal = 1 """
-                                    latent_mask_ = torch.where(latent_mask == 0, 1, 0)  #
+                                    latent_mask_ = torch.where(pixel_mask < 0.5, 1, 0)  #
                                 else :
                                     """ object = 1 """
-                                    latent_mask_ = torch.where(latent_mask != 1, 0, 1)  #
+                                    latent_mask_ = torch.where(pixel_mask > 0.5, 1, 0)  #
                                 pixel_mask_dict[part] = latent_mask_
-                                save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask_part_{part}{ext}', org_h,
-                                                org_w)
+
+                                pixel_mask_img = ((latent_mask_.cpu().numpy()) * 255).astype(np.uint8)
+                                pixel_mask_img = Image.fromarray(pixel_mask_img)
+                                pixel_mask_img = pixel_mask_img.resize((org_h, org_w))
+                                pixel_mask_img.save(
+                                    os.path.join(class_base_folder, f'{name}_pixel_mask_part_{part}_binarized{ext}'))
+
+
 
 
                         anormal_mask = pixel_mask_dict['attn_2']
