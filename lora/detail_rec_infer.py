@@ -302,6 +302,7 @@ def main(args) :
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
+                        print(f'gen background ! ')
                         time_steps = []
                         inf_time.append(999)
                         for i, t in enumerate(inf_time[:-1]):
@@ -317,6 +318,7 @@ def main(args) :
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
                         time_steps.reverse()  # 999, 750, ..., 0
+
 
                         # ----------------------------[3] generate image ------------------------------ #
                         pipeline.to(device)
@@ -379,6 +381,7 @@ def main(args) :
                                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                                 image.save(img_dir)
 
+                        print(f'gen anomaly map ! ')
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
                         org_latent = back_dict[0]
                         call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None, None)
