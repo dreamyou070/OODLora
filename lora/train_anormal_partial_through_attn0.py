@@ -699,7 +699,7 @@ class NetworkTrainer:
                     # ------------------------------------------------ binary mask ------------------------------------------------ #
                     object_position = torch.where(object_position > 0.5, 1, 0)
                     back_position = 1 - object_position
-                    print(f'back_position: {back_position}')
+                    #print(f'back_position: {back_position}')
                     # ---------------------------------------------- (3) mask loss ---------------------------------------------- #
                     for i, layer_name in enumerate(attn_dict.keys()):
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
