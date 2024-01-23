@@ -10,34 +10,34 @@ def main(args):
     base_folder = args.base_folder
     cats = os.listdir(base_folder)
     for cat in cats:
-        #if cat == args.trg_cat:
+        if cat == args.trg_cat:
 
-        cat_dir = os.path.join(base_folder, f'{cat}')
-        print(f'cat_dir: {cat_dir}')
+            cat_dir = os.path.join(base_folder, f'{cat}')
+            print(f'cat_dir: {cat_dir}')
 
-        train_ex_dir = os.path.join(cat_dir, 'train_normal')
-        print(f'train_ex_dir: {train_ex_dir}')
-        train_ex_rgb_dir = os.path.join(train_ex_dir, 'rgb')
-        train_ex_gt_dir = os.path.join(train_ex_dir, 'gt')
-        train_ex_mask_dir = os.path.join(train_ex_dir, 'mask')
-        folders = os.listdir(train_ex_rgb_dir)
+            train_ex_dir = os.path.join(cat_dir, 'train_normal')
+            print(f'train_ex_dir: {train_ex_dir}')
+            train_ex_rgb_dir = os.path.join(train_ex_dir, 'rgb')
+            train_ex_gt_dir = os.path.join(train_ex_dir, 'gt')
+            train_ex_mask_dir = os.path.join(train_ex_dir, 'mask')
+            folders = os.listdir(train_ex_rgb_dir)
 
-        for folder in folders:
-            repeat, name = folder.split('_')
-            org_rgb_folder = os.path.join(train_ex_rgb_dir, folder)
-            org_gt_folder  = os.path.join(train_ex_gt_dir, folder)
-            if 'good' in name:
-                new_repeat = args.new_ok_repeat
-            new_folder = f'{new_repeat}_{name}'
-            print(new_folder)
+            for folder in folders:
+                repeat, name = folder.split('_')
+                org_rgb_folder = os.path.join(train_ex_rgb_dir, folder)
+                org_gt_folder  = os.path.join(train_ex_gt_dir, folder)
+                if 'good' in name:
+                    new_repeat = args.new_ok_repeat
+                new_folder = f'{new_repeat}_{name}'
+                print(new_folder)
 
-            new_rgb_folder = os.path.join(train_ex_rgb_dir, new_folder)
-            new_gt_folder = os.path.join(train_ex_gt_dir, new_folder)
-            new_mask_folder = os.path.join(train_ex_mask_dir, new_folder)
+                new_rgb_folder = os.path.join(train_ex_rgb_dir, new_folder)
+                new_gt_folder = os.path.join(train_ex_gt_dir, new_folder)
+                new_mask_folder = os.path.join(train_ex_mask_dir, new_folder)
 
-            os.rename(org_rgb_folder, new_rgb_folder)
-            os.rename(org_gt_folder, new_gt_folder)
-            os.rename(new_mask_folder)
+                os.rename(org_rgb_folder, new_rgb_folder)
+                os.rename(org_gt_folder, new_gt_folder)
+                os.rename(new_mask_folder)
 
 # 20 + 120 = 140
 # 40 + 160 = 200
@@ -45,8 +45,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str,
                         default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
-    #parser.add_argument('--trg_cat', type=str, default='bagel')
-    parser.add_argument('--new_ok_repeat', type=int, default=100)
-    parser.add_argument('--new_nok_repeat', type=int, default=140)
+    parser.add_argument('--trg_cat', type=str, default='rope')
+    parser.add_argument('--new_ok_repeat', type=int, default=150)
+    parser.add_argument('--new_nok_repeat', type=int, default=150)
     args = parser.parse_args()
     main(args)
