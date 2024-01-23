@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="cable_gland"
+class_name="carrot"
 data_source='train_ex'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
@@ -9,9 +9,9 @@ save_folder="2_res_64_up_attn12_from_normal_self_cross_attn"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
 #network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000005.safetensors"
-network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/anormal/2_res_64_up_attn12_from_normal_self_cross_attn//models/epoch-000002.safetensors"
-start_epoch=2
-port_number=50082
+network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/anormal/2_res_64_up_attn12_from_normal_self_cross_attn//models/epoch-000001.safetensors"
+start_epoch=1
+port_number=50083
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
   --main_process_port $port_number ../lora/train_anormal_partial.py \
