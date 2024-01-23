@@ -676,6 +676,8 @@ class NetworkTrainer:
                     attention_storer.reset()
                     attn_loss = 0
                     average_mask_dict = {}
+
+                    """
                     for i, layer_name in enumerate(attn_dict.keys()):
                         print(f'layer_name: {layer_name}')
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
@@ -692,7 +694,24 @@ class NetworkTrainer:
                             object_position = trigger_score.mean(
                                 dim=0)  # res, res (must lower than 1) -> backgounrd = 0
                             back_position = 1 - object_position
-
+                    """
+                    print(f'attn_dict: {attn_dict.keys()}')
+                    """
+                    map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
+                    if args.cls_training:
+                        cls_map, score_map = torch.chunk(map, 2, dim=-1)
+                        cls_map = cls_map.squeeze()
+                        score_map = score_map.squeeze()
+                    else:
+                        score_map = map
+                    if 'blocks_3' in lora_name and 'up' in layer_name and 'attentions_0' in layer_name:
+                        res = int((score_map.shape[1]) ** 0.5)
+                        h = score_map.shape[0]
+                        trigger_score = score_map.unsqueeze(-1).reshape(h, res, res)
+                        object_position = trigger_score.mean(
+                            dim=0)  # res, res (must lower than 1) -> backgounrd = 0
+                        back_position = 1 - object_position
+                    """
                     for i, layer_name in enumerate(attn_dict.keys()):
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         if args.cls_training:
@@ -756,7 +775,10 @@ class NetworkTrainer:
                                             anormal_position = torch.zeros_like(anormal_mask)
                                         else:
                                             anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-                                        anormal_position = torch.clamp((back_position + anormal_position), min=0, max=1.0)
+
+                                        anormal_position = torch.clamp((anormal_position), min=0,
+                                                                       max=1.0)
+                                        #anormal_position = torch.clamp((back_position + anormal_position), min=0, max=1.0)
                                         normal_position = 1 - back_position
                                         #anormal_position = torch.where((anormal_position != 0), 1, 0)  # head, pix_num
                                         #normal_position = torch.where((anormal_position == 0), 1, 0)  # head, pix_num
