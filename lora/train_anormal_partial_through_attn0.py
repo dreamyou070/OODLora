@@ -309,8 +309,8 @@ class NetworkTrainer:
         for unet_lora in unet_loras:
             lora_name = unet_lora.lora_name
             trainable = False
-            if 'up' in lora_name :
-                if 'blocks_3' in lora_name and ('attentions_1' in lora_name or 'attentions_2' in lora_name):
+            if 'up_blocks_3' in lora_name :
+                if 'attentions_1' in lora_name or 'attentions_2' in lora_name:
                     if args.only_cross_training:
                         if 'attn_2' in lora_name:
                             trainable = True
@@ -318,7 +318,7 @@ class NetworkTrainer:
                         trainable = True
             else :
                 if args.down_training :
-                    if 'down' in lora_name and 'blocks_0' in lora_name :
+                    if 'down_blocks_0' in lora_name :
                         if args.only_cross_training:
                             if 'attn_2' in lora_name:
                                 trainable = True
