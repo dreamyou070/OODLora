@@ -953,6 +953,7 @@ class CrossAttnDownBlock2D(nn.Module):
         mask=None):
         output_states = ()
         for resnet, attn in zip(self.resnets, self.attentions):
+
             if self.training and self.gradient_checkpointing:
                 def create_custom_forward(module, return_dict=None):
                     def custom_forward(*inputs):
