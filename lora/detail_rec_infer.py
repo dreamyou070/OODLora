@@ -412,6 +412,7 @@ def main(args) :
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 recon_normal_score_map = trigger_score.mean(dim=0)  # res, res (must lower than 1)
                         score_diff = torch.abs(org_normal_score_map - recon_normal_score_map)
+                        print(f'score_diff (before binarize) : {score_diff.sum()}')
                         score_diff = torch.where(score_diff > 0.5, 1, 0)
                         score_diff = score_diff.cpu().numpy() * 255
                         anomaly_map = Image.fromarray(score_diff.astype(np.uint8)).resize((org_h, org_w))
