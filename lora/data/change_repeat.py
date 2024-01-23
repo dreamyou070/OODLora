@@ -29,6 +29,8 @@ def main(args):
                 org_mask_folder = os.path.join(train_ex_mask_dir, folder)
                 if 'good' in name:
                     new_repeat = args.new_ok_repeat
+                else:
+                    new_repeat = args.new_nok_repeat
                 new_folder = f'{new_repeat}_{name}'
                 print(new_folder)
 
