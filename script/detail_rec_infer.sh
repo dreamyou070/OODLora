@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_up_attn12_from_normal_self_cross_attn_use_self_mask"
+folder_name="res_64_down_up_attn12_from_normal_self_cross_attn_use_self_mask_high_anormal_sample"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"

@@ -280,8 +280,6 @@ def main(args) :
                                 pixel_mask_img = pixel_mask_img.resize((org_h, org_w))
                                 pixel_mask_img.save(
                                     os.path.join(class_base_folder, f'{name}_pixel_mask_part_{part}{ext}'))
-
-
                                 if part == 'attn_2' :
                                     """ anormal = 1 """
                                     latent_mask_ = torch.where(pixel_mask < 0.5, 1, 0)  #
