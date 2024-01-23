@@ -381,16 +381,40 @@ def main(args) :
 
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
                         org_latent = back_dict[0]
-                        org_image_np = latent2image(org_latent, vae)
-                        #org_image = Image.fromarray(org_image_np.astype(np.uint8)).resize((org_h, org_w)).convert('L')
+                        call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None, None)
+                        attn_stores = controller.step_store
+                        controller.reset()
+                        for layer_name in attn_stores:
+                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                            res, pos, part = get_position(layer_name, attn)
+                            if res in args.cross_map_res and pos in args.trg_position and part == 'attn_2' :
+                                if args.truncate_length == 3:
+                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
+                                else:
+                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
+                                h = trigger_score.shape[0]
+                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
+                                org_normal_score_map = trigger_score.mean(dim=0)  # res, res (must lower than 1)
 
                         recon_latent = x_latent_dict[0]
-                        recon_image_np = latent2image(recon_latent, vae)
-                        #recon_image = Image.fromarray(recon_image_np.astype(np.uint8)).resize((org_h, org_w)).convert('L')
-
-                        mask_np = np.where((np.array(pixel_mask.resize((org_h, org_w)).convert('L')) / 255) < 0.5, 1, 0)
-                        # mask_np = np.where((back_recorect_diff_np * mask_np) != 0, 1, 0) * 255
-                        anomaly_map = Image.fromarray((mask_np * 255).astype(np.uint8)).resize((org_h, org_w))
+                        call_unet(unet, recon_latent, 0, con[:, :args.truncate_length, :], None, None)
+                        recon_attn_stores = controller.step_store
+                        controller.reset()
+                        for layer_name in attn_stores:
+                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                            res, pos, part = get_position(layer_name, attn)
+                            if res in args.cross_map_res and pos in args.trg_position and part == 'attn_2' :
+                                if args.truncate_length == 3:
+                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
+                                else:
+                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
+                                h = trigger_score.shape[0]
+                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
+                                recon_normal_score_map = trigger_score.mean(dim=0)  # res, res (must lower than 1)
+                        score_diff = torch.abs(org_normal_score_map - recon_normal_score_map)
+                        score_diff = torch.where(score_diff > 0.5, 1, 0)
+                        score_diff = score_diff.cpu().numpy() * 255
+                        anomaly_map = Image.fromarray(score_diff.astype(np.uint8)).resize((org_h, org_w))
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
         del unet, text_encoder, vae, pipeline, controller, scheduler, network
