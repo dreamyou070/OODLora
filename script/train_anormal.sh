@@ -8,7 +8,7 @@ normal_folder='anormal'
 save_folder="res_64_up_attn2_t_2_attn2"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}/models/epoch-000004.safetensors"
-start_epoch=5
+start_epoch=4
 port_number=52144
 
 
