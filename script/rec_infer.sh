@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="cookie"
+class_name="bagel"
 folder_name="res_64_up_attn2_t_2_attn2"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
