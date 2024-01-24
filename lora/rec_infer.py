@@ -354,7 +354,7 @@ def main(args) :
                                         noise_pred = noise_pred_uncond + guidance_scale * (
                                                     noise_pred_text - noise_pred_uncond)
                                     latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
-                                    if t > 980 :
+                                    if t > 500 :
                                         z_latent = back_dict[t]
                                         latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
                                     else :
@@ -384,6 +384,9 @@ def main(args) :
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res
+
+                                min_score = trigger_score.min()
+                                print(f' min score : {min_score}')
 
                                 pixel_mask = trigger_score
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device,weight_dtype)  # latent_mask = 1,1,64,64
