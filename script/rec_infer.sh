@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="cookie"
+class_name="dowel"
 folder_name="res_64_up_attn2_t_2_attn2_data_60"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
@@ -34,5 +34,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --use_pixel_mask \
   --latent_diff_thred 0.5 \
   --class_name ${class_name} \
-  --anormal_thred 0.55 \
+  --anormal_thred 0.4 \
   --latent_diff_thred 0.6
