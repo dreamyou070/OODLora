@@ -384,8 +384,7 @@ def main(args) :
                                 pixel_mask = trigger_score
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device,weight_dtype)  # latent_mask = 1,1,64,64
                                 latent_mask_recon = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
-
-                                latent_mask_ = torch.where(latent_mask_recon > args.anormal_thred, 1, 0)  # erase only anomal
+                                latent_mask_recon = torch.where(latent_mask_recon > args.anormal_thred, 1, 0)  # erase only anomal
                                 save_pixel_mask(latent_mask_, class_base_folder,
                                                              f'{name}_recon_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
 
