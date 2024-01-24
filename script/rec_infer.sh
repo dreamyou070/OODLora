@@ -32,6 +32,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --only_zero_save \
   --use_pixel_mask \
   --class_name ${class_name} \
-  --free_time 200 \
+  --free_time 20 \
   --anormal_thred 0.5 \
   --latent_diff_thred 0.5
