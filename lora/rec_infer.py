@@ -282,8 +282,8 @@ def main(args) :
                         latent_mask = latent_mask_.repeat(1, 4, 1, 1)
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
 
-                        anomaly_mask_ = torch.where(latent_mask_ == 0, 1, 0)
-                        anomaly_map_sub = save_pixel_mask(anomaly_mask_, class_base_folder,f'{name}{ext}', org_h, org_w)
+                        #anomaly_mask_ = torch.where(latent_mask_ == 0, 1, 0)
+                        #anomaly_map_sub = save_pixel_mask(anomaly_mask_, class_base_folder,f'{name}{ext}', org_h, org_w)
                         #anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
@@ -380,16 +380,24 @@ def main(args) :
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res
-                                min_score = trigger_score.min()
-                                print(f'recon image min score : {min_score}')
 
                                 pixel_mask = trigger_score
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device,weight_dtype)  # latent_mask = 1,1,64,64
-                                latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
-                                latent_mask = latent_mask_.repeat(1, 4, 1, 1)
-                                pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
-                                                             f'{name}_recon_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
+                                latent_mask_recon = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
+                        anomaly_map = torch.where((latent_mask_ == 0 ) and (latent_mask_recon == 1), 0, 1)
+                        anomal_mask_np = (anomaly_map.detach().cpu().numpy().astype(np.uint8))
+                        anomal_mask_pil = Image.fromarray(anomal_mask_np).resize((org_h, org_w))
+                        anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}{ext}'))
+                        # -------------------------------------------- [5] decide thredhold ---------------------------------------------- #
+                        anomal_mask_pil.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
 
+
+
+
+                        #pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
+                                #                             f'{name}_recon_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
+
+                        """
                         org_latent = back_dict[0]
                         call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None, None)
                         attn_stores = controller.step_store
@@ -417,7 +425,7 @@ def main(args) :
                         anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}{ext}'))
                         # -------------------------------------------- [5] decide thredhold ---------------------------------------------- #
                         anomal_mask_pil.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-
+                        """
         del unet, text_encoder, vae, pipeline, controller, scheduler, network
 
 if __name__ == "__main__":
