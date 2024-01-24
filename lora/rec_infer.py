@@ -169,10 +169,8 @@ def main(args) :
         test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
         os.makedirs(test_lora_dir, exist_ok=True)
         condition_save_dir = os.path.join(test_lora_dir, f'anormal_thred_{args.anormal_thred}_'
-                                                         f'latent_diff_thred_{args.latent_diff_thred}_'
                                                          f'guidance_scale_{args.guidance_scale}_'
-                                                         f'num_ddim_steps_{args.num_ddim_steps}_'
-                                                         f'free_time_{args.free_time}')
+                                                         f'num_ddim_steps_{args.num_ddim_steps}')
         os.makedirs(condition_save_dir, exist_ok=True)
         evaluate_output_dir = os.path.join(condition_save_dir, f'{args.class_name}/test')
         os.makedirs(evaluate_output_dir, exist_ok=True)
@@ -406,7 +404,8 @@ def main(args) :
                         anomal_mask_np = (anomaly_map.detach().cpu().numpy().astype(np.uint8))*255
                         anomal_mask_pil = Image.fromarray(anomal_mask_np).resize((org_h, org_w))
                         anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}{ext}'))
-                        anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}.tiff'))
+                        # -------------------------------------------- [5] decide thredhold ---------------------------------------------- #
+                        anomal_mask_pil.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
 
         del unet, text_encoder, vae, pipeline, controller, scheduler, network
 
