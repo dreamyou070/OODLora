@@ -183,7 +183,9 @@ def main(args) :
         vae.to(accelerator.device, dtype=vae_dtype)
         scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
         scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
-                                  beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule)
+                                  beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule,
+                                  rescale_betas_zero_snr=True,        # add
+                                  )
         scheduler.set_timesteps(args.num_ddim_steps)
         inference_times = scheduler.timesteps
         unet, text_encoder = unet.to(device), text_encoder.to(device)
