@@ -168,10 +168,9 @@ def main(args) :
             model_epoch = 10000
         test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
         os.makedirs(test_lora_dir, exist_ok=True)
-        condition_save_dir = os.path.join(test_lora_dir, f'step_{args.num_ddim_steps}_'
-                                                         f'guidance_scale_{args.guidance_scale}_'
+        condition_save_dir = os.path.join(test_lora_dir, f'guidance_scale_{args.guidance_scale}_'
                                                          f'start_from_origin_{args.start_from_origin}_'
-                                                         f'start_from_final_{args.start_from_final}_')
+                                                         f'latent_diff_thred_{args.latent_diff_thred}')
         os.makedirs(condition_save_dir, exist_ok=True)
         evaluate_output_dir = os.path.join(condition_save_dir, f'{args.class_name}/test')
         os.makedirs(evaluate_output_dir, exist_ok=True)
@@ -408,8 +407,9 @@ def main(args) :
                                 recon_normal_score_map = trigger_score.mean(
                                     dim=0)  # res, res (must lower than 1)
                         score_diff = torch.abs(org_normal_score_map - recon_normal_score_map)
-                        print(f'score_diff (before binarize) : {score_diff.sum()}')
-                        score_diff = torch.where(score_diff > 0.9, 1, 0)
+
+
+                        score_diff = torch.where(score_diff > args.latent_diff_thred, 1, 0)
                         score_diff = score_diff.cpu().numpy() * 255
                         anomaly_map = Image.fromarray(score_diff.astype(np.uint8)).resize(
                             (org_h, org_w))
@@ -467,7 +467,7 @@ if __name__ == "__main__":
     parser.add_argument("--start_from_final", action='store_true')
     parser.add_argument("--save_origin", action='store_true')
     parser.add_argument("--only_normal_infer", action='store_true')
-
+    parser.add_argument("--latent_diff_thred", type=float, default=0.5)
 
     import ast
     def arg_as_list(arg):
