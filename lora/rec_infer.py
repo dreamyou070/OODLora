@@ -51,10 +51,15 @@ def get_position(layer_name, attn):
 def save_pixel_mask(mask, base_dir, save_name, org_h, org_w):
 
     mask_np = mask.squeeze().detach().cpu().numpy().astype(np.uint8)
+
     mask_np = mask_np * 255
+    anomaly_mask_np = (1 - mask_np) * 255
+
     pil_img = Image.fromarray(mask_np).resize((org_h, org_w))
     pil_img.save(os.path.join(base_dir, save_name))
-    return pil_img
+
+    anomaly_pil = Image.fromarray(anomaly_mask_np).resize((org_h, org_w))
+    return pil_img, anomaly_pil
 
 def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     pixel_save_mask_np = normalized_mask.cpu().numpy()
@@ -279,7 +284,10 @@ def main(args) :
                                 pixel_mask = trigger_score
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device, weight_dtype)  # latent_mask = 1,1,64,64
                                 latent_mask_ = latent_mask
-                                pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
+                                save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
+
+
+
                         """
                         lambda x: cosine_function(x) if x > 0 else 0
                         for i in range(args.inner_iteration):
@@ -291,7 +299,10 @@ def main(args) :
 
                         latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
                         latent_mask = latent_mask_.repeat(1, 4, 1, 1)
-                        save_pixel_mask(latent_mask_, class_base_folder, f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
+                        pixel_mask, anomaly_map = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
+
+                        anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
+                        anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
@@ -371,6 +382,7 @@ def main(args) :
                                                 image.save(img_dir)
 
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
+                        """
                         org_latent = back_dict[0]
                         call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None, None)
                         attn_stores = controller.step_store
@@ -416,6 +428,7 @@ def main(args) :
                         anomaly_map = Image.fromarray(score_diff.astype(np.uint8)).resize((org_h, org_w))
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
+                        """
 
         del unet, text_encoder, vae, pipeline, controller, scheduler, network
 
