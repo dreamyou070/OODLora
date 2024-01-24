@@ -297,8 +297,7 @@ def main(args) :
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
 
                         anomaly_mask_ = torch.where(latent_mask_ == 0, 1, 0)
-                        anomaly_map = save_pixel_mask(latent_mask_, class_base_folder,
-                                                     f'{name}{ext}', org_h, org_w)
+                        anomaly_map = save_pixel_mask(anomaly_mask_, class_base_folder,f'{name}{ext}', org_h, org_w)
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
