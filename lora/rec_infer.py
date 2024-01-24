@@ -413,8 +413,7 @@ def main(args) :
                         score_diff = torch.where(score_diff > args.latent_diff_thred, 1, 0)
                         #
                         score_diff = score_diff.cpu().numpy() * 255
-                        anomaly_map = Image.fromarray(score_diff.astype(np.uint8)).resize(
-                            (org_h, org_w))
+                        anomaly_map = Image.fromarray(score_diff.astype(np.uint8)).resize((org_h, org_w))
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
 
