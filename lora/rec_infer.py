@@ -221,6 +221,7 @@ def main(args) :
         classes = os.listdir(test_folder)
 
         for class_name in classes:
+
             flag = True
             if args.only_normal_infer :
                 if 'good' not in class_name :
@@ -238,6 +239,7 @@ def main(args) :
                 test_images = os.listdir(image_folder)
 
                 for j, test_image in enumerate(test_images):
+                    print(f' {class_name} : {test_image}')
                     name, ext = os.path.splitext(test_image)
 
                     test_img_dir = os.path.join(image_folder, test_image)
