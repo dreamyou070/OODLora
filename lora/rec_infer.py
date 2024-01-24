@@ -291,7 +291,6 @@ def main(args) :
 
                         latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
                         latent_mask = latent_mask_.repeat(1, 4, 1, 1)
-
                         save_pixel_mask(latent_mask_, class_base_folder, f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
@@ -373,8 +372,7 @@ def main(args) :
 
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
                         org_latent = back_dict[0]
-                        call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None,
-                                  None)
+                        call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None, None)
                         attn_stores = controller.step_store
                         controller.reset()
                         for layer_name in attn_stores:
@@ -393,8 +391,7 @@ def main(args) :
                                     dim=0)  # res, res (must lower than 1)
 
                         recon_latent = x_latent_dict[0]
-                        call_unet(unet, recon_latent, 0, con[:, :args.truncate_length, :], None,
-                                  None)
+                        call_unet(unet, recon_latent, 0, con[:, :args.truncate_length, :], None,None)
                         recon_attn_stores = controller.step_store
                         controller.reset()
                         for layer_name in recon_attn_stores:
@@ -409,8 +406,8 @@ def main(args) :
                                                                           dim=-1)  # head, pix_num
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                                recon_normal_score_map = trigger_score.mean(
-                                    dim=0)  # res, res (must lower than 1)
+                                recon_normal_score_map = trigger_score.mean(dim=0)  # res, res (must lower than 1)
+
                         score_diff = torch.abs(org_normal_score_map - recon_normal_score_map)
                         score_diff = torch.where(score_diff > args.latent_diff_thred, 1, 0)
                         #
