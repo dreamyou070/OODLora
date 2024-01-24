@@ -378,7 +378,7 @@ def main(args) :
                                                 image.save(img_dir)
 
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
-                        """
+
                         org_latent = back_dict[0]
                         call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None, None)
                         attn_stores = controller.step_store
@@ -416,16 +416,16 @@ def main(args) :
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 recon_normal_score_map = trigger_score.mean(dim=0)  # res, res (must lower than 1)
 
-                        score_diff = torch.abs(org_normal_score_map - recon_normal_score_map)
-                        print(f'latent diff thred: {args.latent_diff_thred}')
-                        score_diff = torch.where(score_diff > args.latent_diff_thred, 1, 0)
+                        min_score = recon_normal_score_map.min()
+                        print(f'min score: {min_score}')
+                        #score_diff = torch.abs(org_normal_score_map - recon_normal_score_map)
+                        #print(f'latent diff thred: {args.latent_diff_thred}')
+                        #score_diff = torch.where(score_diff > args.latent_diff_thred, 1, 0)
                         #
-                        score_diff = score_diff.cpu().numpy() * 255
-                        anomaly_map = Image.fromarray(score_diff.astype(np.uint8)).resize((org_h, org_w))
-                        anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-                        anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
-                        """
-
+                        #score_diff = score_diff.cpu().numpy() * 255
+                        #anomaly_map = Image.fromarray(score_diff.astype(np.uint8)).resize((org_h, org_w))
+                        #anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
+                        #anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
         del unet, text_encoder, vae, pipeline, controller, scheduler, network
 
 if __name__ == "__main__":

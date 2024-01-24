@@ -1,13 +1,13 @@
 #! /bin/bash
 
-class_name="dowel"
+class_name="bagel"
 folder_name="res_64_up_attn2_t_2_attn2"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
-port_number=50035
+port_number=52335
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port ${port_number} ../lora/rec_infer.py \
@@ -26,7 +26,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --num_ddim_steps 50 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \
-  --guidance_scale 8.5 \
+  --guidance_scale 1 \
   --truncate_length 2 \
   --start_from_final \
   --only_zero_save \
