@@ -459,8 +459,6 @@ if __name__ == "__main__":
     parser.add_argument("--only_normal_infer", action='store_true')
     parser.add_argument("--latent_diff_thred", type=float, default=0.5)
     parser.add_argument("--anormal_thred", type=float, default=0.5)
-
-
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
