@@ -185,9 +185,7 @@ def main(args) :
         vae.to(accelerator.device, dtype=vae_dtype)
         scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
         scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
-                                  beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule,
-                                  rescale_betas_zero_snr=True,        # add
-                                  )
+                                  beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule,)
         scheduler.set_timesteps(args.num_ddim_steps)
         inference_times = scheduler.timesteps
         unet, text_encoder = unet.to(device), text_encoder.to(device)
@@ -260,28 +258,21 @@ def main(args) :
                             torch.cuda.manual_seed(seed)
                             height = max(64, height - height % 8)  # round to divisible by 8
                             width = max(64, width - width % 8)  # round to divisible by 8
-                            guidance_scale = 8.5
                             do_classifier_free_guidance = guidance_scale > 1.0
                             with accelerator.autocast():
                                 latents = pipeline(prompt=args.prompt, height=height, width=width,
-                                                   num_inference_steps=50,
+                                                   num_inference_steps=30,
                                                    guidance_scale=8.5, negative_prompt=args.negative_prompt,
                                                    controlnet=None, controlnet_image=None, )
                             image = pipeline.latents_to_image(latents)[0]
                             image.save(os.path.join(class_base_folder, f'pipeline_{name}{ext}'))
 
-
                             with accelerator.autocast():
                                 # 3. Encode input prompt
                                 text_embeddings = pipeline._encode_prompt(args.prompt,
-                                                                          device,
-                                                                          1,
-                                    do_classifier_free_guidance,
-                                    args.negative_prompt,3,)
-                                # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
+                                                                          device, 1, do_classifier_free_guidance,args.negative_prompt,3,)
                                 latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1, height,
-                                                                                             width,
-                                                                                             weight_dtype, device,
+                                                                                             width,weight_dtype, device,
                                                                                              None, None)
 
                                 # 8. Denoising loop
