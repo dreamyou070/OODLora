@@ -24,7 +24,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --trg_position "['up']" \
   --trg_part "['attn_2']" \
   --num_ddim_steps 4 \
-  --inner_iter 1 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \
   --guidance_scale 8.5 \
@@ -32,7 +31,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --start_from_final \
   --only_zero_save \
   --use_pixel_mask \
-  --latent_diff_thred 0.5 \
   --class_name ${class_name} \
-  --anormal_thred 0.4 \
-  --latent_diff_thred 0.4
+  --anormal_thred 0.5 \
+  --latent_diff_thred 0.5

@@ -275,13 +275,13 @@ def main(args) :
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device, weight_dtype)  # latent_mask = 1,1,64,64
                                 latent_mask_ = latent_mask
                                 pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
-
+                        """
                         lambda x: cosine_function(x) if x > 0 else 0
                         for i in range(args.inner_iteration):
                             latent_mask = latent_mask.detach().cpu().apply_(
                                 lambda x: cosine_function(x) if x > 0 else 0)
                             latent_mask = latent_mask.to(device)
-
+                        """
                         # -------------------------------------------- only anormal zero out ---------------------------------------------- #
 
                         latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
