@@ -170,7 +170,8 @@ def main(args) :
         os.makedirs(test_lora_dir, exist_ok=True)
         condition_save_dir = os.path.join(test_lora_dir, f'anormal_thred_{args.anormal_thred}_'
                                                          f'latent_diff_thred_{args.latent_diff_thred}_'
-                                                         f'guidance_scale_{args.guidance_scale}')
+                                                         f'guidance_scale_{args.guidance_scale}_'
+                                                         f'num_ddim_steps_{args.num_ddim_steps}_')
         os.makedirs(condition_save_dir, exist_ok=True)
         evaluate_output_dir = os.path.join(condition_save_dir, f'{args.class_name}/test')
         os.makedirs(evaluate_output_dir, exist_ok=True)
