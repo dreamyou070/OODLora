@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="dowel"
-folder_name="res_64_up_attn2_t_2_attn2_data_60"
+folder_name="res_64_up_attn2_t_2_attn2"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
