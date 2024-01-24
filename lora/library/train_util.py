@@ -4670,7 +4670,6 @@ def sample_images_common(pipe_class,accelerator,
     #if hasattr(scheduler.config, "clip_sample") and scheduler.config.clip_sample is False:
     #    scheduler.config.clip_sample = True
     scheduler.config.clip_sample = False
-    print(f'args.clip_skip : {args.clip_skip}')
     pipeline = pipe_class(vae=vae,
                           text_encoder=text_encoder,
                           tokenizer=tokenizer,
@@ -4679,10 +4678,6 @@ def sample_images_common(pipe_class,accelerator,
                           safety_checker=None,
                           feature_extractor=None,
                           requires_safety_checker=False,)
-                          #clip_skip=args.clip_skip,)
-
-
-
     pipeline.to(device)
     save_dir = args.output_dir + "/sample"
     if efficient :

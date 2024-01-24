@@ -263,6 +263,15 @@ def main(args) :
                             guidance_scale = 8.5
                             do_classifier_free_guidance = guidance_scale > 1.0
                             with accelerator.autocast():
+                                latents = pipeline(prompt=args.prompt, height=height, width=width,
+                                                   num_inference_steps=50,
+                                                   guidance_scale=8.5, negative_prompt=args.negative_prompt,
+                                                   controlnet=None, controlnet_image=None, )
+                            image = pipeline.latents_to_image(latents)[0]
+                            image.save(os.path.join(class_base_folder, f'pipeline_{name}{ext}'))
+
+
+                            with accelerator.autocast():
                                 # 3. Encode input prompt
                                 text_embeddings = pipeline._encode_prompt(args.prompt,
                                                                           device,
@@ -294,7 +303,8 @@ def main(args) :
                                     extra_step_kwargs = {}
                                     latents = pipeline.scheduler.step(noise_pred, t, latents,
                                                                   **extra_step_kwargs).prev_sample
-
+                                image = pipeline.latents_to_image(latents)[0]
+                                image.save(os.path.join(class_base_folder, f'my_pipeline_{name}{ext}'))
                                 """
                                 text_embeddings = init_prompt(tokenizer, text_encoder, device, args.prompt,
                                                               args.negative_prompt)
@@ -376,9 +386,9 @@ def main(args) :
                         latent_mask = latent_mask_.repeat(1, 4, 1, 1)
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
 
-                        anomaly_mask_ = torch.where(latent_mask_ == 0, 1, 0)
-                        anomaly_map = save_pixel_mask(anomaly_mask_, class_base_folder,f'{name}{ext}', org_h, org_w)
-                        anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
+                        #anomaly_mask_ = torch.where(latent_mask_ == 0, 1, 0)
+                        #anomaly_map = save_pixel_mask(anomaly_mask_, class_base_folder,f'{name}{ext}', org_h, org_w)
+                        #anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
@@ -475,8 +485,9 @@ def main(args) :
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res
                                 min_score = trigger_score.min()
+
                         org_latent = back_dict[0]
-                        call_unet(unet, recon_latent, 0, con[:, :args.truncate_length, :], None, None)
+                        call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None, None)
                         attn_stores = controller.step_store
                         controller.reset()
                         for layer_name in attn_stores:
@@ -491,7 +502,12 @@ def main(args) :
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res
-                                min_score = trigger_score.min()
+                                anomaly_map = torch.where(trigger_score < min_score, 1, 0)
+
+                        anomal_mask_np = (anomaly_map.detach().cpu().numpy().astype(np.uint8))*255
+                        anomal_mask_pil = Image.fromarray(anomal_mask_np).resize((org_h, org_w))
+                        anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}{ext}'))
+                        anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}.tiff'))
 
 
         del unet, text_encoder, vae, pipeline, controller, scheduler, network
