@@ -384,21 +384,12 @@ def main(args) :
                                 pixel_mask = trigger_score
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device,weight_dtype)  # latent_mask = 1,1,64,64
                                 latent_mask_recon = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
-                        anomaly_map = torch.where((latent_mask_ == 0) & (latent_mask_recon == 1), 0, 1) *255
-                        anomal_mask_np = (anomaly_map.detach().cpu().numpy().astype(np.uint8))
-                        print(f'anomal_mask_np.shape: {anomal_mask_np.shape}')
-
-
-
-
-
+                        anomaly_map = torch.where((latent_mask_ == 0) & (latent_mask_recon == 1), 0, 1)
+                        anomal_mask_np = (anomaly_map.squeeze().detach().cpu().numpy().astype(np.uint8)) * 255
                         anomal_mask_pil = Image.fromarray(anomal_mask_np).resize((org_h, org_w))
                         anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}{ext}'))
                         # -------------------------------------------- [5] decide thredhold ---------------------------------------------- #
                         anomal_mask_pil.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-
-
-
 
                         #pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
                                 #                             f'{name}_recon_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
