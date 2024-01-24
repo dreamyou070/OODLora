@@ -1,13 +1,13 @@
 #! /bin/bash
 
-class_name="foam"
+class_name="peach"
 folder_name="res_64_up_attn2_t_2_attn2"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
-port_number=50036
+port_number=50031
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port ${port_number} ../lora/rec_infer.py \
@@ -32,5 +32,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --only_zero_save \
   --use_pixel_mask \
   --class_name ${class_name} \
-  --anormal_thred 0.4 \
+  --anormal_thred 0.5 \
   --only_zero_save
