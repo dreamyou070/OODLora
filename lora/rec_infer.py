@@ -476,6 +476,7 @@ def main(args) :
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res
                                 min_score = trigger_score.min()
+                                print(f'recon image min score : {min_score}')
 
                         org_latent = back_dict[0]
                         call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None, None)
