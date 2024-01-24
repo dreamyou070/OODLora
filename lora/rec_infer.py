@@ -284,9 +284,11 @@ def main(args) :
                             latent_mask = latent_mask.to(device)
 
                         # -------------------------------------------- only anormal zero out ---------------------------------------------- #
-                        latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  # erase only anomal
+
+                        latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
                         latent_mask = latent_mask_.repeat(1, 4, 1, 1)
-                        save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
+
+                        save_pixel_mask(latent_mask_, class_base_folder, f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
@@ -410,6 +412,7 @@ def main(args) :
 
 
                         score_diff = torch.where(score_diff > args.latent_diff_thred, 1, 0)
+                        #
                         score_diff = score_diff.cpu().numpy() * 255
                         anomaly_map = Image.fromarray(score_diff.astype(np.uint8)).resize(
                             (org_h, org_w))
@@ -468,6 +471,8 @@ if __name__ == "__main__":
     parser.add_argument("--save_origin", action='store_true')
     parser.add_argument("--only_normal_infer", action='store_true')
     parser.add_argument("--latent_diff_thred", type=float, default=0.5)
+    parser.add_argument("--anormal_thred", type=float, default=0.5)
+
 
     import ast
     def arg_as_list(arg):
