@@ -245,11 +245,11 @@ def main(args) :
                     mask_img_dir = os.path.join(mask_folder, test_image)
                     org_h, org_w = Image.open(mask_img_dir).size
 
-                    Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(
-                        os.path.join(class_base_folder, f'{name}_gt{ext}'))
+                    Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(os.path.join(class_base_folder, f'{name}_gt{ext}'))
 
                     # -------------------------------------------- [0] decide thredhold ---------------------------------------------- #
                     with torch.no_grad():
+
                         if accelerator.is_main_process:
                             width = height = 512
                             guidance_scale = args.guidance_scale
@@ -259,6 +259,7 @@ def main(args) :
                             height = max(64, height - height % 8)  # round to divisible by 8
                             width = max(64, width - width % 8)  # round to divisible by 8
                             do_classifier_free_guidance = guidance_scale > 1.0
+
                             with accelerator.autocast():
                                 latents = pipeline(prompt=args.prompt, height=height, width=width,
                                                    num_inference_steps=30,
@@ -268,14 +269,57 @@ def main(args) :
                             image.save(os.path.join(class_base_folder, f'pipeline_{name}{ext}'))
 
                             with accelerator.autocast():
-                                # 3. Encode input prompt
-                                text_embeddings = pipeline._encode_prompt(args.prompt,
-                                                                          device, 1, do_classifier_free_guidance,args.negative_prompt,3,)
-                                latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1, height,
-                                                                                             width,weight_dtype, device,
-                                                                                             None, None)
+
+                                text_embeddings = pipeline._encode_prompt(args.prompt,device,1,do_classifier_free_guidance,
+                                                                          args.negative_prompt,3,)
+                                dtype = text_embeddings.dtype
+
+                                pipeline.scheduler.set_timesteps(num_inference_steps, device=device)
+                                timesteps, num_inference_steps = pipeline.get_timesteps(num_inference_steps, 0.8, device, image is None)
+                                latent_timestep = timesteps[:1].repeat(1)
+
+                                # 6. Prepare latent variables
+                                latents, init_latents_orig, noise = pipeline.prepare_latents(
+                                    image,
+                                    latent_timestep,1,
+                                    height,
+                                    width,
+                                    dtype,
+                                    device,None,latents,)
+
+                                # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
+                                extra_step_kwargs = pipeline.prepare_extra_step_kwargs(None, 0)
 
                                 # 8. Denoising loop
+                                for i, t in enumerate(pipeline.progress_bar(timesteps)):
+                                    # expand the latents if we are doing classifier free guidance
+                                    latent_model_input = torch.cat(
+                                        [latents] * 2) if do_classifier_free_guidance else latents
+                                    unet_additional_args = {}
+                                    noise_pred = pipeline.unet(latent_model_input, t, encoder_hidden_states=text_embeddings,
+                                                           **unet_additional_args).sample
+
+                                    # perform guidance
+                                    if do_classifier_free_guidance:
+                                        noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                                        noise_pred = noise_pred_uncond + guidance_scale * (
+                                                    noise_pred_text - noise_pred_uncond)
+
+                                    # compute the previous noisy sample x_t -> x_t-1
+                                    latents = pipeline.scheduler.step(noise_pred, t, latents,
+                                                                  **extra_step_kwargs).prev_sample
+
+
+
+                                # 3. Encode input prompt
+                                #text_embeddings = pipeline._encode_prompt(args.prompt,
+                                #                                          device, 1, do_classifier_free_guidance,args.negative_prompt,3,)
+                                #latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1, height,
+                                #                                                             width,weight_dtype, device,
+                                #                                                             None, None)
+
+                                # 8. Denoising loop
+                                """
                                 for i, t in enumerate(pipeline.progress_bar(inference_times)):
                                     # expand the latents if we are doing classifier free guidance
                                     latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
@@ -294,8 +338,10 @@ def main(args) :
                                     extra_step_kwargs = {}
                                     latents = pipeline.scheduler.step(noise_pred, t, latents,
                                                                   **extra_step_kwargs).prev_sample
+                                """
                                 image = pipeline.latents_to_image(latents)[0]
                                 image.save(os.path.join(class_base_folder, f'my_pipeline_{name}{ext}'))
+
                                 """
                                 text_embeddings = init_prompt(tokenizer, text_encoder, device, args.prompt,
                                                               args.negative_prompt)
@@ -305,6 +351,7 @@ def main(args) :
                                                                                              width,
                                                                                              weight_dtype, device,
                                                                                                  None, None)
+                                
                                 # (7) denoising
                                 for i, t in enumerate(inference_times):  # 999, 750, ..., 250, 0
                                     print(f'generate image time = {t}')
@@ -316,10 +363,11 @@ def main(args) :
                                         noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                                         noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
                                     latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
-                                """
+                                
                                 final_pil = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                                 img_dir = os.path.join(class_base_folder, f'gen_test{ext}')
                                 final_pil.save(img_dir)
+                                """
                                 call_unet(unet, latents, 0, con[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller.step_store
                                 controller.reset()
@@ -500,7 +548,6 @@ def main(args) :
                         anomal_mask_pil = Image.fromarray(anomal_mask_np).resize((org_h, org_w))
                         anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}{ext}'))
                         anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}.tiff'))
-
 
         del unet, text_encoder, vae, pipeline, controller, scheduler, network
 
