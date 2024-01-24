@@ -402,12 +402,11 @@ def main(args) :
                                 anomaly_map = torch.where(trigger_score < min_score, 1, 0)
 
                         if anomaly_map.sum() > 0:
-                            anomaly_map = anomaly_map_sub
+                            anomal_mask_pil = anomaly_map_sub
                         else :
                             anomaly_map = torch.zeros_like(anomaly_map)
-
-                        anomal_mask_np = (anomaly_map.detach().cpu().numpy().astype(np.uint8))*255
-                        anomal_mask_pil = Image.fromarray(anomal_mask_np).resize((org_h, org_w))
+                            anomal_mask_np = (anomaly_map.detach().cpu().numpy().astype(np.uint8))
+                            anomal_mask_pil = Image.fromarray(anomal_mask_np).resize((org_h, org_w))
                         anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}{ext}'))
                         # -------------------------------------------- [5] decide thredhold ---------------------------------------------- #
                         anomal_mask_pil.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
