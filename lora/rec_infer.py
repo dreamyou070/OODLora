@@ -268,11 +268,12 @@ def main(args) :
                                                                           device,
                                                                           1,
                                     do_classifier_free_guidance,
-                                    args.negative_prompt,3,
-                                )
-                                dtype = text_embeddings.dtype
-
+                                    args.negative_prompt,3,)
                                 # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
+                                latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1, height,
+                                                                                             width,
+                                                                                             weight_dtype, device,
+                                                                                             None, None)
 
                                 # 8. Denoising loop
                                 for i, t in enumerate(pipeline.progress_bar(inference_times)):
@@ -369,15 +370,6 @@ def main(args) :
                                 latent_mask_ = latent_mask
                                 save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
 
-
-
-                        """
-                        lambda x: cosine_function(x) if x > 0 else 0
-                        for i in range(args.inner_iteration):
-                            latent_mask = latent_mask.detach().cpu().apply_(
-                                lambda x: cosine_function(x) if x > 0 else 0)
-                            latent_mask = latent_mask.to(device)
-                        """
                         # -------------------------------------------- only anormal zero out ---------------------------------------------- #
 
                         latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
@@ -466,123 +458,42 @@ def main(args) :
                                                 image.save(img_dir)
 
                         # -------------------------------------------- [4] decide thredhold ---------------------------------------------- #
-                        with torch.no_grad():
-
-
-                            if accelerator.is_main_process:
-                                width = height = 512
-                                guidance_scale = args.guidance_scale
-                                seed = args.seed
-                                torch.manual_seed(seed)
-                                torch.cuda.manual_seed(seed)
-                                height = max(64, height - height % 8)  # round to divisible by 8
-                                width = max(64, width - width % 8)  # round to divisible by 8
-                                guidance_scale = 8.5
-                                do_classifier_free_guidance = guidance_scale > 1.0
-                                with accelerator.autocast():
-                                    text_embeddings = init_prompt(tokenizer, text_encoder, device,
-                                                                  args.prompt,
-                                                                  args.negative_prompt)
-                                    if not do_classifier_free_guidance:
-                                        _, text_embeddings = text_embeddings.chunk(2, dim=0)
-                                    latents, init_latents_orig, noise = pipeline.prepare_latents(
-                                        None, None, 1, height,
-                                        width,
-                                        weight_dtype, device,
-                                        None, None)
-                                    # (7) denoising
-                                    for i, t in enumerate(inference_times):  # 999, 750, ..., 250, 0
-                                        print(f'generate image time = {t}')
-                                        latent_model_input = torch.cat([
-                                                                           latents] * 2) if do_classifier_free_guidance else latents
-                                        noise_pred = unet(latent_model_input, t,
-                                                          encoder_hidden_states=text_embeddings).sample
-                                        controller.reset()
-                                        # perform guidance
-                                        if do_classifier_free_guidance:
-                                            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                                            noise_pred = noise_pred_uncond + guidance_scale * (
-                                                        noise_pred_text - noise_pred_uncond)
-                                        latents = pipeline.scheduler.step(noise_pred, t,
-                                                                          latents, ).prev_sample
-
-                                    final_pil = pipeline.latents_to_image(latents)[0].resize(
-                                        (org_h, org_w))
-                                    img_dir = os.path.join(class_base_folder, f'gen_test{ext}')
-                                    final_pil.save(img_dir)
-                                    call_unet(unet, latents, 0, con[:, :args.truncate_length, :],
-                                              None, None)
-                                    attn_stores = controller.step_store
-                                    controller.reset()
-
-                                    for layer_name in attn_stores:
-                                        attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                                        res, pos, part = get_position(layer_name, attn)
-                                        if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
-                                            if args.truncate_length == 3:
-                                                cls_score, trigger_score, pad_score = attn.chunk(3,
-                                                                                                 dim=-1)  # head, pix_num
-                                            else:
-                                                cls_score, trigger_score = attn.chunk(2,
-                                                                                      dim=-1)  # head, pix_num
-                                            h = trigger_score.shape[0]
-                                            trigger_score = trigger_score.unsqueeze(-1).reshape(h,
-                                                                                                res,
-                                                                                                res)
-                                            trigger_score = trigger_score.mean(dim=0)  # res, res
-                                            min_score = trigger_score.min()
-                                            print(f'min_score = {min_score}')
-                                            pixel_mask = trigger_score
-                                            latent_mask_np, latent_mask = get_latent_mask(
-                                                pixel_mask, res, device,
-                                                weight_dtype)  # latent_mask = 1,1,64,64
-                        org_latent = back_dict[0]
-                        call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None, None)
+                        recon_latent = x_latent_dict[0]
+                        call_unet(unet, recon_latent, 0, con[:, :args.truncate_length, :], None, None)
                         attn_stores = controller.step_store
                         controller.reset()
                         for layer_name in attn_stores:
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res, pos, part = get_position(layer_name, attn)
-                            if res in args.cross_map_res and pos in args.trg_position and part == 'attn_2':
+                            if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
                                 if args.truncate_length == 3:
                                     cls_score, trigger_score, pad_score = attn.chunk(3,
                                                                                      dim=-1)  # head, pix_num
                                 else:
-                                    cls_score, trigger_score = attn.chunk(2,
-                                                                          dim=-1)  # head, pix_num
+                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                                org_normal_score_map = trigger_score.mean(
-                                    dim=0)  # res, res (must lower than 1)
-
-                        recon_latent = x_latent_dict[0]
-                        call_unet(unet, recon_latent, 0, con[:, :args.truncate_length, :], None,None)
-                        recon_attn_stores = controller.step_store
+                                trigger_score = trigger_score.mean(dim=0)  # res, res
+                                min_score = trigger_score.min()
+                        org_latent = back_dict[0]
+                        call_unet(unet, recon_latent, 0, con[:, :args.truncate_length, :], None, None)
+                        attn_stores = controller.step_store
                         controller.reset()
-                        for layer_name in recon_attn_stores:
-                            attn = recon_attn_stores[layer_name][0].squeeze()  # head, pix_num
+                        for layer_name in attn_stores:
+                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res, pos, part = get_position(layer_name, attn)
-                            if res in args.cross_map_res and pos in args.trg_position and part == 'attn_2':
+                            if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
                                 if args.truncate_length == 3:
                                     cls_score, trigger_score, pad_score = attn.chunk(3,
                                                                                      dim=-1)  # head, pix_num
                                 else:
-                                    cls_score, trigger_score = attn.chunk(2,
-                                                                          dim=-1)  # head, pix_num
+                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                                recon_normal_score_map = trigger_score.mean(dim=0)  # res, res (must lower than 1)
+                                trigger_score = trigger_score.mean(dim=0)  # res, res
+                                min_score = trigger_score.min()
 
-                        min_score = recon_normal_score_map.min()
-                        print(f'min score: {min_score}')
-                        #score_diff = torch.abs(org_normal_score_map - recon_normal_score_map)
-                        #print(f'latent diff thred: {args.latent_diff_thred}')
-                        #score_diff = torch.where(score_diff > args.latent_diff_thred, 1, 0)
-                        #
-                        #score_diff = score_diff.cpu().numpy() * 255
-                        #anomaly_map = Image.fromarray(score_diff.astype(np.uint8)).resize((org_h, org_w))
-                        #anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-                        #anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
+
         del unet, text_encoder, vae, pipeline, controller, scheduler, network
 
 if __name__ == "__main__":
