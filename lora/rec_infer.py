@@ -251,7 +251,6 @@ def main(args) :
                     Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(
                         os.path.join(class_base_folder, f'{name}_gt{ext}'))
 
-
                     # -------------------------------------------- [0] decide thredhold ---------------------------------------------- #
                     with torch.no_grad():
                         if accelerator.is_main_process:
@@ -283,6 +282,10 @@ def main(args) :
                                         noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                                         noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
                                     latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
+
+                                final_pil = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
+                                img_dir = os.path.join(class_base_folder, f'gen_test{ext}')
+                                final_pil.save(img_dir)
 
 
                         # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
