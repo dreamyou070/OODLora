@@ -251,12 +251,43 @@ def main(args) :
                                                                               safety_checker=None,
                                                                               feature_extractor=None,
                                                                               requires_safety_checker=False, )
+                        # -------------------------------------------- [0] decide thredhold ---------------------------------------------- #
+                        with torch.no_grad():
+                            if accelerator.is_main_process:
+                                width = height = 512
+                                guidance_scale = args.guidance_scale
+                                seed = args.seed
+                                torch.manual_seed(seed)
+                                torch.cuda.manual_seed(seed)
+                                height = max(64, height - height % 8)  # round to divisible by 8
+                                width = max(64, width - width % 8)  # round to divisible by 8
+                                do_classifier_free_guidance = guidance_scale > 1.0
+                                with accelerator.autocast():
+                                    text_embeddings = init_prompt(tokenizer, text_encoder, device, args.prompt,
+                                                                  args.negative_prompt)
+                                    if not do_classifier_free_guidance:
+                                        _, text_embeddings = text_embeddings.chunk(2, dim=0)
+                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1, height,
+                                                                                                 width,
+                                                                                                 weight_dtype, device,
+                                                                                                     None, None)
+                                    # (7) denoising
+                                    for i, t in enumerate(inference_times):  # 999, 750, ..., 250, 0
+                                        print(f'generate image time = {t}')
+                                        latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+                                        noise_pred = unet(latent_model_input, t,encoder_hidden_states=text_embeddings).sample
+                                        controller.reset()
+                                        # perform guidance
+                                        if do_classifier_free_guidance:
+                                            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                                            noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+                                        latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
 
+
+                        # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                         call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
-
-                        # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
                         inf_time = inference_times.tolist()
                         inf_time.reverse()  # [0,250,500,750]
                         back_dict = {}
