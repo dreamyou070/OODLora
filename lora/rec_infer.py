@@ -171,7 +171,8 @@ def main(args) :
         condition_save_dir = os.path.join(test_lora_dir, f'anormal_thred_{args.anormal_thred}_'
                                                          f'latent_diff_thred_{args.latent_diff_thred}_'
                                                          f'guidance_scale_{args.guidance_scale}_'
-                                                         f'num_ddim_steps_{args.num_ddim_steps}_')
+                                                         f'num_ddim_steps_{args.num_ddim_steps}_'
+                                                         f'free_time_{args.free_time}')
         os.makedirs(condition_save_dir, exist_ok=True)
         evaluate_output_dir = os.path.join(condition_save_dir, f'{args.class_name}/test')
         os.makedirs(evaluate_output_dir, exist_ok=True)
@@ -361,7 +362,7 @@ def main(args) :
                                             noise_pred = noise_pred_uncond + guidance_scale * (
                                                         noise_pred_text - noise_pred_uncond)
                                         latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
-                                        if args.use_pixel_mask:
+                                        if args.use_pixel_mask and t < args.free_time :
                                             z_latent = back_dict[t]
                                             latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
                                         x_latent_dict[t] = latents
@@ -463,7 +464,7 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
     parser.add_argument("--inner_iteration", type=int, default=10)
     parser.add_argument("--class_name", type=str, default="bagel")
-
+    parser.add_argument("--free_time", type=int, default=80)
     parser.add_argument("--only_zero_save", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
