@@ -354,8 +354,12 @@ def main(args) :
                                         noise_pred = noise_pred_uncond + guidance_scale * (
                                                     noise_pred_text - noise_pred_uncond)
                                     latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
-                                    z_latent = back_dict[t]
-                                    latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
+                                    if t > 40 :
+                                        z_latent = back_dict[t]
+                                        latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
+                                    else :
+                                        print(f' {t} not use pixel maxk')
+                                        latents = latents
                                     x_latent_dict[t] = latents
                                     if args.only_zero_save:
                                         if t == 0:
