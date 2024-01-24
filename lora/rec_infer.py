@@ -261,6 +261,7 @@ def main(args) :
                             torch.cuda.manual_seed(seed)
                             height = max(64, height - height % 8)  # round to divisible by 8
                             width = max(64, width - width % 8)  # round to divisible by 8
+                            guidance_scale = 8.5
                             do_classifier_free_guidance = guidance_scale > 1.0
                             with accelerator.autocast():
                                 text_embeddings = init_prompt(tokenizer, text_encoder, device, args.prompt,
@@ -286,6 +287,27 @@ def main(args) :
                                 final_pil = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                                 img_dir = os.path.join(class_base_folder, f'gen_test{ext}')
                                 final_pil.save(img_dir)
+                                call_unet(unet, latents, 0, con[:, :args.truncate_length, :], None, None)
+                                attn_stores = controller.step_store
+                                controller.reset()
+
+                                for layer_name in attn_stores:
+                                    attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                                    res, pos, part = get_position(layer_name, attn)
+                                    if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
+                                        if args.truncate_length == 3:
+                                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
+                                        else:
+                                            cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
+                                        h = trigger_score.shape[0]
+                                        trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
+                                        trigger_score = trigger_score.mean(dim=0)  # res, res
+                                        min_score = trigger_score.min()
+                                        print(f'min_score = {min_score}')
+                                        pixel_mask = trigger_score
+                                        latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device,
+                                                                                      weight_dtype)  # latent_mask = 1,1,64,64
+                                        
 
 
                         # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
