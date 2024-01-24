@@ -409,6 +409,7 @@ def main(args) :
                                 recon_normal_score_map = trigger_score.mean(dim=0)  # res, res (must lower than 1)
 
                         score_diff = torch.abs(org_normal_score_map - recon_normal_score_map)
+                        print(f'latent diff thred: {args.latent_diff_thred}')
                         score_diff = torch.where(score_diff > args.latent_diff_thred, 1, 0)
                         #
                         score_diff = score_diff.cpu().numpy() * 255
