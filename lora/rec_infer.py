@@ -168,8 +168,7 @@ def main(args) :
             model_epoch = 10000
         test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
         os.makedirs(test_lora_dir, exist_ok=True)
-        condition_save_dir = os.path.join(test_lora_dir, f'guidance_scale_{args.guidance_scale}_'
-                                                         f'start_from_origin_{args.start_from_origin}_'
+        condition_save_dir = os.path.join(test_lora_dir, f'anormal_thred_{args.anormal_thred}_'
                                                          f'latent_diff_thred_{args.latent_diff_thred}')
         os.makedirs(condition_save_dir, exist_ok=True)
         evaluate_output_dir = os.path.join(condition_save_dir, f'{args.class_name}/test')
