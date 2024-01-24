@@ -51,15 +51,10 @@ def get_position(layer_name, attn):
 def save_pixel_mask(mask, base_dir, save_name, org_h, org_w):
 
     mask_np = mask.squeeze().detach().cpu().numpy().astype(np.uint8)
-
     mask_np = mask_np * 255
-    anomaly_mask_np = (1 - mask_np) * 255
-
     pil_img = Image.fromarray(mask_np).resize((org_h, org_w))
     pil_img.save(os.path.join(base_dir, save_name))
-
-    anomaly_pil = Image.fromarray(anomaly_mask_np).resize((org_h, org_w))
-    return pil_img, anomaly_pil
+    return pil_img
 
 def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     pixel_save_mask_np = normalized_mask.cpu().numpy()
@@ -299,10 +294,12 @@ def main(args) :
 
                         latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
                         latent_mask = latent_mask_.repeat(1, 4, 1, 1)
-                        pixel_mask, anomaly_map = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
+                        pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
 
+                        anomaly_mask_ = torch.where(latent_mask_ == 0, 1, 0)
+                        anomaly_map = save_pixel_mask(latent_mask_, class_base_folder,
+                                                     f'{name}{ext}', org_h, org_w)
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-                        anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
