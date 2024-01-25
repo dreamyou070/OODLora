@@ -35,7 +35,7 @@ def main(args):
                     img_np = np.array(pil)
                     h, w = img_np.shape
                     for i in range(h):
-                        if i < h* (19/40) or i > h * (21/40):
+                        if i < h* (14/40) or i > h * (27/40):
                             img_np[i,:] = 0
                     Image.fromarray(img_np.astype(np.uint8)).save(os.path.join(test_folder_dir, image))
 
