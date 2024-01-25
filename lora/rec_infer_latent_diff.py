@@ -74,6 +74,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
             if is_cross_attention and mask is not None:
                 if layer_name  == 'up_blocks_3_attentions_2_transformer_blocks_0_attn2' :
+                    print(f'self_head_query : {self_head_query.shape}')
+                    print(f'query : {query.shape}')
+                    
                     controller.store(self_head_query, layer_name)
 
 
