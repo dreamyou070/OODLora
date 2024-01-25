@@ -342,15 +342,15 @@ def main(args) :
                                 call_unet(unet, org_latent, 0, con, None, 1)
                                 org_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 print(f'org query : {org_query.shape}')
+                                org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
                                 controller.reset()
 
                                 recon_latent = x_latent_dict[0]
                                 call_unet(unet, recon_latent, 0, con, None, 1)
                                 recon_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 controller.reset()
-
-                                org_query = org_query / org_query.nmax()
-                                recon_query = recon_query / recon_query.nmax()
+                                recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
+                                
                                 anomaly_score = (org_query @ recon_query.T).cpu()
                                 pix_num = anomaly_score.shape[0]
                                 anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
