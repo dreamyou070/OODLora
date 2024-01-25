@@ -269,6 +269,7 @@ def main(args) :
                             call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                             attn_stores = controller.step_store
                             controller.reset()
+                            """ if anormal_thred is lower, less anomal detection """
                             anormal_mask = get_crossattn_map(args, attn_stores,
                                                             'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
                                                              thredhold=args.anormal_thred)
