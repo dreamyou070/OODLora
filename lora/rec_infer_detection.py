@@ -51,18 +51,6 @@ def get_position(layer_name, attn):
 
 
 
-def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
-    pixel_save_mask_np = normalized_mask.cpu().numpy()
-    pixel_mask_img = (pixel_save_mask_np * 255).astype(np.uint8)
-    latent_mask_pil = Image.fromarray(pixel_mask_img).resize((trg_res, trg_res,))
-    latent_mask_np = np.array(latent_mask_pil)
-    latent_mask_np = latent_mask_np / latent_mask_np.max()  # 64,64
-    # ------------------------------------------------------------------------------------------ #
-    # binarize
-    latent_mask_torch = torch.from_numpy(latent_mask_np).to(device, dtype=weight_dtype)
-    return latent_mask_np, latent_mask_torch
-
-
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
 
@@ -188,10 +176,10 @@ def main(args) :
 
         test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
         os.makedirs(test_lora_dir, exist_ok=True)
-        condition_save_dir = os.path.join(test_lora_dir, f'with_object_detect_epoch_{detect_model_epoch}_'
+        condition_save_dir = os.path.join(test_lora_dir, f'with_object_detect_epoch_{detect_model_epoch}_'  
+                                                         f'anomal_thredhold_{args.anormal_thred}_'
                                                          f'step_{args.num_ddim_steps}_' 
-                                                         f'guidance_{args.guidance_scale}_'
-                                                         f'start_from_final_{args.start_from_final}_')
+                                                         f'guidance_{args.guidance_scale}')
         os.makedirs(condition_save_dir, exist_ok=True)
 
         evaluate_output_dir = os.path.join(condition_save_dir, f'{args.class_name}/test')
@@ -292,7 +280,8 @@ def main(args) :
                         attn_stores = controller.step_store
                         controller.reset()
                         anormal_mask = get_crossattn_map(args, attn_stores,
-                                                        'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
+                                                        'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
+                                                         thredhold=args.anormal_thredhold)
                         anormal_mask_save_dir = os.path.join(class_base_folder,
                                                              f'{name}_anormal_mask{ext}')
                         save_latent(anormal_mask, anormal_mask_save_dir, org_h, org_w)
