@@ -307,6 +307,7 @@ class NetworkTrainer:
         unet_loras = network.unet_loras
         """ self and cross attn """
         for unet_lora in unet_loras:
+            trainable = False
             lora_name = unet_lora.lora_name
             if 'up' in lora_name  :
                 #if 'attentions_1' in lora_name or 'attentions_2' in lora_name :
