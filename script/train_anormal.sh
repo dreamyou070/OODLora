@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="carrot"
+class_name="cookie"
 data_source='train_ex'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
@@ -9,7 +9,7 @@ save_folder="res_64_up_attn2_t_2_attn2_20240125"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 #network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_up_attn2_t_2_attn2/models/epoch-000007.safetensors"
 start_epoch=0
-port_number=59801
+port_number=59844
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config \
