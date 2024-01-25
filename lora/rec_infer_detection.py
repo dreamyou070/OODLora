@@ -283,7 +283,7 @@ def main(args) :
                         else:
                             cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                         h = trigger_score.shape[0]
-                        trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
+                        trigger_score = trigger_score.unsqueeze(-1).reshape(h, 64,64)
                         trigger_score = trigger_score.mean(dim=0)            # res, res, (object = 1)
                         object_mask = trigger_score / trigger_score.max()
                         object_mask = torch.where(object_mask > 0.5, 1, 0)   # res, res, (object = 1)
