@@ -45,13 +45,6 @@ class AttentionStore :
         return attn
 
 
-    def cross_key_caching(self, key_value, layer_name):
-        if layer_name not in self.cross_key_store.keys() :
-            self.cross_key_store[layer_name] = []
-            self.cross_key_store[layer_name].append(key_value)
-        else :
-            self.cross_key_store[layer_name].append(key_value)
-        return key_value
 
     def self_query_key_value_caching(self,query_value, key_value, value_value, layer_name):
 

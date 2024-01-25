@@ -9,7 +9,6 @@ import library.custom_train_functions as custom_train_functions
 import torch
 from PIL import Image
 import sys, importlib
-import numpy as np
 from utils.image_utils import image2latent, load_image
 from utils.scheduling_utils import get_scheduler, ddim_loop, recon_loop
 from utils.model_utils import get_state_dict, init_prompt
@@ -26,13 +25,6 @@ try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
-
-def cosine_function(x):
-    x = math.pi * (x - 1)
-    result = math.cos(x)
-    result = result * 0.5
-    result = result + 0.5
-    return result
 
 
 def get_position(layer_name, attn):
@@ -56,15 +48,16 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
 
     def ca_forward(self, layer_name):
+
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
             is_cross_attention = False
             if context is not None:
                 is_cross_attention = True
-            query = self.to_q(hidden_states)
+            self_head_query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
-            query = self.reshape_heads_to_batch_dim(query)
+            query = self.reshape_heads_to_batch_dim(self_head_query)
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if self.upcast_attention:
@@ -80,12 +73,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 controller.store(attention_probs[:,:,:args.truncate_length], layer_name)
 
             if is_cross_attention and mask is not None:
-                if layer_name in mask.keys() :
-                    mask = mask[layer_name].unsqueeze(-1)
-                    mask = mask.repeat(1, 1, attention_probs.shape[-1]).to(attention_probs.device) # head, pix_num, sen_len
-                    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0) # head, pix_num, sen_len
-                    x_attn_probs = z_attn_probs * mask + x_attn_probs * (1 - mask)
-                    attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
+                if layer_name  == 'up_blocks_3_attentions_2_transformer_blocks_0_attn2' :
+                    controller.store(self_head_query, layer_name)
+
 
 
 
@@ -335,7 +325,6 @@ def main(args) :
                                         if do_classifier_free_guidance:
                                             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                                             noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-                                        #latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
                                         latents = scheduler.step(noise_pred, t, latents, ).prev_sample
                                         z_latent = back_dict[t]
                                         latents = z_latent * (recon_mask) + (latents * (1-recon_mask))
@@ -346,9 +335,30 @@ def main(args) :
                                                 image = numpy_to_pil(img_np)[0].resize((org_h, org_w))
                                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                                 image.save(img_dir)
-                                del latents, back_dict, x_latent_dict
+
+                                # -------------------------------------- [3] gen image -------------------------------------- #
+                                org_latent = back_dict[0]
+                                call_unet(unet, org_latent, 0, con, None, 1)
+                                org_query = controller.step_store['up_blocks_3_attentions_2_transformer_blocks_0_attn2'].squeeze(0)
                                 controller.reset()
-                                controller_ob.reset()
+
+                                recon_latent = x_latent_dict[0]
+                                call_unet(unet, recon_latent, 0, con, None, 1)
+                                recon_query = controller.step_store['up_blocks_3_attentions_2_transformer_blocks_0_attn2'].squeeze(0)
+                                controller.reset()
+
+                                anomaly_score = org_query @ recon_query.T
+                                pix_num = anomaly_score.shape[0]
+                                anomaly_score = (torch.Identity(pix_num) * anomaly_score).sum(dim=0)
+                                anomaly_score = anomaly_score / anomaly_score.max() # 0 ~ 1
+                                print(f'Anomaly score : {anomaly_score.shape}')
+                                anomaly_score = anomaly_score.unsqueeze(0).reshape(64,64)
+                                anomaly_score = anomaly_score.cpu().numpy()
+                                import numpy as np
+                                anomaly_score_pil = Image.fromarray((anomaly_score * 255).astype(np.uint8))
+                                anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
+
+                                del latents, back_dict, x_latent_dict
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
