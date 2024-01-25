@@ -16,6 +16,7 @@ def main(args):
     print(f'step 2. prepare images')
     base_folder = args.base_folder
     cats = os.listdir(base_folder)
+
     for cat in cats:
         if cat == args.trg_cat:
 
@@ -27,6 +28,7 @@ def main(args):
             os.makedirs(train_gt_dir, exist_ok=True)
 
             folders = os.listdir(train_rgb_dir)
+
             for folder in folders:
                 rgb_folder_dir = os.path.join(train_rgb_dir, folder)
                 gt_folder_dir = os.path.join(train_gt_dir, folder)
@@ -53,12 +55,11 @@ def main(args):
                             np_mask = np.where(np_mask == 1, 0, 1) * 255
                             sam_result_pil = Image.fromarray(np_mask.astype(np.uint8))
                             sam_result_pil = sam_result_pil.resize((org_h, org_w))
-
                             sam_result_pil.save(gt_img_dir)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_folder', type=str, default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD-org')
-    parser.add_argument('--trg_cat', type=str, default='bagel')
+    parser.add_argument('--trg_cat', type=str, default='rope')
     args = parser.parse_args()
     main(args)
