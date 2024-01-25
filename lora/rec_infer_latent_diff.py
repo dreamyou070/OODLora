@@ -348,14 +348,14 @@ def main(args) :
                                 recon_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 controller.reset()
 
-                                anomaly_score = org_query @ recon_query.T
+                                anomaly_score = (org_query @ recon_query.T).cpu()
                                 pix_num = anomaly_score.shape[0]
                                 anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
                                 print(f'Anomaly score : {anomaly_score.shape}')
                                 anomaly_score = anomaly_score / anomaly_score.max() # 0 ~ 1
                                 print(f'Anomaly score : {anomaly_score.shape}')
                                 anomaly_score = anomaly_score.unsqueeze(0).reshape(64,64)
-                                anomaly_score = anomaly_score.cpu().numpy()
+                                anomaly_score = anomaly_score.numpy()
                                 import numpy as np
                                 anomaly_score_pil = Image.fromarray((anomaly_score * 255).astype(np.uint8))
                                 anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
