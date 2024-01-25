@@ -295,10 +295,8 @@ def main(args) :
 
                         # 3. latent mask
                         recon_mask = torch.where((object_mask == 1) & (anormal_mask == 0), 0, 1)
-                        recon_mask_save_dir = os.path.join(class_base_folder,
-                                                                f'{name}_recon_mask{ext}')
+                        recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_recon_mask{ext}')
                         save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
-                        recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
                         # 4. final latent mask
                         anomaly_mask = torch.where(recon_mask == 1, 0, 1)
@@ -307,6 +305,7 @@ def main(args) :
                         tiff_anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}.tiff')
                         save_latent(anomaly_mask, tiff_anomaly_mask_save_dir, org_h, org_w)
 
+                        recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
                         # -------------------------------------- [2] background -------------------------------------- #
                         inf_time = inference_times.tolist()
                         inf_time.reverse()  # [0,250,500,750]
