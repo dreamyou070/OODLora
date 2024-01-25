@@ -344,66 +344,59 @@ def main(args) :
                         time_steps.reverse()  # 999, 750, ..., 0
 
                         # ----------------------------[3] generate image ------------------------------ #
+                        print(f' gen image')
                         pipeline.to(device)
-                        with torch.no_grad():
-                            if accelerator.is_main_process:
-                                width = height = 512
-                                guidance_scale = args.guidance_scale
-                                seed = args.seed
-                                torch.manual_seed(seed)
-                                torch.cuda.manual_seed(seed)
-                                height = max(64, height - height % 8)  # round to divisible by 8
-                                width = max(64, width - width % 8)  # round to divisible by 8
-                                do_classifier_free_guidance = guidance_scale > 1.0
-                                x_latent_dict = {}
+                        if accelerator.is_main_process:
+                            width = height = 512
+                            guidance_scale = args.guidance_scale
+                            seed = args.seed
+                            torch.manual_seed(seed)
+                            torch.cuda.manual_seed(seed)
+                            height = max(64, height - height % 8)  # round to divisible by 8
+                            width = max(64, width - width % 8)  # round to divisible by 8
+                            do_classifier_free_guidance = guidance_scale > 1.0
+                            x_latent_dict = {}
 
-                                with accelerator.autocast():
-                                    text_embeddings = init_prompt(tokenizer, text_encoder, device, args.prompt,
-                                                                  args.negative_prompt)
-                                    if not do_classifier_free_guidance:
-                                        _, text_embeddings = text_embeddings.chunk(2, dim=0)
+                            with accelerator.autocast():
+                                text_embeddings = init_prompt(tokenizer, text_encoder, device, args.prompt,
+                                                              args.negative_prompt)
+                                if not do_classifier_free_guidance:
+                                    _, text_embeddings = text_embeddings.chunk(2, dim=0)
 
-                                    if args.start_from_final:
-                                        latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1, height,
-                                                                                                     width,
-                                                                                                     weight_dtype, device,
-                                                                                                     None, None)
-                                        if args.start_from_origin:
-                                            latents = back_dict[time_steps[0]]
-                                        else:
-                                            latents = latents
-                                        recon_timesteps = time_steps
+                                if args.start_from_final:
+                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1, height, width,
+                                                                                                 weight_dtype, device, None, None)
+                                    if args.start_from_origin:
+                                        latents = back_dict[time_steps[0]]
                                     else:
-                                        total_len = len(time_steps)  # 980, ,,, , 0
-                                        inf_len = int(total_len / 2)
-                                        recon_timesteps = time_steps[inf_len:]
-                                        latents = back_dict[recon_timesteps[0]]
-                                    x_latent_dict[recon_timesteps[0]] = latents
-                                    # (7) denoising
-                                    for i, t in enumerate(recon_timesteps[1:]):  # 999, 750, ..., 250, 0
-                                        # 750, 500, 250, 0
-                                        latent_model_input = torch.cat(
-                                            [latents] * 2) if do_classifier_free_guidance else latents
-                                        # predict the noise residual
-                                        noise_pred = unet(latent_model_input, t,
-                                                          encoder_hidden_states=text_embeddings).sample
-                                        controller.reset()
-                                        # perform guidance
-                                        if do_classifier_free_guidance:
-                                            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                                            noise_pred = noise_pred_uncond + guidance_scale * (
-                                                        noise_pred_text - noise_pred_uncond)
-                                        latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
-                                        if args.use_pixel_mask:
-                                            z_latent = back_dict[t]
-                                            latents = (z_latent * final_pixel_mask) + (latents * (1 - final_pixel_mask))
-                                        x_latent_dict[t] = latents
-                                        if args.only_zero_save:
-                                            if t == 0:
-                                                image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
-                                                img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
-                                                image.save(img_dir)
-
+                                        latents = latents
+                                    recon_timesteps = time_steps
+                                else:
+                                    total_len = len(time_steps)  # 980, ,,, , 0
+                                    inf_len = int(total_len / 2)
+                                    recon_timesteps = time_steps[inf_len:]
+                                    latents = back_dict[recon_timesteps[0]]
+                                x_latent_dict[recon_timesteps[0]] = latents
+                                # (7) denoising
+                                for i, t in enumerate(recon_timesteps[1:]):  # 999, 750, ..., 250, 0
+                                    # 750, 500, 250, 0
+                                    latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+                                    noise_pred = unet(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
+                                    controller.reset()
+                                    # perform guidance
+                                    if do_classifier_free_guidance:
+                                        noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                                        noise_pred = noise_pred_uncond + guidance_scale * (
+                                                noise_pred_text - noise_pred_uncond)
+                                    latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
+                                    z_latent = back_dict[t]
+                                    latents = (z_latent * final_pixel_mask) + (latents * (1 - final_pixel_mask))
+                                    x_latent_dict[t] = latents
+                                    if args.only_zero_save:
+                                        if t == 0:
+                                            image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
+                                            img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
+                                            image.save(img_dir)
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
