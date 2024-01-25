@@ -1,6 +1,6 @@
 import argparse
 from accelerate.utils import set_seed
-from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
+#from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
 import os
 import random
 import library.train_util as train_util
@@ -20,6 +20,7 @@ from utils.scheduling_utils import next_step
 import math
 from utils.common_utils import get_lora_epoch, save_latent
 from utils.model_utils import get_crossattn_map
+from utils.image_utils import latent2image, numpy_to_pil
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -211,15 +212,11 @@ def main(args) :
         controller = AttentionStore()
         register_attention_control(unet, controller)
 
-        pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae,
-                                                              text_encoder=text_encoder,
-                                                              tokenizer=tokenizer,
-                                                              unet=unet,
-                                                              scheduler=scheduler,
-                                                              safety_checker=None,
-                                                              feature_extractor=None,
-                                                              requires_safety_checker=False, )
-        pipeline.to(device)
+        #pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae, text_encoder=text_encoder, tokenizer=tokenizer,
+                                                              #unet=unet, scheduler=scheduler,
+                                                              #safety_checker=None, feature_extractor=None,
+                                                              #requires_safety_checker=False, )
+        #pipeline.to(device)
         print(f' (3.5) prompt condition')
         with torch.no_grad():
             context = init_prompt(tokenizer, text_encoder, device, args.prompt)
@@ -311,7 +308,8 @@ def main(args) :
                             back_dict[int(t)] = latent
                             time_steps.append(t)
                             if t == 0:
-                                back_image = pipeline.latents_to_image(latent)[0].resize((org_h, org_w))
+                                back_image = numpy_to_pil(latent2image(latent, vae, return_type='np'))[0]
+                                back_image = back_image.resize((org_h, org_w))
                                 back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
                                 back_image.save(back_img_dir)
                             noise_pred = call_unet(unet, latent, t, con, None, None)
@@ -337,10 +335,8 @@ def main(args) :
                                     _, text_embeddings = text_embeddings.chunk(2, dim=0)
 
                                 if args.start_from_final:
-                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1,
-                                                                                                 height, width,
-                                                                                                 weight_dtype, device,
-                                                                                                 None, None)
+                                    latents = torch.randn((1,4,64,64), generator=None, device=device, dtype=weight_dtype)
+                                    latents = latents * scheduler.init_noise_sigma
                                     if args.start_from_origin:
                                         latents = back_dict[time_steps[0]]
                                     else:
@@ -362,16 +358,19 @@ def main(args) :
                                     if do_classifier_free_guidance:
                                         noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                                         noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-                                    latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
+                                    #latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
+                                    latents = scheduler.step(noise_pred, t, latents, ).prev_sample
                                     z_latent = back_dict[t]
                                     latents = z_latent * (recon_mask) + (latents * (1-recon_mask))
                                     x_latent_dict[t] = latents
                                     if args.only_zero_save:
                                         if t == 0:
-                                            image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
+                                            img_np = latent2image(latents, vae, return_type='np')
+                                            image = numpy_to_pil(img_np)[0].resize((org_h, org_w))
                                             img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                             image.save(img_dir)
-        del unet, text_encoder, vae, pipeline, controller, scheduler, network, unet_ob, text_encoder_ob, controller_ob, detection_network
+        #del unet, text_encoder, vae, pipeline, controller, scheduler, network, unet_ob, text_encoder_ob, controller_ob, detection_network
+        del unet, text_encoder, vae, controller, scheduler, network, unet_ob, text_encoder_ob, controller_ob, detection_network
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
