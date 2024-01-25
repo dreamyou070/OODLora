@@ -141,7 +141,8 @@ def main(args) :
     print(f' \n step 1. setting')
     train_util.verify_training_args(args)
     train_util.prepare_dataset_args(args, True)
-    if args.seed is None: args.seed = random.randint(0, 2 ** 32)
+    if args.seed is None :
+        args.seed = random.randint(0, 2 ** 32)
     set_seed(args.seed)
 
     print(f'\n step 2. preparing accelerator')
@@ -488,7 +489,7 @@ if __name__ == "__main__":
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
     parser.add_argument("--inner_iteration", type=int, default=10)
     parser.add_argument("--class_name", type=str, default="bagel")
-    parser.add_argument("--trg_part", type = str)
+    parser.add_argument("--free_time", type=int, default=80)
     parser.add_argument("--only_zero_save", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
@@ -497,10 +498,10 @@ if __name__ == "__main__":
     parser.add_argument("--use_pixel_mask", action='store_true')
     parser.add_argument("--start_from_final", action='store_true')
     parser.add_argument("--save_origin", action='store_true')
-    parser.add_argument("--detection_network_weights", type=str,)
-
-
-
+    parser.add_argument("--only_normal_infer", action='store_true')
+    parser.add_argument("--latent_diff_thred", type=float, default=0.5)
+    parser.add_argument("--anormal_thred", type=float, default=0.5)
+    parser.add_argument("--detection_network_weights", type=str, )
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
@@ -509,6 +510,7 @@ if __name__ == "__main__":
         return v
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--trg_position", type=arg_as_list, default=['up'])
+    parser.add_argument("--trg_part", type=arg_as_list, default=['attn_2','attn_1','attn_0'])
     parser.add_argument("--trg_lora_epoch", type=str)
     parser.add_argument("--negative_prompt", type=str)
 
