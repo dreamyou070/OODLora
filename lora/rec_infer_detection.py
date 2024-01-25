@@ -65,7 +65,7 @@ def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     # ------------------------------------------------------------------------------------------ #
     # binarize
     latent_mask_torch = torch.from_numpy(latent_mask_np).to(device, dtype=weight_dtype)
-    return latent_mask_np, latent_mask
+    return latent_mask_np, latent_mask_torch
 
 
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
