@@ -165,6 +165,7 @@ def main(args) :
                                                              f'anomal_thredhold_{args.anormal_thred}_'
                                                              f'step_{args.num_ddim_steps}_' 
                                                              f'guidance_{args.guidance_scale}')
+            print(f'condition_save_dir : {condition_save_dir}')
             os.makedirs(condition_save_dir, exist_ok=True)
             ## (3.2) evaluate dir
             evaluate_output_dir = os.path.join(condition_save_dir,
