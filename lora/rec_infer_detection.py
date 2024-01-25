@@ -162,6 +162,14 @@ def main(args) :
     net_kwargs = {}
     detection_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae_ob, text_encoder_ob, unet_ob,
                                             neuron_dropout=args.network_dropout, **net_kwargs, )
+
+    _, detec_network_dir = os.path.split(detection_network)
+    model_name = os.path.splitext(detec_network_dir)[0]
+    if 'last' not in model_name:
+        detect_model_epoch = int(model_name.split('-')[-1])
+    else:
+        detect_model_epoch = 10000
+
     detection_network.apply_to(text_encoder_ob, unet_ob, True, True)
     if args.network_weights is not None:
         info = detection_network.load_weights(detection_network_weights)
@@ -185,15 +193,17 @@ def main(args) :
             model_epoch = 10000
         test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
         os.makedirs(test_lora_dir, exist_ok=True)
-        condition_save_dir = os.path.join(test_lora_dir, f'with_object_detect_step_{args.num_ddim_steps}_'
-                                                         f'guidance_scale_{args.guidance_scale}_'
-                                                         f'start_from_origin_{args.start_from_origin}_'
+        condition_save_dir = os.path.join(test_lora_dir, f'with_object_detect_epoch_{detect_model_epoch}_'
+                                                         f'step_{args.num_ddim_steps}_'
+                                                         f'guidance_{args.guidance_scale}_'
                                                          f'start_from_final_{args.start_from_final}_')
         os.makedirs(condition_save_dir, exist_ok=True)
         evaluate_output_dir = os.path.join(condition_save_dir, f'{args.class_name}/test')
         os.makedirs(evaluate_output_dir, exist_ok=True)
-        my_inference_output_dir = os.path.join(condition_save_dir, f'my_inference')
+        my_inference_output_dir = os.path.join(condition_save_dir, f'my_inference_lora_{model_epoch}')
         os.makedirs(my_inference_output_dir, exist_ok=True)
+
+
 
         print(f' (3.2) SD')
         text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
@@ -286,7 +296,6 @@ def main(args) :
                         trigger_score = trigger_score.mean(dim=0)            # res, res, (object = 1)
                         object_mask = trigger_score / trigger_score.max()
                         object_mask = torch.where(object_mask > 0.5, 1, 0)   # res, res, (object = 1)
-                        print(f'object mask shape : {object_mask.shape}')
                         # save object mask
                         object_mask_np = ((object_mask.cpu().numpy()) * 255).astype(np.uint8)
                         object_mask_pil = Image.fromarray(object_mask_np).resize((org_h,org_w))
@@ -344,7 +353,6 @@ def main(args) :
                         time_steps.reverse()  # 999, 750, ..., 0
 
                         # ----------------------------[3] generate image ------------------------------ #
-                        print(f' gen image')
                         pipeline.to(device)
                         if accelerator.is_main_process:
                             width = height = 512
