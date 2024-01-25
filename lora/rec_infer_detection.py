@@ -325,7 +325,7 @@ def main(args) :
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
                                                      f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
 
-                        final_pixel_mask_ = torch.where(object_mask == 1 & pixel_mask == 0, 1, 0)
+                        final_pixel_mask_ = torch.where(object_mask == 1 & latent_mask_ == 0, 1, 0)
                         # save final pixel mask
                         pixel_mask = save_pixel_mask(final_pixel_mask_ * 255, class_base_folder,
                                                      f'{name}_final_pixel_binary_mask{ext}', org_h, org_w)
