@@ -163,7 +163,7 @@ def main(args) :
     detection_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae_ob, text_encoder_ob, unet_ob,
                                             neuron_dropout=args.network_dropout, **net_kwargs, )
 
-    _, detec_network_dir = os.path.split(detection_network)
+    _, detec_network_dir = os.path.split(detection_network_weights)
     model_name = os.path.splitext(detec_network_dir)[0]
     if 'last' not in model_name:
         detect_model_epoch = int(model_name.split('-')[-1])
