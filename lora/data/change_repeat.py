@@ -50,6 +50,6 @@ if __name__ == "__main__":
                         default=r'/home/dreamyou070/MyData/anomaly_detection/MVTec3D-AD')
     parser.add_argument('--trg_cat', type=str, default='potato')
     parser.add_argument('--new_ok_repeat', type=int, default=20)
-    parser.add_argument('--new_nok_repeat', type=int, default=40)
+    parser.add_argument('--new_nok_repeat', type=int, default=20)
     args = parser.parse_args()
     main(args)
