@@ -358,6 +358,7 @@ def main(args) :
                                 import numpy as np
                                 anomaly_score_pil = Image.fromarray((anomaly_score * 255).astype(np.uint8))
                                 anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
+                                anomaly_score_pil.save(os.path.join(class_base_folder, f'{name}_anomaly_test{ext}'))
 
                                 del latents, back_dict, x_latent_dict
 
