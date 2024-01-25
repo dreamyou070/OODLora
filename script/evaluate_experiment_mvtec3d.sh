@@ -1,11 +1,11 @@
 #! /bin/bash
 
-class_name="foam"
+class_name="peach"
 dataset_cat="MVTec3D-AD"
 dataset_dir="../../../MyData/anomaly_detection/${dataset_cat}"
 sub_folder="res_64_up_attn2_t_2_attn2"
 base_dir="../result/${dataset_cat}_experiment/${class_name}/lora_training/anormal/${sub_folder}/reconstruction"
-anomaly_maps_dir="with_object_detect_epoch_4_anomal_thredhold_0.45_step_4_guidance_8.5"
+anomaly_maps_dir="with_object_detect_epoch_4_anomal_thredhold_0.5_step_4_guidance_8.5"
 
 output_dir="metrics"
 
