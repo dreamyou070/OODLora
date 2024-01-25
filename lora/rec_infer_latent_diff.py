@@ -349,6 +349,8 @@ def main(args) :
                                 recon_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 controller.reset()
 
+                                org_query = org_query / org_query.nmax()
+                                recon_query = recon_query / recon_query.nmax()
                                 anomaly_score = (org_query @ recon_query.T).cpu()
                                 pix_num = anomaly_score.shape[0]
                                 anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
