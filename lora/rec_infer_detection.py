@@ -324,7 +324,7 @@ def main(args) :
                         # save final pixel mask
                         anomaly_map = save_pixel_mask(final_pixel_mask_, class_base_folder,
                                                      f'{name}_final_pixel_binary_mask{ext}', org_h, org_w)
-                        final_pixel_mask = final_pixel_mask.repeat(1, 4, 1, 1)
+                        final_pixel_mask = final_pixel_mask_.repeat(1, 4, 1, 1)
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
