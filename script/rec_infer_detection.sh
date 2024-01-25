@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="cookie"
+class_name="potato"
 folder_name="res_64_up_attn2_t_2_attn2"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
@@ -8,7 +8,7 @@ network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_tr
 detection_network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000004.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
-port_number=50711
+port_number=50007
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port ${port_number} ../lora/rec_infer_detection.py \
