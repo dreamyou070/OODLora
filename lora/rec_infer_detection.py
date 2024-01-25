@@ -162,6 +162,7 @@ def main(args) :
                                                     text_encoder, unet,
                                                     neuron_dropout=args.network_dropout,
                                                     **net_kwargs, )
+            network.apply_to(text_encoder, unet, True, True)
 
             # (3) save direction
             parent, detect_network_dir = os.path.split(args.detection_network_weights)
@@ -220,9 +221,7 @@ def main(args) :
                                 # ------------------------------------- [1] object mask ------------------------------ #
                                 # -------------------------------------------------------------------------------------
                                 # 1. object mask
-                                network.apply_to(text_encoder, unet, True, True)
-                                if args.network_weights is not None:
-                                    info = network.load_weights(args.detection_network_weights)
+                                network.load_weights(args.detection_network_weights)
                                 network.to(device)
                                 controller_ob = AttentionStore()
                                 register_attention_control(unet, controller_ob)
@@ -232,7 +231,7 @@ def main(args) :
                                 call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller_ob.step_store
                                 controller_ob.reset()
-                                network.restore()
+                                #network.restore()
                                 object_mask = get_crossattn_map(args, attn_stores,
                                                                 'up_blocks_3_attentions_0_transformer_blocks_0_attn2' )
                                 object_mask_save_dir = os.path.join(class_base_folder,
@@ -241,10 +240,10 @@ def main(args) :
 
                                 # -------------------------------------------------------------------------------------
                                 # 2. anormal mask
-                                network.apply_to(text_encoder, unet, True, True)
-                                if args.network_weights is not None:
-                                    weight_dir = os.path.join(args.network_weights, weight)
-                                    info = network.load_weights(weight_dir)
+                                #network.apply_to(text_encoder, unet, True, True)
+                                #if args.network_weights is not None:
+                                weight_dir = os.path.join(args.network_weights, weight)
+                                info = network.load_weights(weight_dir)
                                 network.to(device)
                                 controller = AttentionStore()
                                 register_attention_control(unet, controller)
@@ -348,7 +347,7 @@ def main(args) :
                                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                                 image.save(img_dir)
                                 del latents, back_dict, x_latent_dict
-                                network.restore()
+                                #network.restore()
                                 controller.reset()
                                 controller_ob.reset()
 
