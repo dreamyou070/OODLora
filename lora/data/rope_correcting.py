@@ -31,13 +31,14 @@ def main(args):
                 for image in images:
                     image_dir = os.path.join(folder_dir, image)
                     pil = Image.open(image_dir)
-                    h, w = pil.size
+                    #h, w = pil.size
                     img_np = np.array(pil)
+                    h, w = img_np.shape
                     for i in range(h):
-                        if h < h/3 or h > h/3*2:
+                        if i < h/3 or i > h/3*2:
                             img_np[i,:] = 0
                     Image.fromarray(img_np.astype(np.uint8)).save(os.path.join(test_folder_dir, image))
-                                        
+
 
 # 20 + 120 = 140
 # 40 + 160 = 200
