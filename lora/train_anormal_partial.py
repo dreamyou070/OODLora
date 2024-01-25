@@ -308,19 +308,22 @@ class NetworkTrainer:
         """ self and cross attn """
         for unet_lora in unet_loras:
             lora_name = unet_lora.lora_name
-            if 'up' in lora_name and 'blocks_3' in lora_name :
-                if 'attentions_1' in lora_name or 'attentions_2' in lora_name :
-                    if args.only_cross_training :
-                        if 'attn_2' in lora_name :
-                            trainable = True
-                        else :
-                            trainable = False
+            if 'up' in lora_name  :
+                #if 'attentions_1' in lora_name or 'attentions_2' in lora_name :
+                #if args.only_cross_training :
+                if 'attn_2' in lora_name :
+                    if 'blocks_3' in lora_name and 'attentions_0' in lora_name :
+                        trainable = True
                     else :
                         trainable = True
-                    if trainable :
-                        if 'to_k' in lora_name or 'to_v' in lora_name:
-                            print(f' training layer : {lora_name}')
-                            params.extend(unet_lora.parameters())
+                else :
+                    trainable = False
+               # else :
+               #     trainable = True
+            if trainable :
+                if 'to_k' in lora_name or 'to_v' in lora_name:
+                    print(f' training layer : {lora_name}')
+                    params.extend(unet_lora.parameters())
         trainable_params = [{"params": params, "lr": args.unet_lr}]
 
         if args.text_encoder_training :

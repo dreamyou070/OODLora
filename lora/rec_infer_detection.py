@@ -155,6 +155,7 @@ def main(args) :
     detection_network_weights = args.detection_network_weights
     text_encoder_ob, vae_ob, unet_ob, _ = train_util._load_target_model(args, weight_dtype, device, unet_use_linear_projection_in_v2=False, )
     unet_ob, text_encoder_ob = unet_ob.to(device), text_encoder_ob.to(device)
+    del vae_ob
 
     print(f' (3.3) network')
     sys.path.append(os.path.dirname(__file__))
