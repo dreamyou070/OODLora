@@ -287,6 +287,7 @@ def main(args) :
                         trigger_score = trigger_score.mean(dim=0)            # res, res, (object = 1)
                         object_mask = trigger_score / trigger_score.max()
                         object_mask = torch.where(object_mask > 0.5, 1, 0)   # res, res, (object = 1)
+                        print(f'object mask shape : {object_mask.shape}')
                         # save object mask
                         object_mask_np = ((object_mask.cpu().numpy()) * 255).astype(np.uint8)
                         object_mask_pil = Image.fromarray(object_mask_np).resize((org_h,org_w))
@@ -313,19 +314,20 @@ def main(args) :
                                     cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                                trigger_score = trigger_score.mean(dim=0)  # res, res
+                                pixel_mask = trigger_score.mean(dim=0)  # res, res
 
-                                pixel_mask = trigger_score
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device,
                                                                               weight_dtype)  # latent_mask = 1,1,64,64
                                 latent_mask_ = latent_mask
                                 save_pixel_mask(latent_mask_, class_base_folder,
                                                 f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
                         latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
+                        print(f'latent mask shape : {latent_mask_.shape}')
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
                                                      f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
 
                         final_pixel_mask_ = torch.where((object_mask == 1) & (latent_mask_ == 0), 1, 0)
+                        print(f'final_pixel_mask_ shape : {final_pixel_mask_.shape}')
                         # save final pixel mask
                         pixel_mask = save_pixel_mask(final_pixel_mask_, class_base_folder,
                                                      f'{name}_final_pixel_binary_mask{ext}', org_h, org_w)
