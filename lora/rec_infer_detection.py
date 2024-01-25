@@ -146,36 +146,40 @@ def main(args) :
     tokenizer = train_util.load_tokenizer(args)
     device = accelerator.device
 
-    print(f'\n step 3. object detection model')
-    detection_network_weights = args.detection_network_weights
-    text_encoder_ob, vae_ob, unet_ob, _ = train_util._load_target_model(args, weight_dtype, device, unet_use_linear_projection_in_v2=False, )
-    unet_ob, text_encoder_ob = unet_ob.to(device), text_encoder_ob.to(device)
-    del vae_ob
 
-    print(f' (3.3) network')
-    sys.path.append(os.path.dirname(__file__))
-    network_module = importlib.import_module(args.network_module)
-    net_kwargs = {}
-    detection_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, None, text_encoder_ob, unet_ob,
-                                            neuron_dropout=args.network_dropout, **net_kwargs, )
-
-    _, detec_network_dir = os.path.split(detection_network_weights)
-    detect_model_epoch = get_lora_epoch(detec_network_dir)
-    detection_network.apply_to(text_encoder_ob, unet_ob, True, True)
-    if args.network_weights is not None:
-        info = detection_network.load_weights(detection_network_weights)
-    detection_network.to(device)
-    controller_ob = AttentionStore()
-    register_attention_control(unet_ob, controller_ob)
-
-    with torch.no_grad():
-        context_ob = init_prompt(tokenizer, text_encoder_ob, device, args.prompt)
-    uncon_ob, con_ob = torch.chunk(context_ob, 2)
 
     print(f'\n step 3. save directory and save config')
     network_weights = os.listdir(args.network_weights)
 
     for weight in network_weights:
+
+        print(f'\n step 3. object detection model')
+        detection_network_weights = args.detection_network_weights
+        text_encoder_ob, vae_ob, unet_ob, _ = train_util._load_target_model(args, weight_dtype, device,
+                                                                            unet_use_linear_projection_in_v2=False, )
+        unet_ob, text_encoder_ob = unet_ob.to(device), text_encoder_ob.to(device)
+        del vae_ob
+
+        print(f' (3.3) network')
+        sys.path.append(os.path.dirname(__file__))
+        network_module = importlib.import_module(args.network_module)
+        net_kwargs = {}
+        detection_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, None,
+                                                          text_encoder_ob, unet_ob,
+                                                          neuron_dropout=args.network_dropout, **net_kwargs, )
+
+        _, detec_network_dir = os.path.split(detection_network_weights)
+        detect_model_epoch = get_lora_epoch(detec_network_dir)
+        detection_network.apply_to(text_encoder_ob, unet_ob, True, True)
+        if args.network_weights is not None:
+            info = detection_network.load_weights(detection_network_weights)
+        detection_network.to(device)
+        controller_ob = AttentionStore()
+        register_attention_control(unet_ob, controller_ob)
+
+        with torch.no_grad():
+            context_ob = init_prompt(tokenizer, text_encoder_ob, device, args.prompt)
+        uncon_ob, con_ob = torch.chunk(context_ob, 2)
 
         print(f' (3.1) network weight save directory')
         weight_dir = os.path.join(args.network_weights, weight)
@@ -344,8 +348,10 @@ def main(args) :
                                     _, text_embeddings = text_embeddings.chunk(2, dim=0)
 
                                 if args.start_from_final:
-                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1, height, width,
-                                                                                                 weight_dtype, device, None, None)
+                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1,
+                                                                                                 height, width,
+                                                                                                 weight_dtype, device,
+                                                                                                 None, None)
                                     if args.start_from_origin:
                                         latents = back_dict[time_steps[0]]
                                     else:
@@ -376,8 +382,7 @@ def main(args) :
                                             image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                                             img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                             image.save(img_dir)
-
-        del unet, text_encoder, vae, pipeline, controller, scheduler, network
+        del unet, text_encoder, vae, pipeline, controller, scheduler, network, unet_ob, text_encoder_ob, controller_ob, detection_network
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
