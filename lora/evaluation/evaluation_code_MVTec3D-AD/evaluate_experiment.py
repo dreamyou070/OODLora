@@ -188,8 +188,7 @@ def main():
     lora_folders = os.listdir(args.base_dir)
     for lora_folder in lora_folders:
         lora_dir = os.path.join(args.base_dir, lora_folder)
-        lora_epoch = os.path.splitext(lora_dir)[-1]
-        print(f' **** Evaluate lora epoch {lora_epoch} ===')
+        print(f' * * * * Evaluate {lora_folder} * * * * ')
         args.anomaly_maps_dir = os.path.join(lora_dir, base_anomaly_maps_dir)
         args.output_dir = os.path.join(args.anomaly_maps_dir, base_save_dir)
 
