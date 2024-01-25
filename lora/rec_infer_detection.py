@@ -347,7 +347,6 @@ def main(args) :
                                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                                 image.save(img_dir)
                                 del latents, back_dict, x_latent_dict
-                                #network.restore()
                                 controller.reset()
                                 controller_ob.reset()
 
