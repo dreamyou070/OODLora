@@ -309,18 +309,11 @@ class NetworkTrainer:
         for unet_lora in unet_loras:
             trainable = False
             lora_name = unet_lora.lora_name
-            if 'up' in lora_name  :
-                #if 'attentions_1' in lora_name or 'attentions_2' in lora_name :
-                #if args.only_cross_training :
-                if 'attn_2' in lora_name :
-                    if 'blocks_3' in lora_name and 'attentions_0' in lora_name :
-                        trainable = True
-                    else :
-                        trainable = True
-                else :
+            if 'up' in lora_name :
+                if 'blocks_3' in lora_name and 'attentions_0' in lora_name :
                     trainable = False
-               # else :
-               #     trainable = True
+                else :
+                    trainable = True
             if trainable :
                 if 'to_k' in lora_name or 'to_v' in lora_name:
                     print(f' training layer : {lora_name}')
@@ -680,6 +673,7 @@ class NetworkTrainer:
                     attention_storer.reset()
                     attn_loss = 0
                     average_mask_dict = {}
+                    """
                     for i, layer_name in enumerate(attn_dict.keys()):
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         if args.cls_training:
@@ -693,7 +687,8 @@ class NetworkTrainer:
                             h = score_map.shape[0]
                             trigger_score = score_map.unsqueeze(-1).reshape(h, res, res)
                             object_position = trigger_score.mean(dim=0)  # res, res (must lower than 1) -> backgounrd = 0
-
+                    """
+                    # ---------------------------------------------------------------------------------------------------------- #
                     for i, layer_name in enumerate(attn_dict.keys()):
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         if args.cls_training:
