@@ -341,7 +341,6 @@ def main(args) :
                                 org_latent = back_dict[0]
                                 call_unet(unet, org_latent, 0, con, None, 1)
                                 org_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
-                                print(f'org query : {org_query.shape}')
                                 org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
                                 controller.reset()
 
