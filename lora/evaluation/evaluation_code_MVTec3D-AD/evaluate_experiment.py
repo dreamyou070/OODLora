@@ -152,8 +152,7 @@ def calculate_au_pro_au_roc(gt_filenames,
     # Compute the PRO curve.
     pro_curve = compute_pro(
         anomaly_maps=predictions,
-        ground_truth_maps=ground_truth
-    )
+        ground_truth_maps=ground_truth)
 
     # Compute the area under the PRO curve.
     au_pro = util.trapezoid(
@@ -189,9 +188,18 @@ def main():
     lora_folders = os.listdir(args.base_dir)
     for lora_folder in lora_folders:
         lora_dir = os.path.join(args.base_dir, lora_folder)
+        # lora_epoch
+        def get_lora_epoch(model_dir):
+            model_name = os.path.splitext(model_dir)[0]
+            if 'last' not in model_name:
+                model_epoch = int(model_name.split('-')[-1])
+            else:
+                model_epoch = 10000
+            return model_epoch
+        lora_epoch = get_lora_epoch(lora_folder)
+        print(f' **** Evaluate lora epoch {lora_epoch} ===')
         args.anomaly_maps_dir = os.path.join(lora_dir, base_anomaly_maps_dir)
         args.output_dir = os.path.join(args.anomaly_maps_dir, base_save_dir)
-
 
         # Store evaluation results in this dictionary.
         evaluation_dict = dict()
