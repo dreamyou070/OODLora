@@ -281,7 +281,7 @@ def main(args) :
                         controller.reset()
                         anormal_mask = get_crossattn_map(args, attn_stores,
                                                         'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
-                                                         thredhold=args.anormal_thredhold)
+                                                         thredhold=args.anormal_thred)
                         anormal_mask_save_dir = os.path.join(class_base_folder,
                                                              f'{name}_anormal_mask{ext}')
                         save_latent(anormal_mask, anormal_mask_save_dir, org_h, org_w)
