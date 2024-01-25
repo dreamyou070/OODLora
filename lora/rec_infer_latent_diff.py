@@ -350,7 +350,8 @@ def main(args) :
 
                                 anomaly_score = org_query @ recon_query.T
                                 pix_num = anomaly_score.shape[0]
-                                anomaly_score = (torch.Identity(pix_num) * anomaly_score).sum(dim=0)
+                                anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
+                                print(f'Anomaly score : {anomaly_score.shape}')
                                 anomaly_score = anomaly_score / anomaly_score.max() # 0 ~ 1
                                 print(f'Anomaly score : {anomaly_score.shape}')
                                 anomaly_score = anomaly_score.unsqueeze(0).reshape(64,64)
