@@ -276,6 +276,7 @@ def main(args) :
                         # -------------------------------------------- [0] object detect ---------------------------------------------- #
                         call_unet(unet_ob, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
                         attn_stores = controller_ob.step_store
+                        print(f'all layer : {attn_stores.keys()}')
                         controller_ob.reset()
                         for layer_name in attn_stores:
                             attn = attn_stores[''][0].squeeze()  # head, pix_num
