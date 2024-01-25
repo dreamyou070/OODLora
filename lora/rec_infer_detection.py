@@ -321,41 +321,10 @@ def main(args) :
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
                                                      f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
                         final_pixel_mask_ = torch.where((object_mask == 1) & (latent_mask_ == 0), 1, 0)
-                        print(f'final_pixel_mask_ shape : {final_pixel_mask_.shape}')
                         # save final pixel mask
-                        pixel_mask = save_pixel_mask(final_pixel_mask_, class_base_folder,
+                        anomaly_map = save_pixel_mask(final_pixel_mask_, class_base_folder,
                                                      f'{name}_final_pixel_binary_mask{ext}', org_h, org_w)
-                        print(f'final_pixel_mask shape : {final_pixel_mask.shape}')
                         final_pixel_mask = final_pixel_mask.repeat(1, 4, 1, 1)
-                        # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
-
-                        org_img = load_image(test_img_dir, 512, 512)
-                        org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-                        call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
-                        inf_time = inference_times.tolist()
-                        inf_time.reverse()  # [0,250,500,750]
-                        back_dict = {}
-                        latent = org_vae_latent
-                        back_dict[0] = latent
-                        attn_stores = controller.step_store
-                        controller.reset()
-                        for layer_name in attn_stores:
-                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                            res, pos, part = get_position(layer_name, attn)
-                            if res in args.cross_map_res and pos in args.trg_position and part == args.trg_part:
-                                if args.truncate_length == 3:
-                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
-                                else:
-                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                h = trigger_score.shape[0]
-                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                                trigger_score = trigger_score.mean(dim=0)  # res, res
-                                pixel_mask = trigger_score / trigger_score.max()  # res, res
-                                latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64, device, weight_dtype)  # latent_mask = 1,1,64,64
-                        latent_mask = latent_mask.unsqueeze(0).unsqueeze(0)
-                        latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
-                        latent_mask = latent_mask_.repeat(1, 4, 1, 1)
-                        pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
 
                         # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
                         time_steps = []
@@ -436,8 +405,6 @@ def main(args) :
                                                 image.save(img_dir)
 
                         # ----------------------------[4] generate anomaly maps ------------------------------ #
-                        anomaly_map = (255 - final_pixel_mask).cpu().detach().numpy()
-                        anomaly_map = Image.fromarray(anomaly_map.astype(np.uint8))
                         anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
         del unet, text_encoder, vae, pipeline, controller, scheduler, network
