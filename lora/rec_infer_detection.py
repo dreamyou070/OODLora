@@ -65,7 +65,6 @@ def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     # ------------------------------------------------------------------------------------------ #
     # binarize
     latent_mask_torch = torch.from_numpy(latent_mask_np).to(device, dtype=weight_dtype)
-    latent_mask = latent_mask_torch.unsqueeze(0).unsqueeze(0) # 1,1,64,64
     return latent_mask_np, latent_mask
 
 
@@ -315,23 +314,17 @@ def main(args) :
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 pixel_mask = trigger_score.mean(dim=0)  # res, res
-
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device,
                                                                               weight_dtype)  # latent_mask = 1,1,64,64
-                                latent_mask_ = latent_mask
-                                save_pixel_mask(latent_mask_, class_base_folder,
-                                                f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
+                                save_pixel_mask(latent_mask, class_base_folder,f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
                         latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
-                        print(f'latent mask shape : {latent_mask_.shape}')
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
                                                      f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
-
                         final_pixel_mask_ = torch.where((object_mask == 1) & (latent_mask_ == 0), 1, 0)
                         print(f'final_pixel_mask_ shape : {final_pixel_mask_.shape}')
                         # save final pixel mask
                         pixel_mask = save_pixel_mask(final_pixel_mask_, class_base_folder,
                                                      f'{name}_final_pixel_binary_mask{ext}', org_h, org_w)
-                        final_pixel_mask = final_pixel_mask_.unsqueeze(0).unsqueeze(0)  # 1,1,res,res
                         print(f'final_pixel_mask shape : {final_pixel_mask.shape}')
                         final_pixel_mask = final_pixel_mask.repeat(1, 4, 1, 1)
                         # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
@@ -359,11 +352,7 @@ def main(args) :
                                 trigger_score = trigger_score.mean(dim=0)  # res, res
                                 pixel_mask = trigger_score / trigger_score.max()  # res, res
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, 64, device, weight_dtype)  # latent_mask = 1,1,64,64
-                        lambda x: cosine_function(x) if x > 0 else 0
-                        for i in range(args.inner_iteration):
-                            latent_mask = latent_mask.detach().cpu().apply_(
-                                lambda x: cosine_function(x) if x > 0 else 0)
-                            latent_mask = latent_mask.to(device)
+                        latent_mask = latent_mask.unsqueeze(0).unsqueeze(0)
                         latent_mask_ = torch.where(latent_mask > 0.5, 1, 0)  #
                         latent_mask = latent_mask_.repeat(1, 4, 1, 1)
                         pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask{ext}', org_h, org_w)
