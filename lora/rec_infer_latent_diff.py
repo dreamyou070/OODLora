@@ -339,13 +339,13 @@ def main(args) :
                                 # -------------------------------------- [3] gen image -------------------------------------- #
                                 org_latent = back_dict[0]
                                 call_unet(unet, org_latent, 0, con, None, 1)
-                                org_query = controller.step_store['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
+                                org_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 print(f'org query : {org_query.shape}')
                                 controller.reset()
 
                                 recon_latent = x_latent_dict[0]
                                 call_unet(unet, recon_latent, 0, con, None, 1)
-                                recon_query = controller.step_store['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
+                                recon_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 controller.reset()
 
                                 anomaly_score = org_query @ recon_query.T
