@@ -14,6 +14,7 @@ class AttentionStore :
         self.cross_query_store = {}
         self.cross_key_store = {}
         self.cross_value_store = {}
+        self.query_dict = {}
         self.key_dict = {}
         self.value_dict = {}
         self.repeat = 0
@@ -21,16 +22,12 @@ class AttentionStore :
     def get_empty_store(self):
         return {}
 
-    def save_key_value_states(self, key, value, layer_name):
-        if layer_name not in self.key_dict.keys():
-            self.key_dict[layer_name] = []
-            self.value_dict[layer_name] = []
-            self.key_dict[layer_name].append(key)
-            self.value_dict[layer_name].append(value)
+    def save_query(self, query, layer_name):
+        if layer_name not in self.query_dict.keys():
+            self.query_dict[layer_name] = []
+            self.query_dict[layer_name].append(query)
         else:
-            self.key_dict[layer_name].append(key)
-            self.value_dict[layer_name].append(value)
-
+            self.query_dict[layer_name].append(query)
 
     def store_normal_score(self, score):
         self.normal_score_list.append(score)
@@ -43,7 +40,6 @@ class AttentionStore :
             self.step_store[layer_name].append(attn)
             #self.step_store[layer_name] = self.step_store[layer_name] + attn
         return attn
-
 
 
     def self_query_key_value_caching(self,query_value, key_value, value_value, layer_name):
@@ -88,6 +84,7 @@ class AttentionStore :
         self.cross_query_store = {}
         self.cross_key_store = {}
         self.cross_value_store = {}
+        self.query_dict = {}
         self.key_dict = {}
         self.value_dict = {}
         self.repeat = 0
