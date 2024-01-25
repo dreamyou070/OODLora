@@ -291,7 +291,7 @@ def main(args) :
                         object_mask_np = ((object_mask.cpu().numpy()) * 255).astype(np.uint8)
                         object_mask_pil = Image.fromarray(object_mask_np).resize((org_h,org_w))
                         object_mask_pil.save(os.path.join(class_base_folder, f'{name}_object_mask{ext}'))
-                        #object_mask = object_mask.unsqueeze(0).unsqueeze(0)  # 1,1,res,res
+
                         # -------------------------------------------- [1] latent mask ---------------------------------------------- #
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
@@ -327,9 +327,10 @@ def main(args) :
 
                         final_pixel_mask_ = torch.where((object_mask == 1) & (latent_mask_ == 0), 1, 0)
                         # save final pixel mask
-                        pixel_mask = save_pixel_mask(final_pixel_mask_ * 255, class_base_folder,
+                        pixel_mask = save_pixel_mask(final_pixel_mask_, class_base_folder,
                                                      f'{name}_final_pixel_binary_mask{ext}', org_h, org_w)
                         final_pixel_mask = final_pixel_mask_.unsqueeze(0).unsqueeze(0)  # 1,1,res,res
+                        print(f'final_pixel_mask shape : {final_pixel_mask.shape}')
                         final_pixel_mask = final_pixel_mask.repeat(1, 4, 1, 1)
                         # -------------------------------------------- [1] generate attn mask map ---------------------------------------------- #
 
