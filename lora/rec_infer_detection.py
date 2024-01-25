@@ -278,23 +278,21 @@ def main(args) :
                         attn_stores = controller_ob.step_store
                         controller_ob.reset()
                         attn = attn_stores['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze()  # head, pix_num
-                        res, pos, part = get_position(layer_name, attn)
-                        if res in args.cross_map_res and pos in args.trg_position and part == 'attn_0' :
-                            if args.truncate_length == 3:
-                                cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
-                            else:
-                                cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                            h = trigger_score.shape[0]
-                            trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                            trigger_score = trigger_score.mean(dim=0)            # res, res, (object = 1)
-                            object_mask = trigger_score / trigger_score.max()
-                            object_mask = torch.where(object_mask > 0.5, 1, 0)   # res, res, (object = 1)
-                            object_mask = object_mask.unsqueeze(0).unsqueeze(0)  # 1,1,res,res
-                            # save object mask
-                            object_mask_np = object_mask.cpu().numpy()
-                            object_mask_np = (object_mask_np * 255).astype(np.uint8)
-                            object_mask_pil = Image.fromarray(object_mask_np).resize((org_h,org_w))
-                            object_mask_pil.save(os.path.join(class_base_folder, f'{name}_object_mask{ext}'))
+                        if args.truncate_length == 3:
+                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
+                        else:
+                            cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
+                        h = trigger_score.shape[0]
+                        trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
+                        trigger_score = trigger_score.mean(dim=0)            # res, res, (object = 1)
+                        object_mask = trigger_score / trigger_score.max()
+                        object_mask = torch.where(object_mask > 0.5, 1, 0)   # res, res, (object = 1)
+                        object_mask = object_mask.unsqueeze(0).unsqueeze(0)  # 1,1,res,res
+                        # save object mask
+                        object_mask_np = object_mask.cpu().numpy()
+                        object_mask_np = (object_mask_np * 255).astype(np.uint8)
+                        object_mask_pil = Image.fromarray(object_mask_np).resize((org_h,org_w))
+                        object_mask_pil.save(os.path.join(class_base_folder, f'{name}_object_mask{ext}'))
 
                         # -------------------------------------------- [1] latent mask ---------------------------------------------- #
                         org_img = load_image(test_img_dir, 512, 512)
