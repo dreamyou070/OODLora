@@ -390,7 +390,7 @@ def main(args) :
                                                 noise_pred_text - noise_pred_uncond)
                                     latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
                                     z_latent = back_dict[t]
-                                    latents = (z_latent * final_pixel_mask) + (latents * (1 - final_pixel_mask))
+                                    latents = z_latent * (1-final_pixel_mask) + (latents * final_pixel_mask)
                                     x_latent_dict[t] = latents
                                     if args.only_zero_save:
                                         if t == 0:
