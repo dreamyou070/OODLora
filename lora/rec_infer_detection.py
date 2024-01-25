@@ -194,7 +194,7 @@ def main(args) :
         test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
         os.makedirs(test_lora_dir, exist_ok=True)
         condition_save_dir = os.path.join(test_lora_dir, f'with_object_detect_epoch_{detect_model_epoch}_'
-                                                         f'step_{args.num_ddim_steps}_'
+                                                         f'step_{args.num_ddim_steps}_' 
                                                          f'guidance_{args.guidance_scale}_'
                                                          f'start_from_final_{args.start_from_final}_')
         os.makedirs(condition_save_dir, exist_ok=True)
