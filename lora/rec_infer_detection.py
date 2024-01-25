@@ -302,7 +302,7 @@ def main(args) :
                         anomaly_mask = torch.where(recon_mask == 1, 0, 1)
                         anomaly_mask_save_dir = os.path.join(class_base_folder,f'{name}{ext}')
                         save_latent(anomaly_mask, anomaly_mask_save_dir, org_h, org_w)
-                        tiff_anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}.tiff')
+                        tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
                         save_latent(anomaly_mask, tiff_anomaly_mask_save_dir, org_h, org_w)
 
                         recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
