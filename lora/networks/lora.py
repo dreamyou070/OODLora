@@ -100,6 +100,9 @@ class LoRAModule(torch.nn.Module):
         self.org_forward = self.org_module.forward
         self.org_module.forward = self.forward
 
+    def resotre(self):
+        self.org_module.forward = self.org_forward
+
     def forward(self, x):
         org_forwarded = self.org_forward(x)
         # module dropout
@@ -1023,6 +1026,11 @@ class LoRANetwork(torch.nn.Module):
             weights_sd = torch.load(file, map_location="cpu")
         info = self.load_state_dict(weights_sd, False)
         return info
+
+    def restore(self):
+        loras = self.text_encoder_loras + self.unet_loras
+        for lora in loras:
+            lora.restore()
 
     def apply_to(self, text_encoder, unet, apply_text_encoder=True, apply_unet=True):
 
