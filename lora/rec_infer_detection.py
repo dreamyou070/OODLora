@@ -268,9 +268,10 @@ def main(args) :
                     Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(
                         os.path.join(class_base_folder, f'{name}_gt{ext}'))
 
-
-
                     with torch.no_grad():
+
+                        org_img = load_image(test_img_dir, 512, 512)
+                        org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
 
                         # -------------------------------------------- [0] object detect ---------------------------------------------- #
                         call_unet(unet_ob, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
