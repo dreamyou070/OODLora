@@ -3,9 +3,9 @@
 class_name="foam"
 dataset_cat="MVTec3D-AD"
 dataset_dir="../../../MyData/anomaly_detection/${dataset_cat}"
-sub_folder="with_object_detect_epoch_3_step_4_guidance_8.5_start_from_final_True_"
+sub_folder="res_64_up_attn2_t_2_attn2"
 base_dir="../result/${dataset_cat}_experiment/${class_name}/lora_training/anormal/${sub_folder}/reconstruction"
-anomaly_maps_dir="with_object_detect_epoch_4_step_4_guidance_8.5_start_from_final_True_"
+anomaly_maps_dir="with_object_detect_epoch_3_step_4_guidance_8.5_start_from_final_True_"
 output_dir="metrics"
 
 python ../lora/evaluation/evaluation_code_MVTec3D-AD/evaluate_experiment.py \
