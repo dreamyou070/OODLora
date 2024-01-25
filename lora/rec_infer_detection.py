@@ -232,6 +232,7 @@ def main(args) :
                                 call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller_ob.step_store
                                 controller_ob.reset()
+                                network.restore()
                                 object_mask = get_crossattn_map(args, attn_stores,
                                                                 'up_blocks_3_attentions_0_transformer_blocks_0_attn2' )
                                 object_mask_save_dir = os.path.join(class_base_folder,
@@ -240,7 +241,6 @@ def main(args) :
 
                                 # -------------------------------------------------------------------------------------
                                 # 2. anormal mask
-                                network.restore()
                                 network.apply_to(text_encoder, unet, True, True)
                                 if args.network_weights is not None:
                                     weight_dir = os.path.join(args.network_weights, weight)
@@ -348,6 +348,7 @@ def main(args) :
                                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                                 image.save(img_dir)
                                 del latents, back_dict, x_latent_dict
+                                network.restore()
                                 controller.reset()
                                 controller_ob.reset()
 
