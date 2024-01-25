@@ -101,7 +101,7 @@ class LoRAModule(torch.nn.Module):
         self.org_module.forward = self.forward
 
     def restore(self):
-        self.org_module.forward = self.original_forward
+        self.multiplier = 0
 
     def original_forward(self, x):
         return self.org_forward(x)
