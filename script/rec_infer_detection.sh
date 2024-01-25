@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="foam"
+class_name="potato"
 folder_name="res_64_up_attn2_t_2_attn2"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
@@ -34,5 +34,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --only_zero_save \
   --use_pixel_mask \
   --class_name ${class_name} \
-  --anormal_thred 0.45 \
+  --anormal_thred 0.5 \
   --only_zero_save
