@@ -18,7 +18,8 @@ import torch.nn as nn
 from utils.model_utils import call_unet
 from utils.scheduling_utils import next_step
 import math
-from utils.image_utils import latent2image
+from utils.common_util import get_lora_epoch
+from utils.model_utils import get_crossattn_map, save_latent
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -48,13 +49,7 @@ def get_position(layer_name, attn):
         part = 'attn_2'
     return res, pos, part
 
-def save_pixel_mask(mask, base_dir, save_name, org_h, org_w):
 
-    mask_np = mask.squeeze().detach().cpu().numpy().astype(np.uint8)
-    mask_np = mask_np * 255
-    pil_img = Image.fromarray(mask_np).resize((org_h, org_w))
-    pil_img.save(os.path.join(base_dir, save_name))
-    return pil_img
 
 def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     pixel_save_mask_np = normalized_mask.cpu().numpy()
@@ -165,33 +160,28 @@ def main(args) :
                                             neuron_dropout=args.network_dropout, **net_kwargs, )
 
     _, detec_network_dir = os.path.split(detection_network_weights)
-    model_name = os.path.splitext(detec_network_dir)[0]
-    if 'last' not in model_name:
-        detect_model_epoch = int(model_name.split('-')[-1])
-    else:
-        detect_model_epoch = 10000
-
+    detect_model_epoch = get_lora_epoch(detec_network_dir)
     detection_network.apply_to(text_encoder_ob, unet_ob, True, True)
     if args.network_weights is not None:
         info = detection_network.load_weights(detection_network_weights)
     detection_network.to(device)
     controller_ob = AttentionStore()
     register_attention_control(unet_ob, controller_ob)
-    context_ob = init_prompt(tokenizer, text_encoder_ob, device, args.prompt)
+
+    with torch.no_grad():
+        context_ob = init_prompt(tokenizer, text_encoder_ob, device, args.prompt)
     uncon_ob, con_ob = torch.chunk(context_ob, 2)
 
     print(f'\n step 3. save directory and save config')
     network_weights = os.listdir(args.network_weights)
+
     for weight in network_weights:
 
         print(f' (3.1) network weight save directory')
         weight_dir = os.path.join(args.network_weights, weight)
         parent, network_dir = os.path.split(weight_dir)
-        model_name = os.path.splitext(network_dir)[0]
-        if 'last' not in model_name:
-            model_epoch = int(model_name.split('-')[-1])
-        else:
-            model_epoch = 10000
+        model_epoch = get_lora_epoch(network_dir)
+
         test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
         os.makedirs(test_lora_dir, exist_ok=True)
         condition_save_dir = os.path.join(test_lora_dir, f'with_object_detect_epoch_{detect_model_epoch}_'
@@ -199,12 +189,11 @@ def main(args) :
                                                          f'guidance_{args.guidance_scale}_'
                                                          f'start_from_final_{args.start_from_final}_')
         os.makedirs(condition_save_dir, exist_ok=True)
+
         evaluate_output_dir = os.path.join(condition_save_dir, f'{args.class_name}/test')
         os.makedirs(evaluate_output_dir, exist_ok=True)
         my_inference_output_dir = os.path.join(condition_save_dir, f'my_inference_lora_{model_epoch}')
         os.makedirs(my_inference_output_dir, exist_ok=True)
-
-
 
         print(f' (3.2) SD')
         text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
@@ -218,8 +207,6 @@ def main(args) :
         unet, text_encoder = unet.to(device), text_encoder.to(device)
 
         print(f' (3.3) network')
-        sys.path.append(os.path.dirname(__file__))
-        network_module = importlib.import_module(args.network_module)
         net_kwargs = {}
         network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae, text_encoder, unet,
                                                 neuron_dropout=args.network_dropout, **net_kwargs, )
@@ -240,9 +227,10 @@ def main(args) :
                                                               safety_checker=None,
                                                               feature_extractor=None,
                                                               requires_safety_checker=False, )
-
+        pipeline.to(device)
         print(f' (3.5) prompt condition')
-        context = init_prompt(tokenizer, text_encoder, device, args.prompt)
+        with torch.no_grad():
+            context = init_prompt(tokenizer, text_encoder, device, args.prompt)
         uncon, con = torch.chunk(context, 2)
 
         print(f' (3.6) get images')
@@ -262,6 +250,7 @@ def main(args) :
 
                 class_base_folder = os.path.join(my_inference_output_dir, class_name)
                 os.makedirs(class_base_folder, exist_ok=True)
+
                 image_folder = os.path.join(test_folder, f'{class_name}/rgb')
                 mask_folder = os.path.join(test_folder, f'{class_name}/gt')
 
@@ -283,60 +272,47 @@ def main(args) :
                         org_img = load_image(test_img_dir, 512, 512)
                         org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
 
-                        # -------------------------------------------- [0] object detect ---------------------------------------------- #
+                        # ------------------------------------- [1] object mask ------------------------------------- #
+                        # 1. object mask
                         call_unet(unet_ob, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
                         attn_stores = controller_ob.step_store
                         controller_ob.reset()
-                        attn = attn_stores['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze()  # head, pix_num
-                        if args.truncate_length == 3:
-                            cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
-                        else:
-                            cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                        h = trigger_score.shape[0]
-                        trigger_score = trigger_score.unsqueeze(-1).reshape(h, 64,64)
-                        trigger_score = trigger_score.mean(dim=0)            # res, res, (object = 1)
-                        object_mask = trigger_score / trigger_score.max()
-                        object_mask = torch.where(object_mask > 0.5, 1, 0)   # res, res, (object = 1)
-                        # save object mask
-                        object_mask_np = ((object_mask.cpu().numpy()) * 255).astype(np.uint8)
-                        object_mask_pil = Image.fromarray(object_mask_np).resize((org_h,org_w))
-                        object_mask_pil.save(os.path.join(class_base_folder, f'{name}_object_mask{ext}'))
+                        object_mask = get_crossattn_map(args, attn_stores,
+                                                        'up_blocks_3_attentions_0_transformer_blocks_0_attn2' )
+                        object_mask_save_dir = os.path.join(class_base_folder,
+                                                            f'{name}_object_mask{ext}')
+                        save_latent(object_mask, object_mask_save_dir, org_h, org_w)
 
-                        # -------------------------------------------- [1] latent mask ---------------------------------------------- #
-                        org_img = load_image(test_img_dir, 512, 512)
-                        org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+                        # 2. anormal mask
                         call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
+                        attn_stores = controller.step_store
+                        controller.reset()
+                        anormal_mask = get_crossattn_map(args, attn_stores,
+                                                        'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
+                        anormal_mask_save_dir = os.path.join(class_base_folder,
+                                                             f'{name}_anormal_mask{ext}')
+                        save_latent(anormal_mask, anormal_mask_save_dir, org_h, org_w)
+
+                        # 3. latent mask
+                        recon_mask = torch.where((object_mask == 1) & (anormal_mask == 0), 0, 1)
+                        recon_mask_save_dir = os.path.join(class_base_folder,
+                                                                f'{name}_recon_mask{ext}')
+                        save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
+                        recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
+
+                        # 4. final latent mask
+                        anomaly_mask = torch.where(recon_mask == 1, 0, 1)
+                        anomaly_mask_save_dir = os.path.join(class_base_folder,f'{name}{ext}')
+                        save_latent(anomaly_mask, anomaly_mask_save_dir, org_h, org_w)
+                        tiff_anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}.tiff')
+                        save_latent(anomaly_mask, tiff_anomaly_mask_save_dir, org_h, org_w)
+
+                        # -------------------------------------- [2] background -------------------------------------- #
                         inf_time = inference_times.tolist()
                         inf_time.reverse()  # [0,250,500,750]
                         back_dict = {}
                         latent = org_vae_latent
-                        back_dict[0] = latent
-                        attn_stores = controller.step_store
-                        controller.reset()
-                        for layer_name in attn_stores:
-                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                            res, pos, part = get_position(layer_name, attn)
-                            if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
-                                if args.truncate_length == 3:
-                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
-                                else:
-                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                h = trigger_score.shape[0]
-                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                                pixel_mask = trigger_score.mean(dim=0)  # res, res
-                                latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device,
-                                                                              weight_dtype)  # latent_mask = 1,1,64,64
-                                save_pixel_mask(latent_mask, class_base_folder,f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
-                        latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
-                        pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
-                                                     f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
-                        final_pixel_mask_ = torch.where((object_mask == 1) & (latent_mask_ == 0), 1, 0)
-                        # save final pixel mask
-                        anomaly_map = save_pixel_mask(final_pixel_mask_, class_base_folder,
-                                                     f'{name}_final_pixel_binary_mask{ext}', org_h, org_w)
-                        final_pixel_mask = final_pixel_mask_.repeat(1, 4, 1, 1)
-
-                        # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
+                        back_dict[0] = org_vae_latent
                         time_steps = []
                         inf_time.append(999)
                         for i, t in enumerate(inf_time[:-1]):
@@ -351,21 +327,17 @@ def main(args) :
                             latent = next_step(noise_pred, int(t), latent, scheduler)
                         back_dict[inf_time[-1]] = latent
                         time_steps.append(inf_time[-1])
-                        time_steps.reverse()  # 999, 750, ..., 0
+                        time_steps.reverse()
 
-                        # ----------------------------[3] generate image ------------------------------ #
-                        pipeline.to(device)
+                        # -------------------------------------- [3] gen image -------------------------------------- #
                         if accelerator.is_main_process:
                             width = height = 512
                             guidance_scale = args.guidance_scale
                             seed = args.seed
                             torch.manual_seed(seed)
                             torch.cuda.manual_seed(seed)
-                            height = max(64, height - height % 8)  # round to divisible by 8
-                            width = max(64, width - width % 8)  # round to divisible by 8
                             do_classifier_free_guidance = guidance_scale > 1.0
                             x_latent_dict = {}
-
                             with accelerator.autocast():
                                 text_embeddings = init_prompt(tokenizer, text_encoder, device, args.prompt,
                                                               args.negative_prompt)
@@ -395,20 +367,17 @@ def main(args) :
                                     # perform guidance
                                     if do_classifier_free_guidance:
                                         noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                                        noise_pred = noise_pred_uncond + guidance_scale * (
-                                                noise_pred_text - noise_pred_uncond)
+                                        noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
                                     latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
                                     z_latent = back_dict[t]
-                                    latents = z_latent * (1-final_pixel_mask) + (latents * final_pixel_mask)
+                                    latents = z_latent * (recon_mask) + (latents * (1-recon_mask))
                                     x_latent_dict[t] = latents
                                     if args.only_zero_save:
                                         if t == 0:
                                             image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                                             img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                             image.save(img_dir)
-                        # ----------------------------[4] generate anomaly maps ------------------------------ #
-                        anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-                        anomaly_map.save(os.path.join(class_base_folder, f'{name}.png'))
+
         del unet, text_encoder, vae, pipeline, controller, scheduler, network
 
 if __name__ == "__main__":

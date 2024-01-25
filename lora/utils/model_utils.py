@@ -10,6 +10,22 @@ def get_state_dict(dir):
         state_dict[k_] = v
     return state_dict
 
+
+def get_crossattn_map(args, attention_stores: dict = None,
+                    trg_layer: str = 'up_blocks_3_attentions_0_transformer_blocks_0_attn2'):
+    """ 'up_blocks_3_attentions_0_transformer_blocks_0_attn2'"""
+    attn = attention_stores[trg_layer][0].squeeze()  # head, pix_num
+    if args.truncate_length == 3:
+        cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
+    else:
+        cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
+    h = trigger_score.shape[0]
+    trigger_score = trigger_score.unsqueeze(-1).reshape(h, 64, 64)
+    trigger_score = trigger_score.mean(dim=0)  # res, res, (object = 1)
+    object_mask = trigger_score / trigger_score.max()
+    object_mask = torch.where(object_mask > 0.5, 1, 0)  # res, res, (object = 1)
+    return object_mask
+
 def init_prompt(tokenizer, text_encoder, device, prompt: str,
                 negative_prompt: Union[str, None] = None):
     if negative_prompt :
