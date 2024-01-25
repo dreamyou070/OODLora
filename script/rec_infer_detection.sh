@@ -1,14 +1,14 @@
 #! /bin/bash
 
 class_name="potato"
-folder_name="res_64_up_attn2_t_2_attn2"
+folder_name="res_64_up_attn2_t_2_attn2_data_38"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 detection_network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000004.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
-port_number=52020
+port_number=52388
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port ${port_number} ../lora/rec_infer_detection.py \
@@ -34,5 +34,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --only_zero_save \
   --use_pixel_mask \
   --class_name ${class_name} \
-  --anormal_thred 0.5 \
+  --anormal_thred 0.4 \
   --only_zero_save
