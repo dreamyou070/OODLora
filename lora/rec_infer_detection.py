@@ -51,7 +51,6 @@ def get_position(layer_name, attn):
     return res, pos, part
 
 
-
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
 
@@ -135,8 +134,6 @@ def main(args) :
     tokenizer = train_util.load_tokenizer(args)
     device = accelerator.device
 
-
-
     print(f'\n step 3. save directory and save config')
     network_weights = os.listdir(args.network_weights)
 
@@ -156,7 +153,6 @@ def main(args) :
         detection_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, None,
                                                           text_encoder_ob, unet_ob,
                                                           neuron_dropout=args.network_dropout, **net_kwargs, )
-
         _, detec_network_dir = os.path.split(detection_network_weights)
         detect_model_epoch = get_lora_epoch(detec_network_dir)
         detection_network.apply_to(text_encoder_ob, unet_ob, True, True)
@@ -165,16 +161,15 @@ def main(args) :
         detection_network.to(device)
         controller_ob = AttentionStore()
         register_attention_control(unet_ob, controller_ob)
-
         with torch.no_grad():
             context_ob = init_prompt(tokenizer, text_encoder_ob, device, args.prompt)
         uncon_ob, con_ob = torch.chunk(context_ob, 2)
+        # --------------- --------------- --------------- --------------- --------------- --------------- --------------- #
 
         print(f' (3.1) network weight save directory')
         weight_dir = os.path.join(args.network_weights, weight)
         parent, network_dir = os.path.split(weight_dir)
         model_epoch = get_lora_epoch(network_dir)
-
         test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
         os.makedirs(test_lora_dir, exist_ok=True)
         condition_save_dir = os.path.join(test_lora_dir, f'with_object_detect_epoch_{detect_model_epoch}_'  
@@ -211,7 +206,6 @@ def main(args) :
         print(f' (3.4) attention storer')
         controller = AttentionStore()
         register_attention_control(unet, controller)
-
         #pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae, text_encoder=text_encoder, tokenizer=tokenizer,
                                                               #unet=unet, scheduler=scheduler,
                                                               #safety_checker=None, feature_extractor=None,
@@ -256,72 +250,70 @@ def main(args) :
                     Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(
                         os.path.join(class_base_folder, f'{name}_gt{ext}'))
 
-                    with torch.no_grad():
+                    if accelerator.is_main_process:
+                        with torch.no_grad():
+                            org_img = load_image(test_img_dir, 512, 512)
+                            org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+                            # ------------------------------------- [1] object mask ------------------------------------- #
+                            # 1. object mask
+                            call_unet(unet_ob, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
+                            attn_stores = controller_ob.step_store
+                            controller_ob.reset()
+                            object_mask = get_crossattn_map(args, attn_stores,
+                                                            'up_blocks_3_attentions_0_transformer_blocks_0_attn2' )
+                            object_mask_save_dir = os.path.join(class_base_folder,
+                                                                f'{name}_object_mask{ext}')
+                            save_latent(object_mask, object_mask_save_dir, org_h, org_w)
 
-                        org_img = load_image(test_img_dir, 512, 512)
-                        org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-
-                        # ------------------------------------- [1] object mask ------------------------------------- #
-                        # 1. object mask
-                        call_unet(unet_ob, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
-                        attn_stores = controller_ob.step_store
-                        controller_ob.reset()
-                        object_mask = get_crossattn_map(args, attn_stores,
-                                                        'up_blocks_3_attentions_0_transformer_blocks_0_attn2' )
-                        object_mask_save_dir = os.path.join(class_base_folder,
-                                                            f'{name}_object_mask{ext}')
-                        save_latent(object_mask, object_mask_save_dir, org_h, org_w)
-
-                        # 2. anormal mask
-                        call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
-                        attn_stores = controller.step_store
-                        controller.reset()
-                        anormal_mask = get_crossattn_map(args, attn_stores,
-                                                        'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
-                                                         thredhold=args.anormal_thred)
-                        anormal_mask_save_dir = os.path.join(class_base_folder,
-                                                             f'{name}_anormal_mask{ext}')
-                        save_latent(anormal_mask, anormal_mask_save_dir, org_h, org_w)
-
-                        # 3. latent mask
-                        recon_mask = torch.where((object_mask == 1) & (anormal_mask == 0), 0, 1)
-                        recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_recon_mask{ext}')
-                        save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
-
-                        # 4. final latent mask
-                        anomaly_mask = torch.where(recon_mask == 1, 0, 1)
-                        anomaly_mask_save_dir = os.path.join(class_base_folder,f'{name}{ext}')
-                        save_latent(anomaly_mask, anomaly_mask_save_dir, org_h, org_w)
-                        tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
-                        save_latent(anomaly_mask, tiff_anomaly_mask_save_dir, org_h, org_w)
-
-                        recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
-                        # -------------------------------------- [2] background -------------------------------------- #
-                        inf_time = inference_times.tolist()
-                        inf_time.reverse()  # [0,250,500,750]
-                        back_dict = {}
-                        latent = org_vae_latent
-                        back_dict[0] = org_vae_latent
-                        time_steps = []
-                        inf_time.append(999)
-                        for i, t in enumerate(inf_time[:-1]):
-                            back_dict[int(t)] = latent
-                            time_steps.append(t)
-                            if t == 0:
-                                back_image = numpy_to_pil(latent2image(latent, vae, return_type='np'))[0]
-                                back_image = back_image.resize((org_h, org_w))
-                                back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
-                                back_image.save(back_img_dir)
-                            noise_pred = call_unet(unet, latent, t, con, None, None)
+                            # 2. anormal mask
+                            call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
+                            attn_stores = controller.step_store
                             controller.reset()
-                            latent = next_step(noise_pred, int(t), latent, scheduler)
-                        back_dict[inf_time[-1]] = latent
-                        time_steps.append(inf_time[-1])
-                        time_steps.reverse()
+                            anormal_mask = get_crossattn_map(args, attn_stores,
+                                                            'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
+                                                             thredhold=args.anormal_thred)
+                            anormal_mask_save_dir = os.path.join(class_base_folder,
+                                                                 f'{name}_anormal_mask{ext}')
+                            save_latent(anormal_mask, anormal_mask_save_dir, org_h, org_w)
 
-                        # -------------------------------------- [3] gen image -------------------------------------- #
-                        if accelerator.is_main_process:
-                            width = height = 512
+                            # 3. latent mask
+                            recon_mask = torch.where((object_mask == 1) & (anormal_mask == 0), 0, 1)
+                            recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_recon_mask{ext}')
+                            save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
+
+                            # 4. final latent mask
+                            anomaly_mask = torch.where(recon_mask == 1, 0, 1)
+                            anomaly_mask_save_dir = os.path.join(class_base_folder,f'{name}{ext}')
+                            save_latent(anomaly_mask, anomaly_mask_save_dir, org_h, org_w)
+                            tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
+                            save_latent(anomaly_mask, tiff_anomaly_mask_save_dir, org_h, org_w)
+
+                            recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
+
+                            # -------------------------------------- [2] background -------------------------------------- #
+                            inf_time = inference_times.tolist()
+                            inf_time.reverse()  # [0,250,500,750]
+                            back_dict = {}
+                            latent = org_vae_latent
+                            back_dict[0] = org_vae_latent
+                            time_steps = []
+                            inf_time.append(999)
+                            for i, t in enumerate(inf_time[:-1]):
+                                back_dict[int(t)] = latent
+                                time_steps.append(t)
+                                if t == 0:
+                                    back_image = numpy_to_pil(latent2image(latent, vae, return_type='np'))[0]
+                                    back_image = back_image.resize((org_h, org_w))
+                                    back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
+                                    back_image.save(back_img_dir)
+                                noise_pred = call_unet(unet, latent, t, con, None, None)
+                                controller.reset()
+                                latent = next_step(noise_pred, int(t), latent, scheduler)
+                            back_dict[inf_time[-1]] = latent
+                            time_steps.append(inf_time[-1])
+                            time_steps.reverse()
+
+                            # -------------------------------------- [3] gen image -------------------------------------- #
                             guidance_scale = args.guidance_scale
                             seed = args.seed
                             torch.manual_seed(seed)
@@ -369,7 +361,9 @@ def main(args) :
                                             image = numpy_to_pil(img_np)[0].resize((org_h, org_w))
                                             img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                             image.save(img_dir)
-        #del unet, text_encoder, vae, pipeline, controller, scheduler, network, unet_ob, text_encoder_ob, controller_ob, detection_network
+                            del latents, back_dict, x_latent_dict
+                            controller.reset()
+                            controller_ob.reset()
         del unet, text_encoder, vae, controller, scheduler, network, unet_ob, text_encoder_ob, controller_ob, detection_network
 
 if __name__ == "__main__":
