@@ -18,8 +18,8 @@ import torch.nn as nn
 from utils.model_utils import call_unet
 from utils.scheduling_utils import next_step
 import math
-from utils.common_utils import get_lora_epoch
-from utils.model_utils import get_crossattn_map, save_latent
+from utils.common_utils import get_lora_epoch, save_latent
+from utils.model_utils import get_crossattn_map
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
