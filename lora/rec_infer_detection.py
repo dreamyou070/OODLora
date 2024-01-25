@@ -156,7 +156,7 @@ def main(args) :
     sys.path.append(os.path.dirname(__file__))
     network_module = importlib.import_module(args.network_module)
     net_kwargs = {}
-    detection_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae_ob, text_encoder_ob, unet_ob,
+    detection_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, None, text_encoder_ob, unet_ob,
                                             neuron_dropout=args.network_dropout, **net_kwargs, )
 
     _, detec_network_dir = os.path.split(detection_network_weights)
