@@ -279,7 +279,7 @@ def main(args):
 
                                 pipeline.scheduler.set_timesteps(50, device=device)
                                 timesteps, num_inference_steps = pipeline.get_timesteps(50, 0.8,
-                                                                                    device, image is None)
+                                                                                    device, None)
                                 for i, t in enumerate(pipeline.progress_bar(timesteps)):
                                     noise_pred = call_unet(unet, latents, t, con, None, None)
                                     #latent = prev_ste()
