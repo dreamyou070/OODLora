@@ -439,6 +439,7 @@ class ResnetBlock2D(nn.Module):
         hidden_states = self.conv1(hidden_states)
 
         temb = self.time_emb_proj(self.nonlinearity(temb))[:, :, None, None]
+        print(f'resnet, temb.shape: {temb.shape}')
         hidden_states = hidden_states + temb
 
         hidden_states = self.norm2(hidden_states)
@@ -1515,7 +1516,7 @@ class UNet2DConditionModel(nn.Module):
         timesteps = self.handle_unusual_timesteps(sample, timesteps)  # 変な時だけ処理
         t_emb = self.time_proj(timesteps)
         t_emb = t_emb.to(dtype=self.dtype)
-        emb = self.time_embedding(t_emb)
+        emb = self.time_embedding(t_emb) # 1280 dim
         print(f'time emb.shape : {emb.shape}')
 
 
