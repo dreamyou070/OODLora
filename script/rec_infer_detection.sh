@@ -25,7 +25,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --cross_map_res [64] \
   --trg_position "['up']" \
   --trg_part "['attn_2']" \
-  --num_ddim_steps 30 \
+  --num_ddim_steps 4 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \
   --guidance_scale 8.5 \
