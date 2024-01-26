@@ -286,9 +286,9 @@ def main(args):
                                     extra_step_kwargs = {}
                                     latents = pipeline.scheduler.step(noise_pred, 1, latents,
                                                                       **extra_step_kwargs).prev_sample
-                                    latents = org_vae_latent * recon_mask + rand_latents * (1 - recon_mask)
+                                    latents = org_vae_latent * recon_mask + latents * (1 - recon_mask)
                                     image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
-                                    img_dir = os.path.join(class_base_folder, f'{name}_timestep_{i}{ext}')
+                                    img_dir = os.path.join(class_base_folder, f'{name}_timestep_{t}{ext}')
                                     image.save(img_dir)
 
 
