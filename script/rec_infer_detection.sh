@@ -1,11 +1,13 @@
 #! /bin/bash
 
-class_name="foam"
-folder_name="res_64_up_attn2_t_2_attn2_20240125"
-data_folder="MVTec3D-AD"
+
+class_name="bagel"
+folder_name="res_64_up_attn2_t_2_attn2"
+data_name="MVTec"
 normality_folder='anormal'
+
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
-detection_network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000003.safetensors"
+detection_network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000005.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
 port_number=54001
