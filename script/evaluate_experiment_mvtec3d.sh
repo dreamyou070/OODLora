@@ -3,7 +3,7 @@
 class_name="potato"
 dataset_cat="MVTec3D-AD"
 dataset_dir="../../../MyData/anomaly_detection/${dataset_cat}"
-sub_folder="detec_epoch_4_anomal_thredhold_0.5_step_4_guidance_15.0"
+sub_folder="res_64_up_attn2_t_2_attn2_data_12"
 base_dir="../result/${dataset_cat}_experiment/${class_name}/lora_training/anormal/${sub_folder}/reconstruction"
 anomaly_maps_dir="detec_epoch_4_anomal_thredhold_0.5_step_4_guidance_15.0"
 
