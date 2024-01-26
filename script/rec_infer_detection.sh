@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="rope"
-folder_name="models"
+folder_name="res_64_up_attn2_t_2_attn2"
 data_folder="MVTec3D-AD"
 normality_folder='anormal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
@@ -28,7 +28,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --num_ddim_steps 4 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \
-  --guidance_scale 15 \
+  --guidance_scale 8.5 \
   --truncate_length 2 \
   --start_from_final \
   --only_zero_save \
