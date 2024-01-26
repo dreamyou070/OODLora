@@ -1,7 +1,7 @@
 #! /bin/bash
 
-class_name="cable"
-folder_name="2_2_res_64_up_attn2_t_2_20240121"
+class_name="bagel"
+folder_name="res_64_up_attn2_t_2_attn2"
 data_name="MVTec"
 network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/anormal/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"

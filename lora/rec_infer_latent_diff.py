@@ -244,6 +244,21 @@ def main(args):
                                 attn_stores = controller.step_store
                                 controller.reset()
                                 """ if anormal_thred is lower, less anomal detection """
+
+                                attn = attn_stores['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze()  # head, pix_num
+                                if args.truncate_length == 3:
+                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
+                                else:
+                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
+                                h = trigger_score.shape[0]
+                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, 64, 64)
+                                trigger_score = trigger_score.mean(dim=0)  # res, res, (object = 1)
+                                object_mask = trigger_score / trigger_score.max()
+                                anormal_mask_save_dir = os.path.join(class_base_folder,
+                                                                     f'{name}_before_binarize_mask{ext}')
+                                save_latent(object_mask, anormal_mask_save_dir, org_h, org_w)
+
+
                                 anormal_mask = get_crossattn_map(args, attn_stores,
                                                                  'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
                                                                  thredhold=args.anormal_thred)
