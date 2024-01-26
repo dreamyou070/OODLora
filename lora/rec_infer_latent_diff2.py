@@ -298,10 +298,15 @@ def main(args):
                                                        guidance_scale=args.guidance_scale,
                                                        negative_prompt=args.negative_prompt,
                                                        back_dict=back_dict,
-                                                       mask=recon_mask)
+                                                       #mask=recon_mask)
+                                                       mask = None)
                                 image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
-                                img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
+                                img_dir = os.path.join(class_base_folder, f'original{ext}')
                                 image.save(img_dir)
+
+                                #image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
+                                #img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
+                                #image.save(img_dir)
 
                                 # -------------------------------------- [3] gen image -------------------------------------- #
                                 call_unet(unet, org_vae_latent, 0, con, None, 1)
