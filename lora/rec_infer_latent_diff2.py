@@ -10,7 +10,7 @@ import torch
 from PIL import Image
 import sys, importlib
 from utils.image_utils import image2latent, load_image
-from utils.scheduling_utils import get_scheduler, ddim_loop, recon_loop
+from utils.scheduling_utils import get_scheduler
 from utils.model_utils import get_state_dict, init_prompt
 from attention_store import AttentionStore
 import torch.nn as nn
