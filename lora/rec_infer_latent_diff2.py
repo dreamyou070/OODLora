@@ -277,10 +277,8 @@ def main(args):
                                                                                    requires_safety_checker=False, )
                                 pipeline.scheduler.set_timesteps(args.num_ddim_steps, device=device)
                                 inference_times = pipeline.scheduler.timesteps.to(device)
-                                print(f'inference_times: {inference_times}')
                                 inf_time = inference_times.tolist()
                                 inf_time.reverse()  # [0,250,500,750]
-                                print(f'inf_time (0,250,..,750): {inf_time}')
                                 back_dict = {}
                                 latent = org_vae_latent
                                 back_dict[0] = org_vae_latent
@@ -320,7 +318,9 @@ def main(args):
                                                        negative_prompt=args.negative_prompt,
                                                        back_dict=back_dict,
                                                        mask=recon_mask)
-
+                                image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
+                                img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
+                                image.save(img_dir)
                                 """
                                 guidance_scale = args.guidance_scale
                                 seed = args.seed
@@ -372,17 +372,13 @@ def main(args):
                                 # -------------------------------------- [3] gen image -------------------------------------- #
                                 org_latent = back_dict[0]
                                 call_unet(unet, org_latent, 0, con, None, 1)
-                                org_query = \
-                                controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(
-                                    0)
+                                org_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
                                 controller.reset()
 
                                 recon_latent = latents
                                 call_unet(unet, recon_latent, 0, con, None, 1)
-                                recon_query = \
-                                controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(
-                                    0)
+                                recon_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 controller.reset()
                                 recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
 
