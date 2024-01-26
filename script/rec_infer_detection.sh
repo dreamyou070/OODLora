@@ -29,7 +29,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --num_ddim_steps 4 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \
-  --guidance_scale 1 \
+  --guidance_scale 8.5 \
   --truncate_length 2 \
   --start_from_final \
   --only_zero_save \
