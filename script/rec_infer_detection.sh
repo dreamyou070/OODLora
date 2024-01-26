@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="rope"
-folder_name="res_64_up_attn2_t_2_attn2"
+folder_name="res_64_up_attn2_t_2_attn2_data_18"
 data_name="MVTec"
 normality_folder='anormal'
 
