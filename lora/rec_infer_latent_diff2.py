@@ -267,25 +267,28 @@ def main(args):
                                                                                    safety_checker=None,
                                                                                    feature_extractor=None,
                                                                                    requires_safety_checker=False, )
-                                pipeline.scheduler.set_timesteps(1000, device=device)
-                                inference_times = pipeline.scheduler.timesteps.to(device)
-                                inf_time = inference_times.tolist()
-                                inf_time.reverse()  # [0,250,500,750]
-                                back_dict = {}
+                                #pipeline.scheduler.set_timesteps(1000, device=device)
+                                #inference_times = pipeline.scheduler.timesteps.to(device)
+                                #inf_time = inference_times.tolist()
+                                #inf_time.reverse()  # [0,250,500,750]
+                                #back_dict = {}
 
                                 shape = (1,4,64,64)
                                 rand_latents = torch.randn(shape, generator=None, device="cpu", dtype=weight_dtype).to(device)
-                                latent = org_vae_latent
-                                latents = latent * recon_mask + rand_latents * (1 - recon_mask)
+                                latents = org_vae_latent * recon_mask + rand_latents * (1 - recon_mask)
 
-                                for i in range(10) :
-                                    noise_pred = call_unet(unet, latents, 1, con, None, None)
+                                pipeline.scheduler.set_timesteps(50, device=device)
+                                timesteps, num_inference_steps = pipeline.get_timesteps(num_inference_steps, 0.8,
+                                                                                    device, image is None)
+                                for i, t in enumerate(pipeline.progress_bar(timesteps)):
+                                    noise_pred = call_unet(unet, latents, t, con, None, None)
                                     #latent = prev_ste()
                                     extra_step_kwargs = {}
                                     latents = pipeline.scheduler.step(noise_pred, 1, latents,
                                                                       **extra_step_kwargs).prev_sample
+                                    latents = org_vae_latent * recon_mask + rand_latents * (1 - recon_mask)
                                     image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
-                                    img_dir = os.path.join(class_base_folder, f'{name}_iter_{i}{ext}')
+                                    img_dir = os.path.join(class_base_folder, f'{name}_timestep_{i}{ext}')
                                     image.save(img_dir)
 
 

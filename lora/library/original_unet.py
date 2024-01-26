@@ -1512,13 +1512,16 @@ class UNet2DConditionModel(nn.Module):
 
         # ------------------------------------------------------------------------------------------
         # 1. batch number of time steps
+
+        #initial_timesteps = 1
+        #initial_t_emb = self.time_proj(initial_timesteps).to(dtype=self.dtype)
+        #initial_emb = self.time_embedding(initial_t_emb)
+
         timesteps = timestep
-        print(f'timesteps : {timesteps} | type : {type(timesteps)}')
         timesteps = self.handle_unusual_timesteps(sample, timesteps)  # 変な時だけ処理
         t_emb = self.time_proj(timesteps)
         t_emb = t_emb.to(dtype=self.dtype)
         emb = self.time_embedding(t_emb) # 1280 dim
-        print(f'time emb.shape : {emb.shape}')
 
 
         # ------------------------------------------------------------------------------------------
