@@ -824,6 +824,8 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
             generator,
             latents,
         )
+        # (1) init latent maskint
+        latents = back_dict * mask + latents * (1 - mask)
 
         # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
@@ -848,10 +850,11 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
 
             if mask is not None:
                 # masking
-                if type(t) == torch.Tensor:
-                    t = int(t.item())
-                z_latent = back_dict[t]
-                latents = z_latent * (mask) + (latents * (1 - mask))
+                #if type(t) == torch.Tensor:
+                #    t = int(t.item())
+                #z_latent = back_dict[t]
+                latents = back_dict * (mask) + (latents * (1 - mask))
+
         return latents
 
     def latents_to_image(self, latents):
