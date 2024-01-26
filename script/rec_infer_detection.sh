@@ -1,15 +1,15 @@
 #! /bin/bash
 
-class_name="rope"
-folder_name="res_64_up_attn2_t_2_attn2"
+class_name="cookie"
+folder_name="res_64_up_attn2_t_2_attn2_20240125"
 data_name="MVTec3D-AD"
 normality_folder='anormal'
 
 network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
-detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000003.safetensors"
+detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/normal/res_64_up_attn012_t_2_only_normal/models/epoch-000004.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
 
-port_number=54701
+port_number=54601
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port ${port_number} ../lora/rec_infer_latent_diff.py \
@@ -26,7 +26,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --cross_map_res [64] \
   --trg_position "['up']" \
   --trg_part "['attn_2']" \
-  --num_ddim_steps 4 \
+  --num_ddim_steps 30 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \
   --guidance_scale 8.5 \
