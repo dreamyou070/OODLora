@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="cookie"
+class_name="foam"
 dataset_cat="MVTec3D-AD"
 dataset_dir="../../../MyData/anomaly_detection/${dataset_cat}"
 sub_folder="res_64_up_attn2_t_2_attn2_20240125"
