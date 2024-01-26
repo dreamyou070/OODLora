@@ -782,9 +782,6 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
         height = height or self.unet.config.sample_size * self.vae_scale_factor
         width = width or self.unet.config.sample_size * self.vae_scale_factor
 
-        # 1. Check inputs. Raise error if not correct
-        self.check_inputs(prompt, height, width, strength, callback_steps)
-
         # 2. Define call parameters
         batch_size = 1 if isinstance(prompt, str) else len(prompt)
         device = self._execution_device
