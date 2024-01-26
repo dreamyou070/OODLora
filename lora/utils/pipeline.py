@@ -849,6 +849,8 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
 
             if mask is not None:
                 # masking
+                if type(t) == torch.Tensor:
+                    t = int(t.item())
                 z_latent = back_dict[t]
                 latents = z_latent * (mask) + (latents * (1 - mask))
         return latents
