@@ -140,8 +140,8 @@ def main(args):
                                       beta_start=args.scheduler_linear_start,
                                       beta_end=args.scheduler_linear_end,
                                       beta_schedule=args.scheduler_schedule)
-            scheduler.set_timesteps(args.num_ddim_steps)
-            inference_times = scheduler.timesteps
+            #scheduler.set_timesteps(args.num_ddim_steps)
+            #inference_times = scheduler.timesteps
 
             # (2) make scratch network
             sys.path.append(os.path.dirname(__file__))
@@ -266,8 +266,21 @@ def main(args):
                                 recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
                                 # -------------------------------------- [2] background ------------------------------ #
+                                from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
+                                pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
+                                                                                   text_encoder=text_encoder,
+                                                                                   tokenizer=tokenizer,
+                                                                                   unet=unet,
+                                                                                   scheduler=scheduler,
+                                                                                   safety_checker=None,
+                                                                                   feature_extractor=None,
+                                                                                   requires_safety_checker=False, )
+                                pipeline.scheduler.set_timesteps(args.num_ddim_steps, device=device)
+                                inference_times = pipeline.scheduler.timesteps.to(device)
+                                print(f'inference_times: {inference_times}')
                                 inf_time = inference_times.tolist()
                                 inf_time.reverse()  # [0,250,500,750]
+                                print(f'inf_time (0,250,..,750): {inf_time}')
                                 back_dict = {}
                                 latent = org_vae_latent
                                 back_dict[0] = org_vae_latent
@@ -302,7 +315,7 @@ def main(args):
                                 with accelerator.autocast():
                                     latents = pipeline(prompt=args.prompt,
                                                        height=512, width=512,
-                                                       num_inference_steps=args.ddim_sample_steps,
+                                                       num_inference_steps=args.num_ddim_steps,
                                                        guidance_scale=args.guidance_scale,
                                                        negative_prompt=args.negative_prompt,
                                                        back_dict=back_dict,
