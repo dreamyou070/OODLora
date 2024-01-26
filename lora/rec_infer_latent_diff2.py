@@ -211,7 +211,6 @@ def main(args):
                                 # ------------------------------------- [1] object mask ------------------------------ #
                                 # 1. object mask
                                 network.load_weights(args.detection_network_weights)
-                                network.to(device)
                                 controller_ob = AttentionStore()
                                 register_attention_control(unet, controller_ob)
                                 with torch.no_grad():
@@ -232,6 +231,7 @@ def main(args):
                                 # network.apply_to(text_encoder, unet, True, True)
                                 # if args.network_weights is not None:
                                 weight_dir = os.path.join(args.network_weights, weight)
+                                network.restore()
                                 network.load_weights(weight_dir)
                                 network.to(device)
                                 controller = AttentionStore()
@@ -291,6 +291,7 @@ def main(args):
                                 back_dict[inf_time[-1]] = latent
 
                                 # -------------------------------------- [3] gen image -------------------------------------- #
+                                network.restore()
                                 network.load_weights(args.detection_network_weights)
                                 controller = AttentionStore()
                                 register_attention_control(unet, controller)
@@ -310,6 +311,7 @@ def main(args):
                                 #img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                 #image.save(img_dir)
                                 # -------------------------------------- [4] anomaly map -------------------------------------- #
+                                network.restore()
                                 network.load_weights(weight_dir)
                                 controller = AttentionStore()
                                 register_attention_control(unet, controller)
