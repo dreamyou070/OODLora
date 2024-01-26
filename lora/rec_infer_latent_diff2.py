@@ -294,9 +294,9 @@ def main(args):
                                 shape = (1,4,64,64)
                                 rand_latents = torch.randn(shape, generator=None, device="cpu", dtype=weight_dtype).to(device)
                                 latent = org_vae_latent
-                                latent = latent * recon_mask + rand_latents * (1 - recon_mask)
+                                latents = latent * recon_mask + rand_latents * (1 - recon_mask)
                                 for i in range(10) :
-                                    noise_pred = call_unet(unet, latent, 1, con, None, None)
+                                    noise_pred = call_unet(unet, latents, 1, con, None, None)
                                     #latent = prev_ste()
                                     extra_step_kwargs = {}
                                     latents = pipeline.scheduler.step(noise_pred, 1, latents,
