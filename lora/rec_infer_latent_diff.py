@@ -241,22 +241,6 @@ def main(args):
                                 call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller.step_store
                                 controller.reset()
-                                """ if anormal_thred is lower, less anomal detection """
-
-                                attn = attn_stores['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze()  # head, pix_num
-                                if args.truncate_length == 3:
-                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
-                                else:
-                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                h = trigger_score.shape[0]
-                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, 64, 64)
-                                trigger_score = trigger_score.mean(dim=0)  # res, res, (object = 1)
-                                object_mask = trigger_score / trigger_score.max()
-                                anormal_mask_save_dir = os.path.join(class_base_folder,
-                                                                     f'{name}_before_binarize_mask{ext}')
-                                save_latent(object_mask, anormal_mask_save_dir, org_h, org_w)
-
-
                                 anormal_mask = get_crossattn_map(args, attn_stores,
                                                                  'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
                                                                  thredhold=args.anormal_thred)
@@ -272,9 +256,12 @@ def main(args):
                                 # 4. final latent mask
                                 recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
-                                # -------------------------------------- [2] background ------------------------------ #
+                                # ---------------------------------- [2] reconstruction ------------------------------ #
                                 from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
                                 import numpy as np
+                                network.restore()
+                                network.load_weights(args.detection_network_weights)
+                                network.to(device)
                                 pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
                                                                                    text_encoder=text_encoder,
                                                                                    tokenizer=tokenizer,
@@ -283,48 +270,19 @@ def main(args):
                                                                                    safety_checker=None,
                                                                                    feature_extractor=None,
                                                                                    requires_safety_checker=False, )
-                                pipeline.scheduler.set_timesteps(args.num_ddim_steps, device=device)
-                                inference_times = pipeline.scheduler.timesteps.to(device)
-                                inf_time = inference_times.tolist()
-                                inf_time.reverse()  # [0,250,500,750]
-                                back_dict = {}
-                                latent = org_vae_latent
-                                back_dict[inf_time[0]] = org_vae_latent
-                                time_steps = []
-                                inf_time.append(1000)
-                                for i, t in enumerate(inf_time[:-1]):
-                                    back_dict[int(t)] = latent
-                                    time_steps.append(t)
-                                    if i == 0 :
-                                        back_image = pipeline.latents_to_image(latent)[0].resize((org_h, org_w))
-                                        back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
-                                        back_image.save(back_img_dir)
-                                    noise_pred = call_unet(unet, latent, t, con, None, None)
-                                    controller.reset()
-                                    latent = next_step(noise_pred, int(t), latent, scheduler)
-                                back_dict[inf_time[-1]] = latent
-
-                                # -------------------------------------- [3] gen image -------------------------------------- #
-                                network.restore()
-                                network.load_weights(args.detection_network_weights)
-                                network.to(device)
-                                controller = AttentionStore()
-                                register_attention_control(unet, controller)
-                                with accelerator.autocast():
-                                    latents = pipeline(prompt=args.prompt,
-                                                       height=512, width=512,
-                                                       num_inference_steps=args.num_ddim_steps,
-                                                       guidance_scale=args.guidance_scale,
-                                                       negative_prompt=args.negative_prompt,
-                                                       back_dict=back_dict,
-                                                       mask=recon_mask)
-                                                       #mask = None)
-                                #image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
-                                #img_dir = os.path.join(class_base_folder, f'original{ext}')
-                                #image.save(img_dir)
-                                image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
+                                latents = pipeline(prompt=args.prompt,
+                                                   height=512,
+                                                   width=512,
+                                                   num_inference_steps=args.num_ddim_steps,
+                                                   guidance_scale=args.guidance_scale,
+                                                   negative_prompt=args.negative_prompt,
+                                                   reference_image =org_vae_latent,
+                                                   mask=recon_mask)
+                                # mask = None)
+                                recon_image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
-                                image.save(img_dir)
+                                recon_image.save(img_dir)
+
                                 # -------------------------------------- [4] anomaly map -------------------------------------- #
                                 network.restore()
                                 network.load_weights(weight_dir)
@@ -332,16 +290,20 @@ def main(args):
                                 controller = AttentionStore()
                                 register_attention_control(unet, controller)
                                 # (1) original
+                                org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
+                                org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
                                 call_unet(unet, org_vae_latent, 0, con, None, 1)
                                 org_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
                                 controller.reset()
+
                                 # (2) recon
                                 recon_latent = latents
                                 call_unet(unet, recon_latent, 0, con, None, 1)
                                 recon_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 controller.reset()
                                 recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
+
                                 # (3) anomaly score
                                 anomaly_score = (org_query @ recon_query.T).cpu()
                                 pix_num = anomaly_score.shape[0]
@@ -356,8 +318,6 @@ def main(args):
                                 tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
                                 anomaly_score_pil.save(anomaly_mask_save_dir)
                                 anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
-                                del latents, back_dict
-                                # anomaly_mask = torch.where(recon_mask == 1, 0, 1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
