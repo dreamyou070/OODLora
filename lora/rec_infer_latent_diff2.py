@@ -292,7 +292,9 @@ def main(args):
                                 # (1) original
                                 org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
                                 org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
-                                org_latent = image2latent(org_img, vae, device, weight_dtype)
+                                org_latent = image2latent(np.array(org_img.resize((512,512), Image.BICUBIC), np.uint8),
+                                                          vae, device, weight_dtype)
+
                                 call_unet(unet, org_latent, 0, con, None, 1)
                                 org_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
