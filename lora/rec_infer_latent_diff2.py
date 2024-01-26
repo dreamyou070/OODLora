@@ -211,6 +211,7 @@ def main(args):
                                 # ------------------------------------- [1] object mask ------------------------------ #
                                 # 1. object mask
                                 network.load_weights(args.detection_network_weights)
+                                network.to(device)
                                 controller_ob = AttentionStore()
                                 register_attention_control(unet, controller_ob)
                                 with torch.no_grad():
@@ -293,6 +294,7 @@ def main(args):
                                 # -------------------------------------- [3] gen image -------------------------------------- #
                                 network.restore()
                                 network.load_weights(args.detection_network_weights)
+                                network.to(device)
                                 controller = AttentionStore()
                                 register_attention_control(unet, controller)
                                 with accelerator.autocast():
@@ -313,6 +315,7 @@ def main(args):
                                 # -------------------------------------- [4] anomaly map -------------------------------------- #
                                 network.restore()
                                 network.load_weights(weight_dir)
+                                network.to(device)
                                 controller = AttentionStore()
                                 register_attention_control(unet, controller)
                                 # (1) original
