@@ -1,6 +1,6 @@
 import argparse
 from accelerate.utils import set_seed
-#from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
+# from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
 import os
 import random
 import library.train_util as train_util
@@ -21,6 +21,7 @@ from utils.common_utils import get_lora_epoch, save_latent
 from utils.model_utils import get_crossattn_map
 from utils.image_utils import latent2image, numpy_to_pil
 from safetensors.torch import load_file
+
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -70,14 +71,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_probs.to(value.dtype)
 
             if is_cross_attention:
-                controller.store(attention_probs[:,:,:args.truncate_length], layer_name)
+                controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
 
             if is_cross_attention and mask is not None:
-                if layer_name  == 'up_blocks_3_attentions_2_transformer_blocks_0_attn2' :
+                if layer_name == 'up_blocks_3_attentions_2_transformer_blocks_0_attn2':
                     controller.save_query(self_head_query, layer_name)
-
-
-
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -105,16 +103,17 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
-def main(args) :
 
+
+def main(args):
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
-    args.output_dir = os.path.join(parent,'reconstruction')
+    args.output_dir = os.path.join(parent, 'reconstruction')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
     train_util.verify_training_args(args)
     train_util.prepare_dataset_args(args, True)
-    if args.seed is None :
+    if args.seed is None:
         args.seed = random.randint(0, 2 ** 32)
     set_seed(args.seed)
 
@@ -161,9 +160,9 @@ def main(args) :
             test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
             os.makedirs(test_lora_dir, exist_ok=True)
             ## (3.1) base dir
-            condition_save_dir = os.path.join(test_lora_dir, f'detec_epoch_{detect_model_epoch}_'  
+            condition_save_dir = os.path.join(test_lora_dir, f'detec_epoch_{detect_model_epoch}_'
                                                              f'anomal_thredhold_{args.anormal_thred}_'
-                                                             f'step_{args.num_ddim_steps}_' 
+                                                             f'step_{args.num_ddim_steps}_'
                                                              f'guidance_{args.guidance_scale}')
             print(f'condition_save_dir : {condition_save_dir}')
             os.makedirs(condition_save_dir, exist_ok=True)
@@ -222,17 +221,17 @@ def main(args) :
                                 call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller_ob.step_store
                                 controller_ob.reset()
-                                #network.restore()
+                                # network.restore()
                                 object_mask = get_crossattn_map(args, attn_stores,
-                                                                'up_blocks_3_attentions_0_transformer_blocks_0_attn2' )
+                                                                'up_blocks_3_attentions_0_transformer_blocks_0_attn2')
                                 object_mask_save_dir = os.path.join(class_base_folder,
                                                                     f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
 
                                 # -------------------------------------------------------------------------------------
                                 # 2. anormal mask
-                                #network.apply_to(text_encoder, unet, True, True)
-                                #if args.network_weights is not None:
+                                # network.apply_to(text_encoder, unet, True, True)
+                                # if args.network_weights is not None:
                                 weight_dir = os.path.join(args.network_weights, weight)
                                 info = network.load_weights(weight_dir)
                                 network.to(device)
@@ -246,7 +245,7 @@ def main(args) :
                                 controller.reset()
                                 """ if anormal_thred is lower, less anomal detection """
                                 anormal_mask = get_crossattn_map(args, attn_stores,
-                                                                'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
+                                                                 'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
                                                                  thredhold=args.anormal_thred)
                                 anormal_mask_save_dir = os.path.join(class_base_folder,
                                                                      f'{name}_anormal_mask{ext}')
@@ -259,10 +258,10 @@ def main(args) :
 
                                 # 4. final latent mask
                                 anomaly_mask = torch.where(recon_mask == 1, 0, 1)
-                                anomaly_mask_save_dir = os.path.join(class_base_folder,f'{name}{ext}')
+                                anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
                                 save_latent(anomaly_mask, anomaly_mask_save_dir, org_h, org_w)
                                 tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
-                                #save_latent(anomaly_mask, tiff_anomaly_mask_save_dir, org_h, org_w)
+                                # save_latent(anomaly_mask, tiff_anomaly_mask_save_dir, org_h, org_w)
 
                                 recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
@@ -299,14 +298,15 @@ def main(args) :
                                                                                    scheduler=scheduler,
                                                                                    safety_checker=None,
                                                                                    feature_extractor=None,
-                                                                                   requires_safety_checker=False,)
+                                                                                   requires_safety_checker=False, )
                                 with accelerator.autocast():
                                     latents = pipeline(prompt=args.prompt,
                                                        height=512, width=512,
                                                        num_inference_steps=args.ddim_sample_steps,
-                                                       guidance_scale=args.guidance_scale, negative_prompt=args.negative_prompt,
+                                                       guidance_scale=args.guidance_scale,
+                                                       negative_prompt=args.negative_prompt,
                                                        back_dict=back_dict,
-                                                       mask = recon_mask)
+                                                       mask=recon_mask)
 
                                 """
                                 guidance_scale = args.guidance_scale
@@ -359,21 +359,25 @@ def main(args) :
                                 # -------------------------------------- [3] gen image -------------------------------------- #
                                 org_latent = back_dict[0]
                                 call_unet(unet, org_latent, 0, con, None, 1)
-                                org_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
+                                org_query = \
+                                controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(
+                                    0)
                                 org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
                                 controller.reset()
 
                                 recon_latent = latents
                                 call_unet(unet, recon_latent, 0, con, None, 1)
-                                recon_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
+                                recon_query = \
+                                controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(
+                                    0)
                                 controller.reset()
                                 recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
 
                                 anomaly_score = (org_query @ recon_query.T).cpu()
                                 pix_num = anomaly_score.shape[0]
                                 anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
-                                anomaly_score = anomaly_score / anomaly_score.max() # 0 ~ 1
-                                anomaly_score = anomaly_score.unsqueeze(0).reshape(64,64)
+                                anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
+                                anomaly_score = anomaly_score.unsqueeze(0).reshape(64, 64)
                                 anomaly_score = anomaly_score.numpy()
                                 import numpy as np
                                 anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
@@ -381,6 +385,7 @@ def main(args) :
                                 anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
                                 anomaly_score_pil.save(os.path.join(class_base_folder, f'{name}_final_tiff.tiff'))
                                 del latents, back_dict
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -406,13 +411,13 @@ if __name__ == "__main__":
                         help="network dimensions (depends on each network)")
     parser.add_argument("--network_alpha", type=float, default=1,
                         help="alpha for LoRA weight scaling, default 1", )
-    parser.add_argument("--network_dropout", type=float, default=None,)
-    parser.add_argument("--network_args", type=str, default=None, nargs="*",)
-    parser.add_argument("--dim_from_weights", action="store_true",)
-    parser.add_argument("--network_weights", type=str, default=None,help="pretrained weights for network")
+    parser.add_argument("--network_dropout", type=float, default=None, )
+    parser.add_argument("--network_args", type=str, default=None, nargs="*", )
+    parser.add_argument("--dim_from_weights", action="store_true", )
+    parser.add_argument("--network_weights", type=str, default=None, help="pretrained weights for network")
     parser.add_argument("--concept_image", type=str,
-                        default = '/data7/sooyeon/MyData/perfusion_dataset/td_100/100_td/td_1.jpg')
-    parser.add_argument("--prompt", type=str, default = 'teddy bear, wearing like a super hero')
+                        default='/data7/sooyeon/MyData/perfusion_dataset/td_100/100_td/td_1.jpg')
+    parser.add_argument("--prompt", type=str, default='teddy bear, wearing like a super hero')
     parser.add_argument("--concept_image_folder", type=str)
     parser.add_argument("--num_ddim_steps", type=int, default=50)
     parser.add_argument("--scheduler_linear_start", type=float, default=0.00085)
@@ -435,14 +440,18 @@ if __name__ == "__main__":
     parser.add_argument("--anormal_thred", type=float, default=0.5)
     parser.add_argument("--detection_network_weights", type=str, )
     import ast
+
+
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
+
+
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--trg_position", type=arg_as_list, default=['up'])
-    parser.add_argument("--trg_part", type=arg_as_list, default=['attn_2','attn_1','attn_0'])
+    parser.add_argument("--trg_part", type=arg_as_list, default=['attn_2', 'attn_1', 'attn_0'])
     parser.add_argument("--trg_lora_epoch", type=str)
     parser.add_argument("--negative_prompt", type=str)
 
