@@ -232,7 +232,7 @@ def main(args):
                                 # network.apply_to(text_encoder, unet, True, True)
                                 # if args.network_weights is not None:
                                 weight_dir = os.path.join(args.network_weights, weight)
-                                info = network.load_weights(weight_dir)
+                                network.load_weights(weight_dir)
                                 network.to(device)
                                 controller = AttentionStore()
                                 register_attention_control(unet, controller)
@@ -291,6 +291,9 @@ def main(args):
                                 back_dict[inf_time[-1]] = latent
 
                                 # -------------------------------------- [3] gen image -------------------------------------- #
+                                network.load_weights(args.detection_network_weights)
+                                controller = AttentionStore()
+                                register_attention_control(unet, controller)
                                 with accelerator.autocast():
                                     latents = pipeline(prompt=args.prompt,
                                                        height=512, width=512,
@@ -303,23 +306,25 @@ def main(args):
                                 image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                                 img_dir = os.path.join(class_base_folder, f'original{ext}')
                                 image.save(img_dir)
-
                                 #image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                                 #img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                 #image.save(img_dir)
-
-                                # -------------------------------------- [3] gen image -------------------------------------- #
+                                # -------------------------------------- [4] anomaly map -------------------------------------- #
+                                network.load_weights(weight_dir)
+                                controller = AttentionStore()
+                                register_attention_control(unet, controller)
+                                # (1) original
                                 call_unet(unet, org_vae_latent, 0, con, None, 1)
                                 org_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
                                 controller.reset()
-
+                                # (2) recon
                                 recon_latent = latents
                                 call_unet(unet, recon_latent, 0, con, None, 1)
                                 recon_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 controller.reset()
                                 recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
-
+                                # (3) anomaly score
                                 anomaly_score = (org_query @ recon_query.T).cpu()
                                 pix_num = anomaly_score.shape[0]
                                 anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
