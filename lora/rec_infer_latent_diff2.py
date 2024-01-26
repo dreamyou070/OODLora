@@ -285,7 +285,7 @@ def main(args):
                                 latent = org_vae_latent
                                 back_dict[0] = org_vae_latent
                                 time_steps = []
-                                inf_time.append(999)
+                                inf_time.append(1000)
                                 for i, t in enumerate(inf_time[:-1]):
                                     back_dict[int(t)] = latent
                                     time_steps.append(t)

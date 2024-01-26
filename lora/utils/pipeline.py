@@ -833,6 +833,7 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
 
         # 8. Denoising loop
         for i, t in enumerate(self.progress_bar(timesteps)):
+            print(f'denoising, t : {t} : type : {type(t)}')
             # expand the latents if we are doing classifier free guidance
             latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
             latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
