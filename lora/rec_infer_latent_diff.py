@@ -229,8 +229,6 @@ def main(args):
 
                                 # -------------------------------------------------------------------------------------
                                 # 2. anormal mask
-                                # network.apply_to(text_encoder, unet, True, True)
-                                # if args.network_weights is not None:
                                 weight_dir = os.path.join(args.network_weights, weight)
                                 network.restore()
                                 network.load_weights(weight_dir)

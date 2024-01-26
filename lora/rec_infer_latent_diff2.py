@@ -229,8 +229,6 @@ def main(args):
 
                                 # -------------------------------------------------------------------------------------
                                 # 2. anormal mask
-                                # network.apply_to(text_encoder, unet, True, True)
-                                # if args.network_weights is not None:
                                 weight_dir = os.path.join(args.network_weights, weight)
                                 network.restore()
                                 network.load_weights(weight_dir)
@@ -243,22 +241,6 @@ def main(args):
                                 call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller.step_store
                                 controller.reset()
-                                """ if anormal_thred is lower, less anomal detection """
-
-                                attn = attn_stores['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze()  # head, pix_num
-                                if args.truncate_length == 3:
-                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
-                                else:
-                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                h = trigger_score.shape[0]
-                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, 64, 64)
-                                trigger_score = trigger_score.mean(dim=0)  # res, res, (object = 1)
-                                object_mask = trigger_score / trigger_score.max()
-                                anormal_mask_save_dir = os.path.join(class_base_folder,
-                                                                     f'{name}_before_binarize_mask{ext}')
-                                save_latent(object_mask, anormal_mask_save_dir, org_h, org_w)
-
-
                                 anormal_mask = get_crossattn_map(args, attn_stores,
                                                                  'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
                                                                  thredhold=args.anormal_thred)
@@ -295,6 +277,7 @@ def main(args):
                                 rand_latents = torch.randn(shape, generator=None, device="cpu", dtype=weight_dtype).to(device)
                                 latent = org_vae_latent
                                 latents = latent * recon_mask + rand_latents * (1 - recon_mask)
+
                                 for i in range(10) :
                                     noise_pred = call_unet(unet, latents, 1, con, None, None)
                                     #latent = prev_ste()
