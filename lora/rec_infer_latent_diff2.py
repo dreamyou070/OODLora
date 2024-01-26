@@ -278,9 +278,9 @@ def main(args):
                                 latents = org_vae_latent * recon_mask + rand_latents * (1 - recon_mask)
 
                                 pipeline.scheduler.set_timesteps(50, device=device)
-                                timesteps, num_inference_steps = pipeline.get_timesteps(50, 0.8,
-                                                                                    device, None)
+                                timesteps, num_inference_steps = pipeline.get_timesteps(50, 1, device, False)
                                 for i, t in enumerate(pipeline.progress_bar(timesteps)):
+                                    print(f'denoiing, t : {t}')
                                     noise_pred = call_unet(unet, latents, t, con, None, None)
                                     #latent = prev_ste()
                                     extra_step_kwargs = {}

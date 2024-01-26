@@ -439,7 +439,6 @@ class ResnetBlock2D(nn.Module):
         hidden_states = self.conv1(hidden_states)
 
         temb = self.time_emb_proj(self.nonlinearity(temb))[:, :, None, None]
-        print(f'resnet, temb.shape: {temb.shape}')
         hidden_states = hidden_states + temb
 
         hidden_states = self.norm2(hidden_states)
