@@ -681,7 +681,6 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
         prompt: Union[str, List[str]],
         negative_prompt: Optional[Union[str, List[str]]] = None,
         image: Union[torch.FloatTensor, PIL.Image.Image] = None,
-        mask_image: Union[torch.FloatTensor, PIL.Image.Image] = None,
         height: int = 512,
         width: int = 512,
         num_inference_steps: int = 50,
@@ -697,6 +696,7 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
         callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
         is_cancelled_callback: Optional[Callable[[], bool]] = None,
         back_dict: Dict = False,
+        mask: Union[torch.FloatTensor, PIL.Image.Image] = None,
     ):
         r"""
         Function invoked when calling the pipeline for generation.
@@ -809,13 +809,6 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
             image = preprocess_image(image)
         if image is not None:
             image = image.to(device=self.device, dtype=dtype)
-        if isinstance(mask_image, PIL.Image.Image):
-            mask_image = preprocess_mask(mask_image, self.vae_scale_factor)
-        if mask_image is not None:
-            mask = mask_image.to(device=self.device, dtype=dtype)
-            mask = torch.cat([mask] * batch_size * num_images_per_prompt)
-        else:
-            mask = None
 
         # 5. set timesteps
         self.scheduler.set_timesteps(num_inference_steps, device=device)
