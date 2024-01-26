@@ -1516,6 +1516,7 @@ class UNet2DConditionModel(nn.Module):
         t_emb = self.time_proj(timesteps)
         t_emb = t_emb.to(dtype=self.dtype)
         emb = self.time_embedding(t_emb)
+        print(f'time emb.shape : {emb.shape}')
 
 
         # ------------------------------------------------------------------------------------------
