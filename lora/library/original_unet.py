@@ -1513,6 +1513,7 @@ class UNet2DConditionModel(nn.Module):
         # ------------------------------------------------------------------------------------------
         # 1. batch number of time steps
         timesteps = timestep
+        print(f'timesteps : {timesteps} | type : {type(timesteps)}')
         timesteps = self.handle_unusual_timesteps(sample, timesteps)  # 変な時だけ処理
         t_emb = self.time_proj(timesteps)
         t_emb = t_emb.to(dtype=self.dtype)
