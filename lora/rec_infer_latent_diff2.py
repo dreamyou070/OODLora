@@ -326,7 +326,7 @@ def main(args):
                                 anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
                                 anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
                                 tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
-                                anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
+                                anomaly_score_pil.save(anomaly_mask_save_dir)
                                 anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
                                 del latents, back_dict
                                 # anomaly_mask = torch.where(recon_mask == 1, 0, 1)
