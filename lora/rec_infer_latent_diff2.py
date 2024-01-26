@@ -209,7 +209,6 @@ def main(args):
                                 org_img = load_image(test_img_dir, 512, 512)
                                 org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                                 # ------------------------------------- [1] object mask ------------------------------ #
-                                # -------------------------------------------------------------------------------------
                                 # 1. object mask
                                 network.load_weights(args.detection_network_weights)
                                 network.to(device)
@@ -257,16 +256,11 @@ def main(args):
                                 save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
 
                                 # 4. final latent mask
-                                anomaly_mask = torch.where(recon_mask == 1, 0, 1)
-                                anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
-                                save_latent(anomaly_mask, anomaly_mask_save_dir, org_h, org_w)
-                                tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
-                                # save_latent(anomaly_mask, tiff_anomaly_mask_save_dir, org_h, org_w)
-
                                 recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
                                 # -------------------------------------- [2] background ------------------------------ #
                                 from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
+                                import numpy as np
                                 pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
                                                                                    text_encoder=text_encoder,
                                                                                    tokenizer=tokenizer,
@@ -281,35 +275,22 @@ def main(args):
                                 inf_time.reverse()  # [0,250,500,750]
                                 back_dict = {}
                                 latent = org_vae_latent
-                                back_dict[0] = org_vae_latent
+                                back_dict[inf_time[0]] = org_vae_latent
                                 time_steps = []
                                 inf_time.append(1000)
                                 for i, t in enumerate(inf_time[:-1]):
                                     back_dict[int(t)] = latent
                                     time_steps.append(t)
-                                    if t == 0:
-                                        back_image = numpy_to_pil(latent2image(latent, vae, return_type='np'))[0]
-                                        back_image = back_image.resize((org_h, org_w))
+                                    if i == 0 :
+                                        back_image = pipeline.latents_to_image(latent)[0].resize((org_h, org_w))
                                         back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
                                         back_image.save(back_img_dir)
                                     noise_pred = call_unet(unet, latent, t, con, None, None)
                                     controller.reset()
                                     latent = next_step(noise_pred, int(t), latent, scheduler)
                                 back_dict[inf_time[-1]] = latent
-                                time_steps.append(inf_time[-1])
-                                time_steps.reverse()
 
                                 # -------------------------------------- [3] gen image -------------------------------------- #
-                                # ------------------------------------------------------------------------------------------------ #
-                                from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
-                                pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
-                                                                                   text_encoder=text_encoder,
-                                                                                   tokenizer=tokenizer,
-                                                                                   unet=unet,
-                                                                                   scheduler=scheduler,
-                                                                                   safety_checker=None,
-                                                                                   feature_extractor=None,
-                                                                                   requires_safety_checker=False, )
                                 with accelerator.autocast():
                                     latents = pipeline(prompt=args.prompt,
                                                        height=512, width=512,
@@ -321,54 +302,7 @@ def main(args):
                                 image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                 image.save(img_dir)
-                                """
-                                guidance_scale = args.guidance_scale
-                                seed = args.seed
-                                torch.manual_seed(seed)
-                                torch.cuda.manual_seed(seed)
-                                do_classifier_free_guidance = guidance_scale > 1.0
-                                x_latent_dict = {}
-                                with accelerator.autocast():
-                                    text_embeddings = init_prompt(tokenizer, text_encoder, device, args.prompt,
-                                                                  args.negative_prompt)
-                                    if not do_classifier_free_guidance:
-                                        _, text_embeddings = text_embeddings.chunk(2, dim=0)
 
-                                    if args.start_from_final:
-                                        latents = torch.randn((1,4,64,64), generator=None, device=device, dtype=weight_dtype)
-                                        latents = latents * scheduler.init_noise_sigma
-                                        if args.start_from_origin:
-                                            latents = back_dict[time_steps[0]]
-                                        else:
-                                            latents = latents
-                                        recon_timesteps = time_steps
-                                    else:
-                                        total_len = len(time_steps)  # 980, ,,, , 0
-                                        inf_len = int(total_len / 2)
-                                        recon_timesteps = time_steps[inf_len:]
-                                        latents = back_dict[recon_timesteps[0]]
-                                    x_latent_dict[recon_timesteps[0]] = latents
-                                    # (7) denoising
-                                    for i, t in enumerate(recon_timesteps[1:]):  # 999, 750, ..., 250, 0
-                                        # 750, 500, 250, 0
-                                        latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
-                                        noise_pred = unet(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
-                                        controller.reset()
-                                        # perform guidance
-                                        if do_classifier_free_guidance:
-                                            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                                            noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-                                        latents = scheduler.step(noise_pred, t, latents, ).prev_sample
-                                        z_latent = back_dict[t]
-                                        latents = z_latent * (recon_mask) + (latents * (1-recon_mask))
-                                        x_latent_dict[t] = latents
-                                        if args.only_zero_save:
-                                            if t == 0:
-                                                img_np = latent2image(latents, vae, return_type='np')
-                                                image = numpy_to_pil(img_np)[0].resize((org_h, org_w))
-                                                img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
-                                                image.save(img_dir)
-                                """
                                 # -------------------------------------- [3] gen image -------------------------------------- #
                                 org_latent = back_dict[0]
                                 call_unet(unet, org_latent, 0, con, None, 1)
@@ -388,13 +322,15 @@ def main(args):
                                 anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
                                 anomaly_score = anomaly_score.unsqueeze(0).reshape(64, 64)
                                 anomaly_score = anomaly_score.numpy()
-                                import numpy as np
+
                                 anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
                                 anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
+                                anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
+                                tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
                                 anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
-                                anomaly_score_pil.save(os.path.join(class_base_folder, f'{name}_final_tiff.tiff'))
+                                anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
                                 del latents, back_dict
-
+                                # anomaly_mask = torch.where(recon_mask == 1, 0, 1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
