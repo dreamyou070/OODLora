@@ -128,7 +128,7 @@ def main(args):
 
     print(f'\n step 3. save directory and save config')
     parent = os.path.split(args.network_weights)[0]
-    center_folders = os.path.join(parent, 'centers')
+    center_folders = os.path.join(parent, 'centers_20240128')
 
     network_weights = os.listdir(args.network_weights)
 
@@ -143,8 +143,8 @@ def main(args):
             background= pickle.load(f)
         with open(normal_file, 'rb') as f:
             normal = pickle.load(f)
-        b_center, b_cov = background
-        n_center, n_cov = normal
+        b_center, b_cov, b_pca = background
+        n_center, n_cov, n_pca = normal
         print(f'background center: {b_center.shape}, normal center: {n_center.shape}')
 
 
@@ -235,8 +235,13 @@ def main(args):
                                 # ------------------------------------- [2] make latent mask ------------------------------ #
                                 # network.restore()
                                 features = query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze() # pix_num, dim
+
                                 pix_num = features.size(0)
                                 res = int(pix_num ** 0.5)
+
+                                b_features = b_pca.fit_transform(features.cpu().numpy())
+                                n_features = n_pca.fit_transform(features.cpu().numpy())
+
                                 """
                                 pdist = torch.nn.PairwiseDistance(p=2)
                                 n_vector = normal_vector.unsqueeze(0).repeat(pix_num, 1)
@@ -246,12 +251,17 @@ def main(args):
                                 """
                                 n_dist_list, b_dist_list, t_dist_list = [], [], []
                                 for s in range(pix_num) :
-                                    sample = features[s,:].squeeze().cpu()
-                                    n_dist = mahalanobis(sample, n_center, n_cov)
-                                    b_dist = mahalanobis(sample, b_center, b_cov)
+                                    b_sample = b_features[s,:].squeeze().cpu()
+                                    n_sample = n_features[s,:].squeeze().cpu()
+
+                                    b_dist = mahalanobis(b_sample, b_center, b_cov)
+                                    n_dist = mahalanobis(n_sample, n_center, n_cov)
+
                                     total_dist = n_dist + b_dist
+
                                     n_dist = torch.tensor((n_dist / total_dist))
                                     b_dist = torch.tensor((b_dist / total_dist))
+
                                     if n_dist > b_dist :
                                         t_dist_list.append(n_dist)
                                     else :
