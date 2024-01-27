@@ -136,8 +136,8 @@ def main(args):
         lora_epoch = int(name.split('-')[-1])
         back_file = os.path.join(center_folders, f'b_center_{lora_epoch}.pt')
         normal_file = os.path.join(center_folders, f'n_center_{lora_epoch}.pt')
-        back_vector = torch.load(back_file)
-        normal_vector = torch.load(normal_file)
+        back_vector = torch.load(back_file).to(device)
+        normal_vector = torch.load(normal_file).to(device)
 
         if accelerator.is_main_process:
 
