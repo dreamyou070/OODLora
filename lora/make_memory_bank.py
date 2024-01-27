@@ -1,5 +1,6 @@
 import argparse
 from accelerate.utils import set_seed
+import pickle
 # from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
 import os
 import random
@@ -253,15 +254,22 @@ def main(args):
 
                                 normal_vectors.append(n_vectors)
                                 background_vectors.append(b_vectors)
-
+            import numpy as np
             normal_vectors = torch.cat(normal_vectors, dim=0).cpu()
-            background_vectors = torch.cat(background_vectors, dim=0).cpu()
             n_center = normal_vectors.mean(dim=0)
+            n_cov = np.cov(normal_vectors.numpy(), rowvar=False)
+            n_outputs = [n_center, n_cov]
+            n_dir = os.path.join(args.output_dir, f'normal_{model_epoch}.pt')
+            with open(n_dir, 'wb') as f:
+                pickle.dump(n_outputs, f)
+
+            background_vectors = torch.cat(background_vectors, dim=0).cpu()
             b_center = background_vectors.mean(dim=0)
-            n_center_dir = os.path.join(args.output_dir, f'n_center_{model_epoch}.pt')
-            b_center_dir = os.path.join(args.output_dir, f'b_center_{model_epoch}.pt')
-            torch.save(n_center, n_center_dir)
-            torch.save(b_center, b_center_dir)
+            b_cov = np.cov(background_vectors.numpy(), rowvar=False)
+            b_outputs = [b_center, b_cov]
+            b_dir = os.path.join(args.output_dir, f'background_{model_epoch}.pt')
+            with open(b_dir, 'wb') as f:
+                pickle.dump(b_outputs, f)
 
 
 if __name__ == "__main__":
