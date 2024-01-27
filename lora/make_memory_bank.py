@@ -248,14 +248,14 @@ def main(args):
 
                                 normal_indexs = torch.tensor([i for i in all_indexs if normal_position[i] == 1])
                                 back_indexs = torch.tensor([i for i in all_indexs if back_position[i] == 1])
-                                n_vectors = torch.index_select(features, 0, normal_indexs)
-                                b_vectors = torch.index_select(features, 0, back_indexs)
+                                n_vectors = torch.index_select(features.cpu(), 0, normal_indexs)
+                                b_vectors = torch.index_select(features.cpu(), 0, back_indexs)
 
                                 normal_vectors.append(n_vectors)
                                 background_vectors.append(b_vectors)
 
-            normal_vectors = torch.cat(normal_vectors, dim=0)
-            background_vectors = torch.cat(background_vectors, dim=0)
+            normal_vectors = torch.cat(normal_vectors, dim=0).cpu()
+            background_vectors = torch.cat(background_vectors, dim=0).cpu()
             n_center = normal_vectors.mean(dim=0)
             b_center = background_vectors.mean(dim=0)
             n_center_dir = os.path.join(args.output_dir, f'n_center_{model_epoch}.pt')
