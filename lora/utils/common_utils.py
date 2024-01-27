@@ -10,9 +10,9 @@ def get_lora_epoch(model_dir) :
     return model_epoch
 
 def save_latent(latent, save_dir, h, w):
-    print(f'save latent : {latent}')
+    #print(f'save latent : {latent}')
     latent_np = (latent* 255).squeeze().detach().cpu().numpy().astype(np.uint8)
-    print(f'save latent_np : {latent_np}')
+    #print(f'save latent_np : {latent_np}')
     pil_img = Image.fromarray(latent_np).resize((h, w))
     pil_img.save(save_dir)
     return pil_img
