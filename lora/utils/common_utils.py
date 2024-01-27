@@ -10,6 +10,7 @@ def get_lora_epoch(model_dir) :
     return model_epoch
 
 def save_latent(latent, save_dir, h, w):
+    print(f'save latent : {latent}')
     latent_np = latent.squeeze().detach().cpu().numpy().astype(np.uint8)
     latent_np = latent_np * 255
     print(f'save latent_np : {latent_np}')

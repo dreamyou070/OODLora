@@ -242,7 +242,6 @@ def main(args):
                                 print(f'recon_mask : {recon_mask}')
                                 recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_recon_mask{ext}')
                                 save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
-
                                 recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
                                 # ---------------------------------- [2] reconstruction ------------------------------ #
