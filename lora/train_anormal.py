@@ -709,6 +709,11 @@ class NetworkTrainer:
                                         mask = anormal_mask.squeeze()  # res,res
                                         anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
+                                        cls_min_value = cls_map.min()
+                                        trigger_min_value = score_map.min()
+                                        cls_max_value = cls_map.max()
+                                        trigger_max_value = score_map.max()
+
                                         if part == 'attn_2' :
                                             if batch['train_class_list'][0] == 1:
                                                 anormal_position = torch.zeros_like(anormal_mask)
@@ -747,32 +752,26 @@ class NetworkTrainer:
                                         normal_activation_loss = (1-(normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                         activation_loss = args.normal_weight * normal_activation_loss
 
-
-                                        if args.all_same_learning :
-                                            if batch['train_class_list'][0] == 0 :
+                                        if part == 'attn_2' :
+                                            if batch['train_class_list'][0] == 1:
+                                                activation_loss += cls_max_value + args.normal_weight * (1 - trigger_min_value)
+                                            else :
                                                 anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
                                                 activation_loss += args.anormal_weight * anormal_activation_loss
+                                                activation_loss += (1 - cls_max_value) + args.anormal_weight * (trigger_min_value)
+
                                             if args.cls_training:
                                                 normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
                                                 activation_loss += args.normal_weight * normal_cls_activation_loss
+
                                                 if batch['train_class_list'][0] == 0:
                                                     anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
                                                     activation_loss += args.anormal_weight * anormal_cls_activation_loss
+
                                         else :
-                                            if part == 'attn_2' :
-                                                if batch['train_class_list'][0] == 0 :
-                                                    anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                                                    activation_loss += args.anormal_weight * anormal_activation_loss
-                                                if args.cls_training:
-                                                    normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
-                                                    activation_loss += args.normal_weight * normal_cls_activation_loss
-                                                    if batch['train_class_list'][0] == 0:
-                                                        anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                                        activation_loss += args.anormal_weight * anormal_cls_activation_loss
-                                            else :
-                                                if args.cls_training:
-                                                    normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
-                                                    activation_loss += args.normal_weight * normal_cls_activation_loss
+                                            if args.cls_training:
+                                                normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                                activation_loss += args.normal_weight * normal_cls_activation_loss
 
                                         attn_loss += activation_loss
 
