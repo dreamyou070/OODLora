@@ -161,7 +161,7 @@ def main(args):
                                                     neuron_dropout=args.network_dropout,
                                                     **net_kwargs, )
             network.apply_to(text_encoder, unet, True, True)
-
+            network.restore()
             # (3) save direction
             model_epoch = get_lora_epoch(weight)
             test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
@@ -245,9 +245,6 @@ def main(args):
                                 # ---------------------------------- [2] reconstruction ------------------------------ #
                                 from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
                                 import numpy as np
-                                network.restore()
-                                network.load_weights(args.detection_network_weights)
-                                network.to(device)
                                 pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
                                                                                    text_encoder=text_encoder,
                                                                                    tokenizer=tokenizer,
@@ -270,11 +267,11 @@ def main(args):
                                 recon_image.save(img_dir)
 
                                 # -------------------------------------- [4] anomaly map -------------------------------------- #
-                                network.restore()
-                                network.load_weights(weight_dir)
-                                network.to(device)
-                                controller = AttentionStore()
-                                register_attention_control(unet, controller)
+                                #network.restore()
+                                #network.load_weights(weight_dir)
+                                #network.to(device)
+                                #controller = AttentionStore()
+                                #register_attention_control(unet, controller)
                                 with torch.no_grad():
                                     context = init_prompt(tokenizer, text_encoder, device, args.prompt)
                                 uncon, con = torch.chunk(context, 2)
@@ -283,18 +280,16 @@ def main(args):
                                 org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
                                 call_unet(unet, org_vae_latent, 0, con, None, 1)
                                 org_query = \
-                                controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(
-                                    0)
+                                controller_ob.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                                 org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
-                                controller.reset()
+                                controller_ob.reset()
 
                                 # (2) recon
                                 recon_latent = latents
                                 call_unet(unet, recon_latent, 0, con, None, 1)
                                 recon_query = \
-                                controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(
-                                    0)
-                                controller.reset()
+                                controller_ob.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
+                                controller_ob.reset()
                                 recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
 
                                 # (3) anomaly score
