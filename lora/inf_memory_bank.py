@@ -280,7 +280,7 @@ def main(args):
                                 org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
                                 call_unet(unet, org_vae_latent, 0, con, None, 1)
                                 org_query = \
-                                controller_ob.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
+                                controller_ob.query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze(0)
                                 org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
                                 controller_ob.reset()
 
@@ -288,7 +288,7 @@ def main(args):
                                 recon_latent = latents
                                 call_unet(unet, recon_latent, 0, con, None, 1)
                                 recon_query = \
-                                controller_ob.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
+                                controller_ob.query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze(0)
                                 controller_ob.reset()
                                 recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
 
