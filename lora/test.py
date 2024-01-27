@@ -1,9 +1,20 @@
 import torch
 normal_vectors = []
-n_vectors_1 = torch.rand((3,4))
-n_vectors_2 = torch.rand((5,4))
-normal_vectors.append(n_vectors_1)
-normal_vectors.append(n_vectors_2)
-n_vectors = torch.cat(normal_vectors, dim=0)
-n_center = n_vectors.mean(dim=0)
-print(n_center)
+
+pdist = torch.nn.PairwiseDistance(p=2)
+d = 2
+features = torch.randn((4,d))
+pix_num = features.shape[0]
+n_vector = torch.randn((d)).unsqueeze(0).repeat(pix_num, 1)
+b_vectpr = torch.randn((d)).unsqueeze(0).repeat(pix_num, 1)
+n_diff = pdist(features, n_vector)
+b_diff = pdist(features, b_vectpr)
+total_diff = n_diff + b_diff
+n_diff = n_diff / total_diff
+b_diff = b_diff / total_diff
+diff = torch.where(n_diff > b_diff, b_diff, n_diff)
+diff = diff / diff.max()
+mask = 1-diff
+print(f'features: {features}')
+print(f'n_vector: {n_vector}')
+print(diff)
