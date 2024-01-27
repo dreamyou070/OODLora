@@ -216,6 +216,7 @@ def main(args):
                                 uncon_ob, con_ob = torch.chunk(context_ob, 2)
                                 call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller_ob.step_store
+                                query_dict = controller_ob.query_dict
                                 controller_ob.reset()
                                 object_mask = get_crossattn_map(args, attn_stores,
                                                                 'up_blocks_3_attentions_0_transformer_blocks_0_attn2')
@@ -223,8 +224,7 @@ def main(args):
                                                                     f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
                                 # network.restore()
-
-                                attn = attn_stores['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze()  # head, pix_num
+                                attn = query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze()  # head, pix_num
                                 if args.truncate_length == 3:
                                     cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                 else:
@@ -234,7 +234,6 @@ def main(args):
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, 64, 64)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res, (object = 1)
                                 object_mask = trigger_score / trigger_score.max()
-
 
 
                                 normal_position = torch.where(object_mask > 0.5, 1, 0)  # res, res, (object = 1)
