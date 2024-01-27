@@ -206,7 +206,8 @@ def main(args):
                                 org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                                 # ------------------------------------- [1] object mask ------------------------------ #
                                 # 1. object mask
-                                network.load_weights(args.detection_network_weights)
+                                weight_dir = os.path.join(args.network_weights, weight)
+                                network.load_weights(weight_dir)
                                 network.to(device)
                                 controller_ob = AttentionStore()
                                 register_attention_control(unet, controller_ob)
@@ -216,6 +217,11 @@ def main(args):
                                 call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller_ob.step_store
                                 controller_ob.reset()
+                                object_mask = get_crossattn_map(args, attn_stores,
+                                                                'up_blocks_3_attentions_0_transformer_blocks_0_attn2')
+                                object_mask_save_dir = os.path.join(class_base_folder,
+                                                                    f'{name}_object_mask{ext}')
+                                save_latent(object_mask, object_mask_save_dir, org_h, org_w)
                                 # network.restore()
 
                                 attn = attn_stores['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze()  # head, pix_num
@@ -229,9 +235,11 @@ def main(args):
                                 trigger_score = trigger_score.mean(dim=0)  # res, res, (object = 1)
                                 object_mask = trigger_score / trigger_score.max()
 
-                                normal_position = torch.where(object_mask > 0.55, 1, 0)  # res, res, (object = 1)
+
+
+                                normal_position = torch.where(object_mask > 0.5, 1, 0)  # res, res, (object = 1)
                                 normal_position = normal_position.flatten()
-                                back_position = torch.where(object_mask < 0.45, 1, 0)  # res, res, (object = 1)
+                                back_position = torch.where(object_mask < 0.5, 1, 0)  # res, res, (object = 1)
                                 back_position = back_position.flatten()
 
                                 all_indexs = [i for i in range(len(normal_position))]
