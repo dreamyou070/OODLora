@@ -252,8 +252,8 @@ def main(args):
                                 """
                                 n_dist_list, b_dist_list, t_dist_list = [], [], []
                                 for s in range(pix_num) :
-                                    b_sample = b_features[s,:].squeeze().cpu()
-                                    n_sample = n_features[s,:].squeeze().cpu()
+                                    b_sample = b_features[s,:].squeeze()#.cpu()
+                                    n_sample = n_features[s,:].squeeze()#.cpu()
 
                                     b_dist = mahalanobis(b_sample, b_center, b_cov)
                                     n_dist = mahalanobis(n_sample, n_center, n_cov)
