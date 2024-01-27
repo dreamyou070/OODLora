@@ -284,7 +284,7 @@ def main(args):
                                                    guidance_scale=args.guidance_scale,
                                                    negative_prompt=args.negative_prompt,
                                                    reference_image=org_vae_latent,
-                                                   mask=recon_mask)
+                                                   mask=recon_mask.to(device, weight_dtype),)
                                 controller_ob.reset()
                                 # mask = None)
                                 recon_image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
