@@ -236,7 +236,7 @@ def main(args):
                                 total_diff = n_diff + b_diff
                                 n_diff = n_diff / total_diff
                                 b_diff = b_diff / total_diff
-                                diff = torch.where(n_diff > b_diff, b_diff, n_diff)
+                                diff = torch.where(n_diff > b_diff, b_diff, n_diff) #
                                 diff = diff / diff.max()
                                 anomal_mask = (1 - diff).unsqueeze(0)
                                 recon_mask = anomal_mask.reshape(res,res)
@@ -265,6 +265,7 @@ def main(args):
                                                    negative_prompt=args.negative_prompt,
                                                    reference_image=org_vae_latent,
                                                    mask=recon_mask)
+                                controller_ob.reset()
                                 # mask = None)
                                 recon_image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
