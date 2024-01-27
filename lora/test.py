@@ -7,7 +7,8 @@ d = 10
 features = torch.randn((4,d))
 features = np.array(features)
 feat_ = pca.fit_transform(features)
-print(feat_)
+mean = np.mean(feat_, axis=0)
+print(mean)
 
 
 
