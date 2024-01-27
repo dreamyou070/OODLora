@@ -218,18 +218,19 @@ def main(args):
                                 attn_stores = controller_ob.step_store
                                 query_dict = controller_ob.query_dict
                                 controller_ob.reset()
+                                # ------------------------------------- [2] save object mask ------------------------------ #
                                 object_mask = get_crossattn_map(args, attn_stores,
                                                                 'up_blocks_3_attentions_0_transformer_blocks_0_attn2')
                                 object_mask_save_dir = os.path.join(class_base_folder,
                                                                     f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
+                                # ------------------------------------- [2] save object mask ------------------------------ #
                                 # network.restore()
-                                attn = query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze()  # head, pix_num
+                                attn = attn_stores['up_blocks_3_attentions_0_transformer_blocks_0_attn2']
                                 if args.truncate_length == 3:
                                     cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                 else:
                                     cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, 64, 64)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res, (object = 1)
@@ -242,6 +243,7 @@ def main(args):
                                 back_position = back_position.flatten()
 
                                 all_indexs = [i for i in range(len(normal_position))]
+
                                 features = attn_stores.query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze() # pix_num, dim
 
                                 normal_indexs = torch.tensor([i for i in all_indexs if normal_position[i] == 1])
