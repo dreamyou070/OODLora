@@ -1,9 +1,22 @@
 import torch
+from sklearn.decomposition import PCA
+import numpy as np
+# -------------------------------------------------------------------------
+pca = PCA(n_components=2, random_state=0)
+d = 10
+features = torch.randn((4,d))
+features = np.array(features)
+feat_ = pca.fit_transform(features)
+print(feat_)
+
+
+
+
+
+"""
 normal_vectors = []
 
 pdist = torch.nn.PairwiseDistance(p=2)
-d = 2
-features = torch.randn((4,d))
 pix_num = features.shape[0]
 n_vector = torch.randn((d)).unsqueeze(0).repeat(pix_num, 1)
 b_vectpr = torch.randn((d)).unsqueeze(0).repeat(pix_num, 1)
@@ -18,3 +31,4 @@ mask = 1-diff
 print(f'features: {features}')
 print(f'n_vector: {n_vector}')
 print(diff)
+"""

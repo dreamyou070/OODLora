@@ -1,7 +1,7 @@
 #! /bin/bash
 
-class_name="cable_gland"
-folder_name="res_64_up_attn012_t_2_only_normal"
+class_name="bagel"
+folder_name="res_16_32_64_up_only_normal_20240128"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 

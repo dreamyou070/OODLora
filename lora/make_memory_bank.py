@@ -109,7 +109,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args):
 
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
-    args.output_dir = os.path.join(parent, 'reconstruction')
+    args.output_dir = os.path.join(parent, 'reconstruction_20240128_64_attn0')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -255,17 +255,25 @@ def main(args):
                                 normal_vectors.append(n_vectors)
                                 background_vectors.append(b_vectors)
             import numpy as np
-            normal_vectors = torch.cat(normal_vectors, dim=0).cpu()
+            import torch
+            from sklearn.decomposition import PCA
+
+            # ----------------------------------------------------------------------------------------------------------
+            pca = PCA(n_components=50, random_state=0)
+
+            normal_vectors = np.array(torch.cat(normal_vectors, dim=0).cpu())
+            normal_vectors = pca.fit_transform(normal_vectors)
             n_center = normal_vectors.mean(dim=0)
-            n_cov = np.cov(normal_vectors.numpy(), rowvar=False)
+            n_cov = np.cov(normal_vectors, rowvar=False)
             n_outputs = [n_center, n_cov]
             n_dir = os.path.join(args.output_dir, f'normal_{model_epoch}.pt')
             with open(n_dir, 'wb') as f:
                 pickle.dump(n_outputs, f)
 
             background_vectors = torch.cat(background_vectors, dim=0).cpu()
+            background_vectors = pca.fit_transform(background_vectors)
             b_center = background_vectors.mean(dim=0)
-            b_cov = np.cov(background_vectors.numpy(), rowvar=False)
+            b_cov = np.cov(background_vectors, rowvar=False)
             b_outputs = [b_center, b_cov]
             b_dir = os.path.join(args.output_dir, f'background_{model_epoch}.pt')
             with open(b_dir, 'wb') as f:
