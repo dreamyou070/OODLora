@@ -250,7 +250,7 @@ def main(args):
                                     n_dist = mahalanobis(sample, n_center, n_cov)
                                     b_dist = mahalanobis(sample, b_center, b_cov)
                                     total_dist = n_dist + b_dist
-                                    n_dist = n_dist / total_dist
+                                    n_dist = torch.tensor((n_dist / total_dist))
                                     n_dist_list.append(n_dist)
                                 n_dist_vector = torch.stack(n_dist_list, dim=0).unsqueeze(0)
                                 n_dist_map = n_dist_vector.reshape(res,res)
