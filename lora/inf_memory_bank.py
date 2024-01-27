@@ -18,6 +18,7 @@ from utils.model_utils import call_unet
 from utils.scheduling_utils import next_step
 import math
 from utils.common_utils import get_lora_epoch, save_latent
+from scipy.spatial.distance import mahalanobis
 from utils.model_utils import get_crossattn_map
 from utils.image_utils import latent2image, numpy_to_pil
 from safetensors.torch import load_file
@@ -134,10 +135,18 @@ def main(args):
     for weight in network_weights:
         name = os.path.splitext(weight)[0]
         lora_epoch = int(name.split('-')[-1])
-        back_file = os.path.join(center_folders, f'b_center_{lora_epoch}.pt')
-        normal_file = os.path.join(center_folders, f'n_center_{lora_epoch}.pt')
-        back_vector = torch.load(back_file).to(device)
-        normal_vector = torch.load(normal_file).to(device)
+
+        back_file = os.path.join(center_folders, f'background_{lora_epoch}.pt')
+        normal_file = os.path.join(center_folders, f'normal_{lora_epoch}.pt')
+        import pickle
+        with open(back_file, 'rb') as f:
+            background= pickle.load(f)
+        with open(normal_file, 'rb') as f:
+            normal = pickle.load(f)
+        b_center, b_cov = background
+        n_center, n_cov = normal
+        print(f'background center: {b_center.shape}, normal center: {n_center.shape}')
+
 
         if accelerator.is_main_process:
 
@@ -228,17 +237,30 @@ def main(args):
                                 features = query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze() # pix_num, dim
                                 pix_num = features.size(0)
                                 res = int(pix_num ** 0.5)
+                                """
                                 pdist = torch.nn.PairwiseDistance(p=2)
                                 n_vector = normal_vector.unsqueeze(0).repeat(pix_num, 1)
                                 b_vector = back_vector.unsqueeze(0).repeat(pix_num, 1)
                                 n_diff = pdist(features, n_vector)
                                 b_diff = pdist(features, b_vector)
-                                total_diff = n_diff + b_diff
-                                n_diff = n_diff / total_diff
-                                b_diff = b_diff / total_diff
-                                diff = torch.where(n_diff > b_diff, n_diff, b_diff) #
-                                anomal_mask = diff.unsqueeze(0)
-                                recon_mask = anomal_mask.reshape(res,res)
+                                """
+                                n_dist_list, b_dist_list, t_dist_list = [], [], []
+                                for s in range(pix_num) :
+                                    sample = features[s,:].squeeze()
+                                    n_dist = mahalanobis(sample, n_center, n_cov)
+                                    b_dist = mahalanobis(sample, b_center, b_cov)
+                                    total_dist = n_dist + b_dist
+                                    n_dist = n_dist / total_dist
+                                    n_dist_list.append(n_dist)
+                                n_dist_vector = torch.stack(n_dist_list, dim=0).unsqueeze(0)
+                                n_dist_map = n_dist_vector.reshape(res,res)
+                                recon_mask = n_dist_map
+                                #total_diff = n_diff + b_diff
+                                #n_diff = n_diff / total_diff
+                                #b_diff = b_diff / total_diff
+                                #diff = torch.where(n_diff > b_diff, n_diff, b_diff) #
+                                #anomal_mask = diff.unsqueeze(0)
+                                #recon_mask = anomal_mask.reshape(res,res)
                                 print(f'recon_mask : {recon_mask}')
                                 recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_recon_mask{ext}')
                                 save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
