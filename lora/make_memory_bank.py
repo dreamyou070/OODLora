@@ -226,7 +226,7 @@ def main(args):
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
                                 # ------------------------------------- [2] save object mask ------------------------------ #
                                 # network.restore()
-                                attn = attn_stores['up_blocks_3_attentions_0_transformer_blocks_0_attn2']
+                                attn = attn_stores['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0]
                                 if args.truncate_length == 3:
                                     cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                 else:
