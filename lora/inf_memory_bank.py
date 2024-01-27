@@ -240,9 +240,10 @@ def main(args):
                                 diff = diff / diff.max()
                                 anomal_mask = (1 - diff).unsqueeze(0)
                                 recon_mask = anomal_mask.reshape(res,res)
+                                print(f'recon_mask : {recon_mask}')
                                 recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_recon_mask{ext}')
                                 save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
-                                
+
                                 recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
                                 # ---------------------------------- [2] reconstruction ------------------------------ #
@@ -296,7 +297,9 @@ def main(args):
                                 recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
 
                                 # (3) anomaly score
+                                print(f'org_query : {org_query.shape}')
                                 anomaly_score = (org_query @ recon_query.T).cpu()
+                                print(f'anomaly_score : {anomaly_score.shape}')
                                 pix_num = anomaly_score.shape[0]
                                 anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
                                 anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
