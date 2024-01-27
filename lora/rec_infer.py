@@ -275,7 +275,7 @@ def main(args) :
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device, weight_dtype)  # latent_mask = 1,1,64,64
                                 latent_mask_ = latent_mask
                                 save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
-
+                        """
                         # -------------------------------------------- only anormal zero out ---------------------------------------------- #
 
                         latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
@@ -384,10 +384,7 @@ def main(args) :
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res
-
                                 min_score = trigger_score.min()
-                                print(f' min score : {min_score}')
-
                                 pixel_mask = trigger_score
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device,weight_dtype)  # latent_mask = 1,1,64,64
                                 latent_mask_recon = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
@@ -405,6 +402,7 @@ def main(args) :
                         #pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
                                 #                             f'{name}_recon_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
 
+                        """
                         """
                         org_latent = back_dict[0]
                         call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None, None)
