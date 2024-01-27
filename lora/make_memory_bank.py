@@ -244,7 +244,7 @@ def main(args):
 
                                 all_indexs = [i for i in range(len(normal_position))]
 
-                                features = attn_stores.query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze() # pix_num, dim
+                                features = query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze() # pix_num, dim
 
                                 normal_indexs = torch.tensor([i for i in all_indexs if normal_position[i] == 1])
                                 back_indexs = torch.tensor([i for i in all_indexs if back_position[i] == 1])
