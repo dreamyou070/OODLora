@@ -255,7 +255,6 @@ def main(args):
                                 normal_vectors.append(n_vectors)
                                 background_vectors.append(b_vectors)
             import numpy as np
-            import torch
             from sklearn.decomposition import PCA
 
             # ----------------------------------------------------------------------------------------------------------
