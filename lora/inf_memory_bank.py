@@ -246,7 +246,7 @@ def main(args):
                                 """
                                 n_dist_list, b_dist_list, t_dist_list = [], [], []
                                 for s in range(pix_num) :
-                                    sample = features[s,:].squeeze()
+                                    sample = features[s,:].squeeze().cpu()
                                     n_dist = mahalanobis(sample, n_center, n_cov)
                                     b_dist = mahalanobis(sample, b_center, b_cov)
                                     total_dist = n_dist + b_dist
@@ -254,7 +254,7 @@ def main(args):
                                     n_dist_list.append(n_dist)
                                 n_dist_vector = torch.stack(n_dist_list, dim=0).unsqueeze(0)
                                 n_dist_map = n_dist_vector.reshape(res,res)
-                                recon_mask = n_dist_map
+                                recon_mask = n_dist_map.to(device)
                                 #total_diff = n_diff + b_diff
                                 #n_diff = n_diff / total_diff
                                 #b_diff = b_diff / total_diff
