@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="cabel_gland"
+class_name="cable_gland"
 folder_name="res_64_up_attn012_t_2_only_normal"
 data_name="MVTec3D-AD"
 normality_folder='normal'
