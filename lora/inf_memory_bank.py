@@ -265,8 +265,8 @@ def main(args):
                                 pix_num = features.size(0)
                                 res = int(pix_num ** 0.5)
 
-                                b_features = b_pca.fit_transform(features.cpu().numpy())
-                                n_features = n_pca.fit_transform(features.cpu().numpy())
+                                #b_features = b_pca.fit_transform(features.cpu().numpy())
+                                #n_features = n_pca.fit_transform(features.cpu().numpy())
 
                                 """
                                 pdist = torch.nn.PairwiseDistance(p=2)
@@ -277,10 +277,10 @@ def main(args):
                                 """
                                 n_dist_list, b_dist_list, t_dist_list = [], [], []
                                 for s in range(pix_num) :
-                                    b_sample = b_features[s,:].squeeze()#.cpu()
-                                    n_sample = n_features[s,:].squeeze()#.cpu()
-                                    print(f'b_sample : {b_sample.shape}, n_sample : {n_sample.shape}')
-
+                                    b_sample = features[s,:].squeeze()#.cpu()
+                                    n_sample = features[s,:].squeeze()#.cpu()
+                                    #print(f'b_sample : {b_sample.shape}, n_sample : {n_sample.shape}')
+                                    
                                     b_dist = mahalanobis(b_sample, b_center, b_cov)
                                     n_dist = mahalanobis(n_sample, n_center, n_cov)
                                     print(f'b_dist : {b_dist}, n_dist : {n_dist}')
