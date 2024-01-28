@@ -33,7 +33,20 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
             query = self.to_q(hidden_states) # batch, pix_num, dim
 
+            # ---------------------------------------------------------------------------------------------------------
             b, p, d = query.shape
+            anomal_position = torch.tensor(sample(range(0, p), int(p / 4))).to(query.device)
+            flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
+            noise_query = query.clone()
+            for i in range(p):
+                original_feature = noise_query[:, i, None].squeeze()
+                shuffle = torch.randperm(d)
+                new_feature = original_feature[shuffle]
+                if i in anomal_position:
+                    noise_query[:, i, :] = new_feature
+            noise_query = noise_query.to(query.device)
+            # ---------------------------------------------------------------------------------------------------------
+            """
             random_feature = torch.randn(query.shape)
             for i in range(p) :
                 random_feature[:,i,:] = torch.randn(d)
@@ -41,6 +54,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             anomal_position = torch.tensor(sample(range(0, p), int(p / 4))).to(query.device)
             flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
             noise_query = query + (random_feature * flag_list)
+            """
+            # ---------------------------------------------------------------------------------------------------------
 
             context = context if context is not None else hidden_states
             key = self.to_k(context)
