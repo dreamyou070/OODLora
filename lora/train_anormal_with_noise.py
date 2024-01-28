@@ -718,24 +718,24 @@ class NetworkTrainer:
                                 else:
                                     score_map = map
                                 head_num = score_map.shape[0]
-                                anormal_position = anormal_position.repeat(head_num, 1)
+                                anomal_position = anomal_position.repeat(head_num, 1)
                                 normal_position = normal_position.repeat(head_num, 1)
 
-                                anormal_trigger_activation = (score_map * anormal_position).sum(dim=-1)
+                                anomal_trigger_activation = (score_map * anomal_position).sum(dim=-1)
                                 normal_trigger_activation = (score_map * normal_position).sum(dim=-1)
-                                total_score = torch.ones_like(anormal_trigger_activation)
+                                total_score = torch.ones_like(anomal_trigger_activation)
 
                                 if args.cls_training:
-                                    anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
+                                    anomal_cls_activation = (cls_map * anomal_position).sum(dim=-1)
                                     normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
 
                                 normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                anormal_activation_loss = ((anormal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anormal_activation_loss
+                                anomal_activation_loss = ((anomal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anomal_activation_loss
                                 if args.cls_training :
                                     normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
-                                    anormal_cls_loss = (1-(anormal_cls_activation / total_score)) ** 2
-                                    activation_loss += args.normal_weight * normal_cls_loss + args.anormal_weight * anormal_cls_loss
+                                    anomal_cls_loss = (1-(anomal_cls_activation / total_score)) ** 2
+                                    activation_loss += args.normal_weight * normal_cls_loss + args.anormal_weight * anomal_cls_loss
                                 attn_loss += activation_loss
                     attn_loss = attn_loss.mean()
 
