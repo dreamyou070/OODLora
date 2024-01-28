@@ -46,6 +46,27 @@ def get_position(layer_name, attn):
         part = 'attn_2'
     return res, pos, part
 
+def make_trg_layer_name(args):
+    res = args.cross_map_res[0]
+    trg_part = args.trg_part[1]
+    if res == 8 :
+        block_name = 'blocks_0'
+    elif res == 16:
+        block_name = 'blocks_1'
+    elif res == 32:
+        block_name = 'blocks_2'
+    elif res == 64:
+        block_name = 'blocks_3'
+    if trg_part == 'attn_0':
+        part_name = 'attentions_0'
+    elif trg_part == 'attn_1':
+        part_name = 'attentions_1'
+    elif trg_part == 'attn_2':
+        part_name = 'attentions_2'
+    trg_layer_name = f'up_{block_name}_{part_name}_transformer_blocks_0_attn2'
+    return trg_layer_name
+
+
 
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
@@ -74,7 +95,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
             if is_cross_attention:
                 controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
-                if layer_name == 'up_blocks_2_attentions_0_transformer_blocks_0_attn2':
+                if layer_name == args.trg_layer_name :
                     controller.save_query(self_head_query, layer_name)
 
 
@@ -108,8 +129,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
 def main(args):
 
+    trg_layer_name = make_trg_layer_name(args)
+    args.trg_layer_name = trg_layer_name
+
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
-    args.output_dir = os.path.join(parent, 'reconstruction_20240128')
+    args.output_dir = os.path.join(parent, f'reconstruction_20240128_{args.trg_layer_name}')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -226,7 +250,6 @@ def main(args):
                                     if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
                                         key_layer_name = layer_name
                                         key_res = res
-
 
                                 # ------------------------------------- [2] save object mask ------------------------------ #
                                 object_mask = get_crossattn_map(args, attn_stores,key_layer_name, key_res)
