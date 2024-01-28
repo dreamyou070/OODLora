@@ -704,7 +704,7 @@ class NetworkTrainer:
                                 # -------------------------------------------------------------------------------------
                                 # (2) get position
                                 anomal_position = attn_dict[layer_name][1].squeeze()  # 8, res*res, c
-                                position_vector = torch.zeros((1, pix_num))
+                                position_vector = torch.zeros((1, pix_num)).to(accelerator.device)
                                 for i in range(pix_num):
                                     if i in anomal_position:
                                         position_vector[:, i] = 1
