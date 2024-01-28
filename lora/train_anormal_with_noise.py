@@ -705,8 +705,6 @@ class NetworkTrainer:
                                 # (2) get position
                                 anomal_position = attn_dict[layer_name][1].squeeze()  # 8, res*res, c
                                 anomal_position = anomal_position.unsqueeze(0) # 1, pix_num
-                                print(f'anomal_position.shape (1, pix_num) : {anomal_position.shape}')
-                                print(f'anomal_position : {anomal_position}')
                                 normal_position = 1 - anomal_position
 
                                 # -------------------------------------------------------------------------------------
