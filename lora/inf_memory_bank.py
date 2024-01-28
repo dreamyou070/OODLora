@@ -304,7 +304,7 @@ def main(args):
                                     #else :
                                     #    t_dist_list.append(b_dist)
                                     t_dist_list.append(b_dist)
-                                n_dist_vector = torch.stack(n_dist_list, dim=0).unsqueeze(0)
+                                n_dist_vector = torch.stack(n_dist_list, dim=0).unsqueeze(0).to(device)
                                 n_dist_map = n_dist_vector.reshape(res,res)
                                 normal_map = torch.where(object_mask == 0, 1, n_dist_map)
                                 min_val = normal_map.min()
