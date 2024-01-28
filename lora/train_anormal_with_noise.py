@@ -32,16 +32,12 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 is_cross_attention = True
 
             query = self.to_q(hidden_states) # batch, pix_num, dim
-            print(f'query: {query}')
 
             b, p, d = query.shape
             random_feature = torch.rand_like(query)
             anomal_position = torch.tensor(sample(range(0, p), int(p / 4))).to(query.device)
 
             flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
-            print(f'flag_list: {flag_list}')
-            a = (random_feature * flag_list)
-            print(f'add noise, a : {a}')
             noise_query = query + (random_feature * flag_list)
 
             context = context if context is not None else hidden_states
@@ -58,13 +54,13 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 noise_query = noise_query.float()
                 key = key.float()
 
-            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                                                         device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device),
+                                             query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
 
-            noise_attention_scores = torch.baddbmm(torch.empty(noise_query.shape[0], noise_query.shape[1], key.shape[1], dtype=noise_query.dtype,
-                                                         device=noise_query.device), noise_query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            noise_attention_scores = torch.baddbmm(torch.empty(noise_query.shape[0], noise_query.shape[1], key.shape[1], dtype=noise_query.dtype,device=noise_query.device),
+                                                   noise_query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             noise_attention_probs = noise_attention_scores.softmax(dim=-1)
             noise_attention_probs = noise_attention_probs.to(value.dtype)
 
@@ -77,7 +73,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                     trg_map = attention_probs[:, :, 1]
                     noise_trg_map = noise_attention_probs[:, :, 1]
                 controller.store(noise_trg_map, layer_name)
-                controller.store(anomal_position, layer_name)
+                controller.store(flag_list.flatten(), layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -708,12 +704,10 @@ class NetworkTrainer:
                                 # -------------------------------------------------------------------------------------
                                 # (2) get position
                                 anomal_position = attn_dict[layer_name][1].squeeze()  # 8, res*res, c
-                                position_vector = torch.zeros((1, pix_num)).to(accelerator.device)
-                                for i in range(pix_num):
-                                    if i in anomal_position:
-                                        position_vector[:, i] = 1
-                                anormal_position = position_vector
-                                normal_position = 1 - anormal_position
+                                anomal_position = anomal_position.unsqueeze(0) # 1, pix_num
+                                print(f'anomal_position.shape (1, pix_num) : {anomal_position.shape}')
+                                print(f'anomal_position : {anomal_position}')
+                                normal_position = 1 - anomal_position
 
                                 # -------------------------------------------------------------------------------------
                                 # (3) score map
