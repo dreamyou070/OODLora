@@ -224,22 +224,24 @@ def main(args):
                                     attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                                     res, pos, part = get_position(layer_name, attn)
                                     if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
-                                        key_layera_name = layer_name
+                                        key_layer_name = layer_name
+                                        key_res = res
+
 
                                 # ------------------------------------- [2] save object mask ------------------------------ #
-                                object_mask = get_crossattn_map(args, attn_stores,key_layera_name, res)
+                                object_mask = get_crossattn_map(args, attn_stores,key_layer_name, key_res)
                                 object_mask_save_dir = os.path.join(class_base_folder,
                                                                     f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
                                 # ------------------------------------- [2] save object mask ------------------------------ #
                                 # network.restore()
-                                attn = attn_stores[key_layera_name][0]
+                                attn = attn_stores[key_layer_name][0]
                                 if args.truncate_length == 3:
                                     cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                 else:
                                     cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                                 h = trigger_score.shape[0]
-                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, 64, 64)
+                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, key_res, key_res)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res, (object = 1)
                                 object_mask = trigger_score / trigger_score.max()
 
@@ -251,7 +253,7 @@ def main(args):
 
                                 all_indexs = [i for i in range(len(normal_position))]
 
-                                features = query_dict[key_layera_name][0].squeeze() # pix_num, dim
+                                features = query_dict[key_layer_name][0].squeeze() # pix_num, dim
 
                                 normal_indexs = torch.tensor([i for i in all_indexs if normal_position[i] == 1])
                                 back_indexs = torch.tensor([i for i in all_indexs if back_position[i] == 1])
