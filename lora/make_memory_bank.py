@@ -289,6 +289,7 @@ def main(args):
             from sklearn.decomposition import PCA
 
             # ----------------------------------------------------------------------------------------------------------
+            center_save_dir = os.path.join(args.output_dir, f'centers')
             pca_normal = PCA(n_components=args.pca_dim, random_state=0)
             normal_vectors = np.array(torch.cat(normal_vectors, dim=0).cpu())
             pca_normal.fit(normal_vectors)
@@ -297,7 +298,7 @@ def main(args):
             n_center = np.mean(normal_vectors, axis=0)
             n_cov = np.cov(normal_vectors, rowvar=False)
             n_outputs = [n_center, n_cov, pca_normal]
-            n_dir = os.path.join(args.output_dir, f'normal_{model_epoch}.pt')
+            n_dir = os.path.join(center_save_dir, f'normal_{model_epoch}.pt')
             with open(n_dir, 'wb') as f:
                 pickle.dump(n_outputs, f)
 
@@ -309,7 +310,7 @@ def main(args):
             b_center = np.mean(background_vectors, axis=0)
             b_cov = np.cov(background_vectors, rowvar=False)
             b_outputs = [b_center, b_cov, pca_background]
-            b_dir = os.path.join(args.output_dir, f'background_{model_epoch}.pt')
+            b_dir = os.path.join(center_save_dir, f'background_{model_epoch}.pt')
             with open(b_dir, 'wb') as f:
                 pickle.dump(b_outputs, f)
 
