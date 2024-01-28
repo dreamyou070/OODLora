@@ -161,7 +161,7 @@ def main(args):
             test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
             os.makedirs(test_lora_dir, exist_ok=True)
             ## (3.1) base dir
-            condition_save_dir = os.path.join(test_lora_dir, f'memory_bank_res_{args.trg_res[0]}_part_{args.trg_part[0]}')
+            condition_save_dir = os.path.join(test_lora_dir, f'memory_bank_res_{args.cross_map_res[0]}_part_{args.trg_part[0]}')
             print(f'condition_save_dir : {condition_save_dir}')
             os.makedirs(condition_save_dir, exist_ok=True)
             ## (3.2) evaluate dir
