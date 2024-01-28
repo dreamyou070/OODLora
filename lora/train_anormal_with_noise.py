@@ -31,7 +31,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if context is not None:
                 is_cross_attention = True
 
-            query = self.to_q(hidden_states)
+            query = self.to_q(hidden_states) # batch, pix_num, dim
+            print(f'query shape: {query.shape}')
 
             noise_hidden_states = hidden_states + torch.randn_like(hidden_states)
             noise_query = self.to_q(noise_hidden_states)
