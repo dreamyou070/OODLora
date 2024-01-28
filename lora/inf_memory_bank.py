@@ -128,7 +128,7 @@ def main(args):
 
     print(f'\n step 3. save directory and save config')
     parent = os.path.split(args.network_weights)[0]
-    center_folders = os.path.join(parent, f'centers_{args.cross_map_res[0]}_{args.trg_part[0]}')
+    center_folders = os.path.join(parent, f'centers_20240128_{args.cross_map_res[0]}_{args.trg_part[0]}')
     print(f'center folder: {center_folders}')
 
     network_weights = os.listdir(args.network_weights)
