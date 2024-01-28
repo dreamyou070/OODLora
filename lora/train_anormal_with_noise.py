@@ -672,17 +672,14 @@ class NetworkTrainer:
                     attn_dict = attention_storer.step_store
                     attention_storer.reset()
                     attn_loss = 0
-                    average_mask_dict = {}
-
                     for i, layer_name in enumerate(attn_dict.keys()):
-
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         pix_num = map.shape[1]
                         res = int(pix_num ** 0.5)
-
                         # ----------------------------------------------------------------------------------------
                         # (1) check weather to attn loss
                         if res in args.cross_map_res:
+                            do_mask_loss = False
                             if 'down' in layer_name: position = 'down'
                             elif 'up' in layer_name: position = 'up'
                             elif 'mid' in layer_name: position = 'mid'
