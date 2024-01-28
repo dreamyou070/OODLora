@@ -5,15 +5,15 @@ data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="res_16_32_64_up_t_2_20240128_with_gaussian_noise"
+save_folder="res_16_32_64_up_t_2_attn_1_20240128_with_gaussian_noise"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 #network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_up_attn2_t_2_attn2/models/epoch-000007.safetensors"
 start_epoch=0
-port_number=59001
+port_number=59844
 
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
-  --main_process_port $port_number ../lora/train_anormal_with_noise.py \
+  --main_process_port $port_number ../lora/train_anormal.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -29,4 +29,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --start_epoch $start_epoch \
   --output_dir "$output_dir" --truncate_pad --truncate_length 2  \
   --cross_map_res "[16,32,64]" --detail_64_up --trg_position "['up']" --normal_with_background \
-  --trg_part '["attn_0","attn_1","attn_2"]' --cls_training --all_same_learning # --network_weights "$network_weights"
+  --trg_part '["attn_1"]' --cls_training --all_same_learning # --network_weights "$network_weights"
