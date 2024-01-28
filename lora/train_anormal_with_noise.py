@@ -37,7 +37,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             random_feature = torch.rand_like(query)
             anomal_position = torch.tensor(sample(range(0, p), int(p / 4)))
 
-            flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)])
+            flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
             noise_query = query + (random_feature * flag_list)
 
             context = context if context is not None else hidden_states
