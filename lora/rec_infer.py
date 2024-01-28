@@ -256,23 +256,6 @@ def main(args) :
                         img_dir = os.path.join(class_base_folder, f'{name}_origin_recon{ext}')
                         image.save(img_dir)
 
-
-
-                        b, c, h, w = org_vae_latent.shape
-                        random_latent = org_vae_latent.clone()
-                        for i in range(h):
-                            original_feature = random_latent[:, :, i, 1].squeeze()
-                            shuffle = torch.randperm(c)
-                            new_feature = original_feature[shuffle]
-                            random_latent[:, :, i, 1] = new_feature
-                        new_image = pipeline.latents_to_image(random_latent)[0].resize((org_h, org_w))
-                        img_dir = os.path.join(class_base_folder, f'{name}_new_recon{ext}')
-                        new_image.save(img_dir)
-
-
-
-                        """
-                        
                         call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                         inf_time = inference_times.tolist()
                         inf_time.reverse()  # [0,250,500,750]
@@ -296,7 +279,7 @@ def main(args) :
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device, weight_dtype)  # latent_mask = 1,1,64,64
                                 latent_mask_ = latent_mask
                                 save_pixel_mask(latent_mask_, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
-                        
+                        """                        
                         # -------------------------------------------- only anormal zero out ---------------------------------------------- #
 
                         latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal

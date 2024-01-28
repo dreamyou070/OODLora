@@ -1,9 +1,9 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_16_32_64_up_t_2_20240128_with_gaussian_noise"
+folder_name="res_64_up_attn2_t_2_attn2"
 data_folder="MVTec3D-AD"
-normality_folder='normal'
+normality_folder='anormal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
