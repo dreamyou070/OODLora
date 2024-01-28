@@ -290,6 +290,7 @@ def main(args):
 
             # ----------------------------------------------------------------------------------------------------------
             center_save_dir = os.path.join(args.output_dir, f'centers')
+            os.makedirs(center_save_dir, exist_ok=True)
             pca_normal = PCA(n_components=args.pca_dim, random_state=0)
             normal_vectors = np.array(torch.cat(normal_vectors, dim=0).cpu())
             pca_normal.fit(normal_vectors)

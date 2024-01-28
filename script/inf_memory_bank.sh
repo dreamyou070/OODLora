@@ -34,4 +34,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --use_pixel_mask \
   --class_name ${class_name} \
   --anormal_thred 0.5 \
-  --only_zero_save
+  --only_zero_save --pca_dim 320
