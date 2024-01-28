@@ -287,26 +287,38 @@ def main(args):
 
                                     n_dist = torch.tensor((n_dist / total_dist))
                                     b_dist = torch.tensor((b_dist / total_dist))
+
+                                    b_dist_list.append(b_dist)
+                                    n_dist_list.append(n_dist)
                                     #if n_dist > b_dist :
                                     #    t_dist_list.append(n_dist)
                                     #else :
                                     #    t_dist_list.append(b_dist)
                                     t_dist_list.append(b_dist)
 
-                                n_dist_vector = torch.stack(t_dist_list, dim=0).unsqueeze(0)
+                                n_dist_vector = torch.stack(n_dist_list, dim=0).unsqueeze(0)
                                 n_dist_map = n_dist_vector.reshape(res,res)
+                                n_dist_map_save_dir = os.path.join(class_base_folder, f'{name}_normal_mask{ext}')
+                                save_latent(n_dist_map, n_dist_map_save_dir, org_h, org_w)
+
+                                b_dist_vector = torch.stack(b_dist_list, dim=0).unsqueeze(0)
+                                b_dist_map = b_dist_vector.reshape(res,res)
+                                b_dist_map_save_dir = os.path.join(class_base_folder, f'{name}_background_mask{ext}')
+                                save_latent(b_dist_map, b_dist_map_save_dir, org_h, org_w)
+
                                 #n_dist_map = n_dist_map / n_dist_map.max()
-                                recon_mask = n_dist_map.to(device)
+                                #recon_mask = n_dist_map.to(device)
                                 #total_diff = n_diff + b_diff
                                 #n_diff = n_diff / total_diff
                                 #b_diff = b_diff / total_diff
                                 #diff = torch.where(n_diff > b_diff, n_diff, b_diff) #
                                 #anomal_mask = diff.unsqueeze(0)
                                 #recon_mask = anomal_mask.reshape(res,res)
-                                print(f'recon_mask : {recon_mask}')
-                                recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_recon_mask{ext}')
-                                save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
-                                recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
+                                #print(f'recon_mask : {recon_mask}')
+                                #recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_recon_mask{ext}')
+                                #save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
+                                #recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
+                                """
 
                                 # ---------------------------------- [2] reconstruction ------------------------------ #
                                 from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
@@ -375,6 +387,7 @@ def main(args):
                                 tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
                                 anomaly_score_pil.save(anomaly_mask_save_dir)
                                 anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
+                                """
 
 
 
