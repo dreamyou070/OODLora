@@ -692,9 +692,19 @@ class NetworkTrainer:
                     attention_storer.reset()
                     attn_loss = 0
                     for i, layer_name in enumerate(attn_dict.keys()):
+
+
+
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         pix_num = map.shape[1]
                         res = int(pix_num ** 0.5)
+                        #
+                        img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                        img_mask = img_masks.squeeze()  # res,res
+                        img_mask = img_mask.flatten()  # res*res
+                        #img_mask = torch.stack([img_mask.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)
+                        object_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
+
                         # ----------------------------------------------------------------------------------------
                         # (1) check weather to attn loss
                         if res in args.cross_map_res:
@@ -725,6 +735,9 @@ class NetworkTrainer:
                                 anomal_position = attn_dict[layer_name][1].squeeze()  # 8, res*res, c
                                 anomal_position = anomal_position.unsqueeze(0) # 1, pix_num
                                 normal_position = 1 - anomal_position
+
+                                anomal_position = torch.where((anomal_position == 1) & (object_position == 1), 1, 0)  # head, pix_num
+                                normal_position = torch.where((normal_position == 1) & (object_position == 1), 1, 0)  # head, pix_num
 
                                 # -------------------------------------------------------------------------------------
                                 # (3) score map
