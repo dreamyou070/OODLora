@@ -270,7 +270,6 @@ def main(args) :
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res
-
                                 pixel_mask = trigger_score
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device, weight_dtype)  # latent_mask = 1,1,64,64
                                 latent_mask_ = latent_mask

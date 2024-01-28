@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_16_32_64_up_only_normal_20240128"
+folder_name="res_32_64_up_t_2_20240128_with_gaussian_noise"
 data_folder="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
@@ -20,7 +20,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_dim 64 \
   --network_alpha 4 \
   --network_weights ${network_weight_folder}  \
-  --cross_map_res "[64,32,16]" \
+  --cross_map_res "[64,32]" \
   --trg_position "['up']" \
   --trg_part "['attn_0','attn_1','attn_2']" \
   --num_ddim_steps 50 \
