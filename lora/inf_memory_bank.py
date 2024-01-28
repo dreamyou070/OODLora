@@ -128,7 +128,7 @@ def main(args):
 
     print(f'\n step 3. save directory and save config')
     parent = os.path.split(args.network_weights)[0]
-    center_folders = os.path.join(parent, f'centers_{args.cross_attn_res[0]}_{args.trg_part[0]}')
+    center_folders = os.path.join(parent, f'centers_{args.cross_map_res[0]}_{args.trg_part[0]}')
     print(f'center folder: {center_folders}')
 
     network_weights = os.listdir(args.network_weights)
@@ -177,7 +177,7 @@ def main(args):
             test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
             os.makedirs(test_lora_dir, exist_ok=True)
             ## (3.1) base dir
-            condition_save_dir = os.path.join(test_lora_dir, f'memory_bank_{args.cross_attn_res[0]}_{args.trg_part[0]}')
+            condition_save_dir = os.path.join(test_lora_dir, f'memory_bank_{args.cross_map_res[0]}_{args.trg_part[0]}')
             print(f'condition_save_dir : {condition_save_dir}')
             os.makedirs(condition_save_dir, exist_ok=True)
             ## (3.2) evaluate dir
