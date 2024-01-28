@@ -48,7 +48,7 @@ def get_position(layer_name, attn):
 
 def make_trg_layer_name(args):
     res = args.cross_map_res[0]
-    trg_part = args.trg_part[1]
+    trg_part = args.trg_part[0]
     if res == 8 :
         block_name = 'blocks_0'
     elif res == 16:
