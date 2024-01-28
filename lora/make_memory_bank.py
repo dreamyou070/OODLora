@@ -227,7 +227,7 @@ def main(args):
                                         key_layera_name = layer_name
 
                                 # ------------------------------------- [2] save object mask ------------------------------ #
-                                object_mask = get_crossattn_map(args, attn_stores,key_layera_name)
+                                object_mask = get_crossattn_map(args, attn_stores,key_layera_name, res)
                                 object_mask_save_dir = os.path.join(class_base_folder,
                                                                     f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
