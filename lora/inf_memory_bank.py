@@ -175,7 +175,6 @@ def main(args):
         n_center, n_cov = normal
         print(f'background center: {b_center.shape}, normal center: {n_center.shape}')
 
-
         if accelerator.is_main_process:
 
             # (1) call basic model
@@ -213,7 +212,7 @@ def main(args):
             os.makedirs(evaluate_output_dir, exist_ok=True)
             ## (3.3) my inference dir
             my_inference_output_dir = os.path.join(condition_save_dir,
-                                                   f'my_inference_lora_{model_epoch}')
+                                                   f'my_inference_min_val_test_lora_{model_epoch}')
             os.makedirs(my_inference_output_dir, exist_ok=True)
 
             # (4) get images
@@ -223,9 +222,12 @@ def main(args):
             normal_vectors, background_vectors = [], []
             for class_name in classes:
                 flag = True
-                if args.only_normal_infer:
-                    if 'good' not in class_name:
-                        flag = False
+                #if args.only_normal_infer:
+                    #if 'good' not in class_name:
+                        #flag = False
+                if 'good' in class_name:
+                    flag = False
+
                 if flag:
                     evaluate_class_dir = os.path.join(evaluate_output_dir, class_name)
                     os.makedirs(evaluate_class_dir, exist_ok=True)
@@ -259,14 +261,16 @@ def main(args):
                                 uncon_ob, con_ob = torch.chunk(context_ob, 2)
                                 call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
                                 query_dict = controller_ob.query_dict
+                                attn_stores = controller_ob.step_store
                                 controller_ob.reset()
                                 # ------------------------------------- [2] make latent mask ------------------------------ #
                                 # network.restore()
                                 features = query_dict[args.trg_layer_name][0].squeeze() # pix_num, dim
 
+                                object_mask = get_crossattn_map(args, attn_stores,
+                                                                args.trg_layer_name) # 1, 0
                                 pix_num = features.size(0)
                                 res = int(pix_num ** 0.5)
-
                                 #b_features = b_pca.fit_transform(features.cpu().numpy())
                                 #n_features = n_pca.fit_transform(features.cpu().numpy())
 
@@ -286,12 +290,13 @@ def main(args):
                                     b_dist = mahalanobis(b_sample, b_center, b_cov)
                                     n_dist = mahalanobis(n_sample, n_center, n_cov)
                                     print(f'b_dist : {b_dist}, n_dist : {n_dist}')
-
                                     total_dist = n_dist + b_dist
-
                                     n_dist = torch.tensor((n_dist / total_dist))
                                     b_dist = torch.tensor((b_dist / total_dist))
-
+                                    if n_dist > b_dist :
+                                        t_dist_list.append(b_dist)
+                                    else :
+                                        t_dist_list.append(n_dist)
                                     b_dist_list.append(b_dist)
                                     n_dist_list.append(n_dist)
                                     #if n_dist > b_dist :
@@ -299,16 +304,24 @@ def main(args):
                                     #else :
                                     #    t_dist_list.append(b_dist)
                                     t_dist_list.append(b_dist)
-
                                 n_dist_vector = torch.stack(n_dist_list, dim=0).unsqueeze(0)
                                 n_dist_map = n_dist_vector.reshape(res,res)
-                                n_dist_map_save_dir = os.path.join(class_base_folder, f'{name}_normal_mask{ext}')
-                                save_latent(n_dist_map, n_dist_map_save_dir, org_h, org_w)
+                                normal_map = torch.where(object_mask == 0, 1, n_dist_map)
+                                min_val = normal_map.min()
+                                point_map = torch.where(normal_map == min_val, 1, 0)
+                                print(f'min value : {min_val}}')
 
-                                b_dist_vector = torch.stack(b_dist_list, dim=0).unsqueeze(0)
-                                b_dist_map = b_dist_vector.reshape(res,res)
-                                b_dist_map_save_dir = os.path.join(class_base_folder, f'{name}_background_mask{ext}')
-                                save_latent(b_dist_map, b_dist_map_save_dir, org_h, org_w)
+                                #n_dist_map_save_dir = os.path.join(class_base_folder, f'{name}_normal_mask{ext}')
+                                save_latent(n_dist_map, point_map, org_h, org_w)
+
+                                #b_dist_vector = torch.stack(b_dist_list, dim=0).unsqueeze(0)
+                                #b_dist_map = b_dist_vector.reshape(res,res)
+                                #b_dist_map_save_dir = os.path.join(class_base_folder, f'{name}_background_mask{ext}')
+                                #save_latent(b_dist_map, b_dist_map_save_dir, org_h, org_w)
+
+                                #t_dist_vector = torch.stack(t_dist_list, dim=0).unsqueeze(0)
+                                #t_dist_map = t_dist_vector.reshape(res,res)
+
 
                                 #n_dist_map = n_dist_map / n_dist_map.max()
                                 #recon_mask = n_dist_map.to(device)
