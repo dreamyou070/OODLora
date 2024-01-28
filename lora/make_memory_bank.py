@@ -291,26 +291,27 @@ def main(args):
             # ----------------------------------------------------------------------------------------------------------
             center_save_dir = os.path.join(args.output_dir, f'centers')
             os.makedirs(center_save_dir, exist_ok=True)
-            pca_normal = PCA(n_components=args.pca_dim, random_state=0)
+            #pca_normal = PCA(n_components=args.pca_dim, random_state=0)
             normal_vectors = np.array(torch.cat(normal_vectors, dim=0).cpu())
-            pca_normal.fit(normal_vectors)
+            #pca_normal.fit(normal_vectors)
             # saved_model = pickle.dumps(clf)
-            normal_vectors = pca_normal.fit_transform(normal_vectors)
+            #normal_vectors = pca_normal.fit_transform(normal_vectors)
             n_center = np.mean(normal_vectors, axis=0)
             n_cov = np.cov(normal_vectors, rowvar=False)
-            n_outputs = [n_center, n_cov, pca_normal]
+            #n_outputs = [n_center, n_cov, pca_normal]
+            n_outputs = [n_center, n_cov]
             n_dir = os.path.join(center_save_dir, f'normal_{model_epoch}.pt')
             with open(n_dir, 'wb') as f:
                 pickle.dump(n_outputs, f)
 
             # ----------------------------------------------------------------------------------------------------------
-            pca_background = PCA(n_components=args.pca_dim, random_state=0)
+            #pca_background = PCA(n_components=args.pca_dim, random_state=0)
             background_vectors = torch.cat(background_vectors, dim=0).cpu()
-            pca_background.fit(background_vectors)
-            background_vectors = pca_background.fit_transform(background_vectors)
+            #pca_background.fit(background_vectors)
+            #background_vectors = pca_background.fit_transform(background_vectors)
             b_center = np.mean(background_vectors, axis=0)
             b_cov = np.cov(background_vectors, rowvar=False)
-            b_outputs = [b_center, b_cov, pca_background]
+            b_outputs = [b_center, b_cov]
             b_dir = os.path.join(center_save_dir, f'background_{model_epoch}.pt')
             with open(b_dir, 'wb') as f:
                 pickle.dump(b_outputs, f)
