@@ -312,7 +312,8 @@ def main(args):
                                 print(f'min value : {min_val}')
 
                                 #n_dist_map_save_dir = os.path.join(class_base_folder, f'{name}_normal_mask{ext}')
-                                save_latent(n_dist_map, point_map, org_h, org_w)
+                                point_map_save_dir = os.path.join(class_base_folder, f'{name}_point_mask{ext}')
+                                save_latent(point_map, point_map_save_dir, org_h, org_w)
 
                                 #b_dist_vector = torch.stack(b_dist_list, dim=0).unsqueeze(0)
                                 #b_dist_map = b_dist_vector.reshape(res,res)
