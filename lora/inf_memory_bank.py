@@ -309,7 +309,7 @@ def main(args):
                                 normal_map = torch.where(object_mask == 0, 1, n_dist_map)
                                 min_val = normal_map.min()
                                 point_map = torch.where(normal_map == min_val, 1, 0)
-                                print(f'min value : {min_val}}')
+                                print(f'min value : {min_val}')
 
                                 #n_dist_map_save_dir = os.path.join(class_base_folder, f'{name}_normal_mask{ext}')
                                 save_latent(n_dist_map, point_map, org_h, org_w)
