@@ -306,7 +306,7 @@ def main(args):
 
             # ----------------------------------------------------------------------------------------------------------
             #pca_background = PCA(n_components=args.pca_dim, random_state=0)
-            background_vectors = torch.cat(background_vectors, dim=0).cpu()
+            background_vectors = torch.cat(background_vectors, dim=0).cpu().numpy()
             #pca_background.fit(background_vectors)
             #background_vectors = pca_background.fit_transform(background_vectors)
             b_center = np.mean(background_vectors, axis=0)
