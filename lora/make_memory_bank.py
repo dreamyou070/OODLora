@@ -365,6 +365,7 @@ if __name__ == "__main__":
     parser.add_argument("--latent_diff_thred", type=float, default=0.5)
     parser.add_argument("--anormal_thred", type=float, default=0.5)
     parser.add_argument("--detection_network_weights", type=str, )
+    parser.add_argument("--pca_dim", type=int, default=320)
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
