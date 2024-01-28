@@ -134,7 +134,7 @@ def main(args):
     args.trg_layer_name = trg_layer_name
 
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
-    args.output_dir = os.path.join(parent, f'reconstruction_20240128_{args.trg_layer_name}_pca_dim_{args.pca_dim}')
+    args.output_dir = os.path.join(parent, f'reconstruction_20240128_{args.trg_layer_name}')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -169,8 +169,10 @@ def main(args):
             background= pickle.load(f)
         with open(normal_file, 'rb') as f:
             normal = pickle.load(f)
-        b_center, b_cov, b_pca = background
-        n_center, n_cov, n_pca = normal
+        #b_center, b_cov, b_pca = background
+        #n_center, n_cov, n_pca = normal
+        b_center, b_cov = background
+        n_center, n_cov = normal
         print(f'background center: {b_center.shape}, normal center: {n_center.shape}')
 
 
