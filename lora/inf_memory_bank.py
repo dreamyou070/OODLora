@@ -303,11 +303,20 @@ def main(args):
                                     #    t_dist_list.append(n_dist)
                                     #else :
                                     #    t_dist_list.append(b_dist)
-                                    t_dist_list.append(b_dist)
+                                    #t_dist_list.append(b_dist)
+
+
                                 n_dist_vector = torch.stack(n_dist_list, dim=0).unsqueeze(0).to(device)
                                 n_dist_map = n_dist_vector.reshape(res,res)
-                                normal_map = torch.where(object_mask == 0, 1, n_dist_map)
+
+                                b_dist_vector = torch.stack(b_dist_list, dim=0).unsqueeze(0).to(device)
+                                b_dist_map = b_dist_vector.reshape(res,res)
+
+                                # object_map => object = 1, background = 0
+                                # normal_map => background = 1, normal = background distance (normal big)
+                                normal_map = torch.where(object_mask == 0, 1, b_dist_map)
                                 min_val = normal_map.min()
+                                
                                 point_map = torch.where(normal_map == min_val, 1, 0)
                                 print(f'min value : {min_val}')
 
