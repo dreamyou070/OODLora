@@ -287,7 +287,6 @@ def main(args):
 
                                     n_dist = torch.tensor((n_dist / total_dist))
                                     b_dist = torch.tensor((b_dist / total_dist))
-
                                     #if n_dist > b_dist :
                                     #    t_dist_list.append(n_dist)
                                     #else :
