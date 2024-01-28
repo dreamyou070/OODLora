@@ -728,14 +728,11 @@ class NetworkTrainer:
                                     activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anormal_activation_loss
 
                                     if args.cls_training:
+                                        # head, pix_num
                                         activation_loss += args.normal_weight * normal_cls_loss + args.anormal_weight * anormal_cls_loss
-                                    print(f'action_loss (head, pix_num) : {activation_loss.shape}')
-                                    activation_loss = activation_loss.mean()
-
+                                    activation_loss = activation_loss.mean(dim = -1)
                                     attn_loss += activation_loss
-
                     attn_loss = attn_loss.mean()
-
                     # ------------------------------------------------------------------------------------------------- #
                     if batch['train_class_list'][0] == 1:
                         loss = task_loss
