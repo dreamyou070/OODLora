@@ -35,16 +35,17 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
             # ---------------------------------------------------------------------------------------------------------
             b, p, d = query.shape
-            anomal_position = torch.tensor(sample(range(0, p), int(p / 4))).to(query.device)
-            flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
-            noise_query = query.clone()
-            for i in range(p):
-                original_feature = noise_query[:, i, None].squeeze()
-                shuffle = torch.randperm(d)
-                new_feature = original_feature[shuffle]
-                if i in anomal_position:
-                    noise_query[:, i, :] = new_feature
-            noise_query = noise_query.to(query.device)
+            if b == 1 :
+                anomal_position = torch.tensor(sample(range(0, p), int(p / 4))).to(query.device)
+                flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
+                noise_query = query.clone()
+                for i in range(p):
+                    original_feature = noise_query[:, i, None].squeeze()
+                    shuffle = torch.randperm(d)
+                    new_feature = original_feature[shuffle]
+                    if i in anomal_position:
+                        noise_query[:, i, :] = new_feature
+                noise_query = noise_query.to(query.device)
             # ---------------------------------------------------------------------------------------------------------
             """
             random_feature = torch.randn(query.shape)
@@ -75,22 +76,23 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                              query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
-
-            noise_attention_scores = torch.baddbmm(torch.empty(noise_query.shape[0], noise_query.shape[1], key.shape[1], dtype=noise_query.dtype,device=noise_query.device),
-                                                   noise_query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
-            noise_attention_probs = noise_attention_scores.softmax(dim=-1)
-            noise_attention_probs = noise_attention_probs.to(value.dtype)
+            if b == 1 :
+                noise_attention_scores = torch.baddbmm(torch.empty(noise_query.shape[0], noise_query.shape[1], key.shape[1], dtype=noise_query.dtype,device=noise_query.device),
+                                                       noise_query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+                noise_attention_probs = noise_attention_scores.softmax(dim=-1)
+                noise_attention_probs = noise_attention_probs.to(value.dtype)
 
             if is_cross_attention and trg_indexs_list is not None :
 
-                if args.cls_training :
-                    trg_map = attention_probs[:, :, :2]
-                    noise_trg_map = noise_attention_probs[:, :, :2] # batch, pix_num, 2
-                else :
-                    trg_map = attention_probs[:, :, 1]
-                    noise_trg_map = noise_attention_probs[:, :, 1]
-                controller.store(noise_trg_map, layer_name)
-                controller.store(flag_list.flatten(), layer_name)
+                if b == 1 :
+                    if args.cls_training :
+                        trg_map = attention_probs[:, :, :2]
+                        noise_trg_map = noise_attention_probs[:, :, :2] # batch, pix_num, 2
+                    else :
+                        trg_map = attention_probs[:, :, 1]
+                        noise_trg_map = noise_attention_probs[:, :, 1]
+                    controller.store(noise_trg_map, layer_name)
+                    controller.store(flag_list.flatten(), layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)

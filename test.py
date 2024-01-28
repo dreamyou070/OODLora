@@ -1,12 +1,12 @@
 import torch
+from random import sample
+import numpy as np
 
-a_tensor = torch.tensor([[1.1, 2.1, 3.1],
-                         [3.4, 4.1, 1.1]])
-size = torch.norm(a_tensor, dim=1, keepdim=True)
-a_tensor = a_tensor / size
-print(size)
-print(a_tensor)
+query = torch.randn((1,4,64,64))
+b, c, h, w = query.shape
 
-test = 0.2819 * 0.2819 + 0.5381 * 0.5381 + 0.7943 * 0.7943
-test = test ** 0.5
-print(test)
+for i in range(h) :
+    original_feature = query[:,:,i,1].squeeze()
+    shuffle = torch.randperm(c)
+    new_feature = original_feature[shuffle]
+    query[:,:,i,1] = new_feature
