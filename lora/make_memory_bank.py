@@ -109,7 +109,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args):
 
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
-    args.output_dir = os.path.join(parent, 'reconstruction_20240128_64_attn0')
+    args.output_dir = os.path.join(parent, 'reconstruction_20240128')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -161,7 +161,7 @@ def main(args):
             test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
             os.makedirs(test_lora_dir, exist_ok=True)
             ## (3.1) base dir
-            condition_save_dir = os.path.join(test_lora_dir, f'memory_bank')
+            condition_save_dir = os.path.join(test_lora_dir, f'memory_bank_res_{args.trg_res[0]}_part_{args.trg_part[0]}')
             print(f'condition_save_dir : {condition_save_dir}')
             os.makedirs(condition_save_dir, exist_ok=True)
             ## (3.2) evaluate dir
@@ -219,15 +219,21 @@ def main(args):
                                 attn_stores = controller_ob.step_store
                                 query_dict = controller_ob.query_dict
                                 controller_ob.reset()
+                                # ------------------------------------- key name ------------------------------ #
+                                for layer_name in attn_stores.keys() :
+                                    attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                                    res, pos, part = get_position(layer_name, attn)
+                                    if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
+                                        key_layera_name = layer_name
+
                                 # ------------------------------------- [2] save object mask ------------------------------ #
-                                object_mask = get_crossattn_map(args, attn_stores,
-                                                                'up_blocks_3_attentions_0_transformer_blocks_0_attn2')
+                                object_mask = get_crossattn_map(args, attn_stores,key_layera_name)
                                 object_mask_save_dir = os.path.join(class_base_folder,
                                                                     f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
                                 # ------------------------------------- [2] save object mask ------------------------------ #
                                 # network.restore()
-                                attn = attn_stores['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0]
+                                attn = attn_stores[key_layera_name][0]
                                 if args.truncate_length == 3:
                                     cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                 else:
@@ -245,7 +251,7 @@ def main(args):
 
                                 all_indexs = [i for i in range(len(normal_position))]
 
-                                features = query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze() # pix_num, dim
+                                features = query_dict[key_layera_name][0].squeeze() # pix_num, dim
 
                                 normal_indexs = torch.tensor([i for i in all_indexs if normal_position[i] == 1])
                                 back_indexs = torch.tensor([i for i in all_indexs if back_position[i] == 1])
@@ -281,7 +287,6 @@ def main(args):
             b_dir = os.path.join(args.output_dir, f'background_{model_epoch}.pt')
             with open(b_dir, 'wb') as f:
                 pickle.dump(b_outputs, f)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
