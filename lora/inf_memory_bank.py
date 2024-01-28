@@ -295,7 +295,7 @@ def main(args):
 
                                 n_dist_vector = torch.stack(t_dist_list, dim=0).unsqueeze(0)
                                 n_dist_map = n_dist_vector.reshape(res,res)
-                                n_dist_map = n_dist_map / n_dist_map.max()
+                                #n_dist_map = n_dist_map / n_dist_map.max()
                                 recon_mask = n_dist_map.to(device)
                                 #total_diff = n_diff + b_diff
                                 #n_diff = n_diff / total_diff
