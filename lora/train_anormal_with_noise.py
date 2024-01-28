@@ -32,12 +32,16 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 is_cross_attention = True
 
             query = self.to_q(hidden_states) # batch, pix_num, dim
+            print(f'query: {query}')
 
             b, p, d = query.shape
             random_feature = torch.rand_like(query)
             anomal_position = torch.tensor(sample(range(0, p), int(p / 4))).to(query.device)
 
             flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
+            print(f'flag_list: {flag_list}')
+            a = (random_feature * flag_list)
+            print(f'add noise, a : {a}')
             noise_query = query + (random_feature * flag_list)
 
             context = context if context is not None else hidden_states
@@ -738,7 +742,6 @@ class NetworkTrainer:
                                     normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
                                     anormal_cls_loss = (1-(anormal_cls_activation / total_score)) ** 2
                                     activation_loss += args.normal_weight * normal_cls_loss + args.anormal_weight * anormal_cls_loss
-                                print(f'before mean, activation_loss.shape (8): {activation_loss.shape}')
                                 attn_loss += activation_loss
                     attn_loss = attn_loss.mean()
 
