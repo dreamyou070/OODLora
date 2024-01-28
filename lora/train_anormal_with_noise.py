@@ -726,8 +726,12 @@ class NetworkTrainer:
                                         anormal_cls_loss = (1 - noise_cls_map/total_cls)**2
 
                                     activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anormal_activation_loss
+
                                     if args.cls_training:
                                         activation_loss += args.normal_weight * normal_cls_loss + args.anormal_weight * anormal_cls_loss
+                                    print(f'action_loss (head, pix_num) : {activation_loss.shape}')
+                                    activation_loss = activation_loss.mean()
+
                                     attn_loss += activation_loss
 
                     attn_loss = attn_loss.mean()
