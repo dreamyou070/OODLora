@@ -133,7 +133,7 @@ def main(args):
     args.trg_layer_name = trg_layer_name
 
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
-    args.output_dir = os.path.join(parent, f'reconstruction_20240128_{args.trg_layer_name}')
+    args.output_dir = os.path.join(parent, f'reconstruction_20240128_{args.trg_layer_name}_pca_dim_{args.pca_dim}')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -289,7 +289,7 @@ def main(args):
             from sklearn.decomposition import PCA
 
             # ----------------------------------------------------------------------------------------------------------
-            pca_normal = PCA(n_components=50, random_state=0)
+            pca_normal = PCA(n_components=args.pca_dim, random_state=0)
             normal_vectors = np.array(torch.cat(normal_vectors, dim=0).cpu())
             pca_normal.fit(normal_vectors)
             # saved_model = pickle.dumps(clf)
@@ -302,7 +302,7 @@ def main(args):
                 pickle.dump(n_outputs, f)
 
             # ----------------------------------------------------------------------------------------------------------
-            pca_background = PCA(n_components=50, random_state=0)
+            pca_background = PCA(n_components=args.pca_dim, random_state=0)
             background_vectors = torch.cat(background_vectors, dim=0).cpu()
             pca_background.fit(background_vectors)
             background_vectors = pca_background.fit_transform(background_vectors)

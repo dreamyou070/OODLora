@@ -23,7 +23,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_weights ${network_weight_folder}  \
   --cross_map_res [16] \
   --trg_position "['up']" \
-  --trg_part "['attn_0']" \
+  --trg_part "['attn_2']" \
   --num_ddim_steps 30 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \
@@ -34,4 +34,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --use_pixel_mask \
   --class_name ${class_name} \
   --anormal_thred 0.5 \
-  --only_zero_save --only_normal_infer
+  --only_zero_save --only_normal_infer --pca_dim 320
