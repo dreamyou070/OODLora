@@ -74,7 +74,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
             if is_cross_attention:
                 controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
-                if layer_name == 'up_blocks_3_attentions_0_transformer_blocks_0_attn2':
+                if layer_name == 'up_blocks_2_attentions_0_transformer_blocks_0_attn2':
                     controller.save_query(self_head_query, layer_name)
 
 
