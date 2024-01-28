@@ -260,7 +260,7 @@ def main(args):
                                 controller_ob.reset()
                                 # ------------------------------------- [2] make latent mask ------------------------------ #
                                 # network.restore()
-                                features = query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze() # pix_num, dim
+                                features = query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze() # pix_num, dim
 
                                 pix_num = features.size(0)
                                 res = int(pix_num ** 0.5)
