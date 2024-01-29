@@ -298,15 +298,14 @@ def main(args) :
                         org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
                         org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
                         call_unet(unet, org_vae_latent, 0, con, None, 1)
-                        org_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][
-                            0].squeeze(0)
+                        org_query = controller.query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze(0)
                         org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
                         controller.reset()
 
                         # (2) recon
                         recon_latent = latents[-1]
                         call_unet(unet, recon_latent, 0, con, None, 1)
-                        recon_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][
+                        recon_query = controller.query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][
                             0].squeeze(0)
                         controller.reset()
                         recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
@@ -322,7 +321,7 @@ def main(args) :
                         anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
                         anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
                         anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
-                        tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
+                        tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}_attn0.tiff')
                         anomaly_score_pil.save(anomaly_mask_save_dir)
                         anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
 
