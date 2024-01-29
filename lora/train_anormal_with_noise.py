@@ -73,8 +73,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             value = self.reshape_heads_to_batch_dim(value)
             if self.upcast_attention:
                 query = query.float()
-                noise_query = noise_query.float()
                 key = key.float()
+                if b == 1 :
+                    noise_query = noise_query.float()
 
             attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device),
                                              query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
