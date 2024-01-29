@@ -281,6 +281,7 @@ def main(args) :
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device, weight_dtype)  # latent_mask = 1,1,64,64
                                 save_pixel_mask(latent_mask, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
                                 back_latent_mask = torch.where(latent_mask < 0.5, 1, 0)
+                        save_pixel_mask(back_latent_mask, class_base_folder, f'{name}_binary_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
                         back_latent_mask = back_latent_mask.repeat(1, 4, 1, 1)
                         latents = pipeline(prompt=args.prompt,
                                            height=512,
