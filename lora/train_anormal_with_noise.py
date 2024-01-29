@@ -36,7 +36,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             # ---------------------------------------------------------------------------------------------------------
             b, p, d = query.shape
             if b == 1 :
-                anomal_position = torch.tensor(sample(range(0, p), int(p / 4))).to(query.device)
+                """ change pixel percentage 25% to 50% """
+                anomal_position = torch.tensor(sample(range(0, p), int(p / 2))).to(query.device)
                 flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
                 noise_query = query.clone()
                 for i in range(p):
@@ -920,7 +921,7 @@ if __name__ == "__main__":
     parser.add_argument("--start_epoch", type=int, default=0)
     parser.add_argument("--valid_data_dir", type=str)
     parser.add_argument("--task_loss_weight", type=float, default=0.5)
-    parser.add_argument("--anormal_training", action='store_true')
+    parser.add_argument("--shuffle", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--detail_64_up", action='store_true')
