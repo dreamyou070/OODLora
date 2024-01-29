@@ -289,8 +289,8 @@ def main(args) :
                                            num_inference_steps=args.num_ddim_steps,
                                            guidance_scale=args.guidance_scale,
                                            negative_prompt=args.negative_prompt,
-                                           reference_image=org_vae_latent,
-                                           mask=back_latent_mask)
+                                           reference_image=org_vae_latent,)
+                                           #mask=back_latent_mask)
                         # mask = None)
                         recon_image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                         img_dir = os.path.join(class_base_folder, f'{name}_recon_without_mask{ext}')
