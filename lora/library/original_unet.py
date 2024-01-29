@@ -1445,6 +1445,7 @@ class UNet2DConditionModel(nn.Module):
         self.conv_norm_out = nn.GroupNorm(num_channels=BLOCK_OUT_CHANNELS[0], num_groups=NORM_GROUPS, eps=NORM_EPS)
         self.conv_act = nn.SiLU()
         self.conv_out = nn.Conv2d(BLOCK_OUT_CHANNELS[0], OUT_CHANNELS, kernel_size=3, padding=1)
+        # final convolution
 
     # region diffusers compatibility
     def prepare_config(self):

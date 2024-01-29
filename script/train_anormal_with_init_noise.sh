@@ -5,9 +5,10 @@ data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="res_32_up_attn_1_cls_training_all_text_init_gaussian_noise"
+save_folder="res_64_up_attn2_t_2_attn2_normal_init_gaussian_noise"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-#network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_up_attn2_t_2_attn2/models/epoch-000007.safetensors"
+network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_up_attn2_t_2_attn2_normal/models/epoch-000008.safetensors"
+
 start_epoch=0
 port_number=51333
 #
@@ -27,8 +28,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res "[32]" \
+  --cross_map_res "[64]" \
   --detail_64_up \
   --trg_position "['up']" \
-  --trg_part '["attn_1"]' \
-  --cls_training
+  --trg_part '["attn_2"]' \
+  --cls_training --network_weights "$network_weights"
