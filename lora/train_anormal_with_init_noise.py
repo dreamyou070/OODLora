@@ -15,7 +15,7 @@ import torch
 from torch import nn
 import wandb
 from attention_store import AttentionStore
-
+from random import sample
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -31,29 +31,74 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if context is not None:
                 is_cross_attention = True
 
-            query = self.to_q(hidden_states)
+            query = self.to_q(hidden_states) # batch, pix_num, dim
+
+            # ---------------------------------------------------------------------------------------------------------
+            b, p, d = query.shape
+            if b == 1 :
+                """ change pixel percentage 25% to 50% """
+                anomal_position = torch.tensor(sample(range(0, p), int(p / 2))).to(query.device)
+                flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
+                noise_query = query.clone()
+                for i in range(p):
+                    original_feature = noise_query[:, i, None].squeeze()
+                    if args.shuffle :
+                        shuffle = torch.randperm(d)
+                        new_feature = original_feature[shuffle]
+                    else :
+                        new_feature = original_feature + torch.randn(d).to(query.device)
+                    if i in anomal_position:
+                        noise_query[:, i, :] = new_feature
+                noise_query = noise_query.to(query.device)
+            # ---------------------------------------------------------------------------------------------------------
+            """
+            random_feature = torch.randn(query.shape)
+            for i in range(p) :
+                random_feature[:,i,:] = torch.randn(d)
+            random_feature = random_feature.to(query.device)
+            anomal_position = torch.tensor(sample(range(0, p), int(p / 4))).to(query.device)
+            flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
+            noise_query = query + (random_feature * flag_list)
+            """
+            # ---------------------------------------------------------------------------------------------------------
+
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
 
             query = self.reshape_heads_to_batch_dim(query)
+            if b == 1 :
+                noise_query = self.reshape_heads_to_batch_dim(noise_query)
+
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if self.upcast_attention:
                 query = query.float()
                 key = key.float()
+                if b == 1 :
+                    noise_query = noise_query.float()
 
-            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                                                         device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device),
+                                             query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
+            if b == 1 :
+                noise_attention_scores = torch.baddbmm(torch.empty(noise_query.shape[0], noise_query.shape[1], key.shape[1], dtype=noise_query.dtype,device=noise_query.device),
+                                                       noise_query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+                noise_attention_probs = noise_attention_scores.softmax(dim=-1)
+                noise_attention_probs = noise_attention_probs.to(value.dtype)
 
             if is_cross_attention and trg_indexs_list is not None :
-                if args.cls_training :
-                    trg_map = attention_probs[:, :, :2]
-                else :
-                    trg_map = attention_probs[:, :, 1]
-                controller.store(trg_map, layer_name)
+
+                if b == 1 :
+                    if args.cls_training :
+                        trg_map = attention_probs[:, :, :2]
+                        noise_trg_map = noise_attention_probs[:, :, :2] # batch, pix_num, 2
+                    else :
+                        trg_map = attention_probs[:, :, 1]
+                        noise_trg_map = noise_attention_probs[:, :, 1]
+                    controller.store(noise_trg_map, layer_name)
+                    controller.store(flag_list.flatten(), layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -611,39 +656,50 @@ class NetworkTrainer:
                 with accelerator.accumulate(network):
                     on_step_start(text_encoder, unet)
                     with torch.no_grad():
-
-                        latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
+                        if "latents" in batch and batch["latents"] is not None:
+                            latents = batch["latents"].to(accelerator.device)
+                        else:
+                            latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
+                            if torch.any(torch.isnan(latents)):
+                                accelerator.print("NaN found in latents, replacing with zeros")
+                                latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
 
-                        anomal_latents = torch.randn_like(latents)
-                        anomal_latents += latents
-                        anomal_latents = anomal_latents * self.vae_scale_factor
+                        img_masks = batch["img_masks"][0][64].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                        img_mask = img_masks.squeeze()  # res,res
+                        object_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
+                        object_position = object_position.unsqueeze(0).unsqueeze(0)  # head, 1, pix_num
+                        object_position = object_position.repeat(1,4,1,1).to(accelerator.device)  # head, z_dim, pix_num, pix_num
+                        random_latent = torch.randn_like(latents)  # head, z_dim
+                        anomal_latent = latents + random_latent * object_position  # head, z_dim
+
+                        input_latent = torch.cat((latents, anomal_latent), dim=0)  # 2*head, z_dim
 
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args,accelerator,batch,tokenizers, text_encoders,weight_dtype)
                         if args.truncate_pad:
                             text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
-
-                    init_latent = torch.cat([latents, anomal_latents], dim=0)
-                    init_encoder_conds = torch.cat([text_encoder_conds, text_encoder_conds], dim=0)
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
-                                                                                                       init_latent)
-
+                                                                                                       input_latent)
                     with accelerator.autocast():
                         noise_pred = self.call_unet(args,
                                                     accelerator,
                                                     unet,
                                                     noisy_latents,
                                                     timesteps,
-                                                    init_encoder_conds,
-                                                    batch ,
+                                                    torch.cat((text_encoder_conds, text_encoder_conds), dim=0),
+                                                    batch,
                                                     weight_dtype, 1, None)
-                        normal_noise_pred, anomal_noise_pred = torch.chunk(noise_pred, 2, dim=0)
+                        normal_noise_pred, anormal_noise_pred = torch.chunk(noise_pred, 2, dim=0)
                     # ------------------------------------- (1) task loss ------------------------------------- #
                     if batch['train_class_list'][0] == 1:
-                        target = noise.chunk(2, dim=0)[0]
-                        loss = torch.nn.functional.mse_loss(normal_noise_pred.float(), target.float(), reduction="none")
+                        if args.v_parameterization:
+                            target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                        else:
+                            target = noise
+                        loss = torch.nn.functional.mse_loss(normal_noise_pred.float(),
+                                                            target.float(), reduction="none")
                         loss = loss.mean([1, 2, 3])
                         loss_weights = batch["loss_weights"]  # 各sampleごとのweight
                         loss = loss * loss_weights
@@ -655,71 +711,74 @@ class NetworkTrainer:
                     attention_storer.reset()
                     attn_loss = 0
                     for i, layer_name in enumerate(attn_dict.keys()):
+
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
-                        normal_map, anormal_map = torch.chunk(map, 2, dim=0) # 8, res*res, c
+                        pix_num = map.shape[1]
+                        res = int(pix_num ** 0.5)
 
-                        if args.cls_training :
+                        #normal_map, anomal_map = torch.chunk(map, 2, dim=0)
+                        img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                        img_mask = img_masks.squeeze()  # res,res
+                        object_position = img_mask.flatten()  # res*res
+                        back_position = 1-object_position
 
-                            cls_map, score_map = torch.chunk(normal_map, 2, dim=-1)
-                            cls_map = cls_map.squeeze()
-                            score_map = score_map.squeeze()
-
-                            noise_cls_map, noise_score_map = torch.chunk(anormal_map, 2, dim=-1)
-                            noise_cls_map = noise_cls_map.squeeze()
-                            noise_score_map = noise_score_map.squeeze()
-
-                        else :
-                            score_map = map
-                            noise_score_map = normal_map
-
-                        res = int(score_map.shape[1] ** 0.5)
-                        head_num = int(score_map.shape[0])
-                        do_mask_loss = False
+                        # ----------------------------------------------------------------------------------------
+                        # (1) check weather to attn loss
                         if res in args.cross_map_res:
-                            if 'down' in layer_name:
-                                position = 'down'
-                            elif 'up' in layer_name:
-                                position = 'up'
-                            elif 'mid' in layer_name:
-                                position = 'mid'
-
-                            if 'attentions_0' in layer_name:
-                                part = 'attn_0'
-                            elif 'attentions_1' in layer_name:
-                                part = 'attn_1'
-                            else:
-                                part = 'attn_2'
-
+                            do_mask_loss = False
+                            if 'down' in layer_name: position = 'down'
+                            elif 'up' in layer_name: position = 'up'
+                            elif 'mid' in layer_name: position = 'mid'
+                            if 'attentions_0' in layer_name: part = 'attn_0'
+                            elif 'attentions_1' in layer_name: part = 'attn_1'
+                            else: part = 'attn_2'
                             if res == 64:
                                 if args.detail_64_up:
                                     if 'up' in layer_name:
-                                        do_mask_loss = True
+                                        if part in args.trg_part :
+                                            do_mask_loss = True
                                 if args.detail_64_down:
                                     if 'down' in layer_name:
-                                        do_mask_loss = True
+                                        if part in args.trg_part :
+                                            do_mask_loss = True
                             else:
-                                if position in args.trg_position:
+                                if position in args.trg_position and part in args.trg_part:
                                     do_mask_loss = True
 
                             if do_mask_loss :
 
-                                if part in args.trg_part or int(res) == 8 :
-                                    total_score = torch.ones_like(score_map)  # head, pix_num, 1
-                                    normal_activation_loss = (1 - score_map/total_score)**2
-                                    anormal_activation_loss = (noise_score_map/total_score)**2
-                                    if args.cls_training :
-                                        total_cls = torch.ones_like(cls_map)
-                                        normal_cls_loss = (cls_map/total_cls)**2
-                                        anormal_cls_loss = (1 - noise_cls_map/total_cls)**2
+                                # -------------------------------------------------------------------------------------
+                                # (3) score map
+                                if args.cls_training:
+                                    cls_map, score_map = torch.chunk(map, 2, dim=-1)
+                                    normal_cls_map, anomal_cls_map = torch.chunk(cls_map, 2, dim=0)
+                                    normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
+                                    normal_cls_map, anomal_cls_map = normal_cls_map.squeeze(), anomal_cls_map.squeeze()
+                                    normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
+                                else:
+                                    score_map = map
+                                    normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
+                                    normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
 
-                                    activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anormal_activation_loss
-                                    if args.cls_training:
-                                        activation_loss += args.normal_weight * normal_cls_loss + args.anormal_weight * anormal_cls_loss
-                                    activation_loss = activation_loss.mean(dim = -1)
-                                    attn_loss += activation_loss
+                                head_num = normal_score_map.shape[0]
+
+                                normal_trigger_activation = (normal_score_map).sum(dim=-1)
+                                anomal_trigger_activation = (anomal_score_map * object_position).sum(dim=-1)
+                                total_score = torch.ones_like(anomal_trigger_activation)
+                                if args.cls_training:
+                                    anomal_cls_activation = (anomal_cls_map * object_position).sum(dim=-1)
+                                    normal_cls_activation = (normal_cls_map).sum(dim=-1)
+
+                                normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                anomal_activation_loss = ((anomal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anomal_activation_loss
+                                if args.cls_training :
+                                    normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
+                                    anomal_cls_loss = (1-(anomal_cls_activation / total_score)) ** 2
+                                    activation_loss += args.normal_weight * normal_cls_loss + args.anormal_weight * anomal_cls_loss
+                                attn_loss += activation_loss
                     attn_loss = attn_loss.mean()
 
-                    # ------------------------------------------------------------------------------------------------- #
                     if batch['train_class_list'][0] == 1:
                         loss = task_loss
                         if args.attn_loss :
@@ -868,7 +927,7 @@ if __name__ == "__main__":
     parser.add_argument("--start_epoch", type=int, default=0)
     parser.add_argument("--valid_data_dir", type=str)
     parser.add_argument("--task_loss_weight", type=float, default=0.5)
-    parser.add_argument("--anormal_training", action='store_true')
+    parser.add_argument("--shuffle", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--detail_64_up", action='store_true')
@@ -891,7 +950,7 @@ if __name__ == "__main__":
     parser.add_argument("--average_mask", action="store_true",)
     parser.add_argument("--attn_loss", action="store_true", )
     parser.add_argument("--normal_with_background", action="store_true", )
-    parser.add_argument("--anormal_with_background", action="store_true", )
+    parser.add_argument("--only_object_position", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()

@@ -698,7 +698,6 @@ class NetworkTrainer:
                     attention_storer.reset()
                     attn_loss = 0
                     for i, layer_name in enumerate(attn_dict.keys()):
-
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         pix_num = map.shape[1]
                         res = int(pix_num ** 0.5)
