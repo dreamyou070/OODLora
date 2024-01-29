@@ -280,7 +280,7 @@ def main(args) :
                                 back_latent_mask = torch.where(latent_mask < 0.5, 1, 0)
 
                         pil_img = save_pixel_mask(back_latent_mask, class_base_folder, f'{name}_binary_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
-                        pil_img = pil_img.reshape(64,64).convert('L')
+                        pil_img = pil_img.resize(64,64).convert('L')
                         back_latent_mask = np.array(pil_img)
                         back_latent_mask = torch.where(back_latent_mask < 0.5, 0, 1)
                         back_latent_mask = torch.tensor(back_latent_mask).unsqueeze(0).unsqueeze(0).float().to(device)
