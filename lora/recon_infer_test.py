@@ -280,11 +280,7 @@ def main(args) :
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device, weight_dtype)  # latent_mask = 1,1,64,64
                                 save_pixel_mask(latent_mask, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
                                 object_latent_mask = torch.where(latent_mask > 0.5, 1, 0)
-                        print(f'object_latent_mask : {object_latent_mask.shape}')
-                        object_latent_mask = object_latent_mask.unsqueeze(0).unsqueeze(0)
-                        print(f'object_latent_mask : {object_latent_mask.shape}')
                         object_latent_mask = object_latent_mask.repeat(1, 4, 1, 1)
-
                         latents = pipeline(prompt=args.prompt,
                                            height=512,
                                            width=512,
