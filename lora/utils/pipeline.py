@@ -745,6 +745,7 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
             generator,
             latents,
         )
+        noise = latents
         # (1) init latent maskint
         #if mask is not None:
         #    latents = reference_image * mask + latents * (1 - mask)
