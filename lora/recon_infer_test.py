@@ -304,7 +304,7 @@ def main(args) :
                         controller.reset()
 
                         # (2) recon
-                        recon_latent = latents
+                        recon_latent = latents[-1]
                         call_unet(unet, recon_latent, 0, con, None, 1)
                         recon_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][
                             0].squeeze(0)
