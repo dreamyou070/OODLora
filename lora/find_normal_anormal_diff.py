@@ -19,10 +19,12 @@ from utils.model_utils import call_unet
 from utils.scheduling_utils import next_step
 import math
 from utils.image_utils import latent2image
+
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
+
 
 def cosine_function(x):
     x = math.pi * (x - 1)
@@ -48,13 +50,14 @@ def get_position(layer_name, attn):
         part = 'attn_2'
     return res, pos, part
 
-def save_pixel_mask(mask, base_dir, save_name, org_h, org_w):
 
+def save_pixel_mask(mask, base_dir, save_name, org_h, org_w):
     mask_np = mask.squeeze().detach().cpu().numpy().astype(np.uint8)
     mask_np = mask_np * 255
     pil_img = Image.fromarray(mask_np).resize((org_h, org_w))
     pil_img.save(os.path.join(base_dir, save_name))
     return pil_img
+
 
 def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     pixel_save_mask_np = normalized_mask.cpu().numpy()
@@ -65,7 +68,7 @@ def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     # ------------------------------------------------------------------------------------------ #
     # binarize
     latent_mask_torch = torch.from_numpy(latent_mask_np).to(device, dtype=weight_dtype)
-    latent_mask = latent_mask_torch.unsqueeze(0).unsqueeze(0) # 1,1,64,64
+    latent_mask = latent_mask_torch.unsqueeze(0).unsqueeze(0)  # 1,1,64,64
     return latent_mask_np, latent_mask
 
 
@@ -78,6 +81,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if context is not None:
                 is_cross_attention = True
             query = self.to_q(hidden_states)
+            self_query = query
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
@@ -94,17 +98,17 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_probs.to(value.dtype)
 
             if is_cross_attention:
-                controller.store(attention_probs[:,:,:args.truncate_length], layer_name)
+                controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
+                controller.store(self_query, layer_name)
 
             if is_cross_attention and mask is not None:
-                if layer_name in mask.keys() :
+                if layer_name in mask.keys():
                     mask = mask[layer_name].unsqueeze(-1)
-                    mask = mask.repeat(1, 1, attention_probs.shape[-1]).to(attention_probs.device) # head, pix_num, sen_len
-                    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0) # head, pix_num, sen_len
+                    mask = mask.repeat(1, 1, attention_probs.shape[-1]).to(
+                        attention_probs.device)  # head, pix_num, sen_len
+                    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0)  # head, pix_num, sen_len
                     x_attn_probs = z_attn_probs * mask + x_attn_probs * (1 - mask)
                     attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
-
-
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -132,12 +136,13 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
-def main(args) :
 
+
+def main(args):
     print(f'{args.class_name} inference ... ')
 
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
-    args.output_dir = os.path.join(parent,'reconstruction')
+    args.output_dir = os.path.join(parent, 'reconstruction')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -159,7 +164,8 @@ def main(args) :
     for weight in network_weights:
 
         print(f' (3.1) network weight save directory')
-        weight_dir = os.path.join(args.network_weights, weight)
+        #weight_dir = os.path.join(args.network_weights, weight)
+        weight_dir = f'/home/dreamyou070/Lora/OODLora/result/MVTec3D-AD_experiment/bagel/lora_training/anormal/res_64_up_attn2_t_2_attn2/models/epoch-000002.safetensors'
         parent, network_dir = os.path.split(weight_dir)
         model_name = os.path.splitext(network_dir)[0]
         if 'last' not in model_name:
@@ -178,12 +184,13 @@ def main(args) :
         os.makedirs(my_inference_output_dir, exist_ok=True)
 
         print(f' (3.2) SD')
-        text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype, device,
+        text_encoder, vae, unet, load_stable_diffusion_format = train_util._load_target_model(args, weight_dtype,
+                                                                                              device,
                                                                                               unet_use_linear_projection_in_v2=False, )
         vae.to(accelerator.device, dtype=vae_dtype)
         scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
         scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps, beta_start=args.scheduler_linear_start,
-                                  beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule,)
+                                  beta_end=args.scheduler_linear_end, beta_schedule=args.scheduler_schedule, )
         scheduler.set_timesteps(args.num_ddim_steps)
         inference_times = scheduler.timesteps
         unet, text_encoder = unet.to(device), text_encoder.to(device)
@@ -221,10 +228,10 @@ def main(args) :
         for class_name in classes:
 
             flag = True
-            if args.only_normal_infer :
-                if 'good' not in class_name :
+            if args.only_normal_infer:
+                if 'good' not in class_name:
                     flag = False
-            if flag :
+            if flag:
 
                 evaluate_class_dir = os.path.join(evaluate_output_dir, class_name)
                 os.makedirs(evaluate_class_dir, exist_ok=True)
@@ -244,7 +251,8 @@ def main(args) :
                     mask_img_dir = os.path.join(mask_folder, test_image)
                     org_h, org_w = Image.open(mask_img_dir).size
 
-                    Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(os.path.join(class_base_folder, f'{name}_gt{ext}'))
+                    Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(
+                        os.path.join(class_base_folder, f'{name}_gt{ext}'))
 
                     # -------------------------------------------- [0] decide thredhold ---------------------------------------------- #
                     with torch.no_grad():
@@ -266,8 +274,9 @@ def main(args) :
                         controller.reset()
                         for layer_name in attn_stores:
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
+                            query_feature = attn_stores[layer_name][1].squeeze()  # pix_num, dim
                             res, pos, part = get_position(layer_name, attn)
-                            if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
+                            if res in [64] and pos in ['up'] and part in ['attn_2']:
 
                                 if args.truncate_length == 3:
                                     cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
@@ -276,19 +285,31 @@ def main(args) :
                                 h = trigger_score.shape[0]
                                 trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
                                 trigger_score = trigger_score.mean(dim=0)  # res, res
-                                pixel_mask = trigger_score
-                                latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device, weight_dtype)  # latent_mask = 1,1,64,64
-                                save_pixel_mask(latent_mask, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
+                                anomal_position = torch.where(trigger_score < 0.5, 0, 1)
+                                anomal_position = anomal_position.flatten()
+                                anomal_position = anomal_position.unsqueeze(-1) # pix_num, 1
 
-                                object_latent_mask = torch.where(latent_mask < 0.5, 0, 1)
+                                anomal_features = []
+                                normal_features = []
+                                for p in anomal_position.shape[0] :
+                                    feature = query_feature[p]
+                                    if anomal_position[p] == 1 :
+                                        anomal_features.append(feature)
+                                    else :
+                                        normal_features.append(feature)
 
+                                anomal_features = torch.stack(anomal_features, dim=0)
+                                anomal_mean_vector = torch.mean(anomal_features, dim=0)
 
+                                normal_features = torch.stack(normal_features, dim=0)
+                                normal_mean_vector = torch.mean(normal_features, dim=0)
 
+                                print(f' anomal_mean_vector : {anomal_mean_vector}')
+                                print(f' normal_mean_vector : {normal_mean_vector}')
 
+                                import time
+                                time.sleep(10000)
 
-
-                                save_pixel_mask(binary_latent_mask, class_base_folder,
-                                                f'{name}_binary_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
 
 
 
@@ -449,7 +470,8 @@ def main(args) :
                         # -------------------------------------------- [5] decide thredhold ---------------------------------------------- #
                         anomal_mask_pil.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
                         """
-        #del unet, text_encoder, vae, pipeline, controller, scheduler, network
+        # del unet, text_encoder, vae, pipeline, controller, scheduler, network
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -475,13 +497,13 @@ if __name__ == "__main__":
                         help="network dimensions (depends on each network)")
     parser.add_argument("--network_alpha", type=float, default=1,
                         help="alpha for LoRA weight scaling, default 1", )
-    parser.add_argument("--network_dropout", type=float, default=None,)
-    parser.add_argument("--network_args", type=str, default=None, nargs="*",)
-    parser.add_argument("--dim_from_weights", action="store_true",)
-    parser.add_argument("--network_weights", type=str, default=None,help="pretrained weights for network")
+    parser.add_argument("--network_dropout", type=float, default=None, )
+    parser.add_argument("--network_args", type=str, default=None, nargs="*", )
+    parser.add_argument("--dim_from_weights", action="store_true", )
+    parser.add_argument("--network_weights", type=str, default=None, help="pretrained weights for network")
     parser.add_argument("--concept_image", type=str,
-                        default = '/data7/sooyeon/MyData/perfusion_dataset/td_100/100_td/td_1.jpg')
-    parser.add_argument("--prompt", type=str, default = 'teddy bear, wearing like a super hero')
+                        default='/data7/sooyeon/MyData/perfusion_dataset/td_100/100_td/td_1.jpg')
+    parser.add_argument("--prompt", type=str, default='teddy bear, wearing like a super hero')
     parser.add_argument("--concept_image_folder", type=str)
     parser.add_argument("--num_ddim_steps", type=int, default=50)
     parser.add_argument("--scheduler_linear_start", type=float, default=0.00085)
@@ -503,14 +525,18 @@ if __name__ == "__main__":
     parser.add_argument("--latent_diff_thred", type=float, default=0.5)
     parser.add_argument("--anormal_thred", type=float, default=0.5)
     import ast
+
+
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
+
+
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--trg_position", type=arg_as_list, default=['up'])
-    parser.add_argument("--trg_part", type=arg_as_list, default=['attn_2','attn_1','attn_0'])
+    parser.add_argument("--trg_part", type=arg_as_list, default=['attn_2', 'attn_1', 'attn_0'])
     parser.add_argument("--trg_lora_epoch", type=str)
     parser.add_argument("--negative_prompt", type=str)
 
