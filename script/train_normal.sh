@@ -1,6 +1,6 @@
 #! /bin/bash
 
-class_name="cable_gland"
+class_name="bagel"
 data_source='train_normal_small'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
