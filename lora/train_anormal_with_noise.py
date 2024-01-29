@@ -41,8 +41,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 noise_query = query.clone()
                 for i in range(p):
                     original_feature = noise_query[:, i, None].squeeze()
-                    shuffle = torch.randperm(d)
-                    new_feature = original_feature[shuffle]
+                    if args.suffle :
+                        shuffle = torch.randperm(d)
+                        new_feature = original_feature[shuffle]
+                    else :
+                        new_feature = original_feature + torch.randn(d).to(query.device)
                     if i in anomal_position:
                         noise_query[:, i, :] = new_feature
                 noise_query = noise_query.to(query.device)

@@ -268,6 +268,7 @@ def main(args) :
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res, pos, part = get_position(layer_name, attn)
                             if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
+
                                 if args.truncate_length == 3:
                                     cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
                                 else:
@@ -278,9 +279,10 @@ def main(args) :
                                 pixel_mask = trigger_score
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device, weight_dtype)  # latent_mask = 1,1,64,64
                                 save_pixel_mask(latent_mask, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
-                                binary_latent_mask = torch.where(latent_mask <0.5, 0, 1)
+                                binary_latent_mask = torch.where(latent_mask < 0.5, 0, 1)
                                 save_pixel_mask(binary_latent_mask, class_base_folder,
                                                 f'{name}_binary_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
+
 
 
                         """                        
