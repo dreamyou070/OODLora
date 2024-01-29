@@ -266,6 +266,9 @@ def main(args) :
                             attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
                             res, pos, part = get_position(layer_name, attn)
                             if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
+                                trg_res = res
+                                trg_pos = pos
+                                trg_part = part
 
                                 if args.truncate_length == 3:
                                     cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
@@ -279,7 +282,7 @@ def main(args) :
                                 save_pixel_mask(latent_mask, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
                                 back_latent_mask = torch.where(latent_mask < 0.5, 1, 0)
 
-                        pil_img = save_pixel_mask(back_latent_mask, class_base_folder, f'{name}_binary_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
+                        pil_img = save_pixel_mask(back_latent_mask, class_base_folder, f'{name}_binary_mask_{trg_res}_{trg_pos}_{trg_part}{ext}', org_h, org_w)
                         pil_img = pil_img.resize((64,64)).convert('L')
                         back_latent_mask = torch.tensor(np.array(pil_img))
                         back_latent_mask = torch.where(back_latent_mask < 0.5, 0, 1)
