@@ -67,7 +67,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             value = self.to_v(context)
 
             query = self.reshape_heads_to_batch_dim(query)
-            noise_query = self.reshape_heads_to_batch_dim(noise_query)
+            if b == 1 :
+                noise_query = self.reshape_heads_to_batch_dim(noise_query)
 
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
