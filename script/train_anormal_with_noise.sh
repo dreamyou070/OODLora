@@ -9,10 +9,10 @@ save_folder="res_32_up_attn_1_20240128_with_random_position_shuffle_not_cls_trai
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 #network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_up_attn2_t_2_attn2/models/epoch-000007.safetensors"
 start_epoch=0
-port_number=59002
-# NCCL_P2P_DISABLE=1
+port_number=51002
+#
 
-accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
   --main_process_port $port_number ../lora/train_anormal_with_noise.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
