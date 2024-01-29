@@ -291,7 +291,8 @@ def main(args):
 
                                 anomal_features = []
                                 normal_features = []
-                                for p in anomal_position.shape[0] :
+                                pix_num = anomal_position.shape[0]
+                                for p in range(pix_num) :
                                     feature = query_feature[p]
                                     if anomal_position[p] == 1 :
                                         anomal_features.append(feature)
