@@ -98,7 +98,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
 
             if is_cross_attention and mask is not None:
-                if layer_name == 'up_blocks_3_attentions_0_transformer_blocks_0_attn2':
+                if layer_name == 'up_blocks_2_attentions_1_transformer_blocks_0_attn2' :
                     controller.save_query(self_head_query, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -299,7 +299,7 @@ def main(args) :
                         org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
                         call_unet(unet, org_vae_latent, 0, con, None, 1)
 
-                        attn = controller.step_store['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze(0)
+                        attn = controller.step_store['up_blocks_2_attentions_1_transformer_blocks_0_attn2'][0].squeeze(0)
                         cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                         h = trigger_score.shape[0]
                         org_query = trigger_score.mean(dim=0)  # res, res
@@ -308,7 +308,7 @@ def main(args) :
                         # (2) recon
                         recon_latent = latents[-1]
                         call_unet(unet, recon_latent, 0, con, None, 1)
-                        attn = controller.step_store['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][0].squeeze(0)
+                        attn = controller.step_store['up_blocks_2_attentions_1_transformer_blocks_0_attn2'][0].squeeze(0)
                         cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                         recon_query = trigger_score.mean(dim=0)  # res, res
                         controller.reset()
@@ -319,7 +319,7 @@ def main(args) :
                         anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
 
                         #anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
-                        anomaly_score = anomaly_score.unsqueeze(0).reshape(64, 64)
+                        anomaly_score = anomaly_score.unsqueeze(0).reshape(32,32)
                         anomaly_score = anomaly_score.numpy()
 
                         anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
@@ -327,8 +327,8 @@ def main(args) :
                         anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}_attn0{ext}')
                         anomaly_score_pil.save(anomaly_mask_save_dir)
 
-                        #tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}_attn0.tiff')
-                        #anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
+                        tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
+                        anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
 
 
 if __name__ == "__main__":
