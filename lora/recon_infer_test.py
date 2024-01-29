@@ -68,20 +68,21 @@ def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     latent_mask = latent_mask_torch.unsqueeze(0).unsqueeze(0) # 1,1,64,64
     return latent_mask_np, latent_mask
 
+
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
 
     def ca_forward(self, layer_name):
+
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
             is_cross_attention = False
             if context is not None:
                 is_cross_attention = True
-            query = self.to_q(hidden_states)
-            self_query = query
+            self_head_query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
-            query = self.reshape_heads_to_batch_dim(query)
+            query = self.reshape_heads_to_batch_dim(self_head_query)
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if self.upcast_attention:
@@ -95,18 +96,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
             if is_cross_attention:
                 controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
-                controller.store(self_query, layer_name)
 
-            """
             if is_cross_attention and mask is not None:
-                if layer_name in mask.keys():
-                    mask = mask[layer_name].unsqueeze(-1)
-                    mask = mask.repeat(1, 1, attention_probs.shape[-1]).to(
-                        attention_probs.device)  # head, pix_num, sen_len
-                    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0)  # head, pix_num, sen_len
-                    x_attn_probs = z_attn_probs * mask + x_attn_probs * (1 - mask)
-                    attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0) 
-            """
+                if layer_name == 'up_blocks_3_attentions_2_transformer_blocks_0_attn2':
+                    controller.save_query(self_head_query, layer_name)
+
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
