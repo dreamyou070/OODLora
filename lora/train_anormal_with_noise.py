@@ -45,6 +45,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                     if args.shuffle :
                         shuffle = torch.randperm(d)
                         new_feature = original_feature[shuffle]
+                    elif args.contrast :
+                        new_feature = original_feature * -1
                     else :
                         new_feature = original_feature + torch.randn(d).to(query.device)
                     if i in anomal_position:
@@ -930,6 +932,7 @@ if __name__ == "__main__":
     parser.add_argument("--detail_64_down", action='store_true')
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
     parser.add_argument("--all_same_learning", action='store_true')
+    parser.add_argument("--contrast", action='store_true')
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
