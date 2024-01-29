@@ -750,12 +750,14 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
         #    latents = reference_image * mask + latents * (1 - mask)
 
 
+
         # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
 
         # 8. Denoising loop
         latent_list = []
         for i, t in enumerate(self.progress_bar(timesteps)):
+            ref = self.scheduler.add_noise(reference_image, noise, t)
             # expand the latents if we are doing classifier free guidance
             latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
             latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
@@ -772,7 +774,7 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
             # compute the previous noisy sample x_t -> x_t-1
             latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
             if mask is not None:
-                latents = reference_image * mask + latents * (1 - mask)
+                latents = ref * mask + latents * (1 - mask)
             latent_list.append(latents)
 
         #return latents
