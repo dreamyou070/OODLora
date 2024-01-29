@@ -750,8 +750,6 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
         #if mask is not None:
         #    latents = reference_image * mask + latents * (1 - mask)
 
-
-
         # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
 

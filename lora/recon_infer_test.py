@@ -68,7 +68,6 @@ def get_latent_mask(normalized_mask, trg_res, device, weight_dtype):
     latent_mask = latent_mask_torch.unsqueeze(0).unsqueeze(0) # 1,1,64,64
     return latent_mask_np, latent_mask
 
-
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
 
@@ -78,6 +77,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if context is not None:
                 is_cross_attention = True
             query = self.to_q(hidden_states)
+            self_query = query
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
@@ -94,17 +94,17 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_probs.to(value.dtype)
 
             if is_cross_attention:
-                controller.store(attention_probs[:,:,:args.truncate_length], layer_name)
+                controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
+                controller.store(self_query, layer_name)
 
             if is_cross_attention and mask is not None:
-                if layer_name in mask.keys() :
+                if layer_name in mask.keys():
                     mask = mask[layer_name].unsqueeze(-1)
-                    mask = mask.repeat(1, 1, attention_probs.shape[-1]).to(attention_probs.device) # head, pix_num, sen_len
-                    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0) # head, pix_num, sen_len
+                    mask = mask.repeat(1, 1, attention_probs.shape[-1]).to(
+                        attention_probs.device)  # head, pix_num, sen_len
+                    z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0)  # head, pix_num, sen_len
                     x_attn_probs = z_attn_probs * mask + x_attn_probs * (1 - mask)
                     attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
-
-
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -132,6 +132,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
         elif "mid" in net[0]:
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
+
+
 def main(args) :
 
     print(f'{args.class_name} inference ... ')
@@ -297,164 +299,41 @@ def main(args) :
                             img_dir = os.path.join(class_base_folder, f'{name}_recon_without_mask_{i}{ext}')
                             recon_image.save(img_dir)
 
-                        """                        
-                        # -------------------------------------------- only anormal zero out ---------------------------------------------- #
-
-                        latent_mask_ = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
-                        latent_mask = latent_mask_.repeat(1, 4, 1, 1)
-                        pixel_mask = save_pixel_mask(latent_mask_, class_base_folder, f'{name}_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
-
-                        #anomaly_mask_ = torch.where(latent_mask_ == 0, 1, 0)
-                        #anomaly_map_sub = save_pixel_mask(anomaly_mask_, class_base_folder,f'{name}{ext}', org_h, org_w)
-                        #anomaly_map.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-
-                        # -------------------------------------------- [2] generate background latent ---------------------------------------------- #
-                        time_steps = []
-                        inf_time.append(999)
-                        for i, t in enumerate(inf_time[:-1]):
-                            back_dict[int(t)] = latent
-                            time_steps.append(t)
-                            if t == 0:
-                                back_image = pipeline.latents_to_image(latent)[0].resize((org_h, org_w))
-                                back_img_dir = os.path.join(class_base_folder, f'{name}_org{ext}')
-                                back_image.save(back_img_dir)
-                            noise_pred = call_unet(unet, latent, t, con, None, None)
-                            controller.reset()
-                            latent = next_step(noise_pred, int(t), latent, scheduler)
-                        back_dict[inf_time[-1]] = latent
-                        time_steps.append(inf_time[-1])
-                        time_steps.reverse()  # 999, 750, ..., 0
-
-                        # ----------------------------[3] generate image ------------------------------ #
-                        print(f' gen image')
-                        pipeline.to(device)
-                        if accelerator.is_main_process:
-                            width = height = 512
-                            guidance_scale = args.guidance_scale
-                            seed = args.seed
-                            torch.manual_seed(seed)
-                            torch.cuda.manual_seed(seed)
-                            height = max(64, height - height % 8)  # round to divisible by 8
-                            width = max(64, width - width % 8)  # round to divisible by 8
-                            do_classifier_free_guidance = guidance_scale > 1.0
-                            x_latent_dict = {}
-
-                            with accelerator.autocast():
-                                text_embeddings = init_prompt(tokenizer, text_encoder, device, args.prompt,
-                                                              args.negative_prompt)
-                                if not do_classifier_free_guidance:
-                                    _, text_embeddings = text_embeddings.chunk(2, dim=0)
-
-                                if args.start_from_final:
-                                    latents, init_latents_orig, noise = pipeline.prepare_latents(None, None, 1, height,
-                                                                                                 width,
-                                                                                                 weight_dtype, device,
-                                                                                                 None, None)
-                                    if args.start_from_origin:
-                                        latents = back_dict[time_steps[0]]
-                                    else:
-                                        latents = latents
-                                    recon_timesteps = time_steps
-                                else:
-                                    total_len = len(time_steps)  # 980, ,,, , 0
-                                    inf_len = int(total_len / 2)
-                                    recon_timesteps = time_steps[inf_len:]
-                                    latents = back_dict[recon_timesteps[0]]
-                                x_latent_dict[recon_timesteps[0]] = latents
-                                # (7) denoising
-                                for i, t in enumerate(recon_timesteps[1:]):  # 999, 750, ..., 250, 0
-                                    # 750, 500, 250, 0
-                                    latent_model_input = torch.cat(
-                                        [latents] * 2) if do_classifier_free_guidance else latents
-                                    # predict the noise residual
-                                    noise_pred = unet(latent_model_input, t,
-                                                      encoder_hidden_states=text_embeddings).sample
-                                    controller.reset()
-                                    # perform guidance
-                                    if do_classifier_free_guidance:
-                                        noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                                        noise_pred = noise_pred_uncond + guidance_scale * (
-                                                    noise_pred_text - noise_pred_uncond)
-                                    latents = pipeline.scheduler.step(noise_pred, t, latents, ).prev_sample
-                                    if t > 500 :
-                                        z_latent = back_dict[t]
-                                        latents = (z_latent * latent_mask) + (latents * (1 - latent_mask))
-                                    else :
-                                        print(f' {t} not use pixel maxk')
-                                        latents = latents
-                                    x_latent_dict[t] = latents
-                                    if args.only_zero_save:
-                                        if t == 0:
-                                            image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
-                                            img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
-                                            image.save(img_dir)
-                        print(f' decide anomal map')
-                        # -------------------------------------------- [4] decide thredhold ---------------------------------------------- #
-                        recon_latent = x_latent_dict[0]
-                        call_unet(unet, recon_latent, 0, con[:, :args.truncate_length, :], None, None)
-                        attn_stores = controller.step_store
+                        # -------------------------------------- [4] anomaly map -------------------------------------- #
+                        # (1) original
+                        org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
+                        org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
+                        call_unet(unet, org_vae_latent, 0, con, None, 1)
+                        org_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][
+                            0].squeeze(0)
+                        org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
                         controller.reset()
-                        for layer_name in attn_stores:
-                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                            res, pos, part = get_position(layer_name, attn)
-                            if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
-                                if args.truncate_length == 3:
-                                    cls_score, trigger_score, pad_score = attn.chunk(3,
-                                                                                     dim=-1)  # head, pix_num
-                                else:
-                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                h = trigger_score.shape[0]
-                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                                trigger_score = trigger_score.mean(dim=0)  # res, res
-                                min_score = trigger_score.min()
-                                pixel_mask = trigger_score
-                                latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device,weight_dtype)  # latent_mask = 1,1,64,64
-                                latent_mask_recon = torch.where(latent_mask > args.anormal_thred, 1, 0)  # erase only anomal
-                                latent_mask_recon = torch.where(latent_mask_recon > args.anormal_thred, 1, 0)  # erase only anomal
-                                save_pixel_mask(latent_mask_recon, class_base_folder, f'{name}_recon_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
 
-
-                        anomaly_map = torch.where((latent_mask_ == 0) & (latent_mask_recon == 1), 0, 1)
-                        anomal_mask_np = (anomaly_map.squeeze().detach().cpu().numpy().astype(np.uint8)) * 255
-                        anomal_mask_pil = Image.fromarray(anomal_mask_np).resize((org_h, org_w))
-                        anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}{ext}'))
-                        # -------------------------------------------- [5] decide thredhold ---------------------------------------------- #
-                        anomal_mask_pil.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-
-                        #pixel_mask = save_pixel_mask(latent_mask_, class_base_folder,
-                                #                             f'{name}_recon_binary_thred_{args.anormal_thred}{ext}', org_h, org_w)
-
-                        """
-                        """
-                        org_latent = back_dict[0]
-                        call_unet(unet, org_latent, 0, con[:, :args.truncate_length, :], None, None)
-                        attn_stores = controller.step_store
+                        # (2) recon
+                        recon_latent = latents
+                        call_unet(unet, recon_latent, 0, con, None, 1)
+                        recon_query = controller.query_dict['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][
+                            0].squeeze(0)
                         controller.reset()
-                        for layer_name in attn_stores:
-                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                            res, pos, part = get_position(layer_name, attn)
-                            if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
-                                if args.truncate_length == 3:
-                                    cls_score, trigger_score, pad_score = attn.chunk(3,
-                                                                                     dim=-1)  # head, pix_num
-                                else:
-                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                h = trigger_score.shape[0]
-                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                                trigger_score = trigger_score.mean(dim=0)  # res, res
-                                anomaly_map = torch.where(trigger_score < min_score, 1, 0)
+                        recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
 
-                        if anomaly_map.sum() > 0:
-                            anomal_mask_pil = anomaly_map_sub
-                        else :
-                            anomaly_map = torch.zeros_like(anomaly_map)
-                            anomal_mask_np = (anomaly_map.detach().cpu().numpy().astype(np.uint8))
-                            anomal_mask_pil = Image.fromarray(anomal_mask_np).resize((org_h, org_w))
-                        anomal_mask_pil.save(os.path.join(class_base_folder, f'{name}{ext}'))
-                        # -------------------------------------------- [5] decide thredhold ---------------------------------------------- #
-                        anomal_mask_pil.save(os.path.join(evaluate_class_dir, f'{name}.tiff'))
-                        """
-        #del unet, text_encoder, vae, pipeline, controller, scheduler, network
+                        # (3) anomaly score
+                        anomaly_score = (org_query @ recon_query.T).cpu()
+                        pix_num = anomaly_score.shape[0]
+                        anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
+                        anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
+                        anomaly_score = anomaly_score.unsqueeze(0).reshape(64, 64)
+                        anomaly_score = anomaly_score.numpy()
+
+                        anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
+                        anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
+                        anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
+                        tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
+                        anomaly_score_pil.save(anomaly_mask_save_dir)
+                        anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
+
+                        import time
+                        time.sleep(1000)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
