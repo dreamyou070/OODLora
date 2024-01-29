@@ -280,8 +280,8 @@ def main(args) :
                                 pixel_mask = trigger_score
                                 latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device, weight_dtype)  # latent_mask = 1,1,64,64
                                 save_pixel_mask(latent_mask, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
-                                object_latent_mask = torch.where(latent_mask > 0.5, 1, 0)
-                        object_latent_mask = object_latent_mask.repeat(1, 4, 1, 1)
+                                back_latent_mask = torch.where(latent_mask < 0.5, 1, 0)
+                        back_latent_mask = back_latent_mask.repeat(1, 4, 1, 1)
                         latents = pipeline(prompt=args.prompt,
                                            height=512,
                                            width=512,
@@ -289,7 +289,7 @@ def main(args) :
                                            guidance_scale=args.guidance_scale,
                                            negative_prompt=args.negative_prompt,
                                            reference_image=org_vae_latent,
-                                           mask=object_latent_mask)
+                                           mask=back_latent_mask)
                         # mask = None)
                         recon_image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
                         img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
