@@ -701,8 +701,6 @@ class NetworkTrainer:
                     attn_loss = 0
                     for i, layer_name in enumerate(attn_dict.keys()):
 
-
-
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         pix_num = map.shape[1]
                         res = int(pix_num ** 0.5)
@@ -744,8 +742,9 @@ class NetworkTrainer:
                                 anomal_position = anomal_position.unsqueeze(0) # 1, pix_num
                                 normal_position = 1 - anomal_position
 
-                                anomal_position = torch.where((anomal_position == 1) & (object_position == 1), 1, 0)  # head, pix_num
-                                normal_position = torch.where((normal_position == 1) & (object_position == 1), 1, 0)  # head, pix_num
+                                if args.only_object_position :
+                                    anomal_position = torch.where((anomal_position == 1) & (object_position == 1), 1, 0)  # head, pix_num
+                                    normal_position = torch.where((normal_position == 1) & (object_position == 1), 1, 0)  # head, pix_num
 
                                 # -------------------------------------------------------------------------------------
                                 # (3) score map
@@ -949,7 +948,7 @@ if __name__ == "__main__":
     parser.add_argument("--average_mask", action="store_true",)
     parser.add_argument("--attn_loss", action="store_true", )
     parser.add_argument("--normal_with_background", action="store_true", )
-    parser.add_argument("--anormal_with_background", action="store_true", )
+    parser.add_argument("--only_object_position", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
