@@ -201,15 +201,16 @@ def main(args) :
         print(f' (3.4) attention storer')
         controller = AttentionStore()
         register_attention_control(unet, controller)
-
-        pipeline = StableDiffusionLongPromptWeightingPipeline(vae=vae,
-                                                              text_encoder=text_encoder,
-                                                              tokenizer=tokenizer,
-                                                              unet=unet,
-                                                              scheduler=scheduler,
-                                                              safety_checker=None,
-                                                              feature_extractor=None,
-                                                              requires_safety_checker=False, )
+        from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
+        import numpy as np
+        pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
+                                                           text_encoder=text_encoder,
+                                                           tokenizer=tokenizer,
+                                                           unet=unet,
+                                                           scheduler=scheduler,
+                                                           safety_checker=None,
+                                                           feature_extractor=None,
+                                                           requires_safety_checker=False, )
         print(f' (3.5) prompt condition')
         context = init_prompt(tokenizer, text_encoder, device, args.prompt)
         uncon, con = torch.chunk(context, 2)
