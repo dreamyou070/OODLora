@@ -35,70 +35,31 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
             # ---------------------------------------------------------------------------------------------------------
             b, p, d = query.shape
-            if b == 1 :
-                """ change pixel percentage 25% to 50% """
-                anomal_position = torch.tensor(sample(range(0, p), int(p / 2))).to(query.device)
-                flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
-                noise_query = query.clone()
-                for i in range(p):
-                    original_feature = noise_query[:, i, None].squeeze()
-                    if args.shuffle :
-                        shuffle = torch.randperm(d)
-                        new_feature = original_feature[shuffle]
-                    else :
-                        new_feature = original_feature + torch.randn(d).to(query.device)
-                    if i in anomal_position:
-                        noise_query[:, i, :] = new_feature
-                noise_query = noise_query.to(query.device)
             # ---------------------------------------------------------------------------------------------------------
-            """
-            random_feature = torch.randn(query.shape)
-            for i in range(p) :
-                random_feature[:,i,:] = torch.randn(d)
-            random_feature = random_feature.to(query.device)
-            anomal_position = torch.tensor(sample(range(0, p), int(p / 4))).to(query.device)
-            flag_list = torch.tensor([[1] if i in anomal_position else [0] for i in range(p)]).to(query.device)
-            noise_query = query + (random_feature * flag_list)
-            """
-            # ---------------------------------------------------------------------------------------------------------
-
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
 
             query = self.reshape_heads_to_batch_dim(query)
-            if b == 1 :
-                noise_query = self.reshape_heads_to_batch_dim(noise_query)
-
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if self.upcast_attention:
                 query = query.float()
                 key = key.float()
-                if b == 1 :
-                    noise_query = noise_query.float()
+
 
             attention_scores = torch.baddbmm(torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device),
                                              query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
-            if b == 1 :
-                noise_attention_scores = torch.baddbmm(torch.empty(noise_query.shape[0], noise_query.shape[1], key.shape[1], dtype=noise_query.dtype,device=noise_query.device),
-                                                       noise_query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
-                noise_attention_probs = noise_attention_scores.softmax(dim=-1)
-                noise_attention_probs = noise_attention_probs.to(value.dtype)
 
             if is_cross_attention and trg_indexs_list is not None :
 
-                if b == 1 :
-                    if args.cls_training :
-                        trg_map = attention_probs[:, :, :2]
-                        noise_trg_map = noise_attention_probs[:, :, :2] # batch, pix_num, 2
-                    else :
-                        trg_map = attention_probs[:, :, 1]
-                        noise_trg_map = noise_attention_probs[:, :, 1]
-                    controller.store(noise_trg_map, layer_name)
-                    controller.store(flag_list.flatten(), layer_name)
+                if args.cls_training :
+                    trg_map = attention_probs[:, :, :2]
+                else :
+                    trg_map = attention_probs[:, :, 1]
+                controller.store(trg_map, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -710,6 +671,7 @@ class NetworkTrainer:
                     attn_dict = attention_storer.step_store
                     attention_storer.reset()
                     attn_loss = 0
+
                     for i, layer_name in enumerate(attn_dict.keys()):
 
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
@@ -726,12 +688,16 @@ class NetworkTrainer:
                         # (1) check weather to attn loss
                         if res in args.cross_map_res:
                             do_mask_loss = False
-                            if 'down' in layer_name: position = 'down'
-                            elif 'up' in layer_name: position = 'up'
-                            elif 'mid' in layer_name: position = 'mid'
+                            if 'down' in layer_name:
+                                position = 'down'
+                            elif 'up' in layer_name:
+                                position = 'up'
+                            elif 'mid' in layer_name:
+                                position = 'mid'
                             if 'attentions_0' in layer_name: part = 'attn_0'
                             elif 'attentions_1' in layer_name: part = 'attn_1'
                             else: part = 'attn_2'
+
                             if res == 64:
                                 if args.detail_64_up:
                                     if 'up' in layer_name:
@@ -742,6 +708,7 @@ class NetworkTrainer:
                                         if part in args.trg_part :
                                             do_mask_loss = True
                             else:
+
                                 if position in args.trg_position and part in args.trg_part:
                                     do_mask_loss = True
 
