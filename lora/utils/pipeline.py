@@ -746,7 +746,9 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
             latents,
         )
         # (1) init latent maskint
-        latents = reference_image * mask + latents * (1 - mask)
+        #if mask is not None:
+        #    latents = reference_image * mask + latents * (1 - mask)
+
 
         # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
@@ -768,8 +770,8 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
 
             # compute the previous noisy sample x_t -> x_t-1
             latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
-            #if mask is not None:
-            #    latents = reference_image * mask + latents * (1 - mask)
+            if mask is not None:
+                latents = reference_image * mask + latents * (1 - mask)
 
         return latents
 
