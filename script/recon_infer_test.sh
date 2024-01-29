@@ -10,7 +10,7 @@ img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 port_number=50802
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
-  --main_process_port ${port_number} ../lora/rec_infer.py \
+  --main_process_port ${port_number} ../lora/recon_infer_test.py \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --sample_sampler ddim \
   --seed 42 \
