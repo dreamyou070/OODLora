@@ -672,7 +672,8 @@ class NetworkTrainer:
                     attn_dict = attention_storer.step_store
                     attention_storer.reset()
                     attn_loss = 0
-
+                    anomal_attn_loss = 0
+                    normal_attn_loss = 0
                     for i, layer_name in enumerate(attn_dict.keys()):
 
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
@@ -739,20 +740,25 @@ class NetworkTrainer:
 
                                 normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                 anomal_activation_loss = ((anomal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anomal_activation_loss
+                                #activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anomal_activation_loss
+                                anomal_attn_loss += anomal_activation_loss
+                                normal_attn_loss += normal_activation_loss
                                 if args.cls_training :
                                     normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
                                     anomal_cls_loss = (1-(anomal_cls_activation / total_score)) ** 2
-                                    activation_loss += args.normal_weight * normal_cls_loss + args.anormal_weight * anomal_cls_loss
-                                attn_loss += activation_loss
-                    attn_loss = attn_loss.mean()
+                                    #activation_loss += args.normal_weight * normal_cls_loss + args.anormal_weight * anomal_cls_loss
+                                    anomal_attn_loss += anomal_cls_loss
+                                    normal_attn_loss += normal_cls_loss
+                                #attn_loss += activation_loss
+                    #attn_loss = attn_loss.mean()
+                    anomal_attn_loss = anomal_attn_loss.mean()
+                    normal_attn_loss = normal_attn_loss.mean()
+
 
                     if batch['train_class_list'][0] == 1:
                         loss = task_loss
                         if args.attn_loss :
-                            loss += attn_loss
-                    else :
-                        loss = attn_loss
+                            loss += normal_attn_loss
                     # ------------------------------------------------------------------------------------------------- #
                     if is_main_process and batch['train_class_list'][0] == 1:
                         loss_dict["loss/task_loss"] = task_loss.item()
@@ -765,7 +771,11 @@ class NetworkTrainer:
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
                         accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
+                    optimizer.step()
+                    lr_scheduler.step()
+                    optimizer.zero_grad(set_to_none=True)
 
+                    accelerator.backward(anomal_attn_loss)
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
