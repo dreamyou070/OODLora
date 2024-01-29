@@ -659,6 +659,7 @@ class NetworkTrainer:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
                             target = noise
+                        target = target.chunk(2, dim=0)[0]  # head, z_dim, pix_num, pix_num
                         loss = torch.nn.functional.mse_loss(normal_noise_pred.float(),
                                                             target.float(), reduction="none")
                         loss = loss.mean([1, 2, 3])
