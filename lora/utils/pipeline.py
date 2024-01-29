@@ -768,8 +768,8 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
 
             # compute the previous noisy sample x_t -> x_t-1
             latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
-            if mask is not None:
-                latents = reference_image * mask + latents * (1 - mask)
+            #if mask is not None:
+            #    latents = reference_image * mask + latents * (1 - mask)
 
         return latents
 
