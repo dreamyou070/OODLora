@@ -305,9 +305,12 @@ def main(args):
                                 normal_mean_vector = torch.mean(normal_features, dim=0)
                                 vector_diff = anomal_mean_vector - normal_mean_vector
 
+                                mean = torch.mean(vector_diff)
+
                                 print(f' anomal_mean_vector : {anomal_mean_vector}')
                                 print(f' normal_mean_vector : {normal_mean_vector}')
                                 print(f' vector_diff : {vector_diff}')
+                                print(f' mean : {mean}')
 
                                 import time
                                 time.sleep(10000)
