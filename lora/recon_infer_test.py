@@ -97,6 +97,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
                 controller.store(self_query, layer_name)
 
+            """
             if is_cross_attention and mask is not None:
                 if layer_name in mask.keys():
                     mask = mask[layer_name].unsqueeze(-1)
@@ -104,8 +105,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                         attention_probs.device)  # head, pix_num, sen_len
                     z_attn_probs, x_attn_probs = attention_probs.chunk(2, dim=0)  # head, pix_num, sen_len
                     x_attn_probs = z_attn_probs * mask + x_attn_probs * (1 - mask)
-                    attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0)
-
+                    attention_probs = torch.cat([z_attn_probs, x_attn_probs], dim=0) 
+            """
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
@@ -294,10 +295,9 @@ def main(args) :
                                            reference_image=org_vae_latent,
                                            mask=back_latent_mask)
                         # mask = None)
-                        for i, latent in enumerate(latents) :
-                            recon_image = pipeline.latents_to_image(latent)[0].resize((org_h, org_w))
-                            img_dir = os.path.join(class_base_folder, f'{name}_recon_without_mask_{i}{ext}')
-                            recon_image.save(img_dir)
+                        recon_image = pipeline.latents_to_image(latents[-1])[0].resize((org_h, org_w))
+                        img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
+                        recon_image.save(img_dir)
 
                         # -------------------------------------- [4] anomaly map -------------------------------------- #
                         # (1) original
