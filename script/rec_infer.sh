@@ -3,7 +3,7 @@
 class_name="bagel"
 folder_name="res_64_up_attn_2_20240128_with_random_position_gaussian_not_cls_training_all_text_only_object_anomal_p_0.5"
 data_folder="MVTec3D-AD"
-normality_folder='anormal'
+normality_folder='normal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 img_folder="../../../MyData/anomaly_detection/${data_folder}/${class_name}"
 
