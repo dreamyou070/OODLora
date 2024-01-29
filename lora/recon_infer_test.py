@@ -329,7 +329,7 @@ def main(args) :
 
                         anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
                         anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
-                        anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}_attn0{ext}')
+                        anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
                         anomaly_score_pil.save(anomaly_mask_save_dir)
 
                         tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
