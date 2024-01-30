@@ -299,8 +299,7 @@ def main(args):
                                     0].squeeze(0)
                                 cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                                 org_query = trigger_score.mean(dim=0)  # res, res
-                                org_query = org_query.unsqueeze(0)
-                                org_map = cls_score.reshape(64,64)# 0 ~ 1
+                                org_map = org_query.unsqueeze(0).reshape(64,64)# 0 ~ 1
                                 org_map_save_dir = os.path.join(class_base_folder, f'{name}_org_latent_map{ext}')
                                 save_latent(org_map, org_map_save_dir, org_h, org_w)
                                 controller.reset()
