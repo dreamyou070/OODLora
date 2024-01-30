@@ -321,7 +321,10 @@ def main(args):
                                 save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
 
                                 # (3) anomaly score
+                                print(f'org_query shape : {org_query.shape}')
+                                print(f'recon_query shape : {recon_query.shape}')
                                 anomaly_score = (org_query @ recon_query.T).cpu()
+                                print(f'anomaly_score shape : {anomaly_score.shape}')
                                 pix_num = anomaly_score.shape[0]
                                 res = int(pix_num ** 0.5)
                                 anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
