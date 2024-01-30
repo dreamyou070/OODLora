@@ -742,9 +742,6 @@ class NetworkTrainer:
                                 normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
                                 anomal_trigger_activation = (anomal_score_map * object_position).sum(dim=-1)
                                 total_score = torch.ones_like(normal_trigger_activation)
-
-                                print(f'normal_trigger_activation : {normal_trigger_activation.shape}')
-                                print(f'total_score : {total_score.shape}')
                                 if args.cls_training:
                                     anomal_cls_activation = (anomal_cls_map * object_position).sum(dim=-1)
                                     normal_cls_activation = (normal_cls_map * object_position).sum(dim=-1)
