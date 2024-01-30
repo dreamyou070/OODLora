@@ -319,7 +319,7 @@ def main(args):
                                 save_latent(rec_mask, rec_mask_save_dir, org_h, org_w)
 
                                 # (3) anomaly score
-                                anomaly_score = torch.abs(rec_mask - org_mask)
+                                anomaly_score = torch.abs(rec_mask - org_mask).cpu()
                                 anomaly_score = anomaly_score.numpy()
                                 anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
                                 anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
