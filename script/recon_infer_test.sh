@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_up_attn012_t_2_only_normal_64_attn2_init_gaussian_noise_unet_frozen"
+folder_name="res_64_up_attn2_total_text_attn2_normal_init_gaussian_noise_unet_frozen_none_act_deact"
 data_folder="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
@@ -22,7 +22,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_weights ${network_weight_folder}  \
   --cross_map_res "[64]" \
   --trg_position "['up']" \
-  --trg_part "['attn_2','attn_1','attn_0']" \
+  --trg_part "['attn_2']" \
   --num_ddim_steps 50 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \

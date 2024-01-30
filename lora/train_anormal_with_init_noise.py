@@ -757,13 +757,11 @@ class NetworkTrainer:
                                     anomal_cls_activation = (anomal_cls_map * object_position).sum(dim=-1)
                                     if args.act_deact :
                                         normal_cls_activation = (normal_cls_map * object_position).sum(dim=-1)
-
                                 anomal_activation_loss = ((anomal_trigger_activation / total_score)) ** 2  # 8, res*res
                                 activation_loss = args.anormal_weight * anomal_activation_loss
                                 if args.act_deact :
                                     normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                     activation_loss += args.normal_weight * normal_activation_loss
-
                                 if args.cls_training :
                                     anomal_cls_loss = (1 - (anomal_cls_activation / total_score)) ** 2
                                     activation_loss += args.anormal_weight * anomal_cls_loss
