@@ -298,7 +298,6 @@ def main(args):
                                 attn = controller.step_store['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][
                                     0].squeeze(0)
                                 cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                h = trigger_score.shape[0]
                                 org_query = trigger_score.mean(dim=0)  # res, res
                                 controller.reset()
 
@@ -314,16 +313,18 @@ def main(args):
                                 # (3) anomaly score
                                 anomaly_score = (org_query @ recon_query.T).cpu()
                                 pix_num = anomaly_score.shape[0]
+                                res = int(pix_num ** 0.5)
                                 anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
 
-                                # anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
-                                anomaly_score = anomaly_score.unsqueeze(0).reshape(64,64)
+                                anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
+                                anomaly_score = anomaly_score.unsqueeze(0).reshape(res,res)
                                 anomaly_score = anomaly_score.numpy()
 
                                 anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
                                 anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
                                 anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
                                 anomaly_score_pil.save(anomaly_mask_save_dir)
+
                                 tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
                                 anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
 
