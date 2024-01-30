@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_up_attn2_total_text_attn2_normal_init_gaussian_noise_unet_frozen_none_act_deact"
+folder_name="res_64_up_attn2_total_text_attn2_normal_init_gaussian_noise_unet_frozen_task_loss_act_deact"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 
