@@ -197,7 +197,7 @@ class NetworkTrainer:
 
         args.logging_dir = os.path.join(args.output_dir, 'logs')
         parent, name = os.path.split(args.output_dir)
-        args.wandb_run_name = name
+        #args.wandb_run_name = name
 
         print(f'\n step 1. setting')
         print(f' (1) session')
@@ -251,8 +251,8 @@ class NetworkTrainer:
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
         is_main_process = accelerator.is_main_process
-        if args.log_with == 'wandb' and is_main_process:
-            wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
+        #if args.log_with == 'wandb' and is_main_process:
+        #    wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
 
         print(f'\n step 4. save directory')
         save_base_dir = args.output_dir
@@ -309,22 +309,19 @@ class NetworkTrainer:
             del t_enc
             network.enable_gradient_checkpointing()  # may have no effect
 
-        print(f'\n step 6. optimizer')
-        try:
-            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
-        except:
-            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
-
-        #params = []
-        #unet_loras = network.unet_loras
-        #for unet_lora in unet_loras:
-        #    lora_name = unet_lora.name
-        #    #if lora_name == ''
-        #    print(f'loraNmae : {lora_name}')
-        #    params.extend(unet_lora.parameters())
-
-        print(f' - frozen unet lora (only text encoder training) ')
-        trainable_params = [trainable_params[0]]
+        print(f'\n step 6. optimizer (unet frozen) ')
+        #try:
+        #    trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
+        #except:
+        #    trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+        unet_loras = network.unet_loras
+        te_loras = network.text_encoder_loras
+        for unet_lora in unet_loras:
+            unet_lora.requires_grad = False
+        params = []
+        for te_lora in te_loras:
+            params.extend(te_lora.parameters())
+        trainable_params = [{"params": params, "lr": args.text_encoder_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         print(f' step 7. dataloader')
@@ -807,8 +804,8 @@ class NetworkTrainer:
                 if accelerator.sync_gradients:
                     progress_bar.update(1)
                     global_step += 1
-                    self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer,
-                                       text_encoder, unet)
+                    #self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer,
+                    #                   text_encoder, unet)
                     attention_storer.reset()
 
                     # 指定ステップごとにモデルを保存
@@ -844,7 +841,6 @@ class NetworkTrainer:
                     # accelerator.log(logs, step=global_step)
                     if is_main_process:
                         logs = self.generate_step_logs(loss_dict, lr_scheduler)
-                        wandb.log(logs)#, step=global_step)
                 if global_step >= args.max_train_steps:
                     break
             accelerator.wait_for_everyone()
@@ -860,7 +856,7 @@ class NetworkTrainer:
                         remove_model(remove_ckpt_name)
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
-            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
+            #self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
             attention_storer.reset()
         if is_main_process:
             network = accelerator.unwrap_model(network)
