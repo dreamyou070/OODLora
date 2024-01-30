@@ -314,7 +314,7 @@ class NetworkTrainer:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
         except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
-        print(f' - frozen unet lora')
+        print(f' - frozen unet lora (only text encoder training) ')
         trainable_params = [trainable_params[0]]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
@@ -687,19 +687,15 @@ class NetworkTrainer:
                     attn_dict = attention_storer.step_store
                     attention_storer.reset()
                     attn_loss = 0
-                    anomal_attn_loss = 0
-                    normal_attn_loss = 0
                     for i, layer_name in enumerate(attn_dict.keys()):
 
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         pix_num = map.shape[1]
                         res = int(pix_num ** 0.5)
 
-                        #normal_map, anomal_map = torch.chunk(map, 2, dim=0)
                         img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                         img_mask = img_masks.squeeze()  # res,res
                         object_position = img_mask.flatten()  # res*res
-                        back_position = 1-object_position
 
                         # ----------------------------------------------------------------------------------------
                         # (1) check weather to attn loss
@@ -714,7 +710,6 @@ class NetworkTrainer:
                             if 'attentions_0' in layer_name: part = 'attn_0'
                             elif 'attentions_1' in layer_name: part = 'attn_1'
                             else: part = 'attn_2'
-
                             if res == 64:
                                 if args.detail_64_up:
                                     if 'up' in layer_name:
@@ -725,12 +720,9 @@ class NetworkTrainer:
                                         if part in args.trg_part :
                                             do_mask_loss = True
                             else:
-
                                 if position in args.trg_position and part in args.trg_part:
                                     do_mask_loss = True
-
                             if do_mask_loss :
-
                                 # -------------------------------------------------------------------------------------
                                 # (3) score map
                                 if args.cls_training:
@@ -760,7 +752,7 @@ class NetworkTrainer:
                                 if args.act_deact :
                                     normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
                                 anomal_trigger_activation = (anomal_score_map * object_position).sum(dim=-1)
-                                total_score = torch.ones_like(normal_trigger_activation)
+                                total_score = torch.ones_like(anomal_trigger_activation)
                                 if args.cls_training:
                                     anomal_cls_activation = (anomal_cls_map * object_position).sum(dim=-1)
                                     if args.act_deact :
