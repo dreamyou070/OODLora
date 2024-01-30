@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_up_attn2_t_2_attn2_normal_init_gaussian_noise_tunet_frozen"
+folder_name="res_64_up_attn012_t_2_only_normal_64_attn2_init_gaussian_noise_unet_frozen"
 data_folder="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
