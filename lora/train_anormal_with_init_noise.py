@@ -637,7 +637,7 @@ class NetworkTrainer:
                         random_latent = torch.randn_like(latents)  # head, z_dim
                         anomal_latent = latents + random_latent * object_position  # head, z_dim
 
-                        #input_latent = torch.cat((latents, anomal_latent), dim=0)  # 2*head, z_dim
+                        input_latent = torch.cat((latents, anomal_latent), dim=0)  # 2*head, z_dim
 
                     with torch.set_grad_enabled(train_text_encoder):
                         text_encoder_conds = self.get_text_cond(args,accelerator,batch,tokenizers, text_encoders,weight_dtype)
@@ -645,21 +645,21 @@ class NetworkTrainer:
                             text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
                     noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
-                                                                                                       anomal_latent,)
-                                                                                                       #input_latent)
+                                                                                                       #anomal_latent,)
+                                                                                                       input_latent)
                     with accelerator.autocast():
                         noise_pred = self.call_unet(args,
                                                     accelerator,
                                                     unet,
                                                     noisy_latents,
                                                     timesteps,
-                                                    #torch.cat((text_encoder_conds, text_encoder_conds), dim=0),
-                                                    text_encoder_conds,
+                                                    torch.cat((text_encoder_conds, text_encoder_conds), dim=0),
+                                                    #text_encoder_conds,
                                                     batch,
                                                     weight_dtype, 1, None)
-                        #normal_noise_pred, anormal_noise_pred = torch.chunk(noise_pred, 2, dim=0)
+                        normal_noise_pred, anormal_noise_pred = torch.chunk(noise_pred, 2, dim=0)
                     # ------------------------------------- (1) task loss ------------------------------------- #
-                    """
+
                     if batch['train_class_list'][0] == 1:
                         if args.v_parameterization:
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
@@ -673,7 +673,7 @@ class NetworkTrainer:
                         loss = loss * loss_weights
                         task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
                         task_loss = task_loss * args.task_loss_weight
-                    """
+
                     # ------------------------------------- (2) attn loss ------------------------------------- #
                     attn_dict = attention_storer.step_store
                     attention_storer.reset()
@@ -686,7 +686,7 @@ class NetworkTrainer:
                         pix_num = map.shape[1]
                         res = int(pix_num ** 0.5)
 
-                        #normal_map, anomal_map = torch.chunk(map, 2, dim=0)
+                        normal_map, anomal_map = torch.chunk(map, 2, dim=0)
                         img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                         img_mask = img_masks.squeeze()  # res,res
                         object_position = img_mask.flatten()  # res*res
@@ -726,54 +726,54 @@ class NetworkTrainer:
                                 # (3) score map
                                 if args.cls_training:
                                     cls_map, score_map = torch.chunk(map, 2, dim=-1)
-                                    #normal_cls_map, anomal_cls_map = torch.chunk(cls_map, 2, dim=0)
-                                    #normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
-                                    #normal_cls_map, anomal_cls_map = normal_cls_map.squeeze(), anomal_cls_map.squeeze()
-                                    #normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
+                                    normal_cls_map, anomal_cls_map = torch.chunk(cls_map, 2, dim=0)
+                                    normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
+                                    normal_cls_map, anomal_cls_map = normal_cls_map.squeeze(), anomal_cls_map.squeeze()
+                                    normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
                                     anomal_cls_map = cls_map.squeeze()
                                     anomal_score_map = score_map.squeeze()
                                 else:
                                     score_map = map
-                                    #normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
-                                    #normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
+                                    normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
+                                    normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
 
                                 head_num = anomal_score_map.shape[0]
 
-                                #normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
+                                normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
                                 anomal_trigger_activation = (anomal_score_map * object_position).sum(dim=-1)
                                 total_score = torch.ones_like(anomal_trigger_activation)
                                 if args.cls_training:
                                     anomal_cls_activation = (anomal_cls_map * object_position).sum(dim=-1)
-                                    #normal_cls_activation = (normal_cls_map * object_position).sum(dim=-1)
+                                    normal_cls_activation = (normal_cls_map * object_position).sum(dim=-1)
 
-                                #normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                 anomal_activation_loss = ((anomal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                #activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anomal_activation_loss
+                                activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anomal_activation_loss
                                 anomal_attn_loss += anomal_activation_loss
-                                #normal_attn_loss += normal_activation_loss
+                                normal_attn_loss += normal_activation_loss
                                 if args.cls_training :
-                                    #normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
+                                    normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
                                     anomal_cls_loss = (1-(anomal_cls_activation / total_score)) ** 2
-                                    #activation_loss += args.normal_weight * normal_cls_loss + args.anormal_weight * anomal_cls_loss
+                                    activation_loss += args.normal_weight * normal_cls_loss + args.anormal_weight * anomal_cls_loss
                                     anomal_attn_loss += anomal_cls_loss
-                                    #normal_attn_loss += normal_cls_loss
-                                #attn_loss += activation_loss
-                    #attn_loss = attn_loss.mean()
-                    anomal_attn_loss = anomal_attn_loss.mean()
+                                    normal_attn_loss += normal_cls_loss
+                                attn_loss += activation_loss
+                    attn_loss = attn_loss.mean()
+                    #anomal_attn_loss = anomal_attn_loss.mean()
                     #normal_attn_loss = normal_attn_loss.mean()
 
 
                     if batch['train_class_list'][0] == 1:
-                        #loss = task_loss
+                        loss = task_loss
                         if args.attn_loss :
-                            loss = anomal_attn_loss
+                            loss += attn_loss
                     # ------------------------------------------------------------------------------------------------- #
-                    #if is_main_process and batch['train_class_list'][0] == 1:
-                        #loss_dict["loss/task_loss"] = task_loss.item()
-                        #if args.attn_loss :
-                        #    loss_dict["loss/attn_loss"] = attn_loss.item()
-                    #elif is_main_process and batch['train_class_list'][0] == 0:
-                    #    loss_dict["loss/anormal_loss"] = attn_loss.item()
+                    if is_main_process and batch['train_class_list'][0] == 1:
+                        loss_dict["loss/task_loss"] = task_loss.item()
+                        if args.attn_loss :
+                            loss_dict["loss/attn_loss"] = attn_loss.item()
+                    elif is_main_process and batch['train_class_list'][0] == 0:
+                        loss_dict["loss/anormal_loss"] = attn_loss.item()
                     accelerator.backward(loss)
 
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
@@ -782,11 +782,6 @@ class NetworkTrainer:
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
-
-                    #accelerator.backward(anomal_attn_loss)
-                    #optimizer.step()
-                    #lr_scheduler.step()
-                    #optimizer.zero_grad(set_to_none=True)
 
                 # Checks if the accelerator has performed an optimization step behind the scenes
                 if accelerator.sync_gradients:
