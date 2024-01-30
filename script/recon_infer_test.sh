@@ -20,9 +20,9 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_dim 64 \
   --network_alpha 4 \
   --network_weights ${network_weight_folder}  \
-  --cross_map_res "[32]" \
+  --cross_map_res "[64]" \
   --trg_position "['up']" \
-  --trg_part "['attn_1']" \
+  --trg_part "['attn_2']" \
   --num_ddim_steps 50 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \

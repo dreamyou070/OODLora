@@ -98,7 +98,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
 
             if is_cross_attention and mask is not None:
-                if layer_name == 'up_blocks_2_attentions_1_transformer_blocks_0_attn2' :
+                if layer_name == 'up_blocks_3_attentions_2_transformer_blocks_0_attn2' :
                     controller.save_query(self_head_query, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -307,7 +307,7 @@ def main(args) :
                         org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
                         call_unet(unet, org_vae_latent, 0, con, None, 1)
 
-                        attn = controller.step_store['up_blocks_2_attentions_1_transformer_blocks_0_attn2'][0].squeeze(0)
+                        attn = controller.step_store['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                         cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                         h = trigger_score.shape[0]
                         org_query = trigger_score.mean(dim=0)  # res, res
@@ -316,7 +316,7 @@ def main(args) :
                         # (2) recon
                         recon_latent = latents[-1]
                         call_unet(unet, recon_latent, 0, con, None, 1)
-                        attn = controller.step_store['up_blocks_2_attentions_1_transformer_blocks_0_attn2'][0].squeeze(0)
+                        attn = controller.step_store['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
                         cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
                         recon_query = trigger_score.mean(dim=0)  # res, res
                         controller.reset()
