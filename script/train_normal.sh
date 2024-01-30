@@ -5,11 +5,11 @@ data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="res_64_up_attn2_t_2_dim_20"
+save_folder="res_64_up_attn012_t_2_dim_20"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
 start_epoch=0
-port_number=50001
+port_number=50002
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
   --main_process_port $port_number ../lora/train_normal.py \
@@ -31,5 +31,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --cross_map_res "[64]" \
   --detail_64_up \
   --trg_position "['up']" \
-  --trg_part '["attn_2"]' \
+  --trg_part '["attn_2","attn_1","attn_0"]' \
   --cls_training
