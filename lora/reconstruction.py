@@ -302,7 +302,7 @@ def main(args):
                                 org_mask = get_crossattn_map(args, attn_stores,
                                                              'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
                                                              thredhold=args.anormal_thred,binarize = False)
-                                org_query = org_mask.flatten()
+                                org_query = org_mask.flatten().unsqueeze(-1)
                                 org_mask_save_dir = os.path.join(class_base_folder,
                                                                     f'{name}_org_latent_map{ext}')
                                 save_latent(org_mask, org_mask_save_dir, org_h, org_w)
@@ -315,16 +315,13 @@ def main(args):
                                 recon_mask = get_crossattn_map(args, attn_stores,
                                                                'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
                                                                thredhold=args.anormal_thred,binarize = False)
-                                recon_query = recon_mask.flatten()
+                                recon_query = recon_mask.flatten().unsqueeze(-1)
                                 recon_mask_save_dir = os.path.join(class_base_folder,
                                                                    f'{name}_recon_latent_map{ext}')
                                 save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
 
                                 # (3) anomaly score
-                                print(f'org_query shape : {org_query.shape}')
-                                print(f'recon_query shape : {recon_query.shape}')
                                 anomaly_score = (org_query @ recon_query.T).cpu()
-                                print(f'anomaly_score shape : {anomaly_score.shape}')
                                 pix_num = anomaly_score.shape[0]
                                 res = int(pix_num ** 0.5)
                                 anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
