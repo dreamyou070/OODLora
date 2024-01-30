@@ -314,6 +314,16 @@ class NetworkTrainer:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
         except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+
+        params = []
+        unet_loras = network.unet_loras
+        for unet_lora in unet_loras:
+            lora_name = unet_lora.name
+            #if lora_name == ''
+            print(f'loraNmae : {lora_name}')
+            params.extend(unet_lora.parameters())
+
+
         print(f' - frozen unet lora (only text encoder training) ')
         trainable_params = [trainable_params[0]]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
