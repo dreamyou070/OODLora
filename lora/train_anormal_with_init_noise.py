@@ -665,23 +665,24 @@ class NetworkTrainer:
                                                     batch,
                                                     weight_dtype, 1, None)
                     # ------------------------------------- (1) task loss ------------------------------------- #
-                    if args.act_deact :
-                        normal_noise_pred, anormal_noise_pred = torch.chunk(noise_pred, 2, dim=0)
-                        if batch['train_class_list'][0] == 1:
-                            if args.v_parameterization:
-                                target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                            else:
-                                target = noise
-                            if args.act_deact :
-                                target = target.chunk(2, dim=0)[0]
-                            target = target.chunk(2, dim=0)[0]  # head, z_dim, pix_num, pix_num
-                            loss = torch.nn.functional.mse_loss(normal_noise_pred.float(),
-                                                                target.float(), reduction="none")
-                            loss = loss.mean([1, 2, 3])
-                            loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                            loss = loss * loss_weights
-                            task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-                            task_loss = task_loss * args.task_loss_weight
+                    if args.do_task_loss :
+                        if args.act_deact :
+                            normal_noise_pred, anormal_noise_pred = torch.chunk(noise_pred, 2, dim=0)
+                            if batch['train_class_list'][0] == 1:
+                                if args.v_parameterization:
+                                    target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                                else:
+                                    target = noise
+                                if args.act_deact :
+                                    target = target.chunk(2, dim=0)[0]
+                                target = target.chunk(2, dim=0)[0]  # head, z_dim, pix_num, pix_num
+                                loss = torch.nn.functional.mse_loss(normal_noise_pred.float(),
+                                                                    target.float(), reduction="none")
+                                loss = loss.mean([1, 2, 3])
+                                loss_weights = batch["loss_weights"]  # 各sampleごとのweight
+                                loss = loss * loss_weights
+                                task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                                task_loss = task_loss * args.task_loss_weight
 
                     # ------------------------------------- (2) attn loss ------------------------------------- #
                     attn_dict = attention_storer.step_store
@@ -771,7 +772,7 @@ class NetworkTrainer:
                                 attn_loss += activation_loss
                     attn_loss = attn_loss.mean()
 
-                    if args.act_deact:
+                    if args.do_task_loss :
                         loss = task_loss
                         if args.attn_loss :
                             loss += attn_loss
@@ -925,7 +926,7 @@ if __name__ == "__main__":
     parser.add_argument("--detail_64_up", action='store_true')
     parser.add_argument("--detail_64_down", action='store_true')
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
-    parser.add_argument("--all_same_learning", action='store_true')
+    parser.add_argument("--do_task_loss", action='store_true')
     parser.add_argument("--act_deact", action='store_true')
     import ast
     def arg_as_list(arg):
