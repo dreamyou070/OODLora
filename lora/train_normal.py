@@ -13,14 +13,16 @@ import library.custom_train_functions as custom_train_functions
 from library.custom_train_functions import prepare_scheduler_for_custom_training
 import torch
 from torch import nn
-import wandb
 from attention_store import AttentionStore
 
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
+import os
+import wandb
 
+os.environ["WANDB__SERVICE_WAIT"] = "500"
 
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
