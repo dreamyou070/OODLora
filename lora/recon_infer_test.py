@@ -327,7 +327,7 @@ def main(args) :
                         anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
 
                         #anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
-                        anomaly_score = anomaly_score.unsqueeze(0).reshape(32,32)
+                        anomaly_score = anomaly_score.unsqueeze(0).reshape(trg_res,trg_res)
                         anomaly_score = anomaly_score.numpy()
 
                         anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
