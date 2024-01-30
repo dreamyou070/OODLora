@@ -758,7 +758,7 @@ class NetworkTrainer:
                     if batch['train_class_list'][0] == 1:
                         loss = task_loss
                         if args.attn_loss :
-                            loss += normal_attn_loss
+                            loss += anomal_attn_loss
                     # ------------------------------------------------------------------------------------------------- #
                     if is_main_process and batch['train_class_list'][0] == 1:
                         loss_dict["loss/task_loss"] = task_loss.item()
@@ -775,10 +775,10 @@ class NetworkTrainer:
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
 
-                    accelerator.backward(anomal_attn_loss)
-                    optimizer.step()
-                    lr_scheduler.step()
-                    optimizer.zero_grad(set_to_none=True)
+                    #accelerator.backward(anomal_attn_loss)
+                    #optimizer.step()
+                    #lr_scheduler.step()
+                    #optimizer.zero_grad(set_to_none=True)
 
                 # Checks if the accelerator has performed an optimization step behind the scenes
                 if accelerator.sync_gradients:
