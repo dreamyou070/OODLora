@@ -727,26 +727,30 @@ class NetworkTrainer:
                                 if args.cls_training:
                                     cls_map, score_map = torch.chunk(map, 2, dim=-1)
                                     normal_cls_map, anomal_cls_map = torch.chunk(cls_map, 2, dim=0)
-                                    normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
                                     normal_cls_map, anomal_cls_map = normal_cls_map.squeeze(), anomal_cls_map.squeeze()
+                                    normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
                                     normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
-                                    anomal_cls_map = cls_map.squeeze()
-                                    anomal_score_map = score_map.squeeze()
                                 else:
                                     score_map = map
                                     normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
                                     normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
 
                                 head_num = anomal_score_map.shape[0]
-
+                                object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # head_num, res*res
+                                # object_position = [res*res]
+                                # normal_score_map = [head_num, res*res]
                                 normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
                                 anomal_trigger_activation = (anomal_score_map * object_position).sum(dim=-1)
-                                total_score = torch.ones_like(anomal_trigger_activation)
+                                total_score = torch.ones_like(normal_trigger_activation)
+
+                                print(f'normal_trigger_activation : {normal_trigger_activation.shape}')
+                                print(f'total_score : {total_score.shape}')
                                 if args.cls_training:
                                     anomal_cls_activation = (anomal_cls_map * object_position).sum(dim=-1)
                                     normal_cls_activation = (normal_cls_map * object_position).sum(dim=-1)
 
                                 normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
+
                                 anomal_activation_loss = ((anomal_trigger_activation / total_score)) ** 2  # 8, res*res
                                 activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anomal_activation_loss
                                 anomal_attn_loss += anomal_activation_loss
