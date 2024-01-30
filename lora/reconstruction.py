@@ -205,6 +205,7 @@ def main(args):
 
                         if accelerator.is_main_process:
                             with torch.no_grad():
+
                                 org_img = load_image(test_img_dir, 512, 512)
                                 org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                                 # ------------------------------------- [1] object mask ------------------------------ #
@@ -219,15 +220,13 @@ def main(args):
                                 call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller_ob.step_store
                                 controller_ob.reset()
-                                # network.restore()
                                 object_mask = get_crossattn_map(args, attn_stores,
                                                                 'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
                                 background_mask = 1- object_mask
                                 object_mask_save_dir = os.path.join(class_base_folder, f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
 
-                                # -------------------------------------------------------------------------------------
-                                # 2. anormal mask
+                                # ------------------------------------- [2] anomal mask ------------------------------ #
                                 weight_dir = os.path.join(args.network_weights, weight)
                                 network.restore()
                                 network.load_weights(weight_dir)
@@ -247,12 +246,13 @@ def main(args):
                                                                      f'{name}_normal_mask{ext}')
                                 save_latent(normal_mask, normal_mask_save_dir, org_h, org_w)
 
+
+
                                 # 3. latent mask
                                 recon_mask = background_mask + normal_mask
                                 recon_mask = torch.where(recon_mask == 0, 0, 1)
                                 recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_recon_mask{ext}')
                                 save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
-
                                 # 4. final latent mask
                                 recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
@@ -289,47 +289,38 @@ def main(args):
                                 network.to(device)
                                 controller = AttentionStore()
                                 register_attention_control(unet, controller)
+                                with torch.no_grad():
+                                    context = init_prompt(tokenizer, text_encoder, device, args.prompt)
+                                uncon, con = torch.chunk(context, 2)
 
                                 # (1) original
                                 org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
                                 org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
-                                with torch.no_grad():
-                                    context = init_prompt(tokenizer, text_encoder, device, args.prompt)
-                                uncon, con = torch.chunk(context, 2)
                                 call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller.step_store
                                 controller.reset()
                                 org_mask = get_crossattn_map(args, attn_stores,
-                                                             'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
-                                                             thredhold=args.anormal_thred,binarize = False)
-                                org_query = org_mask.flatten().unsqueeze(-1)
+                                                                'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
+                                                                thredhold=args.anormal_thred,binarize = False)
                                 org_mask_save_dir = os.path.join(class_base_folder,
-                                                                    f'{name}_org_latent_map{ext}')
+                                                                    f'{name}_org_mask{ext}')
                                 save_latent(org_mask, org_mask_save_dir, org_h, org_w)
 
                                 # (2) recon
-                                recon_latent = latents[-1]
-                                call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
-                                attn_stores = controller.step_store
+                                rec_latent = latents[-1]
+                                call_unet(unet, rec_latent, 0, con[:, :args.truncate_length, :], None, None)
+                                rec_attn_stores = controller.step_store
                                 controller.reset()
-                                recon_mask = get_crossattn_map(args, attn_stores,
-                                                               'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
-                                                               thredhold=args.anormal_thred,binarize = False)
-                                recon_query = recon_mask.flatten().unsqueeze(-1)
-                                recon_mask_save_dir = os.path.join(class_base_folder,
-                                                                   f'{name}_recon_latent_map{ext}')
-                                save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
+                                rec_mask = get_crossattn_map(args, rec_attn_stores,
+                                                             'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
+                                                             thredhold=args.anormal_thred,binarize = False)
+                                rec_mask_save_dir = os.path.join(class_base_folder,
+                                                                 f'{name}_rec_mask{ext}')
+                                save_latent(rec_mask, rec_mask_save_dir, org_h, org_w)
 
                                 # (3) anomaly score
-                                anomaly_score = (org_query @ recon_query.T).cpu()
-                                pix_num = anomaly_score.shape[0]
-                                res = int(pix_num ** 0.5)
-                                anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
-
-                                anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
-                                anomaly_score = anomaly_score.unsqueeze(0).reshape(res,res)
+                                anomaly_score = torch.abs(rec_mask - org_mask)
                                 anomaly_score = anomaly_score.numpy()
-
                                 anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
                                 anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
                                 anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')

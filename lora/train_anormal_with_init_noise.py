@@ -784,7 +784,7 @@ class NetworkTrainer:
                             loss_dict["loss/task_loss"] = task_loss.item()
                         if args.attn_loss :
                             loss_dict["loss/attn_loss"] = attn_loss.item()
-                        
+
                     accelerator.backward(loss)
 
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
