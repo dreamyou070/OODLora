@@ -293,29 +293,32 @@ def main(args):
                                 # (1) original
                                 org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
                                 org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
-                                call_unet(unet, org_vae_latent, 0, con, None, 1)
-
-                                attn = controller.step_store['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][
-                                    0].squeeze(0)
-                                cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                org_query = trigger_score.mean(dim=0)  # res, res
-                                org_map = org_query.unsqueeze(0).reshape(64,64)# 0 ~ 1
-                                org_map_save_dir = os.path.join(class_base_folder, f'{name}_org_latent_map{ext}')
-                                save_latent(org_map, org_map_save_dir, org_h, org_w)
+                                with torch.no_grad():
+                                    context = init_prompt(tokenizer, text_encoder, device, args.prompt)
+                                uncon, con = torch.chunk(context, 2)
+                                call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
+                                attn_stores = controller.step_store
                                 controller.reset()
+                                org_mask = get_crossattn_map(args, attn_stores,
+                                                             'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
+                                                             thredhold=args.anormal_thred,binarize = False)
+                                org_query = org_mask.flatten()
+                                org_mask_save_dir = os.path.join(class_base_folder,
+                                                                    f'{name}_org_latent_map{ext}')
+                                save_latent(org_mask, org_mask_save_dir, org_h, org_w)
 
                                 # (2) recon
                                 recon_latent = latents[-1]
-                                call_unet(unet, recon_latent, 0, con, None, 1)
-                                attn = controller.step_store['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][
-                                    0].squeeze(0)
-                                cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                recon_query = trigger_score.mean(dim=0)  # res, res
-
-                                recon_map = recon_query.unsqueeze(0).reshape(64, 64)  # 0 ~ 1
-                                recon_map_save_dir = os.path.join(class_base_folder, f'{name}_recon_latent_map{ext}')
-                                save_latent(recon_map, recon_map_save_dir, org_h, org_w)
+                                call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
+                                attn_stores = controller.step_store
                                 controller.reset()
+                                recon_mask = get_crossattn_map(args, attn_stores,
+                                                               'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
+                                                               thredhold=args.anormal_thred,binarize = False)
+                                recon_query = recon_mask.flatten()
+                                recon_mask_save_dir = os.path.join(class_base_folder,
+                                                                   f'{name}_recon_latent_map{ext}')
+                                save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
 
                                 # (3) anomaly score
                                 anomaly_score = (org_query @ recon_query.T).cpu()

@@ -13,7 +13,8 @@ def get_state_dict(dir):
 def get_crossattn_map(args, attention_stores: dict = None,
                       trg_layer: str = 'up_blocks_3_attentions_0_transformer_blocks_0_attn2',
                       res : int = 64,
-                      thredhold: float = 0.5):
+                      thredhold: float = 0.5,
+                      binarize = True):
     """ 'up_blocks_3_attentions_0_transformer_blocks_0_attn2'"""
     attn = attention_stores[trg_layer][0].squeeze()  # head, pix_num
     if args.truncate_length == 3:
@@ -24,7 +25,8 @@ def get_crossattn_map(args, attention_stores: dict = None,
     trigger_score = trigger_score.unsqueeze(-1).reshape(h, res,res)
     trigger_score = trigger_score.mean(dim=0)  # res, res, (object = 1)
     object_mask = trigger_score / trigger_score.max()
-    object_mask = torch.where(object_mask > thredhold, 1, 0)  # res, res, (object = 1)
+    if binarize :
+        object_mask = torch.where(object_mask > thredhold, 1, 0)  # res, res, (object = 1)
     return object_mask
 
 def init_prompt(tokenizer, text_encoder, device, prompt: str,
