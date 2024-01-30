@@ -279,7 +279,7 @@ def main(args):
                                                    reference_image =org_vae_latent,
                                                    mask=recon_mask)
 
-                                recon_image = pipeline.latents_to_image(latents)[0].resize((org_h, org_w))
+                                recon_image = pipeline.latents_to_image(latents[-1])[0].resize((org_h, org_w))
                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                 recon_image.save(img_dir)
 
