@@ -292,6 +292,7 @@ class NetworkTrainer:
                                                     **net_kwargs, )
         if network is None:
             return
+
         print(' (5.3) lora with unet and text encoder')
         train_unet = not args.network_train_text_encoder_only
         train_text_encoder = not args.network_train_unet_only
@@ -312,6 +313,8 @@ class NetworkTrainer:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
         except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+        print(f' frozen unet lora')
+        trainable_params = [trainable_params[0]]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         print(f' step 7. dataloader')
