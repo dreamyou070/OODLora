@@ -21,6 +21,7 @@ try:
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
 
+os.environ["WANDB__SERVICE_WAIT"] = "500"
 
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
