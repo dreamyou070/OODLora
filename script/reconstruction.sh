@@ -11,8 +11,7 @@ img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
 
 port_number=54603
 
-NCCL_P2P_DISABLE=1 --config_file ../../../gpu_config/gpu_0_config accelerate launch  \
-  --main_process_port ${port_number} ../lora/reconstruction.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} ../lora/reconstruction.py \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --sample_sampler ddim \
   --seed 42 \
