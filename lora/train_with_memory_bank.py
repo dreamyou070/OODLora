@@ -391,7 +391,7 @@ class NetworkTrainer:
 
                 call_unet(unet, latent, 0, text_embeddings.to(device),1,args.trg_layer)
                 query = controller.query_dict[args.trg_layer][0].squeeze()  # pix_num, dim
-                attn = controller.attn_dict[args.trg_layer][0].squeeze()  # pix_num
+                attn = controller.step_store[args.trg_layer][0].squeeze()  # pix_num
 
             if 'good' in class_name:
                 for pix_idx in range(mask_vector.shape[0]):
