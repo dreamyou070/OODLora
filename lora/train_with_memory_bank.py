@@ -62,7 +62,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
 
-            print(f'layer_name : {layer_name}')
+            #print(f'layer_name : {layer_name}')
             if is_cross_attention and trg_indexs_list is not None:
                 if args.cls_training:
                     trg_map = attention_probs[:, :, :2]
@@ -391,8 +391,7 @@ class NetworkTrainer:
                     text_embeddings = text_embeddings.unsqueeze(0)
 
                 call_unet(unet, latent, 0, text_embeddings.to(device),
-                          None,
-                          [args.trg_layer])
+                          None,args.trg_layer)
                 query = controller.query_dict[args.trg_layer][0].squeeze()  # pix_num, dim
 
             if 'good' in class_name:
