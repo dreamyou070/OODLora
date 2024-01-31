@@ -74,7 +74,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
 
             if is_cross_attention and mask is not None:
-                if layer_name == 'up_blocks_3_attentions_2_transformer_blocks_0_attn2':
+                if layer_name == args.trg_layer :
                     controller.save_query(self_head_query, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -221,7 +221,8 @@ def main(args):
                                 attn_stores = controller_ob.step_store
                                 controller_ob.reset()
                                 object_mask = get_crossattn_map(args, attn_stores,
-                                                                'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
+                                                                args.trg_layer)
+                                                                #'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
                                 background_mask = 1- object_mask ###################################################################### [res,res]
                                 object_mask_save_dir = os.path.join(class_base_folder, f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
@@ -240,7 +241,7 @@ def main(args):
                                 attn_stores = controller.step_store
                                 controller.reset()
                                 normal_mask = get_crossattn_map(args, attn_stores,
-                                                                 'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
+                                                                 args.trg_layer,
                                                                  thredhold=args.anormal_thred)
                                 normal_mask_save_dir = os.path.join(class_base_folder,
                                                                      f'{name}_normal_mask{ext}')
@@ -299,8 +300,7 @@ def main(args):
                                 call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller.step_store
                                 controller.reset()
-                                org_mask = get_crossattn_map(args, attn_stores,
-                                                                'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
+                                org_mask = get_crossattn_map(args, attn_stores,args.trg_layer,
                                                                 thredhold=args.anormal_thred,
                                                                 binarize = True)
                                 org_mask_save_dir = os.path.join(class_base_folder,
@@ -394,6 +394,9 @@ if __name__ == "__main__":
     parser.add_argument("--latent_diff_thred", type=float, default=0.5)
     parser.add_argument("--anormal_thred", type=float, default=0.5)
     parser.add_argument("--detection_network_weights", type=str, )
+    parser.add_argument("--trg_layer", type=str, )
+
+
     import ast
 
 
