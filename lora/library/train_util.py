@@ -330,6 +330,7 @@ class AugHelper:
         return self.color_aug if use_color_aug else None
 
 class BaseSubset:
+
     def __init__(
         self,
         image_dir: Optional[str],

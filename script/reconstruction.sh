@@ -1,12 +1,12 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_up_attn2_total_text_attn2_normal_init_gaussian_noise_unet_frozen_none_act_deact"
+folder_name="res_64_down_attn0_t_2_dim_64"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 
 network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
-detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/normal/res_64_up_attn2_t_2_attn2_normal/models/epoch-000008.safetensors"
+detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/normal/res_64_down_attn0_t_2_dim_64/models/epoch-000001.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
 
 port_number=54663
@@ -23,8 +23,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_weights ${network_weight_folder}  \
   --detection_network_weights ${detection_network_weights} \
   --cross_map_res [64] \
-  --trg_position "['up']" \
-  --trg_part "['attn_2']" \
+  --trg_position "['down']" \
+  --trg_part "['attn_0']" \
   --num_ddim_steps 30 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \

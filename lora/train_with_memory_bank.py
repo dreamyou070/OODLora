@@ -13,27 +13,40 @@ import library.custom_train_functions as custom_train_functions
 from library.custom_train_functions import prepare_scheduler_for_custom_training
 import torch
 from torch import nn
+import wandb
 from attention_store import AttentionStore
+from random import sample
+import einops
+from scipy.spatial.distance import mahalanobis
+from utils.model_utils import call_unet
+from utils.model_utils import get_state_dict, init_prompt
+from torchvision import transforms
+from utils.image_utils import load_image
 
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
-import os
-import wandb
 
 os.environ["WANDB__SERVICE_WAIT"] = "500"
+
 
 def register_attention_control(unet: nn.Module, controller: AttentionStore,
                                mask_threshold: float = 1):  # if mask_threshold is 1, use itself
 
     def ca_forward(self, layer_name):
-
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
             is_cross_attention = False
             if context is not None:
                 is_cross_attention = True
-            query = self.to_q(hidden_states)
+
+            query = self.to_q(hidden_states)  # batch, pix_num, dim
+            if mask == layer_name:
+                controller.save_query(query, layer_name)
+
+            # ---------------------------------------------------------------------------------------------------------
+            b, p, d = query.shape
+            # ---------------------------------------------------------------------------------------------------------
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
@@ -46,14 +59,16 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 key = key.float()
 
             attention_scores = torch.baddbmm(
-                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
-                            device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device),
+                query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
-            if is_cross_attention  :
-                if args.cls_training :
+
+
+            if is_cross_attention and trg_indexs_list is not None:
+                if args.cls_training:
                     trg_map = attention_probs[:, :, :2]
-                else :
+                else:
                     trg_map = attention_probs[:, :, 1]
                 controller.store(trg_map, layer_name)
 
@@ -192,7 +207,6 @@ class NetworkTrainer:
 
         args.logging_dir = os.path.join(args.output_dir, 'logs')
         parent, name = os.path.split(args.output_dir)
-        #args.wandb_run_name = name
 
         print(f'\n step 1. setting')
         print(f' (1) session')
@@ -246,7 +260,7 @@ class NetworkTrainer:
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
         is_main_process = accelerator.is_main_process
-        #if args.log_with == 'wandb' and is_main_process:
+        # if args.log_with == 'wandb' and is_main_process:
         #    wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
 
         print(f'\n step 4. save directory')
@@ -263,7 +277,6 @@ class NetworkTrainer:
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
         print(f' (5.1) base model')
-
         model_version, enc_text_encoder, enc_vae, enc_unet = self.load_target_model(args, weight_dtype, accelerator)
         model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
@@ -288,6 +301,7 @@ class NetworkTrainer:
                                                     **net_kwargs, )
         if network is None:
             return
+
         print(' (5.3) lora with unet and text encoder')
         train_unet = not args.network_train_text_encoder_only
         train_text_encoder = not args.network_train_unet_only
@@ -302,15 +316,160 @@ class NetworkTrainer:
                 t_enc.gradient_checkpointing_enable()
             del t_enc
             network.enable_gradient_checkpointing()  # may have no effect
+        # -------------------------------------------------------------------------------------------------------- #
+        print(f'\n step 6. make memory bank')
+        device = accelerator.device
+        unet, text_encoder, network = unet.to(device), text_encoder.to(device), network.to(device)
 
-        print(f'\n step 6. optimizer')
-        try:
-            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
-        except:
-            trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+        class Mahalanobis_dataset(torch.utils.data.Dataset):
+            def __init__(self, train_data_dir):
+
+                self.vae_scale_factor = 0.18215
+                self.image_transforms = transforms.Compose([transforms.ToTensor(),
+                                                            transforms.Normalize([0.5], [0.5]), ])
+
+                self.imgs = []
+                parent, rgb = os.path.split(train_data_dir)  # train_normal, rgb
+                mask_base_dir = os.path.join(parent, 'mask')
+                class_names = os.listdir(train_data_dir)
+                for class_name in class_names:
+                    rgb_class_dir = os.path.join(train_data_dir, class_name)
+                    mask_class_dir = os.path.join(mask_base_dir, class_name)
+                    images = os.listdir(rgb_class_dir)
+                    for img in images:
+                        rgb_dir = os.path.join(rgb_class_dir, img)
+                        mask_dir = os.path.join(mask_class_dir, img)
+                        self.imgs.append((rgb_dir, mask_dir, class_name))
+
+            def __len__(self):
+                return len(self.imgs)
+
+            def __getitem__(self, idx):
+
+                rgb_dir, mask_dir, class_name = self.imgs[idx]
+                # latent
+                img = load_image(rgb_dir, 512, 512)  # ndarray, dim=3
+                torch_img = self.image_transforms(img).unsqueeze(0)  # dim = 4, torch image
+                with torch.no_grad():
+                    latent = vae.encode(torch_img.to(vae.device, dtype=vae_dtype)).latent_dist.sample()
+                    latent = latent * self.vae_scale_factor
+                # mask
+                img_masks = transforms.ToTensor()(Image.open(mask_dir).
+                                                  convert('L').resize((64, 64), Image.BICUBIC))  # [64,64]
+                object_mask = torch.where(img_masks > 0.5, 1, 0).float().squeeze()  # res,res
+                sample = {}
+                sample['latent'] = latent
+                sample['object_mask'] = object_mask
+                sample['class_name'] = class_name
+                return sample
+
+        mahal_dataset = Mahalanobis_dataset(args.train_data_dir)
+        controller = AttentionStore()
+        register_attention_control(unet, controller, mask_threshold=args.mask_threshold)
+        with torch.no_grad():
+            text_input = tokenizer(['good'], padding="max_length",
+                                   max_length=tokenizer.model_max_length,
+                                   truncation=True, return_tensors="pt", )
+            text = text_input.input_ids.to(device)
+            text_encoder.to(device)
+            text_embeddings = text_encoder(text)[0]
+            text_embeddings = text_embeddings[:, :2, :]
+
+        normal_vector_list = set()
+        back_vector_list = set()
+        anormal_vector_list = set()
+        num_samples = len(mahal_dataset)
+        for i in range(num_samples):
+            sample = mahal_dataset.__getitem__(i)
+            class_name = sample['class_name']
+            latent = sample['latent']  # 1,4,64,64
+            if latent.dim() == 3:
+                latent = latent.unsqueeze(0)
+            latent = latent.to(device)  # 1,4,64,64
+            mask = sample['object_mask']  # res,res
+            mask_vector = mask.flatten()  # pix_num
+            with torch.no_grad():
+                if text_embeddings.dim() != 3:
+                    text_embeddings = text_embeddings.unsqueeze(0)
+                call_unet(unet, latent, 0, text_embeddings.to(device),
+                          None,
+                          ['up_blocks_3_attentions_0_transformer_blocks_0_attn2',])
+                query = controller.query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][
+                    0].squeeze()  # pix_num, dim
+
+            if 'good' in class_name:
+                for pix_idx in range(mask_vector.shape[0]):
+                    feature = query[pix_idx, :].cpu()
+                    if mask_vector[pix_idx] == 1:
+                        if feature.dim() == 1:
+                            feature = feature.unsqueeze(0)
+                        normal_vector_list.add(feature)
+                    else:
+                        if feature.dim() == 1:
+                            feature = feature.unsqueeze(0)
+                        back_vector_list.add(feature)
+            else:
+                for pix_idx in range(mask_vector.shape[0]):
+                    feature = query[pix_idx, :].cpu()
+                    if mask_vector[pix_idx] == 1:
+                        if feature.dim() == 1:
+                            feature = feature.unsqueeze(0)
+                        anormal_vector_list.add(feature)
+            if i % 20 == 0:
+                print(f'normal : {len(normal_vector_list)}, anormal : {len(anormal_vector_list)}')
+
+        normal_vector_list = list(normal_vector_list)
+        normal_vectors = torch.cat(normal_vector_list, dim=0)
+        if normal_vectors.device != 'cpu':
+            normal_vectors = normal_vectors.cpu()
+        normal_vector_np = np.array(normal_vectors)
+        normal_mean = np.mean(normal_vector_np, axis=0)
+        normal_cov = np.cov(normal_vector_np, rowvar=False)
+
+        # back_vector_list = list(back_vector_list)
+        # back_vectors = torch.cat(back_vector_list, dim=0)
+
+        anormal_vector_list = list(anormal_vector_list)
+        anormal_vectors = torch.cat(anormal_vector_list, dim=0)
+        if anormal_vectors.device != 'cpu':
+            anormal_vectors = anormal_vectors.cpu()
+        anormal_vector_np = np.array(anormal_vectors)
+        anormal_mean = torch.mean(anormal_vectors, dim=0)
+        anormal_cov = np.cov(anormal_vector_np, rowvar=False)
+
+        mahalanobis_dists = []
+        for n_vector in normal_vector_np:
+            dist = mahalanobis(n_vector, normal_mean, normal_cov)
+            print(f'normal mahalanobis distance to normal dist : {dist}')
+            mahalanobis_dists.append(dist)
+        max_dist = max(mahalanobis_dists)
+        # ------------------------------------------------------------------------------------
+        thred = 0.95
+        mahalanobis_dists.sort()
+        thred_max = int(len(mahalanobis_dists) * thred)
+        thred_value = mahalanobis_dists[thred_max]
+        print(f'max mahalanobis distance : {max_dist} | thred_value : {thred_value}')
+
+        anomal_mahalanobis_dists = []
+        for anormal_vector in anormal_vector_np:
+            dist = mahalanobis(anormal_vector, normal_mean, normal_cov)
+            anomal_mahalanobis_dists.append(dist)
+            print(f'anormal mahalanobis distance to normal dist : {dist}')
+        print(f'min anormal mahalanobis distance to normal dist : {min(anomal_mahalanobis_dists)}')
+
+        # -------------------------------------------------------------------------------------------------------- #
+        print(f'\n step 7. optimizer (unet frozen) ')
+        unet_loras = network.unet_loras
+        te_loras = network.text_encoder_loras
+        for unet_lora in unet_loras:
+            unet_lora.requires_grad = False
+        params = []
+        for te_lora in te_loras:
+            params.extend(te_lora.parameters())
+        trainable_params = [{"params": params, "lr": args.text_encoder_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
-        print(f' step 7. dataloader')
+        print(f' step 8. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
         train_dataloader = torch.utils.data.DataLoader(train_dataset_group, batch_size=args.train_batch_size,
                                                        shuffle=True,
@@ -321,7 +480,7 @@ class NetworkTrainer:
                 len(train_dataloader) / accelerator.num_processes / args.gradient_accumulation_steps)
             accelerator.print(f"override steps. steps for {args.max_train_epochs} epochs / {args.max_train_steps}")
 
-        print(f'\n step 7. lr')
+        print(f'\n step 9. lr')
         lr_scheduler = train_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
         if args.full_fp16:
             assert (args.mixed_precision == "fp16"), "full_fp16 requires mixed precision='fp16'"
@@ -329,7 +488,7 @@ class NetworkTrainer:
             network.to(weight_dtype)
         elif args.full_bf16:
             assert (
-                        args.mixed_precision == "bf16"), "full_bf16 requires mixed precision='bf16' / mixed_precision='bf16'"
+                    args.mixed_precision == "bf16"), "full_bf16 requires mixed precision='bf16' / mixed_precision='bf16'"
             accelerator.print("enable full bf16 training.")
             network.to(weight_dtype)
 
@@ -342,7 +501,7 @@ class NetworkTrainer:
         for enc_t_enc in enc_text_encoders:
             enc_t_enc.requires_grad_(False)
 
-        print(f'\n step 7. training preparing')
+        print(f'\n step 10. training preparing')
         if train_unet and train_text_encoder:
             if len(text_encoders) > 1:
                 unet, t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler, = accelerator.prepare(
@@ -408,17 +567,34 @@ class NetworkTrainer:
                 enc_t_enc.eval()
         del t_enc
         del enc_text_encoders, enc_vae
-
         network.prepare_grad_etc(text_encoder, unet)
         vae.requires_grad_(False)
         vae.eval()
         vae.to(accelerator.device, dtype=vae_dtype)
-
-        print(f'\n step 7. training preparing')
         if args.full_fp16:
             train_util.patch_accelerator_for_fp16_training(accelerator)
 
-        print(f'\n step 8. training')
+        print(f' * * * * * * * * training * * * * * * * * ')
+        num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
+        num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
+        if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
+            args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
+        attention_storer = AttentionStore()
+        register_attention_control(unet, attention_storer, mask_threshold=args.mask_threshold)
+
+        # conserving backward compatibility when using train_dataset_dir and reg_dataset_dir
+        assert (
+                len(train_dataset_group.datasets) == 1
+        ), f"There should be a single dataset but {len(train_dataset_group.datasets)} found. This seems to be a bug. / データセットは1個だけ存在するはずですが、実際には{len(train_dataset_group.datasets)}個でした。プログラムのバグかもしれません。"
+
+        dataset = train_dataset_group.datasets[0]
+        dataset_dirs_info = {}
+        reg_dataset_dirs_info = {}
+        for subset in dataset.subsets:
+            info = reg_dataset_dirs_info if subset.is_reg else dataset_dirs_info
+            info[os.path.basename(subset.image_dir)] = {"n_repeats": subset.num_repeats,
+                                                        "img_count": subset.img_count}
+
         num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
         num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
         if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
@@ -429,7 +605,6 @@ class NetworkTrainer:
         # 学習する
         # TODO: find a way to handle total batch size when there are multiple datasets.
         total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
-
         accelerator.print("running training / 学習開始")
         accelerator.print(
             f"  num train images * repeats / 学習画像の数×繰り返し回数: {train_dataset_group.num_train_images}")
@@ -503,7 +678,6 @@ class NetworkTrainer:
             info = reg_dataset_dirs_info if subset.is_reg else dataset_dirs_info
             info[os.path.basename(subset.image_dir)] = {"n_repeats": subset.num_repeats,
                                                         "img_count": subset.img_count}
-
         metadata.update({
             "ss_batch_size_per_device": args.train_batch_size,
             "ss_total_batch_size": total_batch_size,
@@ -595,7 +769,6 @@ class NetworkTrainer:
 
         # training loop
         if is_main_process:
-            gradient_dict = {}
             loss_dict = {}
 
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
@@ -605,138 +778,226 @@ class NetworkTrainer:
             network.on_epoch_start(text_encoder, unet)
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
-                #with accelerator.accumulate(network):
-                on_step_start(text_encoder, unet)
-                with torch.no_grad():
-                    if "latents" in batch and batch["latents"] is not None:
-                        latents = batch["latents"].to(accelerator.device)
-                    else:
-                        latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
-                        if torch.any(torch.isnan(latents)):
-                            accelerator.print("NaN found in latents, replacing with zeros")
-                            latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
-                    latents = latents * self.vae_scale_factor
-                with torch.set_grad_enabled(train_text_encoder):
-                    text_encoder_conds = self.get_text_cond(args,accelerator,batch,tokenizers, text_encoders,weight_dtype)
-                    if args.truncate_pad:
-                        text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
-                noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                   noise_scheduler,
-                                                                                                   latents)
-                with accelerator.autocast():
-                    noise_pred = self.call_unet(args,
-                                                accelerator,
-                                                unet,
-                                                noisy_latents,
-                                                timesteps,
-                                                text_encoder_conds,
-                                                batch,
-                                                weight_dtype, 1, None)
-                # ------------------------------------- (1) task loss ------------------------------------- #
-                if args.do_task_loss :
-                    if args.v_parameterization:
-                        target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                    else:
-                        target = noise
-                    loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
-                    loss = loss.mean([1, 2, 3])
-                    loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                    loss = loss * loss_weights
-                    task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-                    task_loss = task_loss * args.task_loss_weight
+                with accelerator.accumulate(network):
+                    on_step_start(text_encoder, unet)
+                    with torch.no_grad():
+                        if "latents" in batch and batch["latents"] is not None:
+                            latents = batch["latents"].to(accelerator.device)
+                        else:
+                            latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
+                            if torch.any(torch.isnan(latents)):
+                                accelerator.print("NaN found in latents, replacing with zeros")
+                                latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
+                        latents = latents * self.vae_scale_factor
 
-                # ------------------------------------- (2) attn loss ------------------------------------- #
-                attn_dict = attention_storer.step_store
-                attention_storer.reset()
-                attn_loss = 0
-                for i, layer_name in enumerate(attn_dict.keys()):
-                    map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
-                    if args.cls_training :
-                        cls_map, score_map = torch.chunk(map, 2, dim=-1)
-                        cls_map = cls_map.squeeze()
-                        score_map = score_map.squeeze()
-                    else :
-                        score_map = map
-                    res = int(map.shape[1] ** 0.5)
-                    head_num = int(score_map.shape[0])
-                    do_mask_loss = False
-                    if res in args.cross_map_res:
-                        if 'down' in layer_name:
-                            position = 'down'
-                        elif 'up' in layer_name:
-                            position = 'up'
-                        elif 'mid' in layer_name:
-                            position = 'mid'
-                        if 'attentions_0' in layer_name:
-                            part = 'attn_0'
-                        elif 'attentions_1' in layer_name:
-                            part = 'attn_1'
+                        # img_masks = batch["img_masks"][0][64].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                        # img_mask = img_masks.squeeze()  # res,res
+                        # object_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
+                        # object_position = object_position.unsqueeze(0).unsqueeze(0)  # head, 1, pix_num
+                        # object_position = object_position.repeat(1, 4, 1, 1).to(
+                        #    accelerator.device)  # head, z_dim, pix_num, pix_num
+                        random_latent = torch.randn_like(latents)  # head, z_dim
+                        anomal_latent = latents + random_latent  # head, 4, h, w
+                        # anomal_latent_ = einops.rearrange(anomal_latent, 'b c h w -> b c (h w)')
+                        # pix_num = anomal_latent_.shape[2]
+                        # latent_res = int(pix_num ** 0.5)
+                        # anomal_positions = []
+                        # for i in range(pix_num):
+                        #    anomal_feature = anomal_latent_[:, :, i].squeeze()  # [4]
+                        #    dist = mahalanobis(anomal_feature.cpu(), normal_mean, normal_cov)
+                        #    if dist > max_dist:
+                        #        anomal_positions.append(1)
+                        #    else :
+                        #        anomal_positions.append(0)
+                        # anomal_positions = torch.tensor(anomal_positions).unsqueeze(0)
+                        # anomal_positions = anomal_positions.reshape(latent_res, latent_res) # [64,64]
+                        # anomal_pixel_num = anomal_positions.sum()
+                        # print(f'anomal_pixel_num : {anomal_pixel_num}')
+
+                        if args.act_deact:
+                            input_latent = torch.cat((latents, anomal_latent), dim=0)  # 2*head, z_dim
                         else:
-                            part = 'attn_2'
-                        if res == 64:
-                            if args.detail_64_up:
-                                if 'up' in layer_name:
-                                    do_mask_loss = True
-                            if args.detail_64_down:
-                                if 'down' in layer_name:
-                                    do_mask_loss = True
+                            input_latent = anomal_latent
+
+                    with torch.set_grad_enabled(train_text_encoder):
+                        text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
+                                                                weight_dtype)
+                        if args.truncate_pad:
+                            text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
+                        if args.act_deact:
+                            input_text = torch.cat((text_encoder_conds, text_encoder_conds), dim=0)  # 2*head, z_dim
                         else:
-                            if position in args.trg_position:
-                                do_mask_loss = True
-                        if do_mask_loss :
-                            if part in args.trg_part or int(res) == 8 :
-                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                mask = anormal_mask.squeeze()  # res,res
-                                anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
-                                if args.normal_with_background :
-                                    anormal_position = torch.zeros_like(anormal_mask)
+                            input_text = text_encoder_conds
+
+                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                       noise_scheduler,
+                                                                                                       input_latent)
+                    with accelerator.autocast():
+                        noise_pred = self.call_unet(args,
+                                                    accelerator,
+                                                    unet,
+                                                    noisy_latents,
+                                                    timesteps,
+                                                    input_text,
+                                                    batch,
+                                                    weight_dtype, 1, None)
+                    # ------------------------------------- (1) task loss ------------------------------------- #
+                    if args.do_task_loss:
+                        if args.act_deact:
+                            normal_noise_pred, anormal_noise_pred = torch.chunk(noise_pred, 2, dim=0)
+                            if batch['train_class_list'][0] == 1:
+                                if args.v_parameterization:
+                                    target = noise_scheduler.get_velocity(latents, noise, timesteps)
                                 else:
-                                    anormal_position = torch.where((anormal_mask == 0), 1, 0)  # head, pix_num
-                                normal_position = 1-anormal_position
-                                anormal_trigger_activation = (score_map * anormal_position)
-                                normal_trigger_activation = (score_map * normal_position)
-                                total_score = torch.ones_like(anormal_trigger_activation)
-                                anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
-                                normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8
-                                total_score = total_score.sum(dim=-1)  # 8
-                                normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                                activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anormal_activation_loss
-                                if args.cls_training :
-                                    anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
-                                    normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
-                                    normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
-                                    anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                    activation_loss += args.normal_weight * normal_cls_activation_loss + args.anormal_weight * anormal_cls_activation_loss
+                                    target = noise
+                                if args.act_deact:
+                                    target = target.chunk(2, dim=0)[0]
+                                target = target.chunk(2, dim=0)[0]  # head, z_dim, pix_num, pix_num
+                                loss = torch.nn.functional.mse_loss(normal_noise_pred.float(),
+                                                                    target.float(), reduction="none")
+                                loss = loss.mean([1, 2, 3])
+                                loss_weights = batch["loss_weights"]  # 各sampleごとのweight
+                                loss = loss * loss_weights
+                                task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                                task_loss = task_loss * args.task_loss_weight
+
+                    # ------------------------------------- (2) attn loss ------------------------------------- #
+                    attn_dict = attention_storer.step_store
+                    attention_storer.reset()
+                    attn_loss = 0
+                    for i, layer_name in enumerate(attn_dict.keys()):
+
+                        map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
+                        pix_num = map.shape[1]
+                        res = int(pix_num ** 0.5)
+
+                        img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                        img_mask = img_masks.squeeze()  # res,res
+                        object_position = img_mask.flatten()  # res*res
+
+                        # ----------------------------------------------------------------------------------------
+                        # (1) check weather to attn loss
+                        if res in args.cross_map_res:
+                            do_mask_loss = False
+                            if 'down' in layer_name:
+                                position = 'down'
+                            elif 'up' in layer_name:
+                                position = 'up'
+                            elif 'mid' in layer_name:
+                                position = 'mid'
+                            if 'attentions_0' in layer_name:
+                                part = 'attn_0'
+                            elif 'attentions_1' in layer_name:
+                                part = 'attn_1'
+                            else:
+                                part = 'attn_2'
+                            if res == 64:
+                                if args.detail_64_up:
+                                    if 'up' in layer_name:
+                                        if part in args.trg_part:
+                                            do_mask_loss = True
+                                if args.detail_64_down:
+                                    if 'down' in layer_name:
+                                        if part in args.trg_part:
+                                            do_mask_loss = True
+                            else:
+                                if position in args.trg_position and part in args.trg_part:
+                                    do_mask_loss = True
+                            if do_mask_loss:
+
+                                query = attn_dict[layer_name][1].squeeze()  # 2, pix_num, c
+                                org_query, anomal_query = torch.chunk(query, 2, dim=0)
+                                anomal_query = anomal_query.squeeze()  # pix_num, c
+                                pix_num = anomal_query.shape[0]
+                                anomal_positions = []
+                                for pix_idx in range(pix_num):
+                                    anomal_feat = anomal_query[pix_idx, :].squeeze()  # c
+                                    dist = mahalanobis(anomal_feat.cpu(), normal_mean, normal_cov)
+                                    if dist > max_dist:
+                                        anomal_positions.append(1)
+                                    else:
+                                        anomal_positions.append(0)
+                                # -------------------------------------------------------------------------------------
+                                # (3) score map
+                                if args.cls_training:
+                                    cls_map, score_map = torch.chunk(map, 2, dim=-1)
+                                    if args.act_deact:
+                                        normal_cls_map, anomal_cls_map = torch.chunk(cls_map, 2, dim=0)
+                                        normal_cls_map, anomal_cls_map = normal_cls_map.squeeze(), anomal_cls_map.squeeze()
+                                        normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
+                                        normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
+                                    else:
+                                        anomal_cls_map = cls_map.squeeze()
+                                        anomal_score_map = score_map.squeeze()
+
+                                else:
+                                    score_map = map
+                                    if args.act_deact:
+                                        normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
+                                        normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
+                                    else:
+                                        anomal_score_map = score_map.squeeze()
+
+                                head_num = anomal_score_map.shape[0]
+
+                                anomal_positions = torch.tensor(anomal_positions)
+                                anomal_positions = torch.where((anomal_positions == 1) & (anomal_positions == 1), 1, 0)
+                                anomal_positions = anomal_positions.unsqueeze(0).repeat(head_num, 1).to(
+                                    object_position.device)  # head_num, res*res
+
+                                object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # head_num, res*res
+
+                                if args.act_deact:
+                                    normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
+                                anomal_trigger_activation = (anomal_score_map * anomal_positions).sum(dim=-1)
+                                total_score = torch.ones_like(anomal_trigger_activation)
+                                if args.cls_training:
+                                    anomal_cls_activation = (anomal_cls_map * anomal_positions).sum(dim=-1)
+                                    if args.act_deact:
+                                        normal_cls_activation = (normal_cls_map * object_position).sum(dim=-1)
+                                anomal_activation_loss = ((anomal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                activation_loss = args.anormal_weight * anomal_activation_loss
+                                if args.act_deact:
+                                    normal_activation_loss = (1 - (
+                                            normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                    activation_loss += args.normal_weight * normal_activation_loss
+                                if args.cls_training:
+                                    anomal_cls_loss = (1 - (anomal_cls_activation / total_score)) ** 2
+                                    activation_loss += args.anormal_weight * anomal_cls_loss
+                                    if args.act_deact:
+                                        normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
+                                        activation_loss += args.normal_weight * normal_cls_loss
                                 attn_loss += activation_loss
-                attn_loss = attn_loss.mean()
-                if args.do_task_loss:
-                    loss = task_loss
-                    loss += attn_loss
-                else :
-                    loss = attn_loss
-                # ------------------------------------------------------------------------------------------------- #
-                if is_main_process :
-                    if args.do_task_loss :
-                        loss_dict["loss/task_loss"] = task_loss.item()
-                    if args.attn_loss :
-                        loss_dict["loss/attn_loss"] = attn_loss.item()
-                accelerator.backward(loss)
+                    attn_loss = attn_loss.mean()
 
-                if accelerator.sync_gradients and args.max_grad_norm != 0.0:
-                    params_to_clip = network.get_trainable_params()
-                    accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
+                    if args.do_task_loss:
+                        loss = task_loss
+                        if args.attn_loss:
+                            loss += attn_loss
+                    else:
+                        loss = attn_loss
+                    # ------------------------------------------------------------------------------------------------- #
+                    if is_main_process:
+                        if args.do_task_loss:
+                            loss_dict["loss/task_loss"] = task_loss.item()
+                        if args.attn_loss:
+                            loss_dict["loss/attn_loss"] = attn_loss.item()
 
-                optimizer.step()
-                lr_scheduler.step()
-                optimizer.zero_grad(set_to_none=True)
+                    accelerator.backward(loss)
+
+                    if accelerator.sync_gradients and args.max_grad_norm != 0.0:
+                        params_to_clip = network.get_trainable_params()
+                        accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
+                    optimizer.step()
+                    lr_scheduler.step()
+                    optimizer.zero_grad(set_to_none=True)
 
                 # Checks if the accelerator has performed an optimization step behind the scenes
                 if accelerator.sync_gradients:
                     progress_bar.update(1)
                     global_step += 1
-                    self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer,
-                                       text_encoder, unet)
+                    # self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer,
+                    #                   text_encoder, unet)
                     attention_storer.reset()
 
                     # 指定ステップごとにモデルを保存
@@ -772,29 +1033,30 @@ class NetworkTrainer:
                     # accelerator.log(logs, step=global_step)
                     if is_main_process:
                         logs = self.generate_step_logs(loss_dict, lr_scheduler)
-                        #wandb.log(logs)#, step=global_step)
                 if global_step >= args.max_train_steps:
                     break
             accelerator.wait_for_everyone()
             if args.save_every_n_epochs is not None:
                 saving = (epoch + 1) % args.save_every_n_epochs == 0 and (
-                            epoch + 1) < args.start_epoch + num_train_epochs
+                        epoch + 1) < args.start_epoch + num_train_epochs
                 if is_main_process and saving:
                     ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
                     save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch + 1)
                     remove_epoch_no = train_util.get_remove_epoch_no(args, epoch + 1)
                     if remove_epoch_no is not None:
-                        remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as,remove_epoch_no)
+                        remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as,
+                                                                          remove_epoch_no)
                         remove_model(remove_ckpt_name)
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
-            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
+            # self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
             attention_storer.reset()
         if is_main_process:
             network = accelerator.unwrap_model(network)
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -856,31 +1118,35 @@ if __name__ == "__main__":
     parser.add_argument("--start_epoch", type=int, default=0)
     parser.add_argument("--valid_data_dir", type=str)
     parser.add_argument("--task_loss_weight", type=float, default=0.5)
-    parser.add_argument("--anormal_training", action='store_true')
+    parser.add_argument("--shuffle", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--detail_64_up", action='store_true')
     parser.add_argument("--detail_64_down", action='store_true')
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
-    parser.add_argument("--all_same_learning", action='store_true')
+    parser.add_argument("--do_task_loss", action='store_true')
+    parser.add_argument("--act_deact", action='store_true')
     import ast
+
+
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
+
+
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
-    parser.add_argument('--trg_position', type = arg_as_list, default = ['down', 'up'])
+    parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--anormal_weight', type=float, default=1.0)
     parser.add_argument('--normal_weight', type=float, default=1.0)
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--cls_training", action="store_true", )
     parser.add_argument("--background_loss", action="store_true")
-    parser.add_argument("--average_mask", action="store_true",)
+    parser.add_argument("--average_mask", action="store_true", )
     parser.add_argument("--attn_loss", action="store_true", )
     parser.add_argument("--normal_with_background", action="store_true", )
-    parser.add_argument("--anormal_with_background", action="store_true", )
-    parser.add_argument("--do_task_loss", action="store_true", )
+    parser.add_argument("--only_object_position", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()

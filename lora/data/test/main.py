@@ -47,7 +47,8 @@ def main(args):
                     h, w, c = np_img.shape
                     input_point = np.array([[0,0]])
                     input_label = np.array([1])
-                    masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label,
+                    masks, scores, logits = predictor.predict(point_coords=input_point,
+                                                              point_labels=input_label,
                                                               multimask_output=True, )
                     for i, (mask, score) in enumerate(zip(masks, scores)):
                         if i == 1 :

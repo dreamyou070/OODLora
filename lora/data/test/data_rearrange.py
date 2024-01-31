@@ -64,7 +64,7 @@ def main(args):
 
             total_good_num = train_good_num + val_good_num
             # ---------------------------------------------------------------------------------------- #
-            test_dir = os.path.join(cat_dir, 'test')
+            test_dir = os.path.join(cat_dir, '')
             defets = os.listdir(test_dir)
             total_defect_num = 0
             for defect in defets:
