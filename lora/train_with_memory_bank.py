@@ -869,7 +869,7 @@ class NetworkTrainer:
                     object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # head_num, res*res
 
                     ############################################################################################################
-
+                    attn_loss = 0
                     for i, layer_name in enumerate(attn_dict.keys()):
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         pix_num = map.shape[1]
@@ -978,7 +978,6 @@ class NetworkTrainer:
                                         activation_loss += args.normal_weight * normal_cls_loss
                                 attn_loss += activation_loss
                     attn_loss = attn_loss.mean()
-
                     if args.do_task_loss:
                         loss = task_loss
                         if args.attn_loss:
