@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_32_16_down_all_t_2_dim_64"
+folder_name="res_64_32_16_8_all_t_2_dim_64/"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 
@@ -22,9 +22,9 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_alpha 4 \
   --network_weights ${network_weight_folder}  \
   --detection_network_weights ${detection_network_weights} \
-  --cross_map_res [64] \
-  --trg_position "['down']" \
-  --trg_part "['attn_0']" \
+  --cross_map_res [64,32,16,8] \
+  --trg_position "['down','up]" \
+  --trg_part "['attn_0','attn_1','attn_2']" \
   --num_ddim_steps 30 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \
@@ -36,10 +36,10 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --class_name ${class_name} \
   --anormal_thred 0.5 \
   --trg_layer 'down_blocks_0_attentions_0_transformer_blocks_0_attn2' \
-  --trg_layer_list "['down_blocks_0_attentions_0_transformer_blocks_0_attn2',
-    'down_blocks_0_attentions_1_transformer_blocks_0_attn2',
-    'down_blocks_1_attentions_0_transformer_blocks_0_attn2',
-    'down_blocks_1_attentions_1_transformer_blocks_0_attn2',
-    'down_blocks_2_attentions_0_transformer_blocks_0_attn2',
-    'down_blocks_2_attentions_1_transformer_blocks_0_attn2']"
+  --trg_layer_list "['down_blocks_0_attentions_0_transformer_blocks_0_attn2', 'down_blocks_0_attentions_1_transformer_blocks_0_attn2',
+                     'down_blocks_1_attentions_0_transformer_blocks_0_attn2','down_blocks_1_attentions_1_transformer_blocks_0_attn2',
+                     'down_blocks_2_attentions_0_transformer_blocks_0_attn2','down_blocks_2_attentions_1_transformer_blocks_0_attn2',
+    'up_blocks_0_attentions_0_transformer_blocks_0_attn2','up_blocks_0_attentions_1_transformer_blocks_0_attn2','up_blocks_0_attentions_2_transformer_blocks_0_attn2',
+    'up_blocks_1_attentions_0_transformer_blocks_0_attn2','up_blocks_1_attentions_1_transformer_blocks_0_attn2','up_blocks_1_attentions_2_transformer_blocks_0_attn2',
+    'up_blocks_2_attentions_0_transformer_blocks_0_attn2','up_blocks_2_attentions_1_transformer_blocks_0_attn2','up_blocks_2_attentions_2_transformer_blocks_0_attn2']" \
   --only_zero_save

@@ -855,7 +855,7 @@ class NetworkTrainer:
                     anomal_positions = []
                     for pix_idx in range(pix_num):
                         anomal_feat = anomal_query[pix_idx, :].squeeze()  # c
-                        dist = mahalanobis(anomal_feat.cpu(), normal_mean, normal_cov)
+                        dist = mahalanobis(anomal_feat.detach().cpu(), normal_mean, normal_cov)
                         if dist > thred_value:
                             # if dist > normal_max_dist :
                             anomal_positions.append(1)
