@@ -981,7 +981,7 @@ class NetworkTrainer:
                     if args.do_task_loss:
                         loss = task_loss
                         if args.attn_loss:
-                            loss += attn_loss
+                            loss += args.attn_loss_weight * attn_loss
                     else:
                         loss = attn_loss
                     # ------------------------------------------------------------------------------------------------- #
@@ -1135,6 +1135,7 @@ if __name__ == "__main__":
     parser.add_argument("--do_task_loss", action='store_true')
     parser.add_argument("--act_deact", action='store_true')
     parser.add_argument("--all_data_dir", type=str)
+    parser.add_argument("--attn_loss_weight", type=float)
     import ast
 
 
