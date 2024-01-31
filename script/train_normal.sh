@@ -6,12 +6,12 @@ class_name="bagel"
 data_source='train_normal'
 data_folder='MVTec3D-AD'
 normal_folder='normal'
-save_folder="res_64_32_16_down_all_text_attnloss_weight_0.01"
+save_folder="res_64_32_16_down_all_text_attnloss_weight_0.001"
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
 start_epoch=0
-port_number=59823
+port_number=59877
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_config \
   --main_process_port $port_number ../lora/train_normal.py \
@@ -33,6 +33,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --detail_64_down \
   --trg_position "['down']" \
   --trg_part '["attn_0","attn_1","attn_2"]' \
-  --attn_loss_weight 0.01 \
+  --attn_loss_weight 0.001 \
   --do_task_loss \
   --cls_training
