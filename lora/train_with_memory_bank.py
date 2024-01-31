@@ -1137,7 +1137,7 @@ if __name__ == "__main__":
 
 
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
-    parser.add_argument("--trg_layer", type=arg_as_list, default=['down', 'up'])
+    parser.add_argument("--trg_layer", type=str)
     parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--anormal_weight', type=float, default=1.0)
     parser.add_argument('--normal_weight', type=float, default=1.0)
