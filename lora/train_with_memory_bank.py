@@ -61,7 +61,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
 
-            #print(f'layer_name : {layer_name}')
             if is_cross_attention and trg_indexs_list is not None:
                 if args.cls_training:
                     trg_map = attention_probs[:, :, :2]
@@ -373,6 +372,7 @@ class NetworkTrainer:
             text_embeddings = text_embeddings[:, :2, :]
 
         normal_vector_list = set()
+        normal_vector_good_score_list, normal_vector_bad_score_list = set(), set()
         back_vector_list = set()
         anormal_vector_list = set()
         num_samples = len(mahal_dataset)
@@ -389,17 +389,21 @@ class NetworkTrainer:
                 if text_embeddings.dim() != 3:
                     text_embeddings = text_embeddings.unsqueeze(0)
 
-                call_unet(unet, latent, 0, text_embeddings.to(device),
-                          None,args.trg_layer)
+                call_unet(unet, latent, 0, text_embeddings.to(device),1,args.trg_layer)
                 query = controller.query_dict[args.trg_layer][0].squeeze()  # pix_num, dim
+                attn = controller.attn_dict[args.trg_layer][0].squeeze()  # pix_num
 
             if 'good' in class_name:
                 for pix_idx in range(mask_vector.shape[0]):
                     feature = query[pix_idx, :].cpu()
+                    attn_score = attn[pix_idx].cpu()
                     if mask_vector[pix_idx] == 1:
                         if feature.dim() == 1:
                             feature = feature.unsqueeze(0)
-                        normal_vector_list.add(feature)
+                        if attn_score > 0.5 :
+                            normal_vector_good_score_list.add(feature)
+                        else :
+                            normal_vector_bad_score_list.add(feature)
                     else:
                         if feature.dim() == 1:
                             feature = feature.unsqueeze(0)
@@ -413,6 +417,23 @@ class NetworkTrainer:
                         anormal_vector_list.add(feature)
             if i % 20 == 0:
                 print(f'normal : {len(normal_vector_list)}, anormal : {len(anormal_vector_list)}')
+
+        normal_vector_good_score_list = list(normal_vector_good_score_list)
+        normal_vector_good_score = torch.cat(normal_vector_good_score_list, dim=0)
+        if normal_vector_good_score.device != 'cpu':
+            good_score_normal_vectors = normal_vector_good_score.cpu()
+        good_score_normal_vectors_np = np.array(good_score_normal_vectors)
+        good_score_normal_vectors_mean = np.mean(good_score_normal_vectors_np, axis=0)
+        good_score_normal_vectors_cov = np.cov(good_score_normal_vectors_np, rowvar=False)
+
+
+        normal_vector_bad_score_list = list(normal_vector_bad_score_list)
+        normal_vector_bad_score = torch.cat(normal_vector_bad_score_list, dim=0)
+        if normal_vector_bad_score.device != 'cpu':
+            bad_score_normal_vectors = normal_vector_bad_score.cpu()
+        bad_score_normal_vectors_np = np.array(bad_score_normal_vectors)
+        bad_score_normal_vectors_mean = np.mean(bad_score_normal_vectors_np, axis=0)
+        bad_score_normal_vectors_cov = np.cov(bad_score_normal_vectors_np, rowvar=False)
 
         normal_vector_list = list(normal_vector_list)
         normal_vectors = torch.cat(normal_vector_list, dim=0)
@@ -435,8 +456,8 @@ class NetworkTrainer:
 
         mahalanobis_dists = []
         for n_vector in normal_vector_np:
-            dist = mahalanobis(n_vector, normal_mean, normal_cov)
-            print(f'normal mahalanobis distance to normal dist : {dist}')
+            dist = mahalanobis(n_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
+            print(f'normal mahalanobis distance from good score dist : {dist}')
             mahalanobis_dists.append(dist)
         max_dist = max(mahalanobis_dists)
         # ------------------------------------------------------------------------------------
@@ -448,7 +469,7 @@ class NetworkTrainer:
 
         anomal_mahalanobis_dists = []
         for anormal_vector in anormal_vector_np:
-            dist = mahalanobis(anormal_vector, normal_mean, normal_cov)
+            dist = mahalanobis(anormal_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
             anomal_mahalanobis_dists.append(dist)
             print(f'anormal mahalanobis distance to normal dist : {dist}')
         anomal_min_dist = min(anomal_mahalanobis_dists)
@@ -848,6 +869,8 @@ class NetworkTrainer:
                     object_position = img_mask.flatten()  # res*res
                     
                     query = query_dict[args.trg_layer][0].squeeze()  # 2, pix_num, c
+                    attn = attn_dict[args.trg_layer][0].squeeze()  # 2, pix_num, c
+
                     org_query, anomal_query = torch.chunk(query, 2, dim=0)
                     anomal_query = anomal_query.squeeze()  # pix_num, c
                     pix_num = anomal_query.shape[0]
