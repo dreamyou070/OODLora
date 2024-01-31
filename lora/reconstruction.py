@@ -108,6 +108,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 def main(args):
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
     args.output_dir = os.path.join(parent, 'reconstruction')
+    if args.training_test :
+        args.output_dir = os.path.join(parent, 'reconstruction_with_training_data')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
