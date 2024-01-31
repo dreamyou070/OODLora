@@ -62,7 +62,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
 
-            print(f'layer_name : {layer_name}}')
+            print(f'layer_name : {layer_name}')
             if is_cross_attention and trg_indexs_list is not None:
                 if args.cls_training:
                     trg_map = attention_probs[:, :, :2]
