@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_32_16_down_all_text_attnloss_weight_0.001"
+folder_name="res_64_32_16_down_all_text_attnloss_weight_0.01"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 
@@ -9,7 +9,7 @@ network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_trai
 detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/normal/res_64_32_16_down_all_text_attnloss_weight_0.1/models/epoch-000001.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
 
-port_number=54644
+port_number=55555
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} ../lora/reconstruction.py \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
