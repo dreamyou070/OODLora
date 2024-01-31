@@ -3924,6 +3924,7 @@ def prepare_accelerator(args: argparse.Namespace):
         if log_with in ["tensorboard", "all"]:
             if logging_dir is None:
                 raise ValueError("logging_dir is required when log_with is tensorboard / Tensorboardを使う場合、logging_dirを指定してください")
+        """
         if log_with in ["wandb", "all"]:
             try:
                 import wandb
@@ -3937,11 +3938,11 @@ def prepare_accelerator(args: argparse.Namespace):
             if args.wandb_api_key is not None:
                 print(f'wandb login with api key: {args.wandb_api_key}')
                 wandb.login(key=args.wandb_api_key)
-
+        """
     accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps,
                               mixed_precision=args.mixed_precision,
-                              log_with=log_with,
-                              project_dir=logging_dir,)
+                              log_with=log_with,)
+                              #project_dir=logging_dir,)
     return accelerator
 
 
@@ -4782,6 +4783,7 @@ def sample_images_common(pipe_class,accelerator,
             with open(txt_dir, 'w') as f:
                 f.write(prompt)
             # wandb有効時のみログを送信
+            """
             try:
                 wandb_tracker = accelerator.get_tracker("wandb")
                 try:
@@ -4799,6 +4801,7 @@ def sample_images_common(pipe_class,accelerator,
                 )
             except:  # wandb 無効時
                 pass
+            """
 
     # clear pipeline and cache to reduce vram usage
     del pipeline

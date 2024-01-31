@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_up_attn2_total_text_attn2_normal_init_gaussian_noise_unet_frozen_none_act_deact"
+folder_name="res_64_up_attn2_t_2_dim_20"
 data_folder="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_folder}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
@@ -17,7 +17,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --concept_image_folder "${img_folder}" \
   --resolution '512,512' \
   --network_module networks.lora \
-  --network_dim 64 \
+  --network_dim 20 \
   --network_alpha 4 \
   --network_weights ${network_weight_folder}  \
   --cross_map_res "[64]" \

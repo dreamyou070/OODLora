@@ -5,7 +5,7 @@ data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="res_64_up_attn2_total_text_act_0.1_deact"
+save_folder="res_64_up_attn2_total_text_init_noise_act_0.1_deact"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_up_attn2_t_2_attn2_normal/models/epoch-000008.safetensors"
 
@@ -23,7 +23,9 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --lr_warmup_steps 144 --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 --resolution '512,512' --save_every_n_epochs 1 \
   --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
-  --max_train_steps 160000 --attn_loss --task_loss_weight 1.0 --seed 42 --class_caption 'good' \
+  --max_train_steps 1000 \
+  --max_train_epochs 10 \
+  --attn_loss --task_loss_weight 1.0 --seed 42 --class_caption 'good' \
   --wandb_init_name ${class_name} \
   --train_data_dir "$train_data_dir" \
   --start_epoch $start_epoch \

@@ -572,12 +572,7 @@ class NetworkTrainer:
         noise_scheduler = DDPMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear",
                                         num_train_timesteps=1000, clip_sample=False)
         prepare_scheduler_for_custom_training(noise_scheduler, accelerator.device)
-        if accelerator.is_main_process:
-            init_kwargs = {}
-            if args.log_tracker_config is not None:
-                init_kwargs = toml.load(args.log_tracker_config)
-            accelerator.init_trackers("network_train" if args.log_tracker_name is None else args.log_tracker_name,
-                                      init_kwargs=init_kwargs)
+
         loss_list = []
         loss_total = 0.0
         del train_dataset_group
@@ -614,7 +609,6 @@ class NetworkTrainer:
 
         # training loop
         if is_main_process:
-            gradient_dict = {}
             loss_dict = {}
 
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
@@ -641,8 +635,8 @@ class NetworkTrainer:
                         object_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
                         object_position = object_position.unsqueeze(0).unsqueeze(0)  # head, 1, pix_num
                         object_position = object_position.repeat(1,4,1,1).to(accelerator.device)  # head, z_dim, pix_num, pix_num
-                        random_latent = torch.randn_like(latents)  # head, z_dim
-                        anomal_latent = latents + random_latent * object_position  # head, z_dim
+                        #random_latent = torch.randn_like(latents)  # head, z_dim
+                        anomal_latent = latents #+ random_latent * object_position  # head, z_dim
 
                         if args.act_deact :
                             input_latent = torch.cat((latents, anomal_latent), dim=0)  # 2*head, z_dim

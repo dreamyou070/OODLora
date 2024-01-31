@@ -222,7 +222,7 @@ def main(args):
                                 controller_ob.reset()
                                 object_mask = get_crossattn_map(args, attn_stores,
                                                                 'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
-                                background_mask = 1- object_mask
+                                background_mask = 1- object_mask ###################################################################### [res,res]
                                 object_mask_save_dir = os.path.join(class_base_folder, f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
 
@@ -301,7 +301,8 @@ def main(args):
                                 controller.reset()
                                 org_mask = get_crossattn_map(args, attn_stores,
                                                                 'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
-                                                                thredhold=args.anormal_thred,binarize = False)
+                                                                thredhold=args.anormal_thred,
+                                                                binarize = True)
                                 org_mask_save_dir = os.path.join(class_base_folder,
                                                                     f'{name}_org_mask{ext}')
                                 save_latent(org_mask, org_mask_save_dir, org_h, org_w)
@@ -313,13 +314,25 @@ def main(args):
                                 controller.reset()
                                 rec_mask = get_crossattn_map(args, rec_attn_stores,
                                                              'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
-                                                             thredhold=args.anormal_thred,binarize = False)
+                                                             thredhold=args.anormal_thred,
+                                                             binarize = True)
                                 rec_mask_save_dir = os.path.join(class_base_folder,
                                                                  f'{name}_rec_mask{ext}')
                                 save_latent(rec_mask, rec_mask_save_dir, org_h, org_w)
 
                                 # (3) anomaly score
-                                anomaly_score = torch.abs(rec_mask - org_mask).cpu()
+                                anomaly_score = torch.abs(rec_mask - org_mask).cpu() ########################################################## [res,res]
+                                background_vector = background_mask.flatten().cpu()
+                                object_anomaly_socre_list = []
+                                for i in range(background_vector.shape[0]):
+                                    if background_vector[i] == 0:
+                                        object_anomaly_score = anomaly_score.flatten()[i].item()
+                                        object_anomaly_socre_list.append(object_anomaly_score)
+                                max_score = max(object_anomaly_socre_list)
+                                anomaly_score = anomaly_score / max_score
+                                anomaly_score = anomaly_score * object_mask.cpu()
+
+                                # (4) save
                                 anomaly_score = anomaly_score.numpy()
                                 anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
                                 anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))

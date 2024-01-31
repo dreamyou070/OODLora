@@ -97,9 +97,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if is_cross_attention:
                 controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
 
-            if is_cross_attention and mask is not None:
-                if layer_name == 'up_blocks_3_attentions_2_transformer_blocks_0_attn2' :
-                    controller.save_query(self_head_query, layer_name)
+            if layer_name == 'down_blocks_0_attentions_0_transformer_blocks_0_attn1' :
+                controller.save_query(hidden_states, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -213,130 +212,87 @@ def main(args) :
         uncon, con = torch.chunk(context, 2)
 
         print(f' (3.6) get images')
-        test_folder = os.path.join(args.concept_image_folder, 'test')
+        test_folder = os.path.join(args.concept_image_folder, 'test_sy')
         classes = os.listdir(test_folder)
 
         for class_name in classes:
 
-            flag = True
-            if args.only_normal_infer :
+            class_base_folder = os.path.join(my_inference_output_dir, class_name)
+            os.makedirs(class_base_folder, exist_ok=True)
+            image_folder = os.path.join(test_folder, f'{class_name}/rgb')
+            mask_folder = os.path.join(test_folder, f'{class_name}/gt')
+
+            test_images = os.listdir(image_folder)
+            for j, test_image in enumerate(test_images):
+                name, ext = os.path.splitext(test_image)
+
+                test_img_dir = os.path.join(image_folder, test_image)
+                mask_img_dir = os.path.join(mask_folder, test_image)
+                org_h, org_w = Image.open(mask_img_dir).size
+
+                Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(
+                    os.path.join(class_base_folder, f'{name}_gt{ext}'))
+
+                controller = AttentionStore()
+                register_attention_control(unet, controller)
+                with torch.no_grad():
+                    context_ob = init_prompt(tokenizer, text_encoder, device, args.prompt)
+                uncon_ob, con_ob = torch.chunk(context_ob, 2)
+
+                with torch.no_grad():
+                    org_img = load_image(test_img_dir, 512, 512)
+                    org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
+                gt_mask = Image.open(mask_img_dir).convert('L').resize((64, 64))
+                gt_mask = np.array(gt_mask) / 255
+                gt_mask = torch.from_numpy(gt_mask)
+                if 'good' in class_name :
+                    normals = []
+                    nomal_position = torch.where(gt_mask > 0.5, 1, 0)
+                    nomal_position = nomal_position.flatten().squeeze()
+                    call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
+                    good_hidden_states = controller.query_dict['down_blocks_0_attentions_0_transformer_blocks_0_attn1'][0] # head, pix_num, dim
+                    good_hidden_states = good_hidden_states.mean(dim=0) # pix_num, dim
+                    pix_num = nomal_position.shape[0]
+                    for i in range(pix_num) :
+                        index = nomal_position[i]
+                        if index == 1 :
+                            normal_vector = good_hidden_states[i, :].squeeze()
+                            normal_vector = normal_vector.unsqueeze(0)
+                            normals.append(normal_vector)
+                    normals = torch.cat(normals, dim=0)
+                    normal_vector = normals.mean(dim=0)
+                    print(f' {class_name} normal_vector : {normal_vector}')
+                    controller.reset()
+
                 if 'good' not in class_name :
-                    flag = False
-            if flag :
+                    anormals = []
+                    anomal_position = torch.where(gt_mask > 0.5, 1, 0)
+                    anomal_position = anomal_position.flatten().squeeze()
+                    call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
+                    hidden_states = controller.query_dict['down_blocks_0_attentions_0_transformer_blocks_0_attn1'][0]  # head, pix_num, dim
+                    hidden_states = hidden_states.mean(dim=0)  # pix_num, dim
+                    pix_num = anomal_position.shape[0]
+                    for i in range(pix_num):
+                        index = anomal_position[i]
+                        if index == 1:
+                            anormal_vector = hidden_states[i, :].squeeze()
+                            anormal_vector = anormal_vector.unsqueeze(0)
+                            anormals.append(anormal_vector)
+                    anormals = torch.cat(anormals, dim=0)
+                    anormal_vector = anormals.mean(dim=0)
+                    print(f' {class_name} anormal_vector : {anormal_vector}')
+                    controller.reset()
 
-                evaluate_class_dir = os.path.join(evaluate_output_dir, class_name)
-                os.makedirs(evaluate_class_dir, exist_ok=True)
 
-                class_base_folder = os.path.join(my_inference_output_dir, class_name)
-                os.makedirs(class_base_folder, exist_ok=True)
-                image_folder = os.path.join(test_folder, f'{class_name}/rgb')
-                mask_folder = os.path.join(test_folder, f'{class_name}/gt')
 
-                test_images = os.listdir(image_folder)
 
-                for j, test_image in enumerate(test_images):
-                    print(f' {class_name} : {test_image}')
-                    name, ext = os.path.splitext(test_image)
 
-                    test_img_dir = os.path.join(image_folder, test_image)
-                    mask_img_dir = os.path.join(mask_folder, test_image)
-                    org_h, org_w = Image.open(mask_img_dir).size
 
-                    Image.open(mask_img_dir).convert('L').resize((org_h, org_w)).save(os.path.join(class_base_folder, f'{name}_gt{ext}'))
 
-                    # -------------------------------------------- [0] decide thredhold ---------------------------------------------- #
-                    with torch.no_grad():
 
-                        org_img = load_image(test_img_dir, 512, 512)
-                        org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
 
-                        image = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
-                        img_dir = os.path.join(class_base_folder, f'{name}_origin_recon{ext}')
-                        image.save(img_dir)
 
-                        call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
-                        inf_time = inference_times.tolist()
-                        inf_time.reverse()  # [0,250,500,750]
-                        back_dict = {}
-                        latent = org_vae_latent
-                        back_dict[0] = latent
-                        attn_stores = controller.step_store
-                        controller.reset()
-                        for layer_name in attn_stores:
-                            attn = attn_stores[layer_name][0].squeeze()  # head, pix_num
-                            res, pos, part = get_position(layer_name, attn)
-                            if res in args.cross_map_res and pos in args.trg_position and part in args.trg_part:
-                                trg_res = res
-                                trg_pos = pos
-                                trg_part = part
 
-                                if args.truncate_length == 3:
-                                    cls_score, trigger_score, pad_score = attn.chunk(3, dim=-1)  # head, pix_num
-                                else:
-                                    cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                                h = trigger_score.shape[0]
-                                trigger_score = trigger_score.unsqueeze(-1).reshape(h, res, res)
-                                trigger_score = trigger_score.mean(dim=0)  # res, res
-                                pixel_mask = trigger_score
-                                latent_mask_np, latent_mask = get_latent_mask(pixel_mask, res, device, weight_dtype)  # latent_mask = 1,1,64,64
-                                save_pixel_mask(latent_mask, class_base_folder, f'{name}_pixel_mask_{res}_{pos}_{part}{ext}', org_h, org_w)
-                                back_latent_mask = torch.where(latent_mask < 0.5, 1, 0)
-
-                        pil_img = save_pixel_mask(back_latent_mask, class_base_folder, f'{name}_binary_mask_{trg_res}_{trg_pos}_{trg_part}{ext}', org_h, org_w)
-                        pil_img = pil_img.resize((64,64)).convert('L')
-                        back_latent_mask = torch.tensor(np.array(pil_img))
-                        back_latent_mask = torch.where(back_latent_mask < 0.5, 0, 1)
-                        back_latent_mask = back_latent_mask.unsqueeze(0).unsqueeze(0).float().to(device)
-                        back_latent_mask = back_latent_mask.repeat(1, 4, 1, 1)
-                        latents = pipeline(prompt=args.prompt,
-                                           height=512,
-                                           width=512,
-                                           num_inference_steps=args.num_ddim_steps,
-                                           guidance_scale=args.guidance_scale,
-                                           negative_prompt=args.negative_prompt,
-                                           reference_image=org_vae_latent,
-                                           mask=back_latent_mask)
-                        # mask = None)
-                        recon_image = pipeline.latents_to_image(latents[-1])[0].resize((org_h, org_w))
-                        img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
-                        recon_image.save(img_dir)
-
-                        # -------------------------------------- [4] anomaly map -------------------------------------- #
-                        # (1) original
-                        org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
-                        org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
-                        call_unet(unet, org_vae_latent, 0, con, None, 1)
-
-                        attn = controller.step_store['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
-                        cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                        h = trigger_score.shape[0]
-                        org_query = trigger_score.mean(dim=0)  # res, res
-                        controller.reset()
-
-                        # (2) recon
-                        recon_latent = latents[-1]
-                        call_unet(unet, recon_latent, 0, con, None, 1)
-                        attn = controller.step_store['up_blocks_3_attentions_2_transformer_blocks_0_attn2'][0].squeeze(0)
-                        cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
-                        recon_query = trigger_score.mean(dim=0)  # res, res
-                        controller.reset()
-
-                        # (3) anomaly score
-                        anomaly_score = (org_query @ recon_query.T).cpu()
-                        pix_num = anomaly_score.shape[0]
-                        anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
-
-                        #anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
-                        anomaly_score = anomaly_score.unsqueeze(0).reshape(trg_res,trg_res)
-                        anomaly_score = anomaly_score.numpy()
-
-                        anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
-                        anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
-                        anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
-                        anomaly_score_pil.save(anomaly_mask_save_dir)
-
-                        tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
-                        anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
 
 
 if __name__ == "__main__":
