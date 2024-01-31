@@ -835,7 +835,6 @@ class NetworkTrainer:
                             task_loss = task_loss * args.task_loss_weight
 
                     # ------------------------------------- (2) attn loss ------------------------------------- #
-
                     attn_dict = attention_storer.step_store
                     query_dict = attention_storer.query_dict
                     attention_storer.reset()
