@@ -5,13 +5,13 @@ data_source='train_ex2'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="res_64_up_attn2_total_text_using_memory_bank_gaussian_noise_unet_frozen_act_0.1_deact"
+save_folder="res_64_32_16_down_all_t_2_dim_64"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_up_attn2_total_text_attn2_normal_init_gaussian_noise_unet_frozen_none_act_deact/models/epoch-000005.safetensors"
+network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_32_16_down_all_t_2_dim_64/models/epoch-000001.safetensors"
 
 start_epoch=0
 port_number=51335
-#
+
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port $port_number ../lora/train_with_memory_bank.py \
   --process_title parksooyeon \
@@ -31,11 +31,12 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
   --cross_map_res "[64]" \
-  --detail_64_up \
-  --trg_position "['up']" \
-  --trg_part '["attn_2"]' \
+  --detail_64_down \
+  --trg_position "['down']" \
+  --trg_part '["attn_0"]' \
   --act_deact \
   --cls_training \
   --do_task_loss \
   --normal_weight 0.1 \
+  --trg_layer 'down_blocks_0_attentions_0_transformer_blocks_0_attn2' \
   --network_weights "$network_weights"

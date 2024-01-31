@@ -391,11 +391,11 @@ class NetworkTrainer:
             with torch.no_grad():
                 if text_embeddings.dim() != 3:
                     text_embeddings = text_embeddings.unsqueeze(0)
+
                 call_unet(unet, latent, 0, text_embeddings.to(device),
                           None,
-                          ['up_blocks_3_attentions_0_transformer_blocks_0_attn2',])
-                query = controller.query_dict['up_blocks_3_attentions_0_transformer_blocks_0_attn2'][
-                    0].squeeze()  # pix_num, dim
+                          [args.trg_layer])
+                query = controller.query_dict[args.trg_layer][0].squeeze()  # pix_num, dim
 
             if 'good' in class_name:
                 for pix_idx in range(mask_vector.shape[0]):
@@ -1137,6 +1137,7 @@ if __name__ == "__main__":
 
 
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
+    parser.add_argument("--trg_layer", type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--anormal_weight', type=float, default=1.0)
     parser.add_argument('--normal_weight', type=float, default=1.0)
