@@ -179,7 +179,7 @@ def main(args):
             # (4) get images
             test_folder = os.path.join(args.concept_image_folder, 'test')
             if args.training_test :
-                test_folder = os.path.join(args.concept_image_folder, 'train_normal')
+                test_folder = os.path.join(args.concept_image_folder, 'train_normal_test')
 
             classes = os.listdir(test_folder)
 
