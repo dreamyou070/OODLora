@@ -223,10 +223,9 @@ def main(args):
                                 object_mask = get_crossattn_map(args, attn_stores,
                                                                 args.trg_layer)
                                                                 #'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
-                                background_mask = 1- object_mask ###################################################################### [res,res]
                                 object_mask_save_dir = os.path.join(class_base_folder, f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
-
+                                background_mask = 1 - object_mask  ###################################################################### [res,res]
                                 # ------------------------------------- [2] anomal mask ------------------------------ #
                                 weight_dir = os.path.join(args.network_weights, weight)
                                 network.restore()
@@ -240,12 +239,20 @@ def main(args):
                                 call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller.step_store
                                 controller.reset()
+                                for trg_layer in args.trg_layer_list :
+                                    object_mask = get_crossattn_map(args, attn_stores,
+                                                                    trg_layer)
+                                                                    #'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
+                                    object_mask_save_dir = os.path.join(class_base_folder, f'{name}_{trg_layer}_object_mask{ext}')
+                                    save_latent(object_mask, object_mask_save_dir, org_h, org_w)
+                                """
                                 normal_mask = get_crossattn_map(args, attn_stores,
                                                                  args.trg_layer,
                                                                  thredhold=args.anormal_thred)
                                 normal_mask_save_dir = os.path.join(class_base_folder,
                                                                      f'{name}_normal_mask{ext}')
                                 save_latent(normal_mask, normal_mask_save_dir, org_h, org_w)
+                                """
 
 
 
@@ -397,6 +404,8 @@ if __name__ == "__main__":
     parser.add_argument("--trg_layer", type=str, )
 
 
+
+
     import ast
 
 
@@ -407,6 +416,7 @@ if __name__ == "__main__":
         return v
 
 
+    parser.add_argument("--trg_layer_list", type=arg_as_list, )
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--trg_position", type=arg_as_list, default=['up'])
     parser.add_argument("--trg_part", type=arg_as_list, default=['attn_2', 'attn_1', 'attn_0'])
