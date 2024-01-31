@@ -7,6 +7,7 @@ data_source='train_normal'
 data_folder='MVTec3D-AD'
 normal_folder='normal'
 save_folder="res_64_32_16_8_all_t_2_dim_64"
+train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
 start_epoch=0
@@ -25,7 +26,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
   --max_train_steps 10000 --attn_loss --task_loss_weight 1.0 --seed 42 --class_caption 'good' \
   --max_train_epochs 20 \
-  --train_data_dir "../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb" \
+  --train_data_dir ${train_data_dir} \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
   --truncate_pad --truncate_length 2  \

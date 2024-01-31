@@ -185,7 +185,6 @@ class NetworkTrainer:
 
     def train(self, args):
 
-        args.output_dir = "../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
         args.logging_dir = os.path.join(args.output_dir, 'logs')
 
         print(f'\n step 1. setting')
@@ -417,7 +416,7 @@ class NetworkTrainer:
         if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
             args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
         attention_storer = AttentionStore()
-        register_attention_control(unet, attention_storer, mask_threshold=args.mask_threshold)
+        register_attention_control(unet, attention_storer)
 
         # 学習する
         # TODO: find a way to handle total batch size when there are multiple datasets.
