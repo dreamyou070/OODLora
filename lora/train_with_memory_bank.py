@@ -909,11 +909,8 @@ class NetworkTrainer:
                                     do_mask_loss = True
 
                             if do_mask_loss:
+                                print(f'mask loss ! ')
                                 query = query_dict[layer_name][0].squeeze()  # 2, pix_num, c
-
-
-
-
                                 org_query, anomal_query = torch.chunk(query, 2, dim=0)
                                 anomal_query = anomal_query.squeeze()  # pix_num, c
                                 pix_num = anomal_query.shape[0]
@@ -976,7 +973,10 @@ class NetworkTrainer:
                                     if args.act_deact:
                                         normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
                                         activation_loss += args.normal_weight * normal_cls_loss
+
                                 attn_loss += activation_loss
+
+
                     attn_loss = attn_loss.mean()
                     if args.do_task_loss:
                         loss = task_loss
