@@ -176,6 +176,9 @@ def main(args):
 
             # (4) get images
             test_folder = os.path.join(args.concept_image_folder, 'test')
+            if args.training_test :
+                test_folder = os.path.join(args.concept_image_folder, 'train_normal')
+
             classes = os.listdir(test_folder)
 
             for class_name in classes:
@@ -403,10 +406,7 @@ if __name__ == "__main__":
     parser.add_argument("--anormal_thred", type=float, default=0.5)
     parser.add_argument("--detection_network_weights", type=str, )
     parser.add_argument("--trg_layer", type=str, )
-
-
-
-
+    parser.add_argument("--training_test", action = 'store_true')
     import ast
 
 

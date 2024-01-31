@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_down_attn1_text_attnloss_weight_0.001"
+folder_name="res_64_32_16_down_all_text_attnloss_weight_0.001"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 
@@ -37,6 +37,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --anormal_thred 0.5 \
   --trg_layer 'down_blocks_0_attentions_1_transformer_blocks_0_attn2' \
   --only_zero_save \
+  --training_test \
   --trg_layer_list "['down_blocks_0_attentions_1_transformer_blocks_0_attn2']"
   #, 'down_blocks_0_attentions_1_transformer_blocks_0_attn2',
   #                  'down_blocks_1_attentions_0_transformer_blocks_0_attn2', 'down_blocks_1_attentions_1_transformer_blocks_0_attn2',
