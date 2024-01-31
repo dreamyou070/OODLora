@@ -185,6 +185,7 @@ class NetworkTrainer:
 
     def train(self, args):
 
+        args.output_dir = "../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
         args.logging_dir = os.path.join(args.output_dir, 'logs')
 
         print(f'\n step 1. setting')
