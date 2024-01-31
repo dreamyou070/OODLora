@@ -12,7 +12,6 @@ def get_state_dict(dir):
 
 def get_crossattn_map(args, attention_stores: dict = None,
                       trg_layer: str = 'up_blocks_3_attentions_0_transformer_blocks_0_attn2',
-                      res : int = 64,
                       thredhold: float = 0.5,
                       binarize = True):
     """ 'up_blocks_3_attentions_0_transformer_blocks_0_attn2'"""
@@ -22,6 +21,7 @@ def get_crossattn_map(args, attention_stores: dict = None,
     else:
         cls_score, trigger_score = attn.chunk(2, dim=-1)  # head, pix_num
     h = trigger_score.shape[0]
+    res = int(trigger_score.shape[1] ** 0.5)
     trigger_score = trigger_score.unsqueeze(-1).reshape(h, res,res)
     trigger_score = trigger_score.mean(dim=0)  # res, res, (object = 1)
     object_mask = trigger_score / trigger_score.max()
