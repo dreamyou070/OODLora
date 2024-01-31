@@ -252,7 +252,7 @@ def main(args):
                                 normal_mask_save_dir = os.path.join(class_base_folder,
                                                                      f'{name}_normal_mask{ext}')
                                 save_latent(normal_mask, normal_mask_save_dir, org_h, org_w)
-                                """
+                                
 
 
 
@@ -348,6 +348,7 @@ def main(args):
 
                                 tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
                                 anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
+                                """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
