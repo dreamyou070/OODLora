@@ -41,8 +41,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 is_cross_attention = True
 
             query = self.to_q(hidden_states)  # batch, pix_num, dim
-            if mask == layer_name:
-                controller.save_query(query, layer_name)
+            controller.save_query(query, layer_name)
 
             # ---------------------------------------------------------------------------------------------------------
             context = context if context is not None else hidden_states
@@ -815,7 +814,7 @@ class NetworkTrainer:
                                                     timesteps,
                                                     input_text,
                                                     batch,
-                                                    weight_dtype, 1, None)
+                                                    weight_dtype, 1, args.trg_layer)
                     # ------------------------------------- (1) task loss ------------------------------------- #
                     if args.do_task_loss:
                         if args.act_deact:
@@ -836,10 +835,41 @@ class NetworkTrainer:
                             task_loss = task_loss * args.task_loss_weight
 
                     # ------------------------------------- (2) attn loss ------------------------------------- #
+
                     attn_dict = attention_storer.step_store
                     query_dict = attention_storer.query_dict
                     attention_storer.reset()
-                    attn_loss = 0
+                    # (1) targetting anomal position
+                    map = attn_dict[args.trg_layer][0].squeeze()  # 8, res*res, c
+                    pix_num = map.shape[1]
+                    res = int(pix_num ** 0.5)
+
+                    img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                    img_mask = img_masks.squeeze()  # res,res
+                    object_position = img_mask.flatten()  # res*res
+                    
+                    query = query_dict[args.trg_layer][0].squeeze()  # 2, pix_num, c
+                    org_query, anomal_query = torch.chunk(query, 2, dim=0)
+                    anomal_query = anomal_query.squeeze()  # pix_num, c
+                    pix_num = anomal_query.shape[0]
+                    anomal_positions = []
+                    for pix_idx in range(pix_num):
+                        anomal_feat = anomal_query[pix_idx, :].squeeze()  # c
+                        dist = mahalanobis(anomal_feat.cpu(), normal_mean, normal_cov)
+                        if dist > thred_value:
+                            # if dist > normal_max_dist :
+                            anomal_positions.append(1)
+                        else:
+                            anomal_positions.append(0)
+                    # -------------------------------------------------------------------------------------
+                    head_num = 8
+                    anomal_positions = torch.tensor(anomal_positions)
+                    anomal_positions = torch.where((anomal_positions == 1) & (anomal_positions == 1), 1, 0)
+                    anomal_positions = anomal_positions.unsqueeze(0).repeat(head_num, 1).to(object_position.device)  # head_num, res*res
+                    object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # head_num, res*res
+
+                    ############################################################################################################
+
                     for i, layer_name in enumerate(attn_dict.keys()):
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         pix_num = map.shape[1]
