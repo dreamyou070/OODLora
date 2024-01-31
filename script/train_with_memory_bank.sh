@@ -4,6 +4,7 @@ class_name="bagel"
 data_source='train_ex2'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
+all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex2/rgb"
 normal_folder='normal'
 save_folder="res_64_32_16_down_all_t_2_dim_64"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
@@ -28,6 +29,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --attn_loss --task_loss_weight 1.0 --seed 42 --class_caption 'good' \
   --wandb_init_name ${class_name} \
   --train_data_dir "$train_data_dir" \
+  --all_data_dir "${all_data_dir}" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
   --cross_map_res "[64]" \

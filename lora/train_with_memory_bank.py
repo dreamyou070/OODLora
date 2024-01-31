@@ -361,7 +361,7 @@ class NetworkTrainer:
                 sample['class_name'] = class_name
                 return sample
 
-        mahal_dataset = Mahalanobis_dataset(args.train_data_dir)
+        mahal_dataset = Mahalanobis_dataset(args.all_data_dir)
         controller = AttentionStore()
         register_attention_control(unet, controller, mask_threshold=args.mask_threshold)
         with torch.no_grad():
@@ -441,7 +441,7 @@ class NetworkTrainer:
             mahalanobis_dists.append(dist)
         max_dist = max(mahalanobis_dists)
         # ------------------------------------------------------------------------------------
-        thred = 0.95
+        thred = 0.90
         mahalanobis_dists.sort()
         thred_max = int(len(mahalanobis_dists) * thred)
         thred_value = mahalanobis_dists[thred_max]
@@ -452,7 +452,8 @@ class NetworkTrainer:
             dist = mahalanobis(anormal_vector, normal_mean, normal_cov)
             anomal_mahalanobis_dists.append(dist)
             print(f'anormal mahalanobis distance to normal dist : {dist}')
-        print(f'min anormal mahalanobis distance to normal dist : {min(anomal_mahalanobis_dists)}')
+        anomal_min_dist = min(anomal_mahalanobis_dists)
+
 
         # -------------------------------------------------------------------------------------------------------- #
         print(f'\n step 7. optimizer (unet frozen) ')
@@ -786,31 +787,8 @@ class NetworkTrainer:
                                 accelerator.print("NaN found in latents, replacing with zeros")
                                 latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         latents = latents * self.vae_scale_factor
-
-                        # img_masks = batch["img_masks"][0][64].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                        # img_mask = img_masks.squeeze()  # res,res
-                        # object_position = torch.where((img_mask == 1), 1, 0)  # head, pix_num
-                        # object_position = object_position.unsqueeze(0).unsqueeze(0)  # head, 1, pix_num
-                        # object_position = object_position.repeat(1, 4, 1, 1).to(
-                        #    accelerator.device)  # head, z_dim, pix_num, pix_num
                         random_latent = torch.randn_like(latents)  # head, z_dim
                         anomal_latent = latents + random_latent  # head, 4, h, w
-                        # anomal_latent_ = einops.rearrange(anomal_latent, 'b c h w -> b c (h w)')
-                        # pix_num = anomal_latent_.shape[2]
-                        # latent_res = int(pix_num ** 0.5)
-                        # anomal_positions = []
-                        # for i in range(pix_num):
-                        #    anomal_feature = anomal_latent_[:, :, i].squeeze()  # [4]
-                        #    dist = mahalanobis(anomal_feature.cpu(), normal_mean, normal_cov)
-                        #    if dist > max_dist:
-                        #        anomal_positions.append(1)
-                        #    else :
-                        #        anomal_positions.append(0)
-                        # anomal_positions = torch.tensor(anomal_positions).unsqueeze(0)
-                        # anomal_positions = anomal_positions.reshape(latent_res, latent_res) # [64,64]
-                        # anomal_pixel_num = anomal_positions.sum()
-                        # print(f'anomal_pixel_num : {anomal_pixel_num}')
-
                         if args.act_deact:
                             input_latent = torch.cat((latents, anomal_latent), dim=0)  # 2*head, z_dim
                         else:
@@ -842,28 +820,27 @@ class NetworkTrainer:
                     if args.do_task_loss:
                         if args.act_deact:
                             normal_noise_pred, anormal_noise_pred = torch.chunk(noise_pred, 2, dim=0)
-                            if batch['train_class_list'][0] == 1:
-                                if args.v_parameterization:
-                                    target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                                else:
-                                    target = noise
-                                if args.act_deact:
-                                    target = target.chunk(2, dim=0)[0]
-                                target = target.chunk(2, dim=0)[0]  # head, z_dim, pix_num, pix_num
-                                loss = torch.nn.functional.mse_loss(normal_noise_pred.float(),
-                                                                    target.float(), reduction="none")
-                                loss = loss.mean([1, 2, 3])
-                                loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                                loss = loss * loss_weights
-                                task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-                                task_loss = task_loss * args.task_loss_weight
+                            if args.v_parameterization:
+                                target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                            else:
+                                target = noise
+                            if args.act_deact:
+                                target = target.chunk(2, dim=0)[0]
+                            target = target.chunk(2, dim=0)[0]  # head, z_dim, pix_num, pix_num
+                            loss = torch.nn.functional.mse_loss(normal_noise_pred.float(),
+                                                                target.float(), reduction="none")
+                            loss = loss.mean([1, 2, 3])
+                            loss_weights = batch["loss_weights"]  # 各sampleごとのweight
+                            loss = loss * loss_weights
+                            task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                            task_loss = task_loss * args.task_loss_weight
 
                     # ------------------------------------- (2) attn loss ------------------------------------- #
                     attn_dict = attention_storer.step_store
+                    query_dict = attention_storer.query_dict
                     attention_storer.reset()
                     attn_loss = 0
                     for i, layer_name in enumerate(attn_dict.keys()):
-
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         pix_num = map.shape[1]
                         res = int(pix_num ** 0.5)
@@ -900,9 +877,13 @@ class NetworkTrainer:
                             else:
                                 if position in args.trg_position and part in args.trg_part:
                                     do_mask_loss = True
-                            if do_mask_loss:
 
-                                query = attn_dict[layer_name][1].squeeze()  # 2, pix_num, c
+                            if do_mask_loss:
+                                query = query_dict[layer_name][0].squeeze()  # 2, pix_num, c
+
+
+
+
                                 org_query, anomal_query = torch.chunk(query, 2, dim=0)
                                 anomal_query = anomal_query.squeeze()  # pix_num, c
                                 pix_num = anomal_query.shape[0]
@@ -910,7 +891,8 @@ class NetworkTrainer:
                                 for pix_idx in range(pix_num):
                                     anomal_feat = anomal_query[pix_idx, :].squeeze()  # c
                                     dist = mahalanobis(anomal_feat.cpu(), normal_mean, normal_cov)
-                                    if dist > max_dist:
+                                    if dist > thred_value :
+                                    #if dist > normal_max_dist :
                                         anomal_positions.append(1)
                                     else:
                                         anomal_positions.append(0)
@@ -1123,6 +1105,7 @@ if __name__ == "__main__":
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
     parser.add_argument("--do_task_loss", action='store_true')
     parser.add_argument("--act_deact", action='store_true')
+    parser.add_argument("--all_data_dir", type=str)
     import ast
 
 
