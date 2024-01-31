@@ -1,6 +1,4 @@
 import importlib, argparse, gc, math, os, sys, random, time, json, toml, shutil
-import numpy as np
-from PIL import Image
 from multiprocessing import Value
 from tqdm import tqdm
 from accelerate.utils import set_seed
@@ -20,12 +18,9 @@ try:
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
 import os
-import wandb
 
-os.environ["WANDB__SERVICE_WAIT"] = "500"
 
-def register_attention_control(unet: nn.Module, controller: AttentionStore,
-                               mask_threshold: float = 1):  # if mask_threshold is 1, use itself
+def register_attention_control(unet: nn.Module, controller: AttentionStore,):  # if mask_threshold is 1, use itself
 
     def ca_forward(self, layer_name):
 
@@ -192,7 +187,7 @@ class NetworkTrainer:
 
         #args.logging_dir = os.path.join(args.output_dir, 'logs')
         parent, name = os.path.split(args.output_dir)
-        #args.wandb_run_name = name
+
 
         print(f'\n step 1. setting')
         print(f' (1) session')
@@ -246,8 +241,6 @@ class NetworkTrainer:
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
         is_main_process = accelerator.is_main_process
-        #if args.log_with == 'wandb' and is_main_process:
-        #    wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
 
         print(f'\n step 4. save directory')
         save_base_dir = args.output_dir
