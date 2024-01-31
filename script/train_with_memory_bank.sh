@@ -4,11 +4,11 @@ class_name="bagel"
 data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
-all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex/rgb"
+all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex2/rgb"
 normal_folder='normal'
-save_folder="res_64_down_attn1_act_deact_normal_weight_0.1"
+save_folder="res_64_32_16_down_all_text_attnloss_weight_0.001_arc_0.1_deact"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_32_16_down_all_text_attnloss_weight_0.001/models/epoch-000009.safetensors"
+network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_32_16_down_all_text_attnloss_weight_0.001/models/epoch-000011.safetensors"
 
 start_epoch=0
 port_number=51335
