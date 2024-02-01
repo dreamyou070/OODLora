@@ -525,6 +525,7 @@ class NetworkTrainer:
                 query_dict = controller.query_dict
                 attn_stores = controller.step_store
                 controller.reset()
+
                 ########################### 2. mahalanobis loss ####################################################
                 query = query_dict[args.training_layer][0].squeeze()  # pix_num, dim
                 pix_num = query.shape[0]  # 4096             # 4096
@@ -582,6 +583,7 @@ class NetworkTrainer:
                     if args.back_training :
                         activation_loss += args.back_weight * cls_back_loss
                 attn_loss = activation_loss.mean()
+
                 ########################### 3. attn loss ###########################################################
                 loss = task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
 
@@ -748,9 +750,9 @@ if __name__ == "__main__":
         return v
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
     parser.add_argument("--trg_layer", type=str)
-    parser.add_argument("--trg_layer_list", type=arg_as_list,
-                        default=['down_blocks_0_attentions_1_transformer_blocks_0_attn2',
-                                 'up_blocks_3_attentions_2_transformer_blocks_0_attn2'])
+    parser.add_argument("--trg_layer_list", type=arg_as_list,)
+                        #default=['down_blocks_0_attentions_1_transformer_blocks_0_attn2',
+                        #         'up_blocks_3_attentions_2_transformer_blocks_0_attn2'])
     parser.add_argument("--training_layer", type=str)
     parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--mahalanobis_loss_weight', type=float, default=1.0)

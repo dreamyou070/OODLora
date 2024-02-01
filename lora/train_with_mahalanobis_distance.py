@@ -526,8 +526,8 @@ class NetworkTrainer:
                 attn_stores = controller.attn_stores
                 controller.reset()
                 ########################### 2. mahalanobis loss ####################################################
-                layer_1 = args.trg_layer_list[0]
-                query = query_dict[layer_1][0].squeeze()  # pix_num, dim
+
+                query = query_dict[args.training_layer][0].squeeze()  # pix_num, dim
                 pix_num = query.shape[0]  # 4096             # 4096
                 res = int(pix_num ** 0.5)  # 64
 
