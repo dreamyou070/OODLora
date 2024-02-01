@@ -654,6 +654,7 @@ class NetworkTrainer:
                     object_position = img_mask.flatten()  # res*res
 
                     attn = frozen_attn_dict[args.trg_layer][0].squeeze()  # pix_num, 2
+                    print(f'attn : {attn.shape}')
                     if args.cls_training :
                         cls_attn, score_map = attn[:, 0].squeeze(), attn[:, 1].squeeze()
                     else :
