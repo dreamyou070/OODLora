@@ -8,7 +8,7 @@ all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/tra
 normal_folder='normal'
 save_folder="res_64_32_16_down_all_text_attnloss_weight_0.001_arc_0.1_deact"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_32_16_down_all_text_attnloss_weight_0.001/models/epoch-000011.safetensors"
+network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_32_16_down_all_text_attnloss_weight_0.001/models/epoch-000017.safetensors"
 
 start_epoch=0
 port_number=51335
