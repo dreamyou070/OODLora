@@ -658,11 +658,13 @@ class NetworkTrainer:
                         cls_attn, score_map = attn[:, 0].squeeze(), attn[:, 1].squeeze()
                     else :
                         score_map = attn.squeeze()
+                    print(f'score_map : {score_map}')
                     pix_num = score_map.shape[0]
                     anomal_positions = []
                     for pix_idx in range(pix_num):
                         #dist = mahalanobis(anomal_feat.detach().cpu(), normal_mean, normal_cov)
                         score = score_map[pix_idx]
+                        print(f'score : {score}')
                         if type(score) == torch.Tensor:
                             score = score.item()
                         if score < 0.5 and object_position[pix_idx] > 0 :
