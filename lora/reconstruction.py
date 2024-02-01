@@ -107,7 +107,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
 def main(args):
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
-    args.output_dir = os.path.join(parent, 'reconstruction')
+    args.output_dir = os.path.join(parent, 'reconstruction_with_test_data')
     if args.training_test :
         args.output_dir = os.path.join(parent, 'reconstruction_with_training_data')
     os.makedirs(args.output_dir, exist_ok=True)
@@ -232,6 +232,7 @@ def main(args):
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)
                                 background_mask = 1 - object_mask  ###################################################################### [res,res]
                                 # ------------------------------------- [2] anomal mask ------------------------------ #
+                                # real network is getting good !
                                 weight_dir = os.path.join(args.network_weights, weight)
                                 network.restore()
                                 network.load_weights(weight_dir)
