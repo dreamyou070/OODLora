@@ -657,6 +657,15 @@ class NetworkTrainer:
 
                     # (1) targetting anomal position
                     anormal_query = frozen_query_dict[args.trg_layer][0].squeeze()  # 1, res*res, dim
+                    pix_num = anormal_query.shape[1]
+                    res = int(pix_num ** 0.5)
+
+                    a = batch["img_masks"]
+                    print(f'batch image masks : {a}')
+                    img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                    img_mask = img_masks.squeeze()  # res,res
+                    object_position = img_mask.flatten()  # res*res
+                    print(f'object position : {object_position.shape}')
                     """
                     pix_num = query.shape[1]
                     res = int(pix_num ** 0.5)
