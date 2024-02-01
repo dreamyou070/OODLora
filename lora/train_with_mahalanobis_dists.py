@@ -438,8 +438,10 @@ class NetworkTrainer:
                                 attn_score = attn_score.item()
                             if attn_score > 0.5 :
                                 normal_vector_good_score_list.add(feature)
+                                normal_vector_list.add(feature)
                             else :
                                 normal_vector_bad_score_list.add(feature)
+                                normal_vector_list.add(feature)
                         else:
                             if feature.dim() == 1:
                                 feature = feature.unsqueeze(0)
@@ -456,6 +458,27 @@ class NetworkTrainer:
                           f'normal_vector_bad_score_list : {len(normal_vector_bad_score_list)}, '
                           f'anormal : {len(anormal_vector_list)}')
 
+        normal_vector_list = list(normal_vector_list)
+        normal_vector = torch.cat(normal_vector_list, dim=0)  # sample, dim
+        if normal_vector.device != 'cpu':
+            normal_vectors = normal_vector.cpu()
+        normal_vectors_np = np.array(normal_vectors)
+        normal_vectors_mean = torch.mean(normal_vectors, dim=0).numpy()  # dim
+        normal_vectors_cov = np.cov(normal_vectors.detach().cpu().numpy(), rowvar=False)
+        distance_save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.txt")
+        mahalanobis_dists = []
+        for n_vector in normal_vectors_np:
+            dist = mahalanobis(n_vector, normal_vectors_mean, normal_vectors_cov)
+            mahalanobis_dists.append(dist)
+            print(f'normal vector mahalanobis distance from normal mean : {dist}')
+        max_dist = max(mahalanobis_dists)
+        with open(distance_save_dir, 'w') as f:
+            for dist in mahalanobis_dists:
+                f.write(f'{dist},')
+            f.write(f'\n')
+            f.write(f'max_dist : {max_dist}')
+
+
         normal_vector_good_score_list = list(normal_vector_good_score_list)
         normal_vector_good_score = torch.cat(normal_vector_good_score_list, dim=0) # sample, dim
         if normal_vector_good_score.device != 'cpu':
@@ -471,7 +494,7 @@ class NetworkTrainer:
             mahalanobis_dists.append(dist)
             print(f'good score mahalanobis distance from good score dist : {dist}')
         max_dist = max(mahalanobis_dists)
-        with open(distance_save_dir, 'w') :
+        with open(distance_save_dir, 'w') as f :
             for dist in mahalanobis_dists:
                 f.write(f'{dist},')
             f.write(f'\n')
@@ -488,7 +511,7 @@ class NetworkTrainer:
         for bad_score_n_vector in bad_score_normal_vectors_np:
             dist = mahalanobis(bad_score_n_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
             bad_score_normal_mahalanobis_dists.append(dist)
-        with open(distance_save_dir, 'w') :
+        with open(distance_save_dir, 'w') as f:
             for dist in bad_score_normal_mahalanobis_dists:
                 f.write(f'{dist},')
 
@@ -504,7 +527,7 @@ class NetworkTrainer:
                 dist = mahalanobis(anormal_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
                 anomal_mahalanobis_dists.append(dist)
             anomal_min_dist = min(anomal_mahalanobis_dists)
-            with open(distance_save_dir, 'w'):
+            with open(distance_save_dir, 'w') as f :
                 for dist in anomal_mahalanobis_dists :
                     f.write(f'{dist},')
                 f.write(f'\n')
