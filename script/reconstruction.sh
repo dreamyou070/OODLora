@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_down_1_all_text_mahal_loss"
+folder_name="res_64_down_1_t_2mahal_loss"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 
