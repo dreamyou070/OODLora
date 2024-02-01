@@ -403,7 +403,8 @@ class NetworkTrainer:
                 attn = controller.step_store[args.trg_layer][0].squeeze()  # 1, pix_num, 2
                 cls_map, trigger_map = attn.chunk(2, dim=1)
                 trigger_map = trigger_map.squeeze()
-
+                trigger_map = trigger_map.mean(dim=0) # pix_num
+                
             if 'good' in class_name:
                 for pix_idx in range(mask_vector.shape[0]):
                     feature = query[pix_idx, :].cpu()
