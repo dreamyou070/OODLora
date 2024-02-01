@@ -457,58 +457,60 @@ class NetworkTrainer:
                           f'anormal : {len(anormal_vector_list)}')
 
         normal_vector_good_score_list = list(normal_vector_good_score_list)
-        normal_vector_good_score = torch.cat(normal_vector_good_score_list, dim=0)
+        normal_vector_good_score = torch.cat(normal_vector_good_score_list, dim=0) # sample, dim
         if normal_vector_good_score.device != 'cpu':
             good_score_normal_vectors = normal_vector_good_score.cpu()
         good_score_normal_vectors_np = np.array(good_score_normal_vectors)
-        good_score_normal_vectors_mean = np.mean(good_score_normal_vectors_np, axis=0)
-        good_score_normal_vectors_cov = np.cov(good_score_normal_vectors_np, rowvar=False)
-
-        normal_vector_bad_score_list = list(normal_vector_bad_score_list)
-        normal_vector_bad_score = torch.cat(normal_vector_bad_score_list, dim=0)
-        if normal_vector_bad_score.device != 'cpu':
-            bad_score_normal_vectors = normal_vector_bad_score.cpu()
-        bad_score_normal_vectors_np = np.array(bad_score_normal_vectors)
-        bad_score_normal_vectors_mean = np.mean(bad_score_normal_vectors_np, axis=0)
-        bad_score_normal_vectors_cov = np.cov(bad_score_normal_vectors_np, rowvar=False)
-
-        if args.do_check_anormal:
-            anormal_vector_list = list(anormal_vector_list)
-            anormal_vector = torch.cat(anormal_vector_list, dim=0)
-            if anormal_vector.device != 'cpu':
-                anormal_vectors = anormal_vector.cpu()
-            anormal_vector_np = np.array(anormal_vectors)
-
+        good_score_normal_vectors_mean = torch.mean(good_score_normal_vectors, dim=0).numpy()  # dim
+        good_score_normal_vectors_cov = np.cov(good_score_normal_vectors.detach().cpu().numpy(), rowvar=False)
         # [1] good mahalanobis distances
+        distance_save_dir = os.path.join(record_save_dir, "good_normal_mahalanobis_distances.txt")
         mahalanobis_dists = []
         for good_score_n_vector in good_score_normal_vectors_np:
             dist = mahalanobis(good_score_n_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
             mahalanobis_dists.append(dist)
             print(f'good score mahalanobis distance from good score dist : {dist}')
         max_dist = max(mahalanobis_dists)
-        print(f'normal max dist : {max_dist}')
+        with open(distance_save_dir, 'w') :
+            for dist in mahalanobis_dists:
+                f.write(f'{dist},')
+            f.write(f'\n')
+            f.write(f'max_dist : {max_dist}')
 
-        # [2] bad mahalanobis distances
+        # [2] bad normal mahalanobis distances
+        distance_save_dir = os.path.join(record_save_dir, "bad_normal_mahalanobis_distances.txt")
+        normal_vector_bad_score_list = list(normal_vector_bad_score_list)
+        normal_vector_bad_score = torch.cat(normal_vector_bad_score_list, dim=0)
+        if normal_vector_bad_score.device != 'cpu':
+            bad_score_normal_vectors = normal_vector_bad_score.cpu()
+        bad_score_normal_vectors_np = np.array(bad_score_normal_vectors)
         bad_score_normal_mahalanobis_dists = []
         for bad_score_n_vector in bad_score_normal_vectors_np:
             dist = mahalanobis(bad_score_n_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
             bad_score_normal_mahalanobis_dists.append(dist)
-            print(f'bad score normal mahalanobis distance from good score dist : {dist}')
-        bad_score_normal_max_dist = max(bad_score_normal_mahalanobis_dists)
-        thred = 0.88
-        bad_score_normal_mahalanobis_dists.sort()
-        thred_max = int(len(bad_score_normal_mahalanobis_dists) * thred)
-        thred_value = bad_score_normal_mahalanobis_dists[thred_max] #################################################
-        print(f'bad score thred_value : {thred_value} | max dist : {bad_score_normal_max_dist}')
+        with open(distance_save_dir, 'w') :
+            for dist in bad_score_normal_mahalanobis_dists:
+                f.write(f'{dist},')
 
-        # [3] anomal  mahalanobis distances
         if args.do_check_anormal:
+            distance_save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.txt")
+            anormal_vector_list = list(anormal_vector_list)
+            anormal_vector = torch.cat(anormal_vector_list, dim=0)
+            if anormal_vector.device != 'cpu':
+                anormal_vectors = anormal_vector.cpu()
+            anormal_vector_np = np.array(anormal_vectors)
             anomal_mahalanobis_dists = []
             for anormal_vector in anormal_vector_np:
                 dist = mahalanobis(anormal_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
                 anomal_mahalanobis_dists.append(dist)
-                print(f'anormal mahalanobis distance to normal dist : {dist}')
             anomal_min_dist = min(anomal_mahalanobis_dists)
+            with open(distance_save_dir, 'w'):
+                for dist in anomal_mahalanobis_dists :
+                    f.write(f'{dist},')
+                f.write(f'\n')
+                f.write(f'min_dist : {anomal_min_dist}')
+
+
 
         # -------------------------------------------------------------------------------------------------------- #
         print(f'\n step 7. optimizer (unet frozen) ')
