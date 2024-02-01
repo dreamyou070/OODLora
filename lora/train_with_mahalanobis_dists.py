@@ -797,6 +797,7 @@ class NetworkTrainer:
                                 remove_model(remove_ckpt_name)
                 # ------------------------------------------------------------------------------------------------------
                 # 1) total loss
+                """
                 current_loss = loss.detach().item()
                 if epoch == args.start_epoch:
                     loss_list.append(current_loss)
@@ -817,6 +818,8 @@ class NetworkTrainer:
                         logs = self.generate_step_logs(loss_dict, lr_scheduler)
                 if global_step >= args.max_train_steps:
                     break
+                """
+            """
             accelerator.wait_for_everyone()
             if args.save_every_n_epochs is not None:
                 saving = (epoch + 1) % args.save_every_n_epochs == 0 and (
@@ -834,6 +837,7 @@ class NetworkTrainer:
             # self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
             frozen_attention_storer.reset()
             training_attention_storer.reset()
+            """
         if is_main_process:
             network_ = accelerator.unwrap_model(training_network)
         accelerator.end_training()
