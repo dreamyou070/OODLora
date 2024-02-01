@@ -791,7 +791,8 @@ class NetworkTrainer:
                 avr_loss = loss_total / len(loss_list)
 
                 logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-                progress_bar.set_postfix(**loss_dict)
+                if is_main_process:
+                    progress_bar.set_postfix(**loss_dict)
 
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
