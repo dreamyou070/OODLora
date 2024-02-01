@@ -328,6 +328,7 @@ class NetworkTrainer:
         print(f'\n step 6. make memory bank')
         device = accelerator.device
         frozen_unet, frozen_text_encoder, network = frozen_unet.to(device), frozen_text_encoder.to(device), frozen_network.to(device)
+        """
 
         class Mahalanobis_dataset(torch.utils.data.Dataset):
             def __init__(self, train_data_dir):
@@ -454,7 +455,7 @@ class NetworkTrainer:
         bad_score_normal_vectors_np = np.array(bad_score_normal_vectors)
         bad_score_normal_vectors_mean = np.mean(bad_score_normal_vectors_np, axis=0)
         bad_score_normal_vectors_cov = np.cov(bad_score_normal_vectors_np, rowvar=False)
-
+        """
         """
         anormal_vector_list = list(anormal_vector_list)
         anormal_vector = torch.cat(anormal_vector_list, dim=0)
@@ -471,7 +472,7 @@ class NetworkTrainer:
         normal_mean = np.mean(normal_vector_np, axis=0)
         normal_cov = np.cov(normal_vector_np, rowvar=False)
         """
-
+        """
         mahalanobis_dists = []
         for good_score_n_vector in good_score_normal_vectors_np:
             dist = mahalanobis(good_score_n_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
@@ -492,6 +493,7 @@ class NetworkTrainer:
             print(f'bad score normal mahalanobis distance from good score dist : {dist}')
         bad_score_normal_max_dist = max(mahalanobis_dists)
         print(f'-------------------------------------------------------------------------------------')
+        """
         """
         # ------------------------------------------------------------------------------------
         anomal_mahalanobis_dists = []
@@ -649,13 +651,18 @@ class NetworkTrainer:
                     with accelerator.autocast():
                         self.call_unet(args, accelerator, frozen_unet, frozen_noisy_latents,
                                        timesteps, frozen_text_encoder_conds, batch, weight_dtype, 1, args.trg_layer)
-                    #frozen_attn_dict = frozen_attention_storer.step_store
+
                     frozen_query_dict = frozen_attention_storer.query_dict
                     frozen_attention_storer.reset()
+
                     # (1) targetting anomal position
                     anormal_query = frozen_query_dict[args.trg_layer][0].squeeze()  # 1, res*res, dim
+                    """
                     pix_num = query.shape[1]
                     res = int(pix_num ** 0.5)
+                    
+                    a = batch["img_masks"]
+                    print(f'batch image masks : {a}')
                     img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                     img_mask = img_masks.squeeze()  # res,res
                     object_position = img_mask.flatten()  # res*res
@@ -764,6 +771,7 @@ class NetworkTrainer:
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
+                    """
 
                 # Checks if the accelerator has performed an optimization step behind the scenes
                 if accelerator.sync_gradients:
