@@ -759,6 +759,7 @@ class NetworkTrainer:
                     attn_loss = attn_loss.mean()
 
                     print(f'attn_loss: {attn_loss}')
+                    print(f'args.attn_loss_weight : {args.attn_loss_weight}')
 
                     if args.do_task_loss:
                         loss = task_loss
