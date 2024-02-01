@@ -12,6 +12,11 @@ print(f'normal_vector_mean_torch: {normal_vector_mean_torch.shape}')
 print(f'normal_vectors_cov_torch: {normal_vectors_cov_torch.shape}')
 
 
+def mahal(u, v, cov):
+    delta = u - v
+    m = torch.dot(delta, torch.matmul(cov, delta))
+    return torch.sqrt(m)
+
 normal_vectors = torch.randn((10,30))
 normal_vector_mean = torch.mean(normal_vectors, dim=0)
 
