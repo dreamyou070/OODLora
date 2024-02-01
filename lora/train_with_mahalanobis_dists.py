@@ -262,7 +262,7 @@ class NetworkTrainer:
         print(f'\n step 4. save directory')
         save_base_dir = args.output_dir
         _, folder_name = os.path.split(save_base_dir)
-        record_save_dir = os.path.join(args.output_dir, "record")
+        record_save_dir = os.path.join(args.output_dir, "record_normalize")
         os.makedirs(record_save_dir, exist_ok=True)
         print(f' (4.1) config saving')
         with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
@@ -427,6 +427,8 @@ class NetworkTrainer:
                 if 'good' in class_name:
                     for pix_idx in range(mask_vector.shape[0]):
                         feature = query[pix_idx, :].cpu()
+                        if args.normalize :
+                            feat = torch.nn.functional.normalize(feat, p=2, dim=0)
                         attn_score = trigger_map[pix_idx].cpu()
                         if mask_vector[pix_idx] == 1:
                             if feature.dim() == 1:
