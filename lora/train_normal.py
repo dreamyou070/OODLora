@@ -688,11 +688,26 @@ class NetworkTrainer:
                                 anormal_trigger_activation = (score_map * anormal_position)
                                 normal_trigger_activation = (score_map * normal_position)
                                 total_score = torch.ones_like(anormal_trigger_activation)
+
                                 anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
                                 normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8
                                 total_score = total_score.sum(dim=-1)  # 8
                                 normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                 anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                                 activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anormal_activation_loss
                                 if args.cls_training :
                                     anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)

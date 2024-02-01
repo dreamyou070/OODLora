@@ -558,6 +558,7 @@ class NetworkTrainer:
                                 do_mask_loss = True
 
                         if do_mask_loss and part in args.trg_part :
+
                             query = query_dict[layer_name][0].squeeze()  # pix_num, dim
                             pix_num = query.shape[0]  # 4096             # 4096
                             res = int(pix_num ** 0.5)  # 64
@@ -592,6 +593,7 @@ class NetworkTrainer:
                                 cls_score, normal_score = cls_score.squeeze(), normal_score.squeeze()
                             else:
                                 normal_score = attn.squeeze()  # [, pix_num
+                            print(f'normal_score (8, pix_num) : {normal_score.shape}')
                             head_num = attn.shape[0]
                             object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # 8, res*res
                             background_position = 1 - object_position
@@ -599,11 +601,13 @@ class NetworkTrainer:
                             print(f'background_position : {background_position}')
 
                             trigger_normal_activation = (normal_score * object_position).sum(dim=-1)  # 8
-                            trigger_back_activation    = (normal_score * background_position).sum(dim=-1)  # 8
+                            trigger_back_activation = (normal_score * background_position).sum(dim=-1)  # 8
                             total_score = torch.ones_like(trigger_normal_activation)
                             trigger_normal_loss = (1 - (trigger_normal_activation / total_score)) ** 2  # 8, res*res
                             trigger_back_loss   = (trigger_back_activation / total_score) ** 2  # 8, res*res
                             activation_loss = args.normal_weight * trigger_normal_loss
+
+
                             if args.back_training :
                                 activation_loss += args.back_weight * trigger_back_loss
                             if args.cls_training:
