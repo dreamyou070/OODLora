@@ -215,6 +215,7 @@ def main(args):
                                 org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                                 # ------------------------------------- [1] object mask ------------------------------ #
                                 # 1. object mask
+                                """
                                 network.load_weights(args.detection_network_weights)
                                 network.to(device)
                                 controller_ob = AttentionStore()
@@ -229,8 +230,9 @@ def main(args):
                                                                 args.trg_layer)
                                                                 #'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
                                 object_mask_save_dir = os.path.join(class_base_folder, f'{name}_object_mask{ext}')
-                                save_latent(object_mask, object_mask_save_dir, org_h, org_w)
+                                save_latent(object_mask, object_mask_save_dir, org_h, org_w)                                
                                 background_mask = 1 - object_mask  ###################################################################### [res,res]
+                                """
                                 # ------------------------------------- [2] anomal mask ------------------------------ #
                                 # real network is getting good !
                                 weight_dir = os.path.join(args.network_weights, weight)
@@ -249,8 +251,8 @@ def main(args):
                                     object_mask = get_crossattn_map(args, attn_stores,
                                                                     trg_layer)
                                                                     #'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
-                                    #object_mask_save_dir = os.path.join(class_base_folder, f'{name}_{trg_layer}_object_mask{ext}')
-                                    #save_latent(object_mask, object_mask_save_dir, org_h, org_w)
+                                    object_mask_save_dir = os.path.join(class_base_folder, f'{name}_{trg_layer}{ext}')
+                                    save_latent(object_mask, object_mask_save_dir, org_h, org_w)
                                 """
                                 normal_mask = get_crossattn_map(args, attn_stores,
                                                                  args.trg_layer,
