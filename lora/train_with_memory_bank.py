@@ -533,7 +533,7 @@ class NetworkTrainer:
         training_text_encoder, training_network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
                 training_text_encoder, training_network, optimizer, train_dataloader, lr_scheduler)
 
-        training_network.prepare_grad_etc(training_text_encoder, training_unet)
+        #training_network.prepare_grad_etc(training_text_encoder, training_unet)
         vae.requires_grad_(False)
         vae.eval()
         vae.to(accelerator.device, dtype=vae_dtype)
