@@ -6,7 +6,7 @@ data_name="MVTec3D-AD"
 normality_folder='normal'
 
 network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
-detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/normal/${folder_name}/models/epoch-000011.safetensors"
+detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/normal/${folder_name}/models/epoch-000019.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
 
 port_number=50004
