@@ -541,7 +541,7 @@ class NetworkTrainer:
                         features.add(feat)
                 features = list(features)
                 normal_vectors = torch.cat(features, dim=0)  # sample, dim
-                normal_vectors_mean = torch.mean(np.array(normal_vectors.cpu()), dim=0).numpy()  # dim
+                normal_vectors_mean = torch.mean(normal_vectors.detach().numpy(),dim=0).numpy()  # dim
                 normal_vectors_cov = np.cov(np.array(normal_vectors.cpu()), rowvar=False)
                 mahalanobis_dists = [mahalanobis(feat.cpu().numpy(), normal_vectors_mean, normal_vectors_cov)
                                      for feat in features]
