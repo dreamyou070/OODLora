@@ -400,7 +400,7 @@ if __name__ == "__main__":
     parser.add_argument("--free_time", type=int, default=80)
     parser.add_argument("--only_zero_save", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
-    parser.add_argument("--truncate_length", type=int, default=3)
+    parser.add_argument("--truncate_length", type=int, default=2)
     parser.add_argument("--start_from_origin", action='store_true')
     parser.add_argument("--guidance_scale", type=float, default=8.5)
     parser.add_argument("--use_pixel_mask", action='store_true')
