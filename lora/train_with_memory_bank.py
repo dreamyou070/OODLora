@@ -599,10 +599,10 @@ class NetworkTrainer:
 
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
             current_epoch.value = epoch + 1
-            network.on_epoch_start(training_text_encoder, training_unet)
+            training_network.on_epoch_start(training_text_encoder, training_unet)
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
-                with accelerator.accumulate(network):
+                with accelerator.accumulate(training_network):
                     on_step_start(training_text_encoder, training_unet)
                     with torch.no_grad():
                         if "latents" in batch and batch["latents"] is not None:
