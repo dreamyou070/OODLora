@@ -643,7 +643,7 @@ class NetworkTrainer:
 
                 # ------------------------------------- (2) attn loss ------------------------------------- #
                 attn_dict = attention_storer.step_store
-                query_dict = attention_storer.query_store
+                query_dict = attention_storer.query_dict
                 attention_storer.reset()
                 attn_loss, dist_loss = 0, 0
                 for i, layer_name in enumerate(attn_dict.keys()):
