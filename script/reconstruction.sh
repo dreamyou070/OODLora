@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_down_0_all_text_act_0.001_deact"
+folder_name="res_64_down_1_all_text_arc_0.001_deact"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 
@@ -9,7 +9,7 @@ network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_trai
 detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/normal/${folder_name}/models/epoch-000001.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
 
-port_number=50045
+port_number=50049
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} ../lora/reconstruction.py \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -35,9 +35,9 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --use_pixel_mask \
   --class_name ${class_name} \
   --anormal_thred 0.5 \
-  --trg_layer 'down_blocks_0_attentions_0_transformer_blocks_0_attn2' \
+  --trg_layer 'down_blocks_0_attentions_1_transformer_blocks_0_attn2' \
   --only_zero_save \
-  --trg_layer_list "['down_blocks_0_attentions_0_transformer_blocks_0_attn2',]"
+  --trg_layer_list "['down_blocks_0_attentions_1_transformer_blocks_0_attn2',]"
   #, 'down_blocks_0_attentions_1_transformer_blocks_0_attn2',
   #                  'down_blocks_1_attentions_0_transformer_blocks_0_attn2', 'down_blocks_1_attentions_1_transformer_blocks_0_attn2',
   #                  'down_blocks_2_attentions_0_transformer_blocks_0_attn2', 'down_blocks_2_attentions_1_transformer_blocks_0_attn2',]"
