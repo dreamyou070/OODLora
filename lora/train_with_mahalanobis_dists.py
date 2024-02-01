@@ -396,8 +396,6 @@ class NetworkTrainer:
                 if 'good' in class_name:
                     checking = True
             if checking :
-
-
                 latent = sample['latent']  # 1,4,64,64
                 if latent.dim() == 3:
                     latent = latent.unsqueeze(0)
@@ -407,8 +405,7 @@ class NetworkTrainer:
                 with torch.no_grad():
                     if text_embeddings.dim() != 3:
                         text_embeddings = text_embeddings.unsqueeze(0)
-                    call_unet(frozen_unet, latent, 0, text_embeddings.to(device)[:,:2,:],
-                              1, args.trg_layer_list)
+                    call_unet(frozen_unet, latent, 0, text_embeddings.to(device)[:,:2,:], 1, args.trg_layer_list)
                     layer_1 = args.trg_layer_list[0]
                     if args.concat_query :
                         layer_2 = args.trg_layer_list[1]
