@@ -6,9 +6,9 @@ data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex2/rgb"
 normal_folder='normal'
-save_folder="res_64_down_1_all_text_mahal_loss_real"
+save_folder="res_64_down_1_all_text_mahal_loss"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_attn1_up_attn12_all_text_attnloss_weight_0.001/models/epoch-000004.safetensors"
+#network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_attn1_up_attn12_all_text_attnloss_weight_0.001/models/epoch-000004.safetensors"
 
 start_epoch=0
 port_number=59533
@@ -38,12 +38,10 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --trg_position "['down']" \
   --trg_part '["attn_1"]' \
   --act_deact \
-  --cls_training \
+  --back_training --cls_training \
   --do_task_loss \
   --normal_weight 0.001 \
   --concat_query \
-  --back_training \
   --do_check_anormal \
   --training_layer 'down_blocks_0_attentions_1_transformer_blocks_0_attn2'
-  #--network_weights "$network_weights" \
 

@@ -735,18 +735,13 @@ if __name__ == "__main__":
     parser.add_argument("--do_task_loss", action='store_true')
     parser.add_argument("--act_deact", action='store_true')
     parser.add_argument("--all_data_dir", type=str)
-    parser.add_argument("--attn_loss_weight", type=float, default=1)
     parser.add_argument("--concat_query", action='store_true')
     import ast
-
-
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
-
-
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
     parser.add_argument("--trg_layer", type=str)
     parser.add_argument("--trg_layer_list", type=arg_as_list,
@@ -755,6 +750,7 @@ if __name__ == "__main__":
     parser.add_argument("--training_layer", type=str)
     parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--mahalanobis_loss_weight', type=float, default=1.0)
+    parser.add_argument("--attn_loss_weight", type=float, default=1.0)
     parser.add_argument('--normal_weight', type=float, default=1.0)
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--cls_training", action="store_true", )
