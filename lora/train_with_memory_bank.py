@@ -316,6 +316,7 @@ class NetworkTrainer:
             training_network.enable_gradient_checkpointing()  # may have no effect
 
         # -------------------------------------------------------------------------------------------------------- #
+        """
         print(f'\n step 6. make memory bank')
         device = accelerator.device
         frozen_unet, frozen_text_encoder, network = frozen_unet.to(device), frozen_text_encoder.to(device), frozen_network.to(device)
@@ -428,7 +429,7 @@ class NetworkTrainer:
         good_score_normal_vectors_mean = np.mean(good_score_normal_vectors_np, axis=0)
         good_score_normal_vectors_cov = np.cov(good_score_normal_vectors_np, rowvar=False)
 
-        """
+        
         normal_vector_bad_score_list = list(normal_vector_bad_score_list)
         normal_vector_bad_score = torch.cat(normal_vector_bad_score_list, dim=0)
         if normal_vector_bad_score.device != 'cpu':
@@ -443,7 +444,7 @@ class NetworkTrainer:
         normal_vector_np = np.array(normal_vectors)
         normal_mean = np.mean(normal_vector_np, axis=0)
         normal_cov = np.cov(normal_vector_np, rowvar=False)
-        """
+        
         # back_vector_list = list(back_vector_list)
         # back_vectors = torch.cat(back_vector_list, dim=0)
         mahalanobis_dists = []
@@ -452,7 +453,7 @@ class NetworkTrainer:
             mahalanobis_dists.append(dist)
             print(f'good score mahalanobis distance from good score dist : {dist}')
         max_dist = max(mahalanobis_dists)
-        """
+        
         anormal_vector_list = list(anormal_vector_list)
         anormal_vectors = torch.cat(anormal_vector_list, dim=0)
         if anormal_vectors.device != 'cpu':
