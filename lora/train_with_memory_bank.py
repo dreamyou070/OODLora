@@ -717,7 +717,7 @@ class NetworkTrainer:
                     # -------------------------------------------------------------------------------------
                     # (3) score map
                     if args.cls_training:
-                        cls_map, score_map = torch.chunk(map, 2, dim=-1)
+                        cls_map, score_map = torch.chunk(attn, 2, dim=-1) # 8, res*res
                         if args.act_deact:
                             normal_cls_map, anomal_cls_map = torch.chunk(cls_map, 2, dim=0)
                             normal_cls_map, anomal_cls_map = normal_cls_map.squeeze(), anomal_cls_map.squeeze()
