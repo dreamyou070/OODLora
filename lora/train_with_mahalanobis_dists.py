@@ -650,7 +650,7 @@ class NetworkTrainer:
                         self.call_unet(args, accelerator, frozen_unet, frozen_noisy_latents,
                                        timesteps, frozen_text_encoder_conds, batch, weight_dtype, 1, args.trg_layer)
                     #frozen_attn_dict = frozen_attention_storer.step_store
-                    frozen_query_dict = frozen_attention_storer.query_store
+                    frozen_query_dict = frozen_attention_storer.query_dict
                     frozen_attention_storer.reset()
                     # (1) targetting anomal position
                     anormal_query = frozen_query_dict[args.trg_layer][0].squeeze()  # 1, res*res, dim
@@ -914,6 +914,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
     parser.add_argument("--trg_layer", type=str)
+    parser.add_argument("--training_layer", type=str)
     parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--anormal_weight', type=float, default=1.0)
     parser.add_argument('--normal_weight', type=float, default=1.0)
