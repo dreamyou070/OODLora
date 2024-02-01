@@ -523,7 +523,7 @@ class NetworkTrainer:
                 task_loss = task_loss * args.task_loss_weight
 
                 query_dict = controller.query_dict
-                attn_stores = controller.attn_stores
+                attn_stores = controller.step_store
                 controller.reset()
                 ########################### 2. mahalanobis loss ####################################################
                 query = query_dict[args.training_layer][0].squeeze()  # pix_num, dim
