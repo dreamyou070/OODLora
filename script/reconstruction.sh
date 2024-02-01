@@ -9,7 +9,7 @@ network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_trai
 detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/normal/${folder_name}/models/epoch-000001.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
 
-port_number=50040
+port_number=50041
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} ../lora/reconstruction.py \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -35,7 +35,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --use_pixel_mask \
   --class_name ${class_name} \
   --anormal_thred 0.5 \
-  --training_test \
   --trg_layer 'down_blocks_0_attentions_1_transformer_blocks_0_attn2' \
   --only_zero_save \
   --trg_layer_list "['down_blocks_0_attentions_1_transformer_blocks_0_attn2']"
