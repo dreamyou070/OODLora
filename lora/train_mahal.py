@@ -1,6 +1,4 @@
 import importlib, argparse, gc, math, os, sys, random, time, json, toml, shutil
-import numpy as np
-from PIL import Image
 from multiprocessing import Value
 from tqdm import tqdm
 from accelerate.utils import set_seed
@@ -13,37 +11,27 @@ import library.custom_train_functions as custom_train_functions
 from library.custom_train_functions import prepare_scheduler_for_custom_training
 import torch
 from torch import nn
-import wandb
 from attention_store import AttentionStore
-from random import sample
-import einops
-from scipy.spatial.distance import mahalanobis
-from utils.model_utils import call_unet
-from utils.model_utils import get_state_dict, init_prompt
-from torchvision import transforms
-from utils.image_utils import load_image
 
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
     setproctitle = lambda x: None
+import os
 
-os.environ["WANDB__SERVICE_WAIT"] = "500"
 
-
-def register_attention_control(unet: nn.Module, controller: AttentionStore,
-                               mask_threshold: float = 1):  # if mask_threshold is 1, use itself
+def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  # if mask_threshold is 1, use itself
 
     def ca_forward(self, layer_name):
+
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
             is_cross_attention = False
             if context is not None:
                 is_cross_attention = True
-
-            query = self.to_q(hidden_states)  # batch, pix_num, dim
+            query = self.to_q(hidden_states)
+            # --------------------------------------------------------------------------------------------------
             controller.save_query(query, layer_name)
-
-            # ---------------------------------------------------------------------------------------------------------
+            # --------------------------------------------------------------------------------------------------
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
@@ -56,12 +44,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 key = key.float()
 
             attention_scores = torch.baddbmm(
-                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device),
-                query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+                torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
+                            device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
-
-            if is_cross_attention and trg_indexs_list is not None:
+            if is_cross_attention:
                 if args.cls_training:
                     trg_map = attention_probs[:, :, :2]
                 else:
@@ -202,7 +189,6 @@ class NetworkTrainer:
     def train(self, args):
 
         args.logging_dir = os.path.join(args.output_dir, 'logs')
-        parent, name = os.path.split(args.output_dir)
 
         print(f'\n step 1. setting')
         print(f' (1) session')
@@ -259,6 +245,7 @@ class NetworkTrainer:
 
         print(f'\n step 4. save directory')
         save_base_dir = args.output_dir
+        os.makedirs(save_base_dir, exist_ok=True)
         _, folder_name = os.path.split(save_base_dir)
         record_save_dir = os.path.join(args.output_dir, "record")
         os.makedirs(record_save_dir, exist_ok=True)
@@ -431,25 +418,146 @@ class NetworkTrainer:
         num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
         if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
             args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
-        controller = AttentionStore()
-        register_attention_control(unet, controller)
+        attention_storer = AttentionStore()
+        register_attention_control(unet, attention_storer)
+
+        # 学習する
+        # TODO: find a way to handle total batch size when there are multiple datasets.
+        total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
+
         accelerator.print("running training / 学習開始")
         accelerator.print(
             f"  num train images * repeats / 学習画像の数×繰り返し回数: {train_dataset_group.num_train_images}")
         accelerator.print(f"  num reg images / 正則化画像の数: {train_dataset_group.num_reg_images}")
         accelerator.print(f"  num batches per epoch / 1epochのバッチ数: {len(train_dataloader)}")
         accelerator.print(f"  num epochs / epoch数: {num_train_epochs}")
+        accelerator.print(
+            f"  batch size per device / バッチサイズ: {', '.join([str(d.batch_size) for d in train_dataset_group.datasets])}"
+        )
+        # accelerator.print(f"  total train batch size (with parallel & distributed & accumulation) / 総バッチサイズ（並列学習、勾配合計含む）: {total_batch_size}")
         accelerator.print(f"  gradient accumulation steps / 勾配を合計するステップ数 = {args.gradient_accumulation_steps}")
         accelerator.print(f"  total optimization steps / 学習ステップ数: {args.max_train_steps}")
+
+        # TODO refactor metadata creation and move to util
+        metadata = {
+            "ss_output_name": args.output_name,
+            "ss_learning_rate": args.learning_rate,
+            "ss_text_encoder_lr": args.text_encoder_lr,
+            "ss_unet_lr": args.unet_lr,
+            "ss_num_train_images": train_dataset_group.num_train_images,
+            "ss_num_reg_images": train_dataset_group.num_reg_images,
+            "ss_num_batches_per_epoch": len(train_dataloader),
+            "ss_num_epochs": num_train_epochs,
+            "ss_gradient_checkpointing": args.gradient_checkpointing,
+            "ss_gradient_accumulation_steps": args.gradient_accumulation_steps,
+            "ss_max_train_steps": args.max_train_steps,
+            "ss_lr_warmup_steps": args.lr_warmup_steps,
+            "ss_lr_scheduler": args.lr_scheduler,
+            "ss_network_module": args.network_module,
+            "ss_network_dim": args.network_dim,
+            # None means default because another network than LoRA may have another default dim
+            "ss_network_alpha": args.network_alpha,  # some networks may not have alpha
+            "ss_network_dropout": args.network_dropout,  # some networks may not have dropout
+            "ss_mixed_precision": args.mixed_precision,
+            "ss_full_fp16": bool(args.full_fp16),
+            "ss_v2": bool(args.v2),
+            "ss_base_model_version": model_version,
+            "ss_clip_skip": args.clip_skip,
+            "ss_max_token_length": args.max_token_length,
+            "ss_cache_latents": bool(args.cache_latents),
+            "ss_seed": args.seed,
+            "ss_lowram": args.lowram,
+            "ss_noise_offset": args.noise_offset,
+            "ss_multires_noise_iterations": args.multires_noise_iterations,
+            "ss_multires_noise_discount": args.multires_noise_discount,
+            "ss_adaptive_noise_scale": args.adaptive_noise_scale,
+            "ss_zero_terminal_snr": args.zero_terminal_snr,
+            "ss_training_comment": args.training_comment,  # will not be updated after training
+            "ss_sd_scripts_commit_hash": train_util.get_git_revision_hash(),
+            "ss_optimizer": optimizer_name + (f"({optimizer_args})" if len(optimizer_args) > 0 else ""),
+            "ss_max_grad_norm": args.max_grad_norm,
+            "ss_caption_dropout_rate": args.caption_dropout_rate,
+            "ss_caption_dropout_every_n_epochs": args.caption_dropout_every_n_epochs,
+            "ss_caption_tag_dropout_rate": args.caption_tag_dropout_rate,
+            "ss_face_crop_aug_range": args.face_crop_aug_range,
+            "ss_prior_loss_weight": args.prior_loss_weight,
+            "ss_min_snr_gamma": args.min_snr_gamma,
+            "ss_scale_weight_norms": args.scale_weight_norms,
+        }
+
+        # conserving backward compatibility when using train_dataset_dir and reg_dataset_dir
+        assert (
+                len(train_dataset_group.datasets) == 1
+        ), f"There should be a single dataset but {len(train_dataset_group.datasets)} found. This seems to be a bug. / データセットは1個だけ存在するはずですが、実際には{len(train_dataset_group.datasets)}個でした。プログラムのバグかもしれません。"
+
+        dataset = train_dataset_group.datasets[0]
+
+        dataset_dirs_info = {}
+        reg_dataset_dirs_info = {}
+        for subset in dataset.subsets:
+            info = reg_dataset_dirs_info if subset.is_reg else dataset_dirs_info
+            info[os.path.basename(subset.image_dir)] = {"n_repeats": subset.num_repeats,
+                                                        "img_count": subset.img_count}
+
+        metadata.update({
+            "ss_batch_size_per_device": args.train_batch_size,
+            "ss_total_batch_size": total_batch_size,
+            "ss_resolution": args.resolution,
+            "ss_color_aug": bool(args.color_aug),
+            "ss_flip_aug": bool(args.flip_aug),
+            "ss_random_crop": bool(args.random_crop),
+            "ss_shuffle_caption": bool(args.shuffle_caption),
+            "ss_enable_bucket": bool(dataset.enable_bucket),
+            "ss_bucket_no_upscale": bool(dataset.bucket_no_upscale),
+            "ss_min_bucket_reso": dataset.min_bucket_reso,
+            "ss_max_bucket_reso": dataset.max_bucket_reso,
+            "ss_keep_tokens": args.keep_tokens,
+            "ss_dataset_dirs": json.dumps(dataset_dirs_info),
+            "ss_reg_dataset_dirs": json.dumps(reg_dataset_dirs_info),
+            "ss_tag_frequency": json.dumps(dataset.tag_frequency),
+            "ss_bucket_info": json.dumps(dataset.bucket_info), })
+
+        # add extra args
+        if args.network_args:
+            metadata["ss_network_args"] = json.dumps(net_kwargs)
+
+        # model name and hash
+        if args.pretrained_model_name_or_path is not None:
+            sd_model_name = args.pretrained_model_name_or_path
+            if os.path.exists(sd_model_name):
+                metadata["ss_sd_model_hash"] = train_util.model_hash(sd_model_name)
+                metadata["ss_new_sd_model_hash"] = train_util.calculate_sha256(sd_model_name)
+                sd_model_name = os.path.basename(sd_model_name)
+            metadata["ss_sd_model_name"] = sd_model_name
+
+        if args.vae is not None:
+            vae_name = args.vae
+            if os.path.exists(vae_name):
+                metadata["ss_vae_hash"] = train_util.model_hash(vae_name)
+                metadata["ss_new_vae_hash"] = train_util.calculate_sha256(vae_name)
+                vae_name = os.path.basename(vae_name)
+            metadata["ss_vae_name"] = vae_name
+
+        metadata = {k: str(v) for k, v in metadata.items()}
+
+        # make minimum metadata for filtering
+        minimum_metadata = {}
+        for key in train_util.SS_METADATA_MINIMUM_KEYS:
+            if key in metadata:
+                minimum_metadata[key] = metadata[key]
+
         progress_bar = tqdm(range(args.max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process,
                             desc="steps")
         global_step = 0
+
         noise_scheduler = DDPMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear",
                                         num_train_timesteps=1000, clip_sample=False)
         prepare_scheduler_for_custom_training(noise_scheduler, accelerator.device)
+
         loss_list = []
         loss_total = 0.0
         del train_dataset_group
+
         # callback for step start
         if hasattr(network, "on_step_start"):
             on_step_start = network.on_step_start
@@ -464,8 +572,15 @@ class NetworkTrainer:
             ckpt_file = os.path.join(save_model_base_dir, ckpt_name)
 
             accelerator.print(f"\nsaving checkpoint: {ckpt_file}")
+            metadata["ss_training_finished_at"] = str(time.time())
+            metadata["ss_steps"] = str(steps)
+            metadata["ss_epoch"] = str(epoch_no)
+
+            metadata_to_save = minimum_metadata if args.no_metadata else metadata
             sai_metadata = train_util.get_sai_model_spec(None, args, self.is_sdxl, True, False)
-            unwrapped_nw.save_weights(ckpt_file, save_dtype, {})
+            metadata_to_save.update(sai_metadata)
+
+            unwrapped_nw.save_weights(ckpt_file, save_dtype, metadata_to_save)
 
         def remove_model(old_ckpt_name):
             old_ckpt_file = os.path.join(args.output_dir, old_ckpt_name)
@@ -475,6 +590,7 @@ class NetworkTrainer:
 
         # training loop
         if is_main_process:
+            gradient_dict = {}
             loss_dict = {}
 
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
@@ -512,26 +628,35 @@ class NetworkTrainer:
                                                 text_encoder_conds,
                                                 batch,
                                                 weight_dtype, 1, None)
-                ########################### 1. task loss ####################################################
-                if args.v_parameterization:
-                    target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                else:
-                    target = noise
-                loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
-                loss = loss.mean([1, 2, 3])
-                loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                loss = loss * loss_weights
-                task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-                task_loss = task_loss * args.task_loss_weight
+                # ------------------------------------- (1) task loss ------------------------------------- #
+                if args.do_task_loss:
+                    if args.v_parameterization:
+                        target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                    else:
+                        target = noise
+                    loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
+                    loss = loss.mean([1, 2, 3])
+                    loss_weights = batch["loss_weights"]  # 各sampleごとのweight
+                    loss = loss * loss_weights
+                    task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                    task_loss = task_loss * args.task_loss_weight
 
-                ########################### 2. mahalanobis loss ####################################################
-                query_dict = controller.query_dict
-                attn_stores = controller.step_store
-                controller.reset()
-                attn_loss, dist_loss = 0,0
-                for i, layer_name in enumerate(attn_stores.keys()):
-                    map = attn_stores[layer_name][0].squeeze()  # 8, res*res, c
+                # ------------------------------------- (2) attn loss ------------------------------------- #
+                attn_dict = attention_storer.step_store
+                query_dict = attention_storer.query_store
+                attention_storer.reset()
+                attn_loss, dist_loss = 0, 0
+                for i, layer_name in enumerate(attn_dict.keys()):
+
+                    map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
+                    if args.cls_training:
+                        cls_map, score_map = torch.chunk(map, 2, dim=-1)
+                        cls_map = cls_map.squeeze()
+                        score_map = score_map.squeeze()
+                    else:
+                        score_map = map
                     res = int(map.shape[1] ** 0.5)
+                    head_num = int(score_map.shape[0])
                     do_mask_loss = False
                     if res in args.cross_map_res:
                         if 'down' in layer_name:
@@ -556,79 +681,71 @@ class NetworkTrainer:
                         else:
                             if position in args.trg_position:
                                 do_mask_loss = True
+                        if do_mask_loss:
+                            if part in args.trg_part or int(res) == 8:
 
-                        if do_mask_loss and part in args.trg_part :
-                            """
-                            query = query_dict[layer_name][0].squeeze()  # pix_num, dim
-                            pix_num = query.shape[0]  # 4096             # 4096
-                            res = int(pix_num ** 0.5)  # 64
+                                query = query_dict[layer_name][0].squeeze()
+                                pix_num = query.shape[0]  # 4096             # 4096
+                                res = int(pix_num ** 0.5)  # 64
 
-                            img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                            img_mask = img_masks.squeeze()  # res,res
-                            object_position = img_mask.flatten()  # res*res
-                            features = set()
-                            for i in range(pix_num):
-                                if object_position[i] == 1:
-                                    feat = query[i, :].squeeze()  # dim
-                                    features.add(feat.unsqueeze(0))
-                            features = list(features)
-                            normal_vectors = torch.cat(features, dim=0)  # sample, dim
+                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
+                                    0)  # [1,1,res,res], foreground = 1
+                                mask = anormal_mask.squeeze()  # res,res
+                                anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
+                                                           dim=0)  # .unsqueeze(-1)  # 8, res*res
+                                anormal_position = torch.where((anormal_mask == 0), 1, 0)  # head, pix_num
+                                back_position = anormal_position
+                                normal_position = 1 - anormal_position
 
-                            normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-                            normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+                                object_position = mask.flatten()  # pix_num
+                                features = set()
+                                for i in range(pix_num):
+                                    if object_position[i] == 1:
+                                        feat = query[i, :].squeeze()  # dim
+                                        features.add(feat.unsqueeze(0))
 
-                            def mahal(u, v, cov):
-                                delta = u - v
-                                m = torch.dot(delta, torch.matmul(cov, delta))
-                                return torch.sqrt(m)
+                                features = list(features)
+                                normal_vectors = torch.cat(features, dim=0)  # sample, dim
 
-                            mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for feat in
-                                                   normal_vectors]
-                            dist_loss += torch.tensor(mahalanobis_dists).mean()
-                            """
+                                normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+                                normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
 
-                            ########################### 3. attn loss ###########################################################
-                            attn = attn_stores[layer_name][0].squeeze()  # 8, res*res, 2
-                            if args.cls_training:
-                                cls_score, normal_score = torch.chunk(attn, 2, dim=-1)
-                                cls_score, normal_score = cls_score.squeeze(), normal_score.squeeze()
-                            else:
-                                normal_score = attn.squeeze()  # [, pix_num
-                            head_num = attn.shape[0]
-                            object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # 8, res*res
-                            background_position = 1 - object_position
+                                def mahal(u, v, cov):
+                                    delta = u - v
+                                    m = torch.dot(delta, torch.matmul(cov, delta))
+                                    return torch.sqrt(m)
 
-                            trigger_normal_activation = (normal_score * object_position).sum(dim=-1)  # 8
-                            trigger_back_activation = (normal_score * background_position).sum(dim=-1)  # 8
-                            total_score = torch.ones_like(trigger_normal_activation)
-                            trigger_normal_loss = (1 - (trigger_normal_activation / total_score)) ** 2  # 8, res*res
+                                mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
+                                                     feat in
+                                                     normal_vectors]
+                                dist_loss += torch.tensor(mahalanobis_dists).mean()
 
-                            trigger_back_loss   = (trigger_back_activation / total_score) ** 2  # 8, res*res
+                                anormal_trigger_activation = (score_map * anormal_position)
+                                normal_trigger_activation = (score_map * normal_position)
+                                total_score = torch.ones_like(anormal_trigger_activation)
+                                anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
+                                normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8
+                                total_score = total_score.sum(dim=-1)  # 8
+                                normal_activation_loss = (1 - (
+                                            normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
 
-                            activation_loss = args.normal_weight * trigger_normal_loss
-
-                            if args.back_training :
-                                activation_loss += args.back_weight * trigger_back_loss
-
-                            if args.cls_training:
-                                cls_normal_activation = (cls_score * object_position).sum(dim=-1)  # 8
-                                cls_back_activation = (cls_score * background_position).sum(dim=-1)  # 8
-                                cls_normal_loss = (cls_normal_activation / total_score) ** 2  # 8, res*res
-                                cls_back_loss   = (1-(cls_back_activation / total_score)) ** 2  # 8, res*res
-                                activation_loss += args.normal_weight * cls_normal_loss
-                                if args.back_training :
-                                    activation_loss += args.back_weight * cls_back_loss
-                            attn_loss += activation_loss.mean()
-
+                                activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anormal_activation_loss
+                                if args.cls_training:
+                                    anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
+                                    normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
+                                    normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                    anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
+                                    activation_loss += args.normal_weight * normal_cls_activation_loss + args.anormal_weight * anormal_cls_activation_loss
+                                attn_loss += activation_loss
+                dist_loss = dist_loss.mean()
+                attn_loss = attn_loss.mean()
                 ########################### 3. attn loss ###########################################################
                 loss = task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
-
-
                 # ------------------------------------------------------------------------------------------------- #
                 if is_main_process:
                     loss_dict["loss/task_loss"] = task_loss.item()
                     loss_dict["loss/attn_loss"] = attn_loss.item()
-                    #loss_dict["loss/mahal_loss"] = dist_loss.item()
                 accelerator.backward(loss)
 
                 if accelerator.sync_gradients and args.max_grad_norm != 0.0:
@@ -645,7 +762,7 @@ class NetworkTrainer:
                     global_step += 1
                     self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer,
                                        text_encoder, unet)
-                    controller.reset()
+                    attention_storer.reset()
 
                     # 指定ステップごとにモデルを保存
                     if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
@@ -672,8 +789,7 @@ class NetworkTrainer:
                 avr_loss = loss_total / len(loss_list)
 
                 logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-                if is_main_process:
-                    progress_bar.set_postfix(**loss_dict)
+                progress_bar.set_postfix(**logs)
 
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
@@ -700,7 +816,7 @@ class NetworkTrainer:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
             self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
                                text_encoder, unet)
-            controller.reset()
+            attention_storer.reset()
         if is_main_process:
             network = accelerator.unwrap_model(network)
         accelerator.end_training()
@@ -765,7 +881,7 @@ if __name__ == "__main__":
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
     parser.add_argument("--mask_threshold", type=float, default=0.5)
     parser.add_argument("--resume_lora_training", action="store_true", )
-    parser.add_argument("--back_training",action="store_true", )
+    parser.add_argument("--back_training", action="store_true", )
     parser.add_argument("--back_weight", type=float, default=1)
     parser.add_argument("--start_epoch", type=int, default=0)
     parser.add_argument("--valid_data_dir", type=str)
@@ -781,16 +897,20 @@ if __name__ == "__main__":
     parser.add_argument("--all_data_dir", type=str)
     parser.add_argument("--concat_query", action='store_true')
     import ast
+
+
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
+
+
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
     parser.add_argument("--trg_layer", type=str)
-    parser.add_argument("--trg_layer_list", type=arg_as_list,)
-                        #default=['down_blocks_0_attentions_1_transformer_blocks_0_attn2',
-                        #         'up_blocks_3_attentions_2_transformer_blocks_0_attn2'])
+    parser.add_argument("--trg_layer_list", type=arg_as_list, )
+    # default=['down_blocks_0_attentions_1_transformer_blocks_0_attn2',
+    #         'up_blocks_3_attentions_2_transformer_blocks_0_attn2'])
     parser.add_argument("--training_layer", type=str)
     parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--mahalanobis_loss_weight', type=float, default=1.0)
