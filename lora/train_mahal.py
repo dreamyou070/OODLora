@@ -742,7 +742,7 @@ class NetworkTrainer:
                 dist_loss = dist_loss.mean()
                 attn_loss = attn_loss.mean()
                 ########################### 3. attn loss ###########################################################
-                loss = task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
                 # ------------------------------------------------------------------------------------------------- #
                 if is_main_process:
                     loss_dict["loss/task_loss"] = task_loss.item()
