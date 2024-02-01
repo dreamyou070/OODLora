@@ -6,12 +6,12 @@ data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex2/rgb"
 normal_folder='normal'
-save_folder="res_64_down_0_all_text_arc_0.001_deact"
+save_folder="res_64_down_1_all_text_arc_0.001_deact"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_32_16_down_all_text_attnloss_weight_0.001/models/epoch-000017.safetensors"
 
 start_epoch=0
-port_number=59865
+port_number=59866
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port $port_number ../lora/train_with_mahalanobis_dists.py \
@@ -43,6 +43,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --normal_weight 0.001 \
   --trg_layer 'down_blocks_0_attentions_1_transformer_blocks_0_attn2' \
   --network_weights "$network_weights" \
-  --training_layer 'down_blocks_0_attentions_0_transformer_blocks_0_attn2'
+  --training_layer 'down_blocks_0_attentions_1_transformer_blocks_0_attn2'
 
   # try layer = query feature checking
