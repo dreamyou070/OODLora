@@ -657,9 +657,8 @@ class NetworkTrainer:
 
                     # (1) targetting anomal position
                     anormal_query = frozen_query_dict[args.trg_layer][0].squeeze()  # 2, res*res, dim
-                    _, anormal_query = anormal_query.chunk(2, dim=0)
-                    anormal_query = anormal_query.squeeze(0)  # res*res, dim
-                    print(f'anormal query (pixnum, dim) : {anormal_query.shape}')
+                    anormal_query = anormal_query.squeeze()             # 2048
+                    print(f'anormal query (4096, dim) : {anormal_query.shape}')
                     pix_num = anormal_query.shape[0]
                     res = int(pix_num ** 0.5)
                     print(f'res : {res}')
