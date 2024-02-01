@@ -479,7 +479,7 @@ class NetworkTrainer:
             print(f'good score mahalanobis distance from good score dist : {dist}')
         max_dist = max(mahalanobis_dists)
 
-        thred = 0.90
+        thred = 0.88
         mahalanobis_dists.sort()
         thred_max = int(len(mahalanobis_dists) * thred)
         thred_value = mahalanobis_dists[thred_max]
@@ -666,7 +666,7 @@ class NetworkTrainer:
                         feature = anormal_query[pix_idx, :].squeeze()
                         dist = mahalanobis(feature.detach().cpu(), good_score_normal_vectors_mean,
                                            good_score_normal_vectors_cov)
-                        if dist > max_dist :
+                        if dist > thred_value :
                             anomal_positions.append(1)
                         else:
                             anomal_positions.append(0)
