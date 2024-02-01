@@ -595,6 +595,8 @@ class NetworkTrainer:
                             head_num = attn.shape[0]
                             object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # 8, res*res
                             background_position = 1 - object_position
+                            print(f'object_position : {object_position}')
+                            print(f'background_position : {background_position}')
 
                             trigger_normal_activation = (normal_score * object_position).sum(dim=-1)  # 8
                             trigger_back_activation    = (normal_score * background_position).sum(dim=-1)  # 8
