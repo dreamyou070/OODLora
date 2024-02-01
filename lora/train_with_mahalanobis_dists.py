@@ -664,7 +664,7 @@ class NetworkTrainer:
                     res = int(pix_num ** 0.5)
                     print(f'res : {res}')
 
-                    a = batch["img_masks"][0[res]]
+                    a = batch["img_masks"][0][res]
                     print(f'batch image masks : {a}')
                     img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                     img_mask = img_masks.squeeze()  # res,res
