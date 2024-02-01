@@ -273,49 +273,52 @@ class NetworkTrainer:
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
         print(f' (5.1) base model')
-        model_version, enc_text_encoder, enc_vae, enc_unet = self.load_target_model(args, weight_dtype, accelerator)
-        model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
-        text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-        enc_text_encoders = enc_text_encoder if isinstance(enc_text_encoder, list) else [enc_text_encoder]
-        train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
-        if torch.__version__ >= "2.0.0": vae.set_use_memory_efficient_attention_xformers(args.xformers)
+
+        model_version, training_text_encoder, vae, training_unet = self.load_target_model(args, weight_dtype, accelerator)
+        training_text_encoders = training_text_encoder if isinstance(training_text_encoder, list) else [training_text_encoder]
+
+        model_version, frozen_text_encoder, enc_vae, frozen_unet = self.load_target_model(args, weight_dtype, accelerator)
+        frozen_text_encoders = frozen_text_encoder if isinstance(frozen_text_encoder, list) else [frozen_text_encoder]
+
+        train_util.replace_unet_modules(frozen_unet, args.mem_eff_attn, args.xformers, args.sdpa)
+        train_util.replace_unet_modules(training_unet, args.mem_eff_attn, args.xformers, args.sdpa)
+        if torch.__version__ >= "2.0.0":
+            vae.set_use_memory_efficient_attention_xformers(args.xformers)
+
         print(' (5.2) lora model')
         sys.path.append(os.path.dirname(__file__))
         accelerator.print("import network module:", args.network_module)
         network_module = importlib.import_module(args.network_module)
         net_kwargs = {}
-        if args.network_args is not None:
-            for net_arg in args.network_args:
-                key, value = net_arg.split("=")
-                net_kwargs[key] = value
         if args.dim_from_weights:
-            network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, text_encoder, unet,
-                                                                    **net_kwargs)
+            frozen_network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, frozen_text_encoder, frozen_unet,**net_kwargs)
+            training_network, _ = network_module.create_network_from_weights(1, args.network_weights, vae, training_text_encoder, training_unet, **net_kwargs)
         else:
-            network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae,
-                                                    text_encoder, unet, neuron_dropout=args.network_dropout,
-                                                    **net_kwargs, )
-        if network is None:
-            return
+            frozen_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae, frozen_text_encoder, frozen_unet,
+                                                           neuron_dropout=args.network_dropout, **net_kwargs, )
+            training_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae, training_text_encoder, training_unet,
+                                                             neuron_dropout=args.network_dropout, **net_kwargs, )
+
 
         print(' (5.3) lora with unet and text encoder')
         train_unet = not args.network_train_text_encoder_only
         train_text_encoder = not args.network_train_unet_only
-        network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
+        frozen_network.apply_to(frozen_text_encoder, frozen_unet, train_text_encoder, train_unet)
+        training_network.apply_to(training_text_encoder, training_unet, train_text_encoder, train_unet)
         print(' (5.4) lora resume?')
         if args.network_weights is not None:
-            info = network.load_weights(args.network_weights)
-            accelerator.print(f"load network weights from {args.network_weights}: {info}")
+            frozen_network.load_weights(args.network_weights)
+            training_network.load_weights(args.network_weights)
         if args.gradient_checkpointing:
-            unet.enable_gradient_checkpointing()
-            for t_enc in text_encoders:
+            for t_enc in training_text_encoders:
                 t_enc.gradient_checkpointing_enable()
             del t_enc
-            network.enable_gradient_checkpointing()  # may have no effect
+            training_network.enable_gradient_checkpointing()  # may have no effect
+
         # -------------------------------------------------------------------------------------------------------- #
         print(f'\n step 6. make memory bank')
         device = accelerator.device
-        unet, text_encoder, network = unet.to(device), text_encoder.to(device), network.to(device)
+        frozen_unet, frozen_text_encoder, network = frozen_unet.to(device), frozen_text_encoder.to(device), frozen_network.to(device)
 
         class Mahalanobis_dataset(torch.utils.data.Dataset):
             def __init__(self, train_data_dir):
@@ -361,15 +364,13 @@ class NetworkTrainer:
 
         mahal_dataset = Mahalanobis_dataset(args.all_data_dir)
         controller = AttentionStore()
-        register_attention_control(unet, controller, mask_threshold=args.mask_threshold)
+        register_attention_control(frozen_unet, controller, mask_threshold=args.mask_threshold)
         with torch.no_grad():
             text_input = tokenizer(['good'], padding="max_length",
                                    max_length=tokenizer.model_max_length,
                                    truncation=True, return_tensors="pt", )
             text = text_input.input_ids.to(device)
-            text_encoder.to(device)
-            text_embeddings = text_encoder(text)[0]
-            text_embeddings = text_embeddings[:, :2, :]
+            text_embeddings = frozen_text_encoder(text)[0][:, :2, :]
 
         normal_vector_list = set()
         normal_vector_good_score_list, normal_vector_bad_score_list = set(), set()
@@ -388,15 +389,16 @@ class NetworkTrainer:
             with torch.no_grad():
                 if text_embeddings.dim() != 3:
                     text_embeddings = text_embeddings.unsqueeze(0)
-
-                call_unet(unet, latent, 0, text_embeddings.to(device),1,args.trg_layer)
+                call_unet(frozen_unet, latent, 0, text_embeddings.to(device),1,args.trg_layer)
                 query = controller.query_dict[args.trg_layer][0].squeeze()  # pix_num, dim
-                attn = controller.step_store[args.trg_layer][0].squeeze()  # pix_num
+                attn = controller.step_store[args.trg_layer][0].squeeze()  # 1, pix_num, 2
+                cls_map, trigger_map = attn.chunk(2, dim=1)
+                trigger_map = trigger_map.squeeze()
 
             if 'good' in class_name:
                 for pix_idx in range(mask_vector.shape[0]):
                     feature = query[pix_idx, :].cpu()
-                    attn_score = attn[pix_idx].cpu()
+                    attn_score = trigger_map[pix_idx].cpu()
                     if mask_vector[pix_idx] == 1:
                         if feature.dim() == 1:
                             feature = feature.unsqueeze(0)
@@ -426,7 +428,7 @@ class NetworkTrainer:
         good_score_normal_vectors_mean = np.mean(good_score_normal_vectors_np, axis=0)
         good_score_normal_vectors_cov = np.cov(good_score_normal_vectors_np, rowvar=False)
 
-
+        """
         normal_vector_bad_score_list = list(normal_vector_bad_score_list)
         normal_vector_bad_score = torch.cat(normal_vector_bad_score_list, dim=0)
         if normal_vector_bad_score.device != 'cpu':
@@ -434,7 +436,6 @@ class NetworkTrainer:
         bad_score_normal_vectors_np = np.array(bad_score_normal_vectors)
         bad_score_normal_vectors_mean = np.mean(bad_score_normal_vectors_np, axis=0)
         bad_score_normal_vectors_cov = np.cov(bad_score_normal_vectors_np, rowvar=False)
-
         normal_vector_list = list(normal_vector_list)
         normal_vectors = torch.cat(normal_vector_list, dim=0)
         if normal_vectors.device != 'cpu':
@@ -442,10 +443,16 @@ class NetworkTrainer:
         normal_vector_np = np.array(normal_vectors)
         normal_mean = np.mean(normal_vector_np, axis=0)
         normal_cov = np.cov(normal_vector_np, rowvar=False)
-
+        """
         # back_vector_list = list(back_vector_list)
         # back_vectors = torch.cat(back_vector_list, dim=0)
-
+        mahalanobis_dists = []
+        for good_score_n_vector in good_score_normal_vectors_np:
+            dist = mahalanobis(good_score_n_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
+            mahalanobis_dists.append(dist)
+            print(f'good score mahalanobis distance from good score dist : {dist}')
+        max_dist = max(mahalanobis_dists)
+        """
         anormal_vector_list = list(anormal_vector_list)
         anormal_vectors = torch.cat(anormal_vector_list, dim=0)
         if anormal_vectors.device != 'cpu':
@@ -473,12 +480,13 @@ class NetworkTrainer:
             anomal_mahalanobis_dists.append(dist)
             print(f'anormal mahalanobis distance to normal dist : {dist}')
         anomal_min_dist = min(anomal_mahalanobis_dists)
+        """
 
 
         # -------------------------------------------------------------------------------------------------------- #
         print(f'\n step 7. optimizer (unet frozen) ')
-        unet_loras = network.unet_loras
-        te_loras = network.text_encoder_loras
+        unet_loras = training_network.unet_loras
+        te_loras = training_network.text_encoder_loras
         for unet_lora in unet_loras:
             unet_lora.requires_grad = False
         params = []
@@ -486,6 +494,7 @@ class NetworkTrainer:
             params.extend(te_lora.parameters())
         trainable_params = [{"params": params, "lr": args.text_encoder_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
+
 
         print(f' step 8. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
@@ -503,125 +512,43 @@ class NetworkTrainer:
         if args.full_fp16:
             assert (args.mixed_precision == "fp16"), "full_fp16 requires mixed precision='fp16'"
             accelerator.print("enable full fp16 training.")
-            network.to(weight_dtype)
+            training_network.to(weight_dtype)
         elif args.full_bf16:
             assert (
                     args.mixed_precision == "bf16"), "full_bf16 requires mixed precision='bf16' / mixed_precision='bf16'"
             accelerator.print("enable full bf16 training.")
             network.to(weight_dtype)
-
-        unet.requires_grad_(False)
-        unet.to(dtype=weight_dtype)
-        for t_enc in text_encoders:
-            t_enc.requires_grad_(False)
-        enc_unet.requires_grad_(False)
-        enc_unet.to(dtype=weight_dtype)
-        for enc_t_enc in enc_text_encoders:
-            enc_t_enc.requires_grad_(False)
+        frozen_unet.requires_grad_(False)
+        frozen_unet.to(dtype=weight_dtype)
+        training_unet.requires_grad_(False)
+        training_unet.to(dtype=weight_dtype)
+        for frozen_text_encoder in frozen_text_encoders:
+            frozen_text_encoder.requires_grad_(False)
 
         print(f'\n step 10. training preparing')
-        if train_unet and train_text_encoder:
-            if len(text_encoders) > 1:
-                unet, t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler, = accelerator.prepare(
-                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler, )
-                text_encoder = text_encoders = [t_enc1, t_enc2]
-                del t_enc1, t_enc2
-                enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1],
-                                                                        enc_unet)
-                enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
-                del enc_t_enc1, enc_t_enc2
-            else:
-                unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                    unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler)
-                text_encoders = [text_encoder]
-                enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
-                enc_text_encoders = [enc_text_encoder]
-        elif train_unet:
-            unet, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                unet, network, optimizer, train_dataloader, lr_scheduler)
-            enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
-            text_encoder.to(accelerator.device)
-        elif train_text_encoder:
-            if len(text_encoders) > 1:
-                t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                    text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler)
-                text_encoder = text_encoders = [t_enc1, t_enc2]
-                del t_enc1, t_enc2
-                enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1],
-                                                                        enc_unet)
-                enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
-                del enc_t_enc1, enc_t_enc2
-            else:
-                text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                    text_encoder, network, optimizer, train_dataloader, lr_scheduler)
-                text_encoders = [text_encoder]
-                enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
-                enc_text_encoders = [enc_text_encoder]
-            unet.to(accelerator.device,
-                    dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
-            enc_unet.to(accelerator.device,
-                        dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
-        else:
-            network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(network, optimizer,
-                                                                                     train_dataloader, lr_scheduler)
-        text_encoders = train_util.transform_models_if_DDP(text_encoders)
-        unet, network = train_util.transform_models_if_DDP([unet, network])
-        enc_text_encoders = train_util.transform_models_if_DDP(enc_text_encoders)
-        enc_unet = train_util.transform_models_if_DDP([enc_unet])[0]
-        if args.gradient_checkpointing:
-            unet.train()
-            for t_enc in text_encoders:
-                t_enc.train()
-                if train_text_encoder:
-                    t_enc.text_model.embeddings.requires_grad_(True)
-            if not train_text_encoder:  # train U-Net only
-                unet.parameters().__next__().requires_grad_(True)
-        else:
-            unet.eval()
-            for t_enc in text_encoders:
-                t_enc.eval()
-            enc_unet.eval()
-            for enc_t_enc in enc_text_encoders:
-                enc_t_enc.eval()
-        del t_enc
-        del enc_text_encoders, enc_vae
-        network.prepare_grad_etc(text_encoder, unet)
+        frozen_unet, frozen_text_encoder, frozen_network = frozen_unet.to(accelerator.device), frozen_text_encoder.to(accelerator.device),\
+            frozen_network.to(accelerator.device)
+        training_unet = training_unet.to(accelerator.device)
+        training_text_encoder, training_network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+                training_text_encoder, training_network, optimizer, train_dataloader, lr_scheduler)
+
+        training_network.prepare_grad_etc(training_text_encoder, training_unet)
         vae.requires_grad_(False)
         vae.eval()
         vae.to(accelerator.device, dtype=vae_dtype)
         if args.full_fp16:
             train_util.patch_accelerator_for_fp16_training(accelerator)
 
+        frozen_attention_storer = AttentionStore()
+        register_attention_control(frozen_unet, frozen_attention_storer, mask_threshold=args.mask_threshold)
+        training_attention_storer = AttentionStore()
+        register_attention_control(training_unet, training_attention_storer, mask_threshold=args.mask_threshold)
+
         print(f' * * * * * * * * training * * * * * * * * ')
         num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
         num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
         if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
             args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
-        attention_storer = AttentionStore()
-        register_attention_control(unet, attention_storer, mask_threshold=args.mask_threshold)
-
-        # conserving backward compatibility when using train_dataset_dir and reg_dataset_dir
-        assert (
-                len(train_dataset_group.datasets) == 1
-        ), f"There should be a single dataset but {len(train_dataset_group.datasets)} found. This seems to be a bug. / データセットは1個だけ存在するはずですが、実際には{len(train_dataset_group.datasets)}個でした。プログラムのバグかもしれません。"
-
-        dataset = train_dataset_group.datasets[0]
-        dataset_dirs_info = {}
-        reg_dataset_dirs_info = {}
-        for subset in dataset.subsets:
-            info = reg_dataset_dirs_info if subset.is_reg else dataset_dirs_info
-            info[os.path.basename(subset.image_dir)] = {"n_repeats": subset.num_repeats,
-                                                        "img_count": subset.img_count}
-
-        num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
-        num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
-        if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
-            args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
-        attention_storer = AttentionStore()
-        register_attention_control(unet, attention_storer, mask_threshold=args.mask_threshold)
-
-        # 学習する
-        # TODO: find a way to handle total batch size when there are multiple datasets.
         total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
         accelerator.print("running training / 学習開始")
         accelerator.print(
@@ -629,132 +556,17 @@ class NetworkTrainer:
         accelerator.print(f"  num reg images / 正則化画像の数: {train_dataset_group.num_reg_images}")
         accelerator.print(f"  num batches per epoch / 1epochのバッチ数: {len(train_dataloader)}")
         accelerator.print(f"  num epochs / epoch数: {num_train_epochs}")
-        accelerator.print(
-            f"  batch size per device / バッチサイズ: {', '.join([str(d.batch_size) for d in train_dataset_group.datasets])}"
-        )
-        # accelerator.print(f"  total train batch size (with parallel & distributed & accumulation) / 総バッチサイズ（並列学習、勾配合計含む）: {total_batch_size}")
         accelerator.print(f"  gradient accumulation steps / 勾配を合計するステップ数 = {args.gradient_accumulation_steps}")
         accelerator.print(f"  total optimization steps / 学習ステップ数: {args.max_train_steps}")
-
-        # TODO refactor metadata creation and move to util
-        metadata = {
-            "ss_output_name": args.output_name,
-            "ss_learning_rate": args.learning_rate,
-            "ss_text_encoder_lr": args.text_encoder_lr,
-            "ss_unet_lr": args.unet_lr,
-            "ss_num_train_images": train_dataset_group.num_train_images,
-            "ss_num_reg_images": train_dataset_group.num_reg_images,
-            "ss_num_batches_per_epoch": len(train_dataloader),
-            "ss_num_epochs": num_train_epochs,
-            "ss_gradient_checkpointing": args.gradient_checkpointing,
-            "ss_gradient_accumulation_steps": args.gradient_accumulation_steps,
-            "ss_max_train_steps": args.max_train_steps,
-            "ss_lr_warmup_steps": args.lr_warmup_steps,
-            "ss_lr_scheduler": args.lr_scheduler,
-            "ss_network_module": args.network_module,
-            "ss_network_dim": args.network_dim,
-            # None means default because another network than LoRA may have another default dim
-            "ss_network_alpha": args.network_alpha,  # some networks may not have alpha
-            "ss_network_dropout": args.network_dropout,  # some networks may not have dropout
-            "ss_mixed_precision": args.mixed_precision,
-            "ss_full_fp16": bool(args.full_fp16),
-            "ss_v2": bool(args.v2),
-            "ss_base_model_version": model_version,
-            "ss_clip_skip": args.clip_skip,
-            "ss_max_token_length": args.max_token_length,
-            "ss_cache_latents": bool(args.cache_latents),
-            "ss_seed": args.seed,
-            "ss_lowram": args.lowram,
-            "ss_noise_offset": args.noise_offset,
-            "ss_multires_noise_iterations": args.multires_noise_iterations,
-            "ss_multires_noise_discount": args.multires_noise_discount,
-            "ss_adaptive_noise_scale": args.adaptive_noise_scale,
-            "ss_zero_terminal_snr": args.zero_terminal_snr,
-            "ss_training_comment": args.training_comment,  # will not be updated after training
-            "ss_sd_scripts_commit_hash": train_util.get_git_revision_hash(),
-            "ss_optimizer": optimizer_name + (f"({optimizer_args})" if len(optimizer_args) > 0 else ""),
-            "ss_max_grad_norm": args.max_grad_norm,
-            "ss_caption_dropout_rate": args.caption_dropout_rate,
-            "ss_caption_dropout_every_n_epochs": args.caption_dropout_every_n_epochs,
-            "ss_caption_tag_dropout_rate": args.caption_tag_dropout_rate,
-            "ss_face_crop_aug_range": args.face_crop_aug_range,
-            "ss_prior_loss_weight": args.prior_loss_weight,
-            "ss_min_snr_gamma": args.min_snr_gamma,
-            "ss_scale_weight_norms": args.scale_weight_norms,
-        }
-
-        # conserving backward compatibility when using train_dataset_dir and reg_dataset_dir
-        assert (
-                len(train_dataset_group.datasets) == 1
-        ), f"There should be a single dataset but {len(train_dataset_group.datasets)} found. This seems to be a bug. / データセットは1個だけ存在するはずですが、実際には{len(train_dataset_group.datasets)}個でした。プログラムのバグかもしれません。"
-
-        dataset = train_dataset_group.datasets[0]
-
-        dataset_dirs_info = {}
-        reg_dataset_dirs_info = {}
-        for subset in dataset.subsets:
-            info = reg_dataset_dirs_info if subset.is_reg else dataset_dirs_info
-            info[os.path.basename(subset.image_dir)] = {"n_repeats": subset.num_repeats,
-                                                        "img_count": subset.img_count}
-        metadata.update({
-            "ss_batch_size_per_device": args.train_batch_size,
-            "ss_total_batch_size": total_batch_size,
-            "ss_resolution": args.resolution,
-            "ss_color_aug": bool(args.color_aug),
-            "ss_flip_aug": bool(args.flip_aug),
-            "ss_random_crop": bool(args.random_crop),
-            "ss_shuffle_caption": bool(args.shuffle_caption),
-            "ss_enable_bucket": bool(dataset.enable_bucket),
-            "ss_bucket_no_upscale": bool(dataset.bucket_no_upscale),
-            "ss_min_bucket_reso": dataset.min_bucket_reso,
-            "ss_max_bucket_reso": dataset.max_bucket_reso,
-            "ss_keep_tokens": args.keep_tokens,
-            "ss_dataset_dirs": json.dumps(dataset_dirs_info),
-            "ss_reg_dataset_dirs": json.dumps(reg_dataset_dirs_info),
-            "ss_tag_frequency": json.dumps(dataset.tag_frequency),
-            "ss_bucket_info": json.dumps(dataset.bucket_info), })
-
-        # add extra args
-        if args.network_args:
-            metadata["ss_network_args"] = json.dumps(net_kwargs)
-
-        # model name and hash
-        if args.pretrained_model_name_or_path is not None:
-            sd_model_name = args.pretrained_model_name_or_path
-            if os.path.exists(sd_model_name):
-                metadata["ss_sd_model_hash"] = train_util.model_hash(sd_model_name)
-                metadata["ss_new_sd_model_hash"] = train_util.calculate_sha256(sd_model_name)
-                sd_model_name = os.path.basename(sd_model_name)
-            metadata["ss_sd_model_name"] = sd_model_name
-
-        if args.vae is not None:
-            vae_name = args.vae
-            if os.path.exists(vae_name):
-                metadata["ss_vae_hash"] = train_util.model_hash(vae_name)
-                metadata["ss_new_vae_hash"] = train_util.calculate_sha256(vae_name)
-                vae_name = os.path.basename(vae_name)
-            metadata["ss_vae_name"] = vae_name
-
-        metadata = {k: str(v) for k, v in metadata.items()}
-
-        # make minimum metadata for filtering
-        minimum_metadata = {}
-        for key in train_util.SS_METADATA_MINIMUM_KEYS:
-            if key in metadata:
-                minimum_metadata[key] = metadata[key]
-
         progress_bar = tqdm(range(args.max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process,
                             desc="steps")
         global_step = 0
-
         noise_scheduler = DDPMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear",
                                         num_train_timesteps=1000, clip_sample=False)
         prepare_scheduler_for_custom_training(noise_scheduler, accelerator.device)
-
         loss_list = []
         loss_total = 0.0
         del train_dataset_group
-
         # callback for step start
         if hasattr(network, "on_step_start"):
             on_step_start = network.on_step_start
@@ -769,15 +581,8 @@ class NetworkTrainer:
             ckpt_file = os.path.join(save_model_base_dir, ckpt_name)
 
             accelerator.print(f"\nsaving checkpoint: {ckpt_file}")
-            metadata["ss_training_finished_at"] = str(time.time())
-            metadata["ss_steps"] = str(steps)
-            metadata["ss_epoch"] = str(epoch_no)
-
-            metadata_to_save = minimum_metadata if args.no_metadata else metadata
             sai_metadata = train_util.get_sai_model_spec(None, args, self.is_sdxl, True, False)
-            metadata_to_save.update(sai_metadata)
-
-            unwrapped_nw.save_weights(ckpt_file, save_dtype, metadata_to_save)
+            unwrapped_nw.save_weights(ckpt_file, save_dtype, {})
 
         def remove_model(old_ckpt_name):
             old_ckpt_file = os.path.join(args.output_dir, old_ckpt_name)
@@ -793,11 +598,11 @@ class NetworkTrainer:
 
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
             current_epoch.value = epoch + 1
-            network.on_epoch_start(text_encoder, unet)
+            network.on_epoch_start(training_text_encoder, training_unet)
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 with accelerator.accumulate(network):
-                    on_step_start(text_encoder, unet)
+                    on_step_start(training_text_encoder, training_unet)
                     with torch.no_grad():
                         if "latents" in batch and batch["latents"] is not None:
                             latents = batch["latents"].to(accelerator.device)
@@ -810,32 +615,72 @@ class NetworkTrainer:
                         random_latent = torch.randn_like(latents)  # head, z_dim
                         anomal_latent = latents + random_latent  # head, 4, h, w
                         if args.act_deact:
-                            input_latent = torch.cat((latents, anomal_latent), dim=0)  # 2*head, z_dim
+                            training_input_latent = torch.cat((latents, anomal_latent), dim=0)  # 2*head, z_dim
                         else:
-                            input_latent = anomal_latent
-
+                            training_input_latent = anomal_latent
+                        frozen_input_latent = anomal_latent
                     with torch.set_grad_enabled(train_text_encoder):
-                        text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
+                        training_text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, training_text_encoders,
                                                                 weight_dtype)
-                        if args.truncate_pad:
-                            text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
-                        if args.act_deact:
-                            input_text = torch.cat((text_encoder_conds, text_encoder_conds), dim=0)  # 2*head, z_dim
-                        else:
-                            input_text = text_encoder_conds
+                        frozen_text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, frozen_text_encoders,
+                                                                weight_dtype)
 
-                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                        if args.truncate_pad:
+                            training_text_encoder_conds = training_text_encoder_conds[:, :args.truncate_length, :]
+                            frozen_text_encoder_conds = frozen_text_encoder_conds[:, :args.truncate_length, :]
+                        if args.act_deact:
+                            training_input_text = torch.cat((training_text_encoder_conds, training_text_encoder_conds), dim=0)  # 2*head, z_dim
+                        else:
+                            training_input_text = training_text_encoder_conds
+                        frozen_input_text = frozen_text_encoder_conds
+
+                    noise, frozen_noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
                                                                                                        noise_scheduler,
-                                                                                                       input_latent)
+                                                                                                       frozen_input_latent)
                     with accelerator.autocast():
-                        noise_pred = self.call_unet(args,
-                                                    accelerator,
-                                                    unet,
-                                                    noisy_latents,
-                                                    timesteps,
-                                                    input_text,
-                                                    batch,
-                                                    weight_dtype, 1, args.trg_layer)
+                        self.call_unet(args, accelerator,frozen_unet,frozen_noisy_latents,
+                                       timesteps,frozen_input_text,batch,weight_dtype, 1, args.trg_layer)
+
+                    # ------------------------------------- get position ------------------------------------- #
+                    frozen_attn_dict = frozen_attention_storer.step_store
+                    frozen_attention_storer.reset()
+                    # (1) targetting anomal position
+                    map = frozen_attn_dict[args.trg_layer][0].squeeze()  # 8, res*res, c
+                    pix_num = map.shape[1]
+                    res = int(pix_num ** 0.5)
+                    img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                    img_mask = img_masks.squeeze()  # res,res
+                    object_position = img_mask.flatten()  # res*res
+
+                    attn = frozen_attn_dict[args.trg_layer][0].squeeze()  # pix_num, 2
+                    if args.cls_training :
+                        cls_attn, score_map = attn[:, 0].squeeze(), attn[:, 1].squeeze()
+                    else :
+                        score_map = attn.squeeze()
+                    pix_num = score_map.shape[0]
+                    anomal_positions = []
+                    for pix_idx in range(pix_num):
+                        #dist = mahalanobis(anomal_feat.detach().cpu(), normal_mean, normal_cov)
+                        score = score_map[pix_idx]
+                        if score < 0.5 and pix_idx in object_position:
+                            # if dist > normal_max_dist :
+                            anomal_positions.append(1)
+                        else:
+                            anomal_positions.append(0)
+                    head_num = 8
+                    anomal_positions = torch.tensor(anomal_positions)
+                    anomal_positions = torch.where((anomal_positions == 1) & (anomal_positions == 1), 1, 0)
+                    anomal_positions = anomal_positions.unsqueeze(0).repeat(head_num, 1).to(
+                        object_position.device)  # head_num, res*res
+                    object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # head_num, res*res
+
+                    # ----------------------------------------------------------------------------------------- #
+                    noise, training_noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                            noise_scheduler, training_input_latent)
+                    with accelerator.autocast():
+                        noise_pred = self.call_unet(args, accelerator, training_unet, training_noisy_latents,
+                                            timesteps, training_input_text, batch, weight_dtype, 1, args.trg_layer)
+
                     # ------------------------------------- (1) task loss ------------------------------------- #
                     if args.do_task_loss:
                         if args.act_deact:
@@ -856,149 +701,56 @@ class NetworkTrainer:
                             task_loss = task_loss * args.task_loss_weight
 
                     # ------------------------------------- (2) attn loss ------------------------------------- #
-                    attn_dict = attention_storer.step_store
-                    query_dict = attention_storer.query_dict
-                    attention_storer.reset()
-                    # (1) targetting anomal position
-                    map = attn_dict[args.trg_layer][0].squeeze()  # 8, res*res, c
-                    pix_num = map.shape[1]
-                    res = int(pix_num ** 0.5)
-
-                    img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                    img_mask = img_masks.squeeze()  # res,res
-                    object_position = img_mask.flatten()  # res*res
-                    
-                    query = query_dict[args.trg_layer][0].squeeze()  # 2, pix_num, c
-                    attn = attn_dict[args.trg_layer][0].squeeze()  # 2, pix_num, c
-
-                    org_query, anomal_query = torch.chunk(query, 2, dim=0)
-                    anomal_query = anomal_query.squeeze()  # pix_num, c
-                    pix_num = anomal_query.shape[0]
-                    anomal_positions = []
-                    for pix_idx in range(pix_num):
-                        anomal_feat = anomal_query[pix_idx, :].squeeze()  # c
-                        dist = mahalanobis(anomal_feat.detach().cpu(), normal_mean, normal_cov)
-                        if dist > thred_value:
-                            # if dist > normal_max_dist :
-                            anomal_positions.append(1)
-                        else:
-                            anomal_positions.append(0)
-                    # -------------------------------------------------------------------------------------
-                    head_num = 8
-                    anomal_positions = torch.tensor(anomal_positions)
-                    anomal_positions = torch.where((anomal_positions == 1) & (anomal_positions == 1), 1, 0)
-                    anomal_positions = anomal_positions.unsqueeze(0).repeat(head_num, 1).to(object_position.device)  # head_num, res*res
-                    object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # head_num, res*res
-
-                    ############################################################################################################
                     attn_loss = 0
-                    for i, layer_name in enumerate(attn_dict.keys()):
-                        map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
-                        pix_num = map.shape[1]
-                        res = int(pix_num ** 0.5)
+                    attn_dict = training_attention_storer.step_store
+                    query_dict = training_attention_storer.query_dict
+                    training_attention_storer.reset()
+                    # (1) targetting anomal position
+                    attn = attn_dict['down_blocks_0_attentions_0_transformer_blocks_0_attn2'][0].squeeze()  # 8, res*res, c
+                    pix_num = attn.shape[1]
+                    res = int(pix_num ** 0.5)
+                    # -------------------------------------------------------------------------------------
+                    # (3) score map
+                    if args.cls_training:
+                        cls_map, score_map = torch.chunk(map, 2, dim=-1)
+                        if args.act_deact:
+                            normal_cls_map, anomal_cls_map = torch.chunk(cls_map, 2, dim=0)
+                            normal_cls_map, anomal_cls_map = normal_cls_map.squeeze(), anomal_cls_map.squeeze()
+                            normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
+                            normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
+                        else:
+                            anomal_cls_map = cls_map.squeeze()
+                            anomal_score_map = score_map.squeeze()
 
-                        img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                        img_mask = img_masks.squeeze()  # res,res
-                        object_position = img_mask.flatten()  # res*res
+                    else:
+                        score_map = map
+                        if args.act_deact:
+                            normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
+                            normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
+                        else:
+                            anomal_score_map = score_map.squeeze()
 
-                        # ----------------------------------------------------------------------------------------
-                        # (1) check weather to attn loss
-                        if res in args.cross_map_res:
-                            do_mask_loss = False
-                            if 'down' in layer_name:
-                                position = 'down'
-                            elif 'up' in layer_name:
-                                position = 'up'
-                            elif 'mid' in layer_name:
-                                position = 'mid'
-                            if 'attentions_0' in layer_name:
-                                part = 'attn_0'
-                            elif 'attentions_1' in layer_name:
-                                part = 'attn_1'
-                            else:
-                                part = 'attn_2'
-                            if res == 64:
-                                if args.detail_64_up:
-                                    if 'up' in layer_name:
-                                        if part in args.trg_part:
-                                            do_mask_loss = True
-                                if args.detail_64_down:
-                                    if 'down' in layer_name:
-                                        if part in args.trg_part:
-                                            do_mask_loss = True
-                            else:
-                                if position in args.trg_position and part in args.trg_part:
-                                    do_mask_loss = True
-
-                            if do_mask_loss:
-                                print(f'mask loss ! ')
-                                query = query_dict[layer_name][0].squeeze()  # 2, pix_num, c
-                                org_query, anomal_query = torch.chunk(query, 2, dim=0)
-                                anomal_query = anomal_query.squeeze()  # pix_num, c
-                                pix_num = anomal_query.shape[0]
-                                anomal_positions = []
-                                for pix_idx in range(pix_num):
-                                    anomal_feat = anomal_query[pix_idx, :].squeeze()  # c
-                                    dist = mahalanobis(anomal_feat.detach().cpu(), normal_mean, normal_cov)
-                                    if dist > thred_value :
-                                    #if dist > normal_max_dist :
-                                        anomal_positions.append(1)
-                                    else:
-                                        anomal_positions.append(0)
-                                # -------------------------------------------------------------------------------------
-                                # (3) score map
-                                if args.cls_training:
-                                    cls_map, score_map = torch.chunk(map, 2, dim=-1)
-                                    if args.act_deact:
-                                        normal_cls_map, anomal_cls_map = torch.chunk(cls_map, 2, dim=0)
-                                        normal_cls_map, anomal_cls_map = normal_cls_map.squeeze(), anomal_cls_map.squeeze()
-                                        normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
-                                        normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
-                                    else:
-                                        anomal_cls_map = cls_map.squeeze()
-                                        anomal_score_map = score_map.squeeze()
-
-                                else:
-                                    score_map = map
-                                    if args.act_deact:
-                                        normal_score_map, anomal_score_map = torch.chunk(score_map, 2, dim=0)
-                                        normal_score_map, anomal_score_map = normal_score_map.squeeze(), anomal_score_map.squeeze()
-                                    else:
-                                        anomal_score_map = score_map.squeeze()
-
-                                head_num = anomal_score_map.shape[0]
-
-                                anomal_positions = torch.tensor(anomal_positions)
-                                anomal_positions = torch.where((anomal_positions == 1) & (anomal_positions == 1), 1, 0)
-                                anomal_positions = anomal_positions.unsqueeze(0).repeat(head_num, 1).to(
-                                    object_position.device)  # head_num, res*res
-
-                                object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # head_num, res*res
-
-                                if args.act_deact:
-                                    normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
-                                anomal_trigger_activation = (anomal_score_map * anomal_positions).sum(dim=-1)
-                                total_score = torch.ones_like(anomal_trigger_activation)
-                                if args.cls_training:
-                                    anomal_cls_activation = (anomal_cls_map * anomal_positions).sum(dim=-1)
-                                    if args.act_deact:
-                                        normal_cls_activation = (normal_cls_map * object_position).sum(dim=-1)
-                                anomal_activation_loss = ((anomal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                activation_loss = args.anormal_weight * anomal_activation_loss
-                                if args.act_deact:
-                                    normal_activation_loss = (1 - (
-                                            normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                    activation_loss += args.normal_weight * normal_activation_loss
-                                if args.cls_training:
-                                    anomal_cls_loss = (1 - (anomal_cls_activation / total_score)) ** 2
-                                    activation_loss += args.anormal_weight * anomal_cls_loss
-                                    if args.act_deact:
-                                        normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
-                                        activation_loss += args.normal_weight * normal_cls_loss
-
-                                attn_loss += activation_loss
-
-
+                    if args.act_deact:
+                        normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
+                    anomal_trigger_activation = (anomal_score_map * anomal_positions).sum(dim=-1)
+                    total_score = torch.ones_like(anomal_trigger_activation)
+                    if args.cls_training:
+                        anomal_cls_activation = (anomal_cls_map * anomal_positions).sum(dim=-1)
+                        if args.act_deact:
+                            normal_cls_activation = (normal_cls_map * object_position).sum(dim=-1)
+                    anomal_activation_loss = ((anomal_trigger_activation / total_score)) ** 2  # 8, res*res
+                    activation_loss = args.anormal_weight * anomal_activation_loss
+                    if args.act_deact:
+                        normal_activation_loss = (1 - (
+                                normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                        activation_loss += args.normal_weight * normal_activation_loss
+                    if args.cls_training:
+                        anomal_cls_loss = (1 - (anomal_cls_activation / total_score)) ** 2
+                        activation_loss += args.anormal_weight * anomal_cls_loss
+                        if args.act_deact:
+                            normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
+                            activation_loss += args.normal_weight * normal_cls_loss
+                    attn_loss += activation_loss
                     attn_loss = attn_loss.mean()
                     if args.do_task_loss:
                         loss = task_loss
@@ -1006,15 +758,12 @@ class NetworkTrainer:
                             loss += args.attn_loss_weight * attn_loss
                     else:
                         loss = attn_loss
-                    # ------------------------------------------------------------------------------------------------- #
                     if is_main_process:
                         if args.do_task_loss:
                             loss_dict["loss/task_loss"] = task_loss.item()
                         if args.attn_loss:
                             loss_dict["loss/attn_loss"] = attn_loss.item()
-
                     accelerator.backward(loss)
-
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = network.get_trainable_params()
                         accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
@@ -1028,7 +777,8 @@ class NetworkTrainer:
                     global_step += 1
                     # self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer,
                     #                   text_encoder, unet)
-                    attention_storer.reset()
+                    frozen_attention_storer.reset()
+                    training_attention_storer.reset()
 
                     # 指定ステップごとにモデルを保存
                     if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
@@ -1080,7 +830,8 @@ class NetworkTrainer:
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
             # self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
-            attention_storer.reset()
+            frozen_attention_storer.reset()
+            training_attention_storer.reset()
         if is_main_process:
             network = accelerator.unwrap_model(network)
         accelerator.end_training()
