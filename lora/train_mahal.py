@@ -504,10 +504,15 @@ class NetworkTrainer:
                                                                                                    noise_scheduler,
                                                                                                    latents)
                 with accelerator.autocast():
-                    noise_pred = self.call_unet(args, accelerator, unet, noisy_latents, timesteps, text_encoder_conds,
-                                                batch, weight_dtype, 1, None)
-
-                ############################################## 1. task loss ########################################
+                    noise_pred = self.call_unet(args,
+                                                accelerator,
+                                                unet,
+                                                noisy_latents,
+                                                timesteps,
+                                                text_encoder_conds,
+                                                batch,
+                                                weight_dtype, 1, None)
+                ########################### 1. task loss ####################################################
                 if args.v_parameterization:
                     target = noise_scheduler.get_velocity(latents, noise, timesteps)
                 else:
