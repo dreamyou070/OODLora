@@ -417,7 +417,6 @@ class NetworkTrainer:
                     if mask_vector[pix_idx] == 1:
                         if feature.dim() == 1:
                             feature = feature.unsqueeze(0)
-                        print(attn_score)
                         if type(attn_score) == torch.Tensor:
                             attn_score = attn_score.item()
                         if attn_score > 0.5 :
@@ -436,7 +435,9 @@ class NetworkTrainer:
                             feature = feature.unsqueeze(0)
                         anormal_vector_list.add(feature)
             if i % 20 == 0:
-                print(f'normal : {len(normal_vector_list)}, anormal : {len(anormal_vector_list)}')
+                print(f'normal_vector_good_score_list : {len(normal_vector_good_score_list)}, '
+                      f'normal_vector_bad_score_list : {len(normal_vector_bad_score_list)}, '
+                      f'anormal : {len(anormal_vector_list)}')
 
         normal_vector_good_score_list = list(normal_vector_good_score_list)
         normal_vector_good_score = torch.cat(normal_vector_good_score_list, dim=0)
