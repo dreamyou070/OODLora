@@ -731,9 +731,7 @@ class NetworkTrainer:
                         else:
                             anomal_score_map = score_map.squeeze()
 
-                    anomal_pix_num = anomal_positions.sum() / 8
-                    print(f'anomal_pix_num: {anomal_pix_num}')
-
+                    #anomal_pix_num = anomal_positions.sum() / 8
                     if args.act_deact:
                         normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
                     anomal_trigger_activation = (anomal_score_map * anomal_positions).sum(dim=-1) # head, pix_num
@@ -770,6 +768,9 @@ class NetworkTrainer:
                         if args.attn_loss:
                             loss_dict["loss/attn_loss"] = attn_loss.item()
                     accelerator.backward(loss)
+                    # -----------------------------------------------------------------------------------------------
+                    network_ = accelerator.unwrap_model(training_network)
+                    # -----------------------------------------------------------------------------------------------
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                         params_to_clip = training_network.get_trainable_params()
                         accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
@@ -791,7 +792,7 @@ class NetworkTrainer:
                         accelerator.wait_for_everyone()
                         if accelerator.is_main_process:
                             ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
-                            save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch)
+                            save_model(ckpt_name, accelerator.unwrap_model(training_network), global_step, epoch)
                             if args.save_state:
                                 train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
                             remove_step_no = train_util.get_remove_step_no(args, global_step)
@@ -827,7 +828,7 @@ class NetworkTrainer:
                         epoch + 1) < args.start_epoch + num_train_epochs
                 if is_main_process and saving:
                     ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
-                    save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch + 1)
+                    save_model(ckpt_name, accelerator.unwrap_model(training_network), global_step, epoch + 1)
                     remove_epoch_no = train_util.get_remove_epoch_no(args, epoch + 1)
                     if remove_epoch_no is not None:
                         remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as,
@@ -839,7 +840,7 @@ class NetworkTrainer:
             frozen_attention_storer.reset()
             training_attention_storer.reset()
         if is_main_process:
-            network = accelerator.unwrap_model(network)
+            network_ = accelerator.unwrap_model(training_network)
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
