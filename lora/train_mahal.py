@@ -593,6 +593,7 @@ class NetworkTrainer:
             gradient_dict = {}
             loss_dict = {}
 
+        norm = {}
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
 
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
@@ -707,8 +708,15 @@ class NetworkTrainer:
                                 features = list(features)
                                 normal_vectors = torch.cat(features, dim=0)  # sample, dim
 
-                                normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-                                normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+                                if 'mean' not in norm.keys()  :
+                                    normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+                                    normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+                                else :
+                                    normal_vector_mean_torch = norm['mean']
+                                    normal_vectors_cov_torch = norm['cov']
+
+                                norm['mean'] = torch.mean(normal_vectors, dim=0)
+                                norm['cov'] = torch.cov(normal_vectors.transpose(0, 1))
 
                                 def mahal(u, v, cov):
                                     delta = u - v
