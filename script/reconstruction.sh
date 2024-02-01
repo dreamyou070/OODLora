@@ -38,7 +38,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --anormal_thred 0.5 \
   --trg_layer 'up_blocks_3_attentions_2_transformer_blocks_0_attn2' \
   --only_zero_save \
-  --training_test \
   --trg_layer_list "['up_blocks_3_attentions_2_transformer_blocks_0_attn2']"
 
   #, 'down_blocks_0_attentions_1_transformer_blocks_0_attn2',
