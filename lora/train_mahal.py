@@ -553,6 +553,7 @@ class NetworkTrainer:
                                 do_mask_loss = True
 
                         if do_mask_loss:
+                            print(f'layer_name: {layer_name}')
                             query = query_dict[layer_name][0].squeeze()  # pix_num, dim
                             pix_num = query.shape[0]  # 4096             # 4096
                             res = int(pix_num ** 0.5)  # 64
