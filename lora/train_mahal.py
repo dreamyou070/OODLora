@@ -564,11 +564,18 @@ class NetworkTrainer:
                 head_num = attn.shape[0]
                 object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # 8, res*res
                 normal_trigger_activation = (normal_score * object_position).sum(dim=-1)
+                background_position = 1 - object_position
+                normal_back_activation = (normal_score * background_position).sum(dim=-1)
                 total_score = torch.ones_like(normal_trigger_activation)
                 activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                if args.back_training :
+                    activation_loss +=  ((normal_back_activation / total_score) ** 2)
                 if args.cls_training:
                     normal_cls_activation = (cls_score * object_position).sum(dim=-1)  # 8
                     activation_loss += args.normal_weight * ((normal_cls_activation / total_score) ** 2)
+                    if args.back_training:
+                        back_cls_activation = (cls_score * background_position).sum(dim=-1)  # 8
+                        activation_loss += args.back_weight * (1-(back_cls_activation / total_score) ** 2)
                 attn_loss = activation_loss.mean()
 
                 ########################### 3. attn loss ###########################################################
@@ -714,6 +721,8 @@ if __name__ == "__main__":
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
     parser.add_argument("--mask_threshold", type=float, default=0.5)
     parser.add_argument("--resume_lora_training", action="store_true", )
+    parser.add_argument("--back_training",action="store_true", )
+    parser.add_argument("--back_weight", type=float, default=1)
     parser.add_argument("--start_epoch", type=int, default=0)
     parser.add_argument("--valid_data_dir", type=str)
     parser.add_argument("--task_loss_weight", type=float, default=0.5)
