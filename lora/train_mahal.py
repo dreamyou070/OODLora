@@ -552,8 +552,7 @@ class NetworkTrainer:
                             if position in args.trg_position:
                                 do_mask_loss = True
 
-                        if do_mask_loss:
-                            print(f'layer_name: {layer_name}')
+                        if do_mask_loss and part in args.trg_part :
                             query = query_dict[layer_name][0].squeeze()  # pix_num, dim
                             pix_num = query.shape[0]  # 4096             # 4096
                             res = int(pix_num ** 0.5)  # 64
