@@ -656,11 +656,15 @@ class NetworkTrainer:
                     frozen_attention_storer.reset()
 
                     # (1) targetting anomal position
-                    anormal_query = frozen_query_dict[args.trg_layer][0].squeeze()  # 1, res*res, dim
-                    pix_num = anormal_query.shape[1]
+                    anormal_query = frozen_query_dict[args.trg_layer][0].squeeze()  # 2, res*res, dim
+                    _, anormal_query = anormal_query.chunk(2, dim=0)
+                    anormal_query = anormal_query.squeeze(0)  # res*res, dim
+                    print(f'anormal query (pixnum, dim) : {anormal_query.shape}')
+                    pix_num = anormal_query.shape[0]
                     res = int(pix_num ** 0.5)
+                    print(f'res : {res}')
 
-                    a = batch["img_masks"]
+                    a = batch["img_masks"][0[res]]
                     print(f'batch image masks : {a}')
                     img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                     img_mask = img_masks.squeeze()  # res,res
