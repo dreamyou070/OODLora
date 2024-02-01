@@ -540,7 +540,6 @@ class NetworkTrainer:
                         features.add(feat.unsqueeze(0))
                 features = list(features)
                 normal_vectors = torch.cat(features, dim=0)  # sample, dim
-                print(f"normal_vectors.shape: {normal_vectors.shape}")
 
                 normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
                 normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
@@ -746,7 +745,7 @@ if __name__ == "__main__":
                                  'up_blocks_3_attentions_2_transformer_blocks_0_attn2'])
     parser.add_argument("--training_layer", type=str)
     parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
-    parser.add_argument('--anormal_weight', type=float, default=1.0)
+    parser.add_argument('--mahalanobis_loss_weight', type=float, default=1.0)
     parser.add_argument('--normal_weight', type=float, default=1.0)
     parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--cls_training", action="store_true", )
