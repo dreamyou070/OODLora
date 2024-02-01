@@ -427,8 +427,8 @@ class NetworkTrainer:
                 if 'good' in class_name:
                     for pix_idx in range(mask_vector.shape[0]):
                         feature = query[pix_idx, :].cpu()
-                        if args.normalize :
-                            feat = torch.nn.functional.normalize(feat, p=2, dim=0)
+                        #if args.normalize :
+                        #    feat = torch.nn.functional.normalize(feat, p=2, dim=0)
                         attn_score = trigger_map[pix_idx].cpu()
                         if mask_vector[pix_idx] == 1:
                             if feature.dim() == 1:
