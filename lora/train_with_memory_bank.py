@@ -757,6 +757,9 @@ class NetworkTrainer:
                             activation_loss += args.normal_weight * normal_cls_loss
                     attn_loss += activation_loss
                     attn_loss = attn_loss.mean()
+
+                    print(f'attn_loss: {attn_loss}')
+
                     if args.do_task_loss:
                         loss = task_loss
                         if args.attn_loss:
@@ -770,7 +773,7 @@ class NetworkTrainer:
                             loss_dict["loss/attn_loss"] = attn_loss.item()
                     accelerator.backward(loss)
                     if accelerator.sync_gradients and args.max_grad_norm != 0.0:
-                        params_to_clip = network.get_trainable_params()
+                        params_to_clip = training_network.get_trainable_params()
                         accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
                     optimizer.step()
                     lr_scheduler.step()

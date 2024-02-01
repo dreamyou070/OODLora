@@ -26,7 +26,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
   --max_train_steps 1000 \
   --max_train_epochs 10 \
-  --attn_loss --task_loss_weight 1.0 --seed 42 --class_caption 'good' \
+  --attn_loss \
+  --task_loss_weight 1.0 --seed 42 --class_caption 'good' \
   --wandb_init_name ${class_name} \
   --train_data_dir "$train_data_dir" \
   --all_data_dir "${all_data_dir}" \
