@@ -663,7 +663,9 @@ class NetworkTrainer:
                     for pix_idx in range(pix_num):
                         #dist = mahalanobis(anomal_feat.detach().cpu(), normal_mean, normal_cov)
                         score = score_map[pix_idx]
-                        if score < 0.5 and pix_idx in object_position:
+                        if type(score) == torch.Tensor:
+                            score = score.item()
+                        if score < 0.5 and object_position[pix_idx] > 0 :
                             # if dist > normal_max_dist :
                             anomal_positions.append(1)
                         else:
