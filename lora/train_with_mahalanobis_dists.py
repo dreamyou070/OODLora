@@ -408,13 +408,21 @@ class NetworkTrainer:
                     if text_embeddings.dim() != 3:
                         text_embeddings = text_embeddings.unsqueeze(0)
                     call_unet(frozen_unet, latent, 0, text_embeddings.to(device)[:,:2,:],
-                              1, args.trg_layer)
-                    query = controller.query_dict[args.trg_layer][0].squeeze()  # pix_num, dim
+                              1, args.trg_layer_list)
+                    layer_1 = args.trg_layer_list[0]
+                    if args.concat_query :
+                        layer_2 = args.trg_layer_list[1]
+                        query_1 = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
+                        query_2 = controller.query_dict[layer_2][1].squeeze()  # pix_num, dim
+                        query = torch.cat([query_1, query_2], dim=-1)  # pix_num, 2*dim
+                    else :
+                        query = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
+
                     if args.cls_training :
-                        attn = controller.step_store[args.trg_layer][0].squeeze()  # 1, pix_num, 2
+                        attn = controller.step_store[layer_1][0].squeeze()  # 1, pix_num, 2
                         cls_map, trigger_map = attn.chunk(2, dim=-1)
                     else :
-                        attn = controller.step_store[args.trg_layer][0].squeeze()  # 1, pix_num, 1
+                        attn = controller.step_store[layer_1][0].squeeze()  # 1, pix_num, 1
                         trigger_map = attn.squeeze()
                     trigger_map = trigger_map.squeeze()
                     trigger_map = trigger_map.mean(dim=0) # pix_num
@@ -653,7 +661,15 @@ class NetworkTrainer:
                     frozen_attention_storer.reset()
 
                     # (1) targetting anomal position
-                    anormal_query = frozen_query_dict[args.trg_layer][0].squeeze()  # 2, res*res, dim
+                    ############################################## 1. targetting anomal position ##############################################
+                    layer_1 = args.trg_layer_list[0]
+                    if args.concat_query :
+                        layer_2 = args.trg_layer_list[1]
+                        query_1 = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
+                        query_2 = controller.query_dict[layer_2][1].squeeze()  # pix_num, dim
+                        anormal_query = torch.cat([query_1, query_2], dim=-1)  # pix_num, 2*dim
+                    else :
+                        anormal_query = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
                     anormal_query = anormal_query.squeeze()             # 4096
                     pix_num = anormal_query.shape[0] # 4096             # 4096
                     res = int(pix_num ** 0.5)                           # 64
@@ -908,9 +924,8 @@ if __name__ == "__main__":
     parser.add_argument("--act_deact", action='store_true')
     parser.add_argument("--all_data_dir", type=str)
     parser.add_argument("--attn_loss_weight", type=float, default=1)
+    parser.add_argument("--concat_query", action='store_true')
     import ast
-
-
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
@@ -920,6 +935,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
     parser.add_argument("--trg_layer", type=str)
+    parser.add_argument("--trg_layer_list", type=arg_as_list, default=['down_blocks_0_attentions_1_transformer_blocks_0_attn2',
+                                                                        'up_blocks_3_attentions_2_transformer_blocks_0_attn2'])
     parser.add_argument("--training_layer", type=str)
     parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--anormal_weight', type=float, default=1.0)
