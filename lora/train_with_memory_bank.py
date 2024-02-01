@@ -569,8 +569,8 @@ class NetworkTrainer:
         loss_total = 0.0
         del train_dataset_group
         # callback for step start
-        if hasattr(network, "on_step_start"):
-            on_step_start = network.on_step_start
+        if hasattr(training_network, "on_step_start"):
+            on_step_start = training_network.on_step_start
         else:
             on_step_start = lambda *args, **kwargs: None
 
