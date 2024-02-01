@@ -398,10 +398,15 @@ class NetworkTrainer:
             with torch.no_grad():
                 if text_embeddings.dim() != 3:
                     text_embeddings = text_embeddings.unsqueeze(0)
-                call_unet(frozen_unet, latent, 0, text_embeddings.to(device),1,args.trg_layer)
+                call_unet(frozen_unet, latent, 0, text_embeddings.to(device)[:,:2,:],
+                          1, args.trg_layer)
                 query = controller.query_dict[args.trg_layer][0].squeeze()  # pix_num, dim
-                attn = controller.step_store[args.trg_layer][0].squeeze()  # 1, pix_num, 2
-                cls_map, trigger_map = attn.chunk(2, dim=1)
+                if args.cls_training :
+                    attn = controller.step_store[args.trg_layer][0].squeeze()  # 1, pix_num, 2
+                    cls_map, trigger_map = attn.chunk(2, dim=-1)
+                else :
+                    attn = controller.step_store[args.trg_layer][0].squeeze()  # 1, pix_num, 1
+                    trigger_map = attn.squeeze()
                 trigger_map = trigger_map.squeeze()
                 trigger_map = trigger_map.mean(dim=0) # pix_num
 
@@ -413,6 +418,8 @@ class NetworkTrainer:
                         if feature.dim() == 1:
                             feature = feature.unsqueeze(0)
                         print(attn_score)
+                        if type(attn_score) == torch.Tensor:
+                            attn_score = attn_score.item()
                         if attn_score > 0.5 :
                             normal_vector_good_score_list.add(feature)
                         else :
