@@ -43,6 +43,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --truncate_pad --truncate_length 2 \
   --normal_weight 0.001 \
   --concat_query \
-  --do_check_anormal \
-  --training_layer 'down_blocks_0_attentions_1_transformer_blocks_0_attn2'
-
+  --do_check_anormal

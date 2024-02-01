@@ -519,67 +519,95 @@ class NetworkTrainer:
                 task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
                 task_loss = task_loss * args.task_loss_weight
 
+                ########################### 2. mahalanobis loss ####################################################
                 query_dict = controller.query_dict
                 attn_stores = controller.step_store
                 controller.reset()
+                attn_loss, dist_loss = 0,0
+                for i, layer_name in enumerate(attn_stores.keys()):
+                    map = attn_stores[layer_name][0].squeeze()  # 8, res*res, c
+                    res = int(map.shape[1] ** 0.5)
+                    do_mask_loss = False
+                    if res in args.cross_map_res:
+                        if 'down' in layer_name:
+                            position = 'down'
+                        elif 'up' in layer_name:
+                            position = 'up'
+                        elif 'mid' in layer_name:
+                            position = 'mid'
+                        if 'attentions_0' in layer_name:
+                            part = 'attn_0'
+                        elif 'attentions_1' in layer_name:
+                            part = 'attn_1'
+                        else:
+                            part = 'attn_2'
+                        if res == 64:
+                            if args.detail_64_up:
+                                if 'up' in layer_name:
+                                    do_mask_loss = True
+                            if args.detail_64_down:
+                                if 'down' in layer_name:
+                                    do_mask_loss = True
+                        else:
+                            if position in args.trg_position:
+                                do_mask_loss = True
 
-                ########################### 2. mahalanobis loss ####################################################
-                query = query_dict[args.training_layer][0].squeeze()  # pix_num, dim
-                pix_num = query.shape[0]  # 4096             # 4096
-                res = int(pix_num ** 0.5)  # 64
+                        if do_mask_loss:
+                            query = query_dict[layer_name][0].squeeze()  # pix_num, dim
+                            pix_num = query.shape[0]  # 4096             # 4096
+                            res = int(pix_num ** 0.5)  # 64
 
-                img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                img_mask = img_masks.squeeze()  # res,res
-                object_position = img_mask.flatten()  # res*res
-                features = set()
-                for i in range(pix_num):
-                    if object_position[i] == 1:
-                        feat = query[i, :].squeeze()  # dim
-                        features.add(feat.unsqueeze(0))
-                features = list(features)
-                normal_vectors = torch.cat(features, dim=0)  # sample, dim
+                            img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                            img_mask = img_masks.squeeze()  # res,res
+                            object_position = img_mask.flatten()  # res*res
+                            features = set()
+                            for i in range(pix_num):
+                                if object_position[i] == 1:
+                                    feat = query[i, :].squeeze()  # dim
+                                    features.add(feat.unsqueeze(0))
+                            features = list(features)
+                            normal_vectors = torch.cat(features, dim=0)  # sample, dim
 
-                normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-                normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+                            normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+                            normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
 
-                def mahal(u, v, cov):
-                    delta = u - v
-                    m = torch.dot(delta, torch.matmul(cov, delta))
-                    return torch.sqrt(m)
+                            def mahal(u, v, cov):
+                                delta = u - v
+                                m = torch.dot(delta, torch.matmul(cov, delta))
+                                return torch.sqrt(m)
 
-                mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for feat in
-                                       normal_vectors]
-                dist_loss = torch.tensor(mahalanobis_dists)
-                dist_loss = dist_loss.mean()
+                            mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for feat in
+                                                   normal_vectors]
+                            dist_loss += torch.tensor(mahalanobis_dists).mean()
 
-                ########################### 3. attn loss ###########################################################
-                attn = attn_stores[args.training_layer][0].squeeze()  # 8, res*res, 2
-                if args.cls_training:
-                    cls_score, normal_score = torch.chunk(attn, 2, dim=-1)
-                    cls_score, normal_score = cls_score.squeeze(), normal_score.squeeze()
-                else:
-                    normal_score = attn.squeeze()  # [, pix_num
-                head_num = attn.shape[0]
-                object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # 8, res*res
-                background_position = 1 - object_position
+                            ########################### 3. attn loss ###########################################################
+                            attn = attn_stores[layer_name][0].squeeze()  # 8, res*res, 2
+                            if args.cls_training:
+                                cls_score, normal_score = torch.chunk(attn, 2, dim=-1)
+                                cls_score, normal_score = cls_score.squeeze(), normal_score.squeeze()
+                            else:
+                                normal_score = attn.squeeze()  # [, pix_num
+                            head_num = attn.shape[0]
+                            object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # 8, res*res
+                            background_position = 1 - object_position
 
-                trigger_normal_activation = (normal_score * object_position).sum(dim=-1)  # 8
-                trigger_back_activation    = (normal_score * background_position).sum(dim=-1)  # 8
-                total_score = torch.ones_like(trigger_normal_activation)
-                trigger_normal_loss = (1 - (trigger_normal_activation / total_score)) ** 2  # 8, res*res
-                trigger_back_loss   = (trigger_back_activation / total_score) ** 2  # 8, res*res
-                activation_loss = args.normal_weight * trigger_normal_loss
-                if args.back_training :
-                    activation_loss += args.back_weight * trigger_back_loss
-                if args.cls_training:
-                    cls_normal_activation = (cls_score * object_position).sum(dim=-1)  # 8
-                    cls_back_activation = (cls_score * background_position).sum(dim=-1)  # 8
-                    cls_normal_loss = (cls_normal_activation / total_score) ** 2  # 8, res*res
-                    cls_back_loss   = (1-(cls_back_activation / total_score)) ** 2  # 8, res*res
-                    activation_loss += args.normal_weight * cls_normal_loss
-                    if args.back_training :
-                        activation_loss += args.back_weight * cls_back_loss
-                attn_loss = activation_loss.mean()
+                            trigger_normal_activation = (normal_score * object_position).sum(dim=-1)  # 8
+                            trigger_back_activation    = (normal_score * background_position).sum(dim=-1)  # 8
+                            total_score = torch.ones_like(trigger_normal_activation)
+                            trigger_normal_loss = (1 - (trigger_normal_activation / total_score)) ** 2  # 8, res*res
+                            trigger_back_loss   = (trigger_back_activation / total_score) ** 2  # 8, res*res
+                            activation_loss = args.normal_weight * trigger_normal_loss
+                            if args.back_training :
+                                activation_loss += args.back_weight * trigger_back_loss
+                            if args.cls_training:
+                                cls_normal_activation = (cls_score * object_position).sum(dim=-1)  # 8
+                                cls_back_activation = (cls_score * background_position).sum(dim=-1)  # 8
+                                cls_normal_loss = (cls_normal_activation / total_score) ** 2  # 8, res*res
+                                cls_back_loss   = (1-(cls_back_activation / total_score)) ** 2  # 8, res*res
+                                activation_loss += args.normal_weight * cls_normal_loss
+                                if args.back_training :
+                                    activation_loss += args.back_weight * cls_back_loss
+                            attn_loss += activation_loss.mean()
 
                 ########################### 3. attn loss ###########################################################
                 loss = task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
@@ -632,7 +660,8 @@ class NetworkTrainer:
                 avr_loss = loss_total / len(loss_list)
 
                 logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-                progress_bar.set_postfix(**loss_dict)
+                if is_main_process:
+                    progress_bar.set_postfix(**loss_dict)
 
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
