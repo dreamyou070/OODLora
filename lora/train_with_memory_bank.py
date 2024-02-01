@@ -653,13 +653,12 @@ class NetworkTrainer:
                     img_mask = img_masks.squeeze()  # res,res
                     object_position = img_mask.flatten()  # res*res
 
-                    attn = frozen_attn_dict[args.trg_layer][0].squeeze()  # pix_num, 2
-                    print(f'attn : {attn.shape}')
+                    attn = frozen_attn_dict[args.trg_layer][0].squeeze()  # head, pix_num, 2
                     if args.cls_training :
-                        cls_attn, score_map = attn[:, 0].squeeze(), attn[:, 1].squeeze()
+                        cls_attn, score_map = attn[:, :, 0].squeeze(), attn[:, :, 1].squeeze() # head, pix_num
                     else :
-                        score_map = attn.squeeze()
-                    print(f'score_map : {score_map}')
+                        score_map = attn.squeeze() # head, pix_num
+                    score_map = score_map.mean(dim=0)  # pix_num
                     pix_num = score_map.shape[0]
                     anomal_positions = []
                     for pix_idx in range(pix_num):
