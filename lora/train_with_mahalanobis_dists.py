@@ -447,7 +447,6 @@ class NetworkTrainer:
         good_score_normal_vectors_mean = np.mean(good_score_normal_vectors_np, axis=0)
         good_score_normal_vectors_cov = np.cov(good_score_normal_vectors_np, rowvar=False)
 
-
         normal_vector_bad_score_list = list(normal_vector_bad_score_list)
         normal_vector_bad_score = torch.cat(normal_vector_bad_score_list, dim=0)
         if normal_vector_bad_score.device != 'cpu':
@@ -456,13 +455,14 @@ class NetworkTrainer:
         bad_score_normal_vectors_mean = np.mean(bad_score_normal_vectors_np, axis=0)
         bad_score_normal_vectors_cov = np.cov(bad_score_normal_vectors_np, rowvar=False)
 
+        """
         anormal_vector_list = list(anormal_vector_list)
         anormal_vector = torch.cat(anormal_vector_list, dim=0)
         if anormal_vector.device != 'cpu':
             anormal_vectors = anormal_vector.cpu()
         anormal_vector_np = np.array(anormal_vectors)
 
-        """
+        
         normal_vector_list = list(normal_vector_list)
         normal_vectors = torch.cat(normal_vector_list, dim=0)
         if normal_vectors.device != 'cpu':
@@ -490,19 +490,10 @@ class NetworkTrainer:
             dist = mahalanobis(bad_score_n_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
             mahalanobis_dists.append(dist)
             print(f'bad score normal mahalanobis distance from good score dist : {dist}')
-        max_dist = max(mahalanobis_dists)
+        bad_score_normal_max_dist = max(mahalanobis_dists)
         print(f'-------------------------------------------------------------------------------------')
-
-        # # ----------------- bad score normal mahalanobis distance from good score -----------------
-        mahalanobis_dists = []
-        for bad_score_n_vector in bad_score_normal_vectors_np:
-            dist = mahalanobis(bad_score_n_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
-            mahalanobis_dists.append(dist)
-            print(f'bad score normal mahalanobis distance from good score dist : {dist}')
-        max_dist = max(mahalanobis_dists)
-        print(f'-------------------------------------------------------------------------------------')
+        """
         # ------------------------------------------------------------------------------------
-
         anomal_mahalanobis_dists = []
         for anormal_vector in anormal_vector_np:
             dist = mahalanobis(anormal_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
@@ -879,8 +870,6 @@ class NetworkTrainer:
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
-        """
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
