@@ -533,7 +533,6 @@ class NetworkTrainer:
                 img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                 img_mask = img_masks.squeeze()  # res,res
                 object_position = img_mask.flatten()  # res*res
-                print(f'object_position: {object_position.shape}')
                 features = set()
                 for i in range(pix_num):
                     if object_position[i] == 1:
@@ -541,13 +540,18 @@ class NetworkTrainer:
                         features.add(feat)
                 features = list(features)
                 normal_vectors = torch.cat(features, dim=0)  # sample, dim
+                print(f"normal_vectors.shape: {normal_vectors.shape}")
 
                 normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
                 normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
-                mahalanobis_dists = [
-                    mahalanobis(feat.detach().numpy(), normal_vector_mean_torch, normal_vectors_cov_torch) for feat in
-                    normal_vectors]
 
+                def mahal(u, v, cov):
+                    delta = u - v
+                    m = torch.dot(delta, torch.matmul(cov, delta))
+                    return torch.sqrt(m)
+
+                mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for feat in
+                                       normal_vectors]
                 dist_loss = torch.tensor(mahalanobis_dists)
                 dist_loss = dist_loss.mean()
 
