@@ -413,7 +413,7 @@ class NetworkTrainer:
                     if args.concat_query :
                         layer_2 = args.trg_layer_list[1]
                         query_1 = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
-                        query_2 = controller.query_dict[layer_2][1].squeeze()  # pix_num, dim
+                        query_2 = controller.query_dict[layer_2][0].squeeze()  # pix_num, dim
                         query = torch.cat([query_1, query_2], dim=-1)  # pix_num, 2*dim
                     else :
                         query = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
