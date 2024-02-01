@@ -518,7 +518,7 @@ class NetworkTrainer:
             assert (
                     args.mixed_precision == "bf16"), "full_bf16 requires mixed precision='bf16' / mixed_precision='bf16'"
             accelerator.print("enable full bf16 training.")
-            network.to(weight_dtype)
+            training_network.to(weight_dtype)
         frozen_unet.requires_grad_(False)
         frozen_unet.to(dtype=weight_dtype)
         training_unet.requires_grad_(False)
@@ -530,10 +530,10 @@ class NetworkTrainer:
         frozen_unet, frozen_text_encoder, frozen_network = frozen_unet.to(accelerator.device), frozen_text_encoder.to(accelerator.device),\
             frozen_network.to(accelerator.device)
         training_unet = training_unet.to(accelerator.device)
-        training_text_encoder, training_network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-                training_text_encoder, training_network, optimizer, train_dataloader, lr_scheduler)
-
-        #training_network.prepare_grad_etc(training_text_encoder, training_unet)
+        training_text_encoder, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+                training_text_encoder, optimizer, train_dataloader, lr_scheduler)
+        training_network = training_network.to(accelerator.device)
+        training_network.prepare_grad_etc(training_text_encoder, training_unet)
         vae.requires_grad_(False)
         vae.eval()
         vae.to(accelerator.device, dtype=vae_dtype)
