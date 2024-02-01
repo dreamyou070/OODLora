@@ -727,6 +727,7 @@ class NetworkTrainer:
                     attn_dict = training_attention_storer.step_store
                     training_attention_storer.reset()
                     # (1) targetting anomal position
+                    # down_blocks_0_attentions_0_transformer_blocks_0_attn2
                     attn = attn_dict['down_blocks_0_attentions_0_transformer_blocks_0_attn2'][
                         0].squeeze()  # 16, res*res, 2
                     pix_num = attn.shape[1]
