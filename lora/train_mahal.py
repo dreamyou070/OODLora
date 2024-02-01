@@ -537,7 +537,7 @@ class NetworkTrainer:
                 for i in range(pix_num):
                     if object_position[i] == 1:
                         feat = query[i, :].squeeze()  # dim
-                        features.add(feat)
+                        features.add(feat.unsqueeze(0))
                 features = list(features)
                 normal_vectors = torch.cat(features, dim=0)  # sample, dim
                 print(f"normal_vectors.shape: {normal_vectors.shape}")
