@@ -664,19 +664,15 @@ class NetworkTrainer:
                     for pix_idx in range(pix_num):
                         #dist = mahalanobis(anomal_feat.detach().cpu(), normal_mean, normal_cov)
                         score = score_map[pix_idx]
-                        print(f'score : {score}')
                         if type(score) == torch.Tensor:
                             score = score.item()
                         if score < 0.5 and object_position[pix_idx] > 0 :
-                            # if dist > normal_max_dist :
                             anomal_positions.append(1)
                         else:
                             anomal_positions.append(0)
                     head_num = 8
                     anomal_positions = torch.tensor(anomal_positions)
-                    anomal_positions = torch.where((anomal_positions == 1) & (anomal_positions == 1), 1, 0)
-                    anomal_positions = anomal_positions.unsqueeze(0).repeat(head_num, 1).to(
-                        object_position.device)  # head_num, res*res
+                    anomal_positions = anomal_positions.unsqueeze(0).repeat(head_num, 1).to(object_position.device)  # head_num, res*res
                     object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # head_num, res*res
 
                     # ----------------------------------------------------------------------------------------- #
@@ -735,9 +731,11 @@ class NetworkTrainer:
                         else:
                             anomal_score_map = score_map.squeeze()
 
+                    print(f'normal_score_map: {normal_score_map.shape}, anomal_score_map: {anomal_score_map.shape}')
+
                     if args.act_deact:
                         normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
-                    anomal_trigger_activation = (anomal_score_map * anomal_positions).sum(dim=-1)
+                    anomal_trigger_activation = (anomal_score_map * anomal_positions).sum(dim=-1) # head, pix_num
                     total_score = torch.ones_like(anomal_trigger_activation)
                     if args.cls_training:
                         anomal_cls_activation = (anomal_cls_map * anomal_positions).sum(dim=-1)
@@ -755,11 +753,9 @@ class NetworkTrainer:
                         if args.act_deact:
                             normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
                             activation_loss += args.normal_weight * normal_cls_loss
+
                     attn_loss += activation_loss
                     attn_loss = attn_loss.mean()
-
-                    print(f'attn_loss: {attn_loss}')
-                    print(f'args.attn_loss_weight : {args.attn_loss_weight}')
 
                     if args.do_task_loss:
                         loss = task_loss
@@ -917,7 +913,7 @@ if __name__ == "__main__":
     parser.add_argument("--do_task_loss", action='store_true')
     parser.add_argument("--act_deact", action='store_true')
     parser.add_argument("--all_data_dir", type=str)
-    parser.add_argument("--attn_loss_weight", type=float)
+    parser.add_argument("--attn_loss_weight", type=float, default = 1)
     import ast
 
 
