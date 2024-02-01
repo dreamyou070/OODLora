@@ -747,6 +747,7 @@ class NetworkTrainer:
                 if is_main_process:
                     loss_dict["loss/task_loss"] = task_loss.item()
                     loss_dict["loss/attn_loss"] = attn_loss.item()
+                    loss_dict["loss/dist_loss"] = dist_loss.item()
                 accelerator.backward(loss)
 
                 if accelerator.sync_gradients and args.max_grad_norm != 0.0:
@@ -790,7 +791,7 @@ class NetworkTrainer:
                 avr_loss = loss_total / len(loss_list)
 
                 logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-                progress_bar.set_postfix(**logs)
+                progress_bar.set_postfix(**loss_dict)
 
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
