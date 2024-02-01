@@ -463,7 +463,8 @@ class NetworkTrainer:
         good_score_normal_vectors_mean = torch.mean(good_score_normal_vectors, dim=0).numpy()  # dim
         good_score_normal_vectors_cov = np.cov(good_score_normal_vectors.detach().cpu().numpy(), rowvar=False)
         identity_matrix = torch.eye(dim)
-        variance_vector = (good_score_normal_vectors_cov * identity_matrix).sum(dim=1).squeeze()
+        variance_vector = (torch.tensor(good_score_normal_vectors_cov) *
+                           identity_matrix).sum(dim=1).squeeze()
         sort_result, index_result = torch.sort(variance_vector, descending=False)
         max_dim = 100
         important_dim = index_result[:max_dim]
