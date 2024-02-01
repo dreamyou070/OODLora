@@ -533,9 +533,9 @@ class NetworkTrainer:
                 img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                 img_mask = img_masks.squeeze()  # res,res
                 object_position = img_mask.flatten()  # res*res
-
+                print(f'object_position: {object_position.shape}')
                 features = set()
-                for i in object_position:
+                for i in range(pix_num):
                     if object_position[i] == 1:
                         feat = query[i, :].squeeze()  # dim
                         features.add(feat)
