@@ -389,55 +389,64 @@ class NetworkTrainer:
         for i in range(num_samples):
             sample = mahal_dataset.__getitem__(i)
             class_name = sample['class_name']
-            latent = sample['latent']  # 1,4,64,64
-            if latent.dim() == 3:
-                latent = latent.unsqueeze(0)
-            latent = latent.to(device)  # 1,4,64,64
-            mask = sample['object_mask']  # res,res
-            mask_vector = mask.flatten()  # pix_num
-            with torch.no_grad():
-                if text_embeddings.dim() != 3:
-                    text_embeddings = text_embeddings.unsqueeze(0)
-                call_unet(frozen_unet, latent, 0, text_embeddings.to(device)[:,:2,:],
-                          1, args.trg_layer)
-                query = controller.query_dict[args.trg_layer][0].squeeze()  # pix_num, dim
-                if args.cls_training :
-                    attn = controller.step_store[args.trg_layer][0].squeeze()  # 1, pix_num, 2
-                    cls_map, trigger_map = attn.chunk(2, dim=-1)
-                else :
-                    attn = controller.step_store[args.trg_layer][0].squeeze()  # 1, pix_num, 1
-                    trigger_map = attn.squeeze()
-                trigger_map = trigger_map.squeeze()
-                trigger_map = trigger_map.mean(dim=0) # pix_num
+            checking = False
+            if args.do_check_anormal :
+                checking = True
+            else :
+                if 'good' in class_name:
+                    checking = True
+            if checking :
 
-            if 'good' in class_name:
-                for pix_idx in range(mask_vector.shape[0]):
-                    feature = query[pix_idx, :].cpu()
-                    attn_score = trigger_map[pix_idx].cpu()
-                    if mask_vector[pix_idx] == 1:
-                        if feature.dim() == 1:
-                            feature = feature.unsqueeze(0)
-                        if type(attn_score) == torch.Tensor:
-                            attn_score = attn_score.item()
-                        if attn_score > 0.5 :
-                            normal_vector_good_score_list.add(feature)
-                        else :
-                            normal_vector_bad_score_list.add(feature)
-                    else:
-                        if feature.dim() == 1:
-                            feature = feature.unsqueeze(0)
-                        back_vector_list.add(feature)
-            else:
-                for pix_idx in range(mask_vector.shape[0]):
-                    feature = query[pix_idx, :].cpu()
-                    if mask_vector[pix_idx] == 1:
-                        if feature.dim() == 1:
-                            feature = feature.unsqueeze(0)
-                        anormal_vector_list.add(feature)
-            if i % 20 == 0:
-                print(f'normal_vector_good_score_list : {len(normal_vector_good_score_list)}, '
-                      f'normal_vector_bad_score_list : {len(normal_vector_bad_score_list)}, '
-                      f'anormal : {len(anormal_vector_list)}')
+
+                latent = sample['latent']  # 1,4,64,64
+                if latent.dim() == 3:
+                    latent = latent.unsqueeze(0)
+                latent = latent.to(device)  # 1,4,64,64
+                mask = sample['object_mask']  # res,res
+                mask_vector = mask.flatten()  # pix_num
+                with torch.no_grad():
+                    if text_embeddings.dim() != 3:
+                        text_embeddings = text_embeddings.unsqueeze(0)
+                    call_unet(frozen_unet, latent, 0, text_embeddings.to(device)[:,:2,:],
+                              1, args.trg_layer)
+                    query = controller.query_dict[args.trg_layer][0].squeeze()  # pix_num, dim
+                    if args.cls_training :
+                        attn = controller.step_store[args.trg_layer][0].squeeze()  # 1, pix_num, 2
+                        cls_map, trigger_map = attn.chunk(2, dim=-1)
+                    else :
+                        attn = controller.step_store[args.trg_layer][0].squeeze()  # 1, pix_num, 1
+                        trigger_map = attn.squeeze()
+                    trigger_map = trigger_map.squeeze()
+                    trigger_map = trigger_map.mean(dim=0) # pix_num
+
+                if 'good' in class_name:
+                    for pix_idx in range(mask_vector.shape[0]):
+                        feature = query[pix_idx, :].cpu()
+                        attn_score = trigger_map[pix_idx].cpu()
+                        if mask_vector[pix_idx] == 1:
+                            if feature.dim() == 1:
+                                feature = feature.unsqueeze(0)
+                            if type(attn_score) == torch.Tensor:
+                                attn_score = attn_score.item()
+                            if attn_score > 0.5 :
+                                normal_vector_good_score_list.add(feature)
+                            else :
+                                normal_vector_bad_score_list.add(feature)
+                        else:
+                            if feature.dim() == 1:
+                                feature = feature.unsqueeze(0)
+                            back_vector_list.add(feature)
+                else:
+                    for pix_idx in range(mask_vector.shape[0]):
+                        feature = query[pix_idx, :].cpu()
+                        if mask_vector[pix_idx] == 1:
+                            if feature.dim() == 1:
+                                feature = feature.unsqueeze(0)
+                            anormal_vector_list.add(feature)
+                if i % 20 == 0:
+                    print(f'normal_vector_good_score_list : {len(normal_vector_good_score_list)}, '
+                          f'normal_vector_bad_score_list : {len(normal_vector_bad_score_list)}, '
+                          f'anormal : {len(anormal_vector_list)}')
 
         normal_vector_good_score_list = list(normal_vector_good_score_list)
         normal_vector_good_score = torch.cat(normal_vector_good_score_list, dim=0)
@@ -455,23 +464,14 @@ class NetworkTrainer:
         bad_score_normal_vectors_mean = np.mean(bad_score_normal_vectors_np, axis=0)
         bad_score_normal_vectors_cov = np.cov(bad_score_normal_vectors_np, rowvar=False)
 
+        if args.do_check_anormal:
+            anormal_vector_list = list(anormal_vector_list)
+            anormal_vector = torch.cat(anormal_vector_list, dim=0)
+            if anormal_vector.device != 'cpu':
+                anormal_vectors = anormal_vector.cpu()
+            anormal_vector_np = np.array(anormal_vectors)
 
-        anormal_vector_list = list(anormal_vector_list)
-        anormal_vector = torch.cat(anormal_vector_list, dim=0)
-        if anormal_vector.device != 'cpu':
-            anormal_vectors = anormal_vector.cpu()
-        anormal_vector_np = np.array(anormal_vectors)
-
-        """
-        normal_vector_list = list(normal_vector_list)
-        normal_vectors = torch.cat(normal_vector_list, dim=0)
-        if normal_vectors.device != 'cpu':
-            normal_vectors = normal_vectors.cpu()
-        normal_vector_np = np.array(normal_vectors)
-        normal_mean = np.mean(normal_vector_np, axis=0)
-        normal_cov = np.cov(normal_vector_np, rowvar=False)
-        """
-
+        # [1] good mahalanobis distances
         mahalanobis_dists = []
         for good_score_n_vector in good_score_normal_vectors_np:
             dist = mahalanobis(good_score_n_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
@@ -480,31 +480,27 @@ class NetworkTrainer:
         max_dist = max(mahalanobis_dists)
         print(f'normal max dist : {max_dist}')
 
-        # ----------------- bad score normal mahalanobis distance from good score -----------------
+        # [2] bad mahalanobis distances
         bad_score_normal_mahalanobis_dists = []
         for bad_score_n_vector in bad_score_normal_vectors_np:
             dist = mahalanobis(bad_score_n_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
             bad_score_normal_mahalanobis_dists.append(dist)
             print(f'bad score normal mahalanobis distance from good score dist : {dist}')
         bad_score_normal_max_dist = max(bad_score_normal_mahalanobis_dists)
-
         thred = 0.88
         bad_score_normal_mahalanobis_dists.sort()
         thred_max = int(len(bad_score_normal_mahalanobis_dists) * thred)
         thred_value = bad_score_normal_mahalanobis_dists[thred_max] #################################################
         print(f'bad score thred_value : {thred_value} | max dist : {bad_score_normal_max_dist}')
 
-        print(f'-------------------------------------------------------------------------------------')
-        """
-        # ------------------------------------------------------------------------------------
-        anomal_mahalanobis_dists = []
-        for anormal_vector in anormal_vector_np:
-            dist = mahalanobis(anormal_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
-            anomal_mahalanobis_dists.append(dist)
-            print(f'anormal mahalanobis distance to normal dist : {dist}')
-        anomal_min_dist = min(anomal_mahalanobis_dists)
-        print(f'-------------------------------------------------------------------------------------')
-        
+        # [3] anomal  mahalanobis distances
+        if args.do_check_anormal:
+            anomal_mahalanobis_dists = []
+            for anormal_vector in anormal_vector_np:
+                dist = mahalanobis(anormal_vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
+                anomal_mahalanobis_dists.append(dist)
+                print(f'anormal mahalanobis distance to normal dist : {dist}')
+            anomal_min_dist = min(anomal_mahalanobis_dists)
 
         # -------------------------------------------------------------------------------------------------------- #
         print(f'\n step 7. optimizer (unet frozen) ')
@@ -671,7 +667,7 @@ class NetworkTrainer:
                         feature = anormal_query[pix_idx, :].squeeze()
                         dist = mahalanobis(feature.detach().cpu(), good_score_normal_vectors_mean,
                                            good_score_normal_vectors_cov)
-                        if dist > thred_value :
+                        if dist > max_dist :
                             anomal_positions.append(1)
                         else:
                             anomal_positions.append(0)
@@ -841,7 +837,6 @@ class NetworkTrainer:
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
-    """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -936,6 +931,7 @@ if __name__ == "__main__":
     parser.add_argument("--attn_loss", action="store_true", )
     parser.add_argument("--normal_with_background", action="store_true", )
     parser.add_argument("--only_object_position", action="store_true", )
+    parser.add_argument("--do_check_anormal", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()

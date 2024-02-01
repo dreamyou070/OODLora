@@ -25,7 +25,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
   --max_train_steps 1000 \
-  --max_train_epochs 10 \
+  --max_train_epochs 500 \
   --attn_loss \
   --task_loss_weight 1.0 --seed 42 --class_caption 'good' \
   --wandb_init_name ${class_name} \
@@ -33,6 +33,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --all_data_dir "${all_data_dir}" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
+  --do_check_anormal \
   --cross_map_res "[64]" \
   --detail_64_down \
   --trg_position "['down']" \
@@ -44,5 +45,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --trg_layer 'down_blocks_0_attentions_1_transformer_blocks_0_attn2' \
   --network_weights "$network_weights" \
   --training_layer 'down_blocks_0_attentions_1_transformer_blocks_0_attn2'
-
   # try layer = query feature checking
