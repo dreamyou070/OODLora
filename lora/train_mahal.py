@@ -563,21 +563,25 @@ class NetworkTrainer:
                     normal_score = attn.squeeze()  # [, pix_num
                 head_num = attn.shape[0]
                 object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # 8, res*res
-                normal_trigger_activation = (normal_score * object_position).sum(dim=-1)
                 background_position = 1 - object_position
-                normal_back_activation = (normal_score * background_position).sum(dim=-1)
-                total_score = torch.ones_like(normal_trigger_activation)
-                activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                if args.back_training :
-                    activation_loss +=  ((normal_back_activation / total_score) ** 2)
-                if args.cls_training:
-                    normal_cls_activation = (cls_score * object_position).sum(dim=-1)  # 8
-                    activation_loss += args.normal_weight * ((normal_cls_activation / total_score) ** 2)
-                    if args.back_training:
-                        back_cls_activation = (cls_score * background_position).sum(dim=-1)  # 8
-                        activation_loss += args.back_weight * (1-(back_cls_activation / total_score) ** 2)
-                attn_loss = activation_loss.mean()
 
+                trigger_normal_activation = (normal_score * object_position).sum(dim=-1)  # 8
+                trigger_back_activation    = (normal_score * background_position).sum(dim=-1)  # 8
+                total_score = torch.ones_like(trigger_normal_activation)
+                trigger_normal_loss = (1 - (trigger_normal_activation / total_score)) ** 2  # 8, res*res
+                trigger_back_loss   = (trigger_back_activation / total_score) ** 2  # 8, res*res
+                activation_loss = args.normal_weight * trigger_normal_loss
+                if args.back_training :
+                    activation_loss += args.back_weight * trigger_back_loss
+                if args.cls_training:
+                    cls_normal_activation = (cls_score * object_position).sum(dim=-1)  # 8
+                    cls_back_activation = (cls_score * background_position).sum(dim=-1)  # 8
+                    cls_normal_loss = (cls_normal_activation / total_score) ** 2  # 8, res*res
+                    cls_back_loss   = (1-(cls_back_activation / total_score)) ** 2  # 8, res*res
+                    activation_loss += args.normal_weight * cls_normal_loss
+                    if args.back_training :
+                        activation_loss += args.back_weight * cls_back_loss
+                attn_loss = activation_loss.mean()
                 ########################### 3. attn loss ###########################################################
                 loss = task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
 
@@ -629,7 +633,7 @@ class NetworkTrainer:
                 avr_loss = loss_total / len(loss_list)
 
                 logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-                progress_bar.set_postfix(**logs)
+                progress_bar.set_postfix(**loss_dict)
 
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
