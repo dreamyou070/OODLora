@@ -467,7 +467,6 @@ class NetworkTrainer:
         for n_vector in normal_vectors_np:
             dist = mahalanobis(n_vector, normal_vectors_mean, normal_vectors_cov)
             mahalanobis_dists.append(dist)
-            print(f'normal vector mahalanobis distance from normal mean : {dist}')
         max_dist = max(mahalanobis_dists)
         with open(distance_save_dir, 'w') as f:
             for dist in mahalanobis_dists:
@@ -475,6 +474,11 @@ class NetworkTrainer:
             f.write(f'\n')
             f.write(f'max_dist : {max_dist}')
 
+        import matplotlib.pyplot as plt
+        figure = plt.figure()
+        plt.hist(mahalanobis_dists)
+        save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.png")
+        plt.savefig(save_dir)
 
         normal_vector_good_score_list = list(normal_vector_good_score_list)
         normal_vector_good_score = torch.cat(normal_vector_good_score_list, dim=0) # sample, dim
@@ -496,6 +500,10 @@ class NetworkTrainer:
                 f.write(f'{dist},')
             f.write(f'\n')
             f.write(f'max_dist : {max_dist}')
+        figure = plt.figure()
+        plt.hist(mahalanobis_dists)
+        save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
+        plt.savefig(save_dir)
 
         # [2] bad normal mahalanobis distances
         distance_save_dir = os.path.join(record_save_dir, "bad_normal_mahalanobis_distances.txt")
@@ -511,6 +519,10 @@ class NetworkTrainer:
         with open(distance_save_dir, 'w') as f:
             for dist in bad_score_normal_mahalanobis_dists:
                 f.write(f'{dist},')
+        figure = plt.figure()
+        plt.hist(bad_score_normal_mahalanobis_dists)
+        save_dir = os.path.join(record_save_dir, "normal_badscore_mahalanobis_distances.png")
+        plt.savefig(save_dir)
 
         if args.do_check_anormal:
             distance_save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.txt")
@@ -529,6 +541,11 @@ class NetworkTrainer:
                     f.write(f'{dist},')
                 f.write(f'\n')
                 f.write(f'min_dist : {anomal_min_dist}')
+            figure = plt.figure()
+            plt.hist(anomal_mahalanobis_dists)
+            save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.png")
+            plt.savefig(save_dir)
+
 
 
 
