@@ -732,6 +732,8 @@ class NetworkTrainer:
                             anomal_score_map = score_map.squeeze()
 
                     print(f'normal_score_map: {normal_score_map.shape}, anomal_score_map: {anomal_score_map.shape}')
+                    anomal_pix_num = anomal_score_map.sum() / 8
+                    print(f'anomal_pix_num: {anomal_pix_num}')
 
                     if args.act_deact:
                         normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
