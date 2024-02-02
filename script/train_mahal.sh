@@ -5,13 +5,13 @@ data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="res_64_down_1_attn_loss_1"
+save_folder="res_64_down_1_attn_0.001_text_frozen_no_actdeact"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_1_t_2_anomal_add_query/models/epoch-000004.safetensors"
+network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_1_attn_0.001/models/epoch-000006.safetensors"
 start_epoch=0
-port_number=58844
+port_number=58899
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port $port_number ../lora/train_mahal.py --process_title parksooyeon \
   --wandb_init_name ${class_name} --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -26,7 +26,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --cross_map_res "[64]" --detail_64_down --trg_position "['down']" --trg_part '["attn_1"]' \
   --cls_training --back_training \
   --do_task_loss --task_loss_weight 1 \
-  --attn_loss --attn_loss_weight 1 \
+  --attn_loss --attn_loss_weight 0.001 \
   --mahalanobis_loss_weight 1 \
+  --text_frozen
   # --act_deact --act_deact_weight 1.0
   # --network_weights "$network_weights"
