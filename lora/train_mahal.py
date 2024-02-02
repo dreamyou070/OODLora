@@ -770,10 +770,13 @@ class NetworkTrainer:
                                     random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
 
                                     if args.strict_training :
-                                        if random_dist < dist_mean :
+                                        if args.partial :
+                                            if random_dist < dist_mean :
+                                                random_anomal_positions.append(1)
+                                            else:
+                                                random_anomal_positions.append(0)
+                                        else :
                                             random_anomal_positions.append(1)
-                                        else:
-                                            random_anomal_positions.append(0)
                                     else :
                                         if random_dist > dist_mean :
                                             random_anomal_positions.append(0)
@@ -927,6 +930,8 @@ if __name__ == "__main__":
                         help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
+
+
     # step 4. training
     train_util.add_training_arguments(parser, True)
     custom_train_functions.add_custom_train_arguments(parser)
@@ -974,6 +979,7 @@ if __name__ == "__main__":
     parser.add_argument("--all_data_dir", type=str)
     parser.add_argument("--concat_query", action='store_true')
     parser.add_argument("--strict_training", action='store_true')
+    parser.add_argument("--partial", action="store_true", )
     import ast
 
 

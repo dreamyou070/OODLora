@@ -4,11 +4,10 @@ data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="res_64_down_1_t_2_normal_attn_loss_weight_1_mahal_loss_new_code_disloss_2_data_10_act_deact"
+save_folder="res_64_down_1_t_2_normal_attn_loss_weight_1_mahal_loss_new_code_disloss_2_data_10_act_deact_query_add_random_strict_training_all_deact"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 start_epoch=0
-port_number=58821
-
+port_number=58824
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
   --main_process_port $port_number ../lora/train_mahal.py \
   --process_title parksooyeon \
@@ -41,4 +40,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --task_loss_weight 1 \
   --do_task_loss \
   --truncate_pad --truncate_length 2 \
-  --normal_weight 1
+  --normal_weight 1 \
+  --query_add_random \
+  --strict_training

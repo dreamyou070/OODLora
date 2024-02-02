@@ -1,7 +1,5 @@
 #! /bin/bash
 
-#network_weights = "../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_up_attn2_t_2_dim_20/models/epoch-000003.safetensors"
-
 class_name="bagel"
 data_source='train_normal'
 data_folder='MVTec3D-AD'
@@ -11,7 +9,7 @@ train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/$
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 
 start_epoch=0
-port_number=57777
+port_number=57774
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port $port_number ../lora/train_normal.py \
