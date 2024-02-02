@@ -768,10 +768,18 @@ class NetworkTrainer:
                                 for i in range(pix_num) :
                                     feat = random_vectors[i, :]
                                     random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
-                                    if random_dist > dist_mean :
-                                        random_anomal_positions.append(1)
+
+                                    if args.strict_training :
+                                        if random_dist < dist_mean :
+                                            random_anomal_positions.append(1)
+                                        else:
+                                            random_anomal_positions.append(0)
                                     else :
-                                        random_anomal_positions.append(0)
+                                        if random_dist > dist_mean :
+                                            random_anomal_positions.append(0)
+                                        else:
+                                            random_anomal_positions.append(1)
+
                                 random_anomal_positions = torch.tensor(random_anomal_positions)
                                 random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).to(score_random_map.device)
 
@@ -965,6 +973,7 @@ if __name__ == "__main__":
     parser.add_argument("--act_deact_weight", type=float, default=1.0)
     parser.add_argument("--all_data_dir", type=str)
     parser.add_argument("--concat_query", action='store_true')
+    parser.add_argument("--strict_training", type=float, default=1.0)
     import ast
 
 
