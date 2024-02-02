@@ -30,6 +30,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
                 is_cross_attention = True
             query = self.to_q(hidden_states)
             random_query = torch.randn_like(query)
+            if args.query_add_random :
+                random_query = random_query + query
             # --------------------------------------------------------------------------------------------------
             controller.save_query(query, layer_name)
             controller.save_query(random_query, layer_name)
@@ -990,7 +992,8 @@ if __name__ == "__main__":
     parser.add_argument("--attn_loss", action="store_true", )
     parser.add_argument("--normal_with_background", action="store_true", )
     parser.add_argument("--only_object_position", action="store_true", )
-    parser.add_argument("--do_check_anormal", action="store_true", )
+    parser.add_argument("--query_add_random", action="store_true", )
+
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
