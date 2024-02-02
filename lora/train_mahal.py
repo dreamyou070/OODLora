@@ -714,7 +714,7 @@ class NetworkTrainer:
                 attn_loss, dist_loss = 0, 0
                 features = []
                 for i, layer_name in enumerate(attn_dict.keys()):
-                    if layer_name in args.trg_layer_name_list :
+                    if layer_name in args.trg_layer_list :
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         map, random_map = map.chunk(2, dim=0)  # 8, res*res, c
 
