@@ -38,11 +38,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
             #    hidden_states, random_hidden_states = hidden_states.chunk(2, dim=0)
 
             query = self.to_q(hidden_states) # "to_q learning"
-            #random_query = self.to_q(random_hidden_states)
-            #if args.query_add_random :
-            #    random_query = random_query + query
-            # --------------------------------------------------------------------------------------------------
-            print(f'saving query : {query.shape}')
             controller.save_query(query, layer_name)
             #controller.save_query(random_query, layer_name)
             # --------------------------------------------------------------------------------------------------
