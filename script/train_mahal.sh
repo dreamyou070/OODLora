@@ -4,7 +4,7 @@ data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="res_64_up_2_t_2_normal_attn_loss_weight_1_mahal_loss_new_code_disloss_2_data_10_act_deact_query_add_random_strict_training"
+save_folder="res_64_down_1_t_2_mahal_loss_new_code_disloss_2_data_10_act_deact_query_add_random_strict_training_only_object"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 start_epoch=0
 port_number=58831
@@ -29,9 +29,9 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
   --cross_map_res "[64]" \
-  --detail_64_up \
-  --trg_position "['up']" \
-  --trg_part '["attn_2"]' \
+  --detail_64_down \
+  --trg_position "['down']" \
+  --trg_part '["attn_1"]' \
   --act_deact \
   --act_deact_weight 1.0 \
   --normal_weight 1 \
