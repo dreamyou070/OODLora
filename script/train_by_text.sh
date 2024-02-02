@@ -22,7 +22,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --lr_warmup_steps 144 --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 --resolution '512,512' --save_every_n_epochs 1 \
   --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
-  --max_train_steps 500 \
+  --max_train_steps 10 \
   --max_train_epochs 500 \
   --attn_loss \
   --task_loss_weight 1.0 --seed 42 --class_caption 'good' \
