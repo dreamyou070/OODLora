@@ -673,11 +673,11 @@ class NetworkTrainer:
                         cls_map = cls_map.squeeze()
                         score_map = score_map.squeeze()
                         cls_random_map, score_random_map = torch.chunk(random_map, 2, dim=-1)
-                        random_cls_map = random_cls_map.squeeze()
-                        random_score_map = random_score_map.squeeze()
+                        random_cls_map = cls_random_map.squeeze()
+                        random_score_map = score_random_map.squeeze()
                     else:
                         score_map = map
-                        score_random_map = random_map
+                        random_score_map = random_map
                     res = int(map.shape[1] ** 0.5)
                     head_num = int(score_map.shape[0])
                     do_mask_loss = False
