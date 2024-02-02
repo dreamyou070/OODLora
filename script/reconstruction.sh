@@ -1,6 +1,6 @@
 #! /bin/bash
 class_name="bagel"
-folder_name="res_64_down_1_attn_1_text_frozen_actdeact"
+folder_name="res_64_down_1_attn_0.001_act_deact"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
