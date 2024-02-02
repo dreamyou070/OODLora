@@ -703,13 +703,20 @@ class NetworkTrainer:
                                 total_score = total_score.sum(dim=-1)  # 8
                                 normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                 anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                                activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anormal_activation_loss
+                                activation_loss = args.normal_weight * normal_activation_loss
+
+                                if args.back_training :
+                                    activation_loss += args.anormal_weight * anormal_activation_loss
                                 if args.cls_training :
                                     anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
                                     normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
                                     normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
                                     anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                    activation_loss += args.normal_weight * normal_cls_activation_loss + args.anormal_weight * anormal_cls_activation_loss
+                                    activation_loss += args.normal_weight * normal_cls_activation_loss
+
+                                    if args.back_training:
+                                        activation_loss += args.anormal_weight * anormal_cls_activation_loss
+
                                 attn_loss += activation_loss
                 attn_loss = attn_loss.mean()
                 if args.do_task_loss:
