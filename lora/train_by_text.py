@@ -300,15 +300,6 @@ class NetworkTrainer:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
         except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
-        print(f'\n step 7. optimizer (unet frozen) ')
-        unet_loras = network.unet_loras
-        for unet_lora in unet_loras:
-            unet_lora.requires_grad = False
-        te_loras = network.text_encoder_loras
-        params = []
-        for te_lora in te_loras:
-            params.extend(te_lora.parameters())
-        trainable_params = [{"params": params, "lr": args.unet_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         print(f' step 7. dataloader')
@@ -685,9 +676,7 @@ class NetworkTrainer:
                             if position in args.trg_position:
                                 do_mask_loss = True
                         if do_mask_loss :
-
                             if part in args.trg_part or int(res) == 8 :
-
                                 anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                 mask = anormal_mask.squeeze()  # res,res
                                 anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
@@ -696,7 +685,6 @@ class NetworkTrainer:
                                 else:
                                     anormal_position = torch.where((anormal_mask == 0), 1, 0)  # head, pix_num
                                 normal_position = 1-anormal_position
-
                                 anormal_trigger_activation = (score_map * anormal_position)
                                 normal_trigger_activation = (score_map * normal_position)
                                 total_score = torch.ones_like(anormal_trigger_activation)
@@ -706,20 +694,13 @@ class NetworkTrainer:
                                 total_score = total_score.sum(dim=-1)  # 8
                                 normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                                 anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                                activation_loss = args.normal_weight * normal_activation_loss
-
-                                if args.back_training :
-                                    activation_loss += args.anormal_weight * anormal_activation_loss
+                                activation_loss = args.normal_weight * normal_activation_loss + args.anormal_weight * anormal_activation_loss
                                 if args.cls_training :
                                     anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
                                     normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
                                     normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
                                     anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                    activation_loss += args.normal_weight * normal_cls_activation_loss
-
-                                    if args.back_training:
-                                        activation_loss += args.anormal_weight * anormal_cls_activation_loss
-
+                                    activation_loss += args.normal_weight * normal_cls_activation_loss + args.anormal_weight * anormal_cls_activation_loss
                                 attn_loss += activation_loss
                 attn_loss = attn_loss.mean()
                 if args.do_task_loss:
@@ -733,7 +714,6 @@ class NetworkTrainer:
                         loss_dict["loss/task_loss"] = task_loss.item()
                     if args.attn_loss :
                         loss_dict["loss/attn_loss"] = attn_loss.item()
-                        loss_dict["loss/total_loss"] = loss.item()
                 accelerator.backward(loss)
 
                 if accelerator.sync_gradients and args.max_grad_norm != 0.0:
@@ -777,8 +757,7 @@ class NetworkTrainer:
                 avr_loss = loss_total / len(loss_list)
 
                 logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-                if is_main_process:
-                    progress_bar.set_postfix(**loss_dict)
+                progress_bar.set_postfix(**logs)
 
                 # ------------------------------------------------------------------------------------------------------
                 # 2) total loss
@@ -877,7 +856,6 @@ if __name__ == "__main__":
     parser.add_argument("--detail_64_down", action='store_true')
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
     parser.add_argument("--all_same_learning", action='store_true')
-    parser.add_argument("--back_training", action='store_true')
     parser.add_argument("--attn_loss_weight", type=float, default=1.0)
 
     import ast
