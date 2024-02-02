@@ -381,8 +381,7 @@ if __name__ == "__main__":
     parser.add_argument("--network_args", type=str, default=None, nargs="*", )
     parser.add_argument("--dim_from_weights", action="store_true", )
     parser.add_argument("--network_weights", type=str, default=None, help="pretrained weights for network")
-    parser.add_argument("--concept_image_folder", type=str,
-                        default='/data7/sooyeon/MyData/perfusion_dataset/td_100/100_td/td_1.jpg')
+    parser.add_argument("--concept_image_folder", type=str,)
     parser.add_argument("--num_ddim_steps", type=int, default=50)
     parser.add_argument("--scheduler_linear_start", type=float, default=0.00085)
     parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
