@@ -28,6 +28,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --use_pixel_mask \
   --class_name ${class_name} \
   --anormal_thred 0.5 \
+  --trg_layer "down_blocks_0_attentions_1_transformer_blocks_0_attn2" \
   --trg_layer_list "['down_blocks_0_attentions_1_transformer_blocks_0_attn2']" \
   --only_zero_save
 
