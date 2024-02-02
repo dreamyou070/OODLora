@@ -694,7 +694,8 @@ class NetworkTrainer:
                                                 text_encoder_conds,
                                                 batch,
                                                 weight_dtype, 1, None)
-                    print(f'noise_pred: {noise_pred.shape}')
+                    noise_pred, _ = noise_pred.chunk(2, dim=0)
+                    #print(f'noise_pred: {noise_pred.shape}')
                 # ------------------------------------- (1) task loss ------------------------------------- #
                 if args.do_task_loss:
                     if args.v_parameterization:
@@ -717,7 +718,7 @@ class NetworkTrainer:
                 for i, layer_name in enumerate(attn_dict.keys()):
 
                     map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
-                    random_map = attn_dict[layer_name][1].squeeze()  # 8, res*res, c
+                    map, random_map = map.chunk(2, dim=0)  # 8, res*res, c
 
                     if args.cls_training:
                         cls_map, score_map = torch.chunk(map, 2, dim=-1) # 8, res*res, c
@@ -762,7 +763,7 @@ class NetworkTrainer:
                             if part in args.trg_part or int(res) == 8:
 
                                 query = query_dict[layer_name][0].squeeze()
-                                random_query = query_dict[layer_name][1].squeeze()
+                                query, random_query = query.chunk(2, dim=0)
 
                                 pix_num = query.shape[0]  # 4096             # 4096
                                 res = int(pix_num ** 0.5)  # 64

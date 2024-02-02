@@ -16,7 +16,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --wandb_init_name ${class_name} --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora --network_dim 64 --network_alpha 4 \
-  # --network_weights "${network_weights}" \
   --seed 42 --train_batch_size 1 \
   --optimizer_type AdamW --lr_scheduler cosine_with_restarts \
   --lr_warmup_steps 144 --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 \
@@ -30,3 +29,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --mahalanobis_loss_weight 1 \
   --cls_training --back_training \
   --act_deact --act_deact_weight 1.0
+  # --network_weights "$network_weights"
