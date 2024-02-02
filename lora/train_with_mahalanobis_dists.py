@@ -460,26 +460,13 @@ class NetworkTrainer:
         normal_vector_good_score = torch.cat(list(normal_vector_good_score_list), dim=0)  # sample, dim
         dim = normal_vector_good_score.shape[1]
         good_score_normal_vectors = normal_vector_good_score.cpu()
+        normal_vector_good_score_np = normal_vector_good_score.cpu().numpy()
         good_score_normal_vectors_mean = torch.mean(good_score_normal_vectors, dim=0).numpy()  # dim
         good_score_normal_vectors_cov = np.cov(good_score_normal_vectors.detach().cpu().numpy(), rowvar=False)
-        identity_matrix = torch.eye(dim)
-        variance_vector = (torch.tensor(good_score_normal_vectors_cov) *
-                           identity_matrix).sum(dim=1).squeeze()
-        sort_result, index_result = torch.sort(variance_vector, descending=False)
-        max_dim = 320
-        important_dim = index_result[:max_dim]
-        important_dim, _ = torch.sort(important_dim)
         # ----------------------------------------------------------------------------------------------------------- #
         # [1] good mahalanobis distances
-        redused_features = [normal_vector_good_score[:, i] for i in important_dim]
-        reduced_normal_vector_good_score = torch.stack(redused_features, dim=1)
-        reduced_normal_vector_good_score_np = np.array(reduced_normal_vector_good_score)
-        reduced_normal_vector_good_score_mean = torch.mean(reduced_normal_vector_good_score, dim=0).numpy()  # dim
-        reduced_normal_vector_good_score_cov = np.cov(reduced_normal_vector_good_score.detach().cpu().numpy(), rowvar=False)
-        mahalanobis_dists = [mahalanobis(vector,
-                                         reduced_normal_vector_good_score_mean,
-                                         reduced_normal_vector_good_score_cov)
-                             for vector in reduced_normal_vector_good_score_np]
+        mahalanobis_dists = [mahalanobis(vector,good_score_normal_vectors_mean,good_score_normal_vectors_cov)
+                             for vector in normal_vector_good_score_np]
         import matplotlib.pyplot as plt
         plt.figure()
         plt.hist(mahalanobis_dists)
@@ -493,40 +480,30 @@ class NetworkTrainer:
         # ----------------------------------------------------------------------------------------------------------- #
         # [2] normal vectors
         normal_vector = torch.cat(list(normal_vector_list), dim=0).cpu()
-        redused_features = [normal_vector[:, i] for i in important_dim ]
-        reduced_normal_vector = torch.stack(redused_features, dim=1)
-        reduced_normal_vector_np = np.array(reduced_normal_vector)
-        mahalanobis_dists = [mahalanobis(vector,
-                                         reduced_normal_vector_good_score_mean,
-                                         reduced_normal_vector_good_score_cov)
-                             for vector in reduced_normal_vector_np ]
+        normal_vector_np = normal_vector.cpu().numpy()
+        normal_mahalanobis_dists = [mahalanobis(vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
+                             for vector in normal_vector_np]
         plt.figure()
-        plt.hist(mahalanobis_dists)
-        save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.png")
-        plt.savefig(save_dir)
+        plt.hist(normal_mahalanobis_dists)
+        plt.savefig(os.path.join(record_save_dir, "normal_mahalanobis_distances.png"))
         save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.txt")
         with open(save_dir, 'w') as f:
-            for d in mahalanobis_dists:
+            for d in normal_mahalanobis_dists :
                 f.write(f'{d},')
 
         # ----------------------------------------------------------------------------------------------------------- #
         # [3] anormal vectors
-        anormal_vector = torch.cat(list(anormal_vector_list), dim=0).cpu()
-        redused_features = [anormal_vector[:, i] for i in important_dim]
-        reduced_anormal_vector = torch.stack(redused_features, dim=1)
-        reduced_anormal_vector_np = np.array(reduced_anormal_vector)
-        mahalanobis_dists = [mahalanobis(vector,
-                                         reduced_normal_vector_good_score_mean,
-                                         reduced_normal_vector_good_score_cov)
-                             for vector in reduced_anormal_vector_np]
+        anormal_vector_np = torch.cat(list(anormal_vector_list), dim=0).cpu().numpy()
+        anormal_mahalanobis_dists = [mahalanobis(vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
+                                    for vector in anormal_vector_np]
         plt.figure()
-        plt.hist(mahalanobis_dists)
-        save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.png")
-        plt.savefig(save_dir)
+        plt.hist(anormal_mahalanobis_dists)
+        plt.savefig(os.path.join(record_save_dir, "anormal_mahalanobis_distances.png"))
         save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.txt")
         with open(save_dir, 'w') as f:
-            for d in mahalanobis_dists:
+            for d in anormal_mahalanobis_dists:
                 f.write(f'{d},')
+
         """
         # ----------------------------------------------------------------------------------------------------------- #
         print(f'\n step 7. optimizer (unet frozen) ')
