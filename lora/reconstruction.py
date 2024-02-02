@@ -228,8 +228,8 @@ def main(args):
                                 #object_mask = get_crossattn_map(args, attn_stores,
                                 #                                args.trg_layer)
                                 #object_mask_save_dir = os.path.join(class_base_folder, f'{name}_object_mask{ext}')
-                                save_latent(object_mask, object_mask_save_dir, org_h, org_w)                                
-                                background_mask = 1 - object_mask  ###################################################################### [res,res]
+                                #save_latent(object_mask, object_mask_save_dir, org_h, org_w)
+                                background_mask = 1 - object_mask  ########################################## [res,res]
 
                                 # ------------------------------------- [2] anomal mask ------------------------------ #
                                 # real network is getting good !
@@ -248,7 +248,7 @@ def main(args):
                                 for trg_layer in args.trg_layer_list :
                                     object_mask = get_crossattn_map(args, attn_stores,
                                                                     trg_layer)
-                                                                    #'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
+                                                                #'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
                                     object_mask_save_dir = os.path.join(class_base_folder, f'{name}_z_{trg_layer}{ext}')
                                     save_latent(object_mask, object_mask_save_dir, org_h, org_w)
                                 # 2. normal mask
@@ -295,7 +295,7 @@ def main(args):
                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                 recon_image.save(img_dir)
 
-                                # -------------------------------------- [4] anomaly map -------------------------------------- #
+                                # ----------------------------- [4] anomaly map -------------------------------------- #
                                 network.restore()
                                 network.load_weights(weight_dir)
                                 network.to(device)
@@ -332,7 +332,7 @@ def main(args):
                                 save_latent(rec_mask, rec_mask_save_dir, org_h, org_w)
 
                                 # (3) anomaly score
-                                anomaly_score = torch.abs(rec_mask - org_mask).cpu() ########################################################## [res,res]
+                                anomaly_score = torch.abs(rec_mask - org_mask).cpu() ######################## [res,res]
                                 background_vector = background_mask.flatten().cpu()
                                 object_anomaly_socre_list = []
                                 for i in range(background_vector.shape[0]):
@@ -383,24 +383,16 @@ if __name__ == "__main__":
     parser.add_argument("--network_weights", type=str, default=None, help="pretrained weights for network")
     parser.add_argument("--concept_image", type=str,
                         default='/data7/sooyeon/MyData/perfusion_dataset/td_100/100_td/td_1.jpg')
-    parser.add_argument("--prompt", type=str, default='teddy bear, wearing like a super hero')
-    parser.add_argument("--concept_image_folder", type=str)
     parser.add_argument("--num_ddim_steps", type=int, default=50)
     parser.add_argument("--scheduler_linear_start", type=float, default=0.00085)
     parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
     parser.add_argument("--scheduler_timesteps", type=int, default=1000)
     parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
-    parser.add_argument("--inner_iteration", type=int, default=10)
     parser.add_argument("--class_name", type=str, default="bagel")
-    parser.add_argument("--free_time", type=int, default=80)
+    parser.add_argument("--save_origin", action='store_true')
     parser.add_argument("--only_zero_save", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=2)
-    parser.add_argument("--start_from_origin", action='store_true')
-    parser.add_argument("--guidance_scale", type=float, default=8.5)
-    parser.add_argument("--use_pixel_mask", action='store_true')
-    parser.add_argument("--start_from_final", action='store_true')
-    parser.add_argument("--save_origin", action='store_true')
     parser.add_argument("--only_normal_infer", action='store_true')
     parser.add_argument("--latent_diff_thred", type=float, default=0.5)
     parser.add_argument("--anormal_thred", type=float, default=0.5)
@@ -415,6 +407,8 @@ if __name__ == "__main__":
     parser.add_argument("--trg_layer", type=str)
     parser.add_argument("--trg_layer_list", type=arg_as_list, )
     parser.add_argument("--trg_lora_epoch", type=str)
+    parser.add_argument("--guidance_scale", type=float, default=8.5)
+    parser.add_argument("--prompt", type=str, default='teddy bear, wearing like a super hero')
     parser.add_argument("--negative_prompt", type=str)
     args = parser.parse_args()
     main(args)
