@@ -155,14 +155,13 @@ def main(args):
             network.apply_to(text_encoder, unet, True, True)
 
             # (3) save direction
-            parent, detect_network_dir = os.path.split(args.detection_network_weights)
-            detect_model_epoch = get_lora_epoch(detect_network_dir)
+            #parent, detect_network_dir = os.path.split(args.detection_network_weights)
+            #detect_model_epoch = get_lora_epoch(detect_network_dir)
             model_epoch = get_lora_epoch(weight)
             test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
             os.makedirs(test_lora_dir, exist_ok=True)
             ## (3.1) base dir
-            condition_save_dir = os.path.join(test_lora_dir, f'detec_epoch_{detect_model_epoch}_'
-                                                             f'anomal_thredhold_{args.anormal_thred}_'
+            condition_save_dir = os.path.join(test_lora_dir, f'anomal_thredhold_{args.anormal_thred}_'
                                                              f'step_{args.num_ddim_steps}_'
                                                              f'guidance_{args.guidance_scale}')
             print(f'condition_save_dir : {condition_save_dir}')
