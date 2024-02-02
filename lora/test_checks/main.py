@@ -1,7 +1,8 @@
 import os
 
 file1 = 'normal_goodscore_mahalanobis_distances.txt'
-file2 = 'anormal_mahalanobis_distances.txt'
+file2 = 'normal_mahalanobis_distances.txt'
+file3 = 'anormal_mahalanobis_distances.txt'
 
 with open(file1, 'r') as f:
     lines1 = f.readlines()[0]
@@ -13,11 +14,15 @@ for s in scores :
         score_list.append(float(score))
     except :
         pass
-print(max(score_list))
+sample_num = len(score_list)
+mean_value = sum(score_list) / sample_num
+max_value = max(score_list)
+min_value = min(score_list)
+print(mean_value, max_value, min_value)
 
-with open(file2, 'r') as f:
-    lines2 = f.readlines()[0]
-scores = lines2.split(',')
+with open(file3, 'r') as f:
+    lines3 = f.readlines()[0]
+scores = lines3.split(',')
 score_list = []
 for s in scores :
     score = s.strip()
@@ -25,4 +30,8 @@ for s in scores :
         score_list.append(float(score))
     except :
         pass
-print(max(score_list))
+sample_num = len(score_list)
+mean_value = sum(score_list) / sample_num
+max_value = max(score_list)
+min_value = min(score_list)
+print(mean_value, max_value, min_value)

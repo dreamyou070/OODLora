@@ -738,11 +738,9 @@ class NetworkTrainer:
                                 for i in range(pix_num):
                                     if object_position[i] == 1:
                                         feat = query[i, :].squeeze()  # dim
-                                        #if len(features) > 10000 :
-                                        #    features.pop(0)
                                         features.append(feat.unsqueeze(0))
                                 normal_vectors = torch.cat(features, dim=0)  # sample, dim
-
+                                """
                                 if 'mean' not in norm.keys() :
                                     normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
                                     normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
@@ -751,8 +749,9 @@ class NetworkTrainer:
                                     normal_vectors_cov_torch = norm['cov']
                                 norm['mean'] = torch.mean(normal_vectors, dim=0)
                                 norm['cov'] = torch.cov(normal_vectors.transpose(0, 1))
-                                #normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-                                #normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+                                """
+                                normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+                                normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
 
                                 def mahal(u, v, cov):
                                     delta = u - v
@@ -760,8 +759,7 @@ class NetworkTrainer:
                                     return torch.sqrt(m)
 
                                 mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
-                                                     feat in
-                                                     normal_vectors]
+                                                     feat in normal_vectors]
                                 dist_max = torch.tensor(mahalanobis_dists).max()
                                 dist_mean = torch.tensor(mahalanobis_dists).mean()
                                 dist_loss += dist_mean

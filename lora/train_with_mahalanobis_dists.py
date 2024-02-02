@@ -427,8 +427,6 @@ class NetworkTrainer:
                 if 'good' in class_name:
                     for pix_idx in range(mask_vector.shape[0]):
                         feature = query[pix_idx, :].cpu()
-                        #if args.normalize :
-                        #    feat = torch.nn.functional.normalize(feat, p=2, dim=0)
                         attn_score = trigger_map[pix_idx].cpu()
                         if mask_vector[pix_idx] == 1:
                             if feature.dim() == 1:
@@ -457,16 +455,18 @@ class NetworkTrainer:
                           f'normal_vector_bad_score_list : {len(normal_vector_bad_score_list)}, '
                           f'anormal : {len(anormal_vector_list)}')
         # ----------------------------------------------------------------------------------------------------------- #
+        def mahal(u, v, cov):
+            delta = u - v
+            m = torch.dot(delta, torch.matmul(cov, delta))
+            return torch.sqrt(m)
+
         normal_vector_good_score = torch.cat(list(normal_vector_good_score_list), dim=0)  # sample, dim
-        dim = normal_vector_good_score.shape[1]
-        good_score_normal_vectors = normal_vector_good_score.cpu()
-        normal_vector_good_score_np = normal_vector_good_score.cpu().numpy()
-        good_score_normal_vectors_mean = torch.mean(good_score_normal_vectors, dim=0).numpy()  # dim
-        good_score_normal_vectors_cov = np.cov(good_score_normal_vectors.detach().cpu().numpy(), rowvar=False)
+        normal_vector_mean_torch = torch.mean(normal_vector_good_score, dim=0)
+        normal_vectors_cov_torch = torch.cov(normal_vector_good_score.transpose(0, 1))
         # ----------------------------------------------------------------------------------------------------------- #
         # [1] good mahalanobis distances
-        mahalanobis_dists = [mahalanobis(vector,good_score_normal_vectors_mean,good_score_normal_vectors_cov)
-                             for vector in normal_vector_good_score_np]
+        mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
+                             feat in normal_vector_good_score]
         import matplotlib.pyplot as plt
         plt.figure()
         plt.hist(mahalanobis_dists)
@@ -479,6 +479,7 @@ class NetworkTrainer:
 
         # ----------------------------------------------------------------------------------------------------------- #
         # [2] normal vectors
+        """
         normal_vector = torch.cat(list(normal_vector_list), dim=0).cpu()
         normal_vector_np = normal_vector.cpu().numpy()
         normal_mahalanobis_dists = [mahalanobis(vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
@@ -490,19 +491,23 @@ class NetworkTrainer:
         with open(save_dir, 'w') as f:
             for d in normal_mahalanobis_dists :
                 f.write(f'{d},')
-
+        """
         # ----------------------------------------------------------------------------------------------------------- #
         # [3] anormal vectors
-        anormal_vector_np = torch.cat(list(anormal_vector_list), dim=0).cpu().numpy()
-        anormal_mahalanobis_dists = [mahalanobis(vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
-                                    for vector in anormal_vector_np]
+        anormal_vectors = torch.cat(list(anormal_vector_list), dim=0)
+        anomal_dists = []
+        for feat in anormal_vectors:
+            anomal_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
+            print(f'anomal_dist : {anomal_dist}')
+            anomal_dists.append(anomal_dist)
+
         plt.figure()
-        plt.hist(anormal_mahalanobis_dists)
+        plt.hist(anomal_dists)
         plt.savefig(os.path.join(record_save_dir, "anormal_mahalanobis_distances.png"))
         save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.txt")
-        with open(save_dir, 'w') as f:
-            for d in anormal_mahalanobis_dists:
-                f.write(f'{d},')
+        with open(save_dir, 'w') as ff:
+            for d in anomal_dists :
+                ff.write(f'{d},')
 
         """
         # ----------------------------------------------------------------------------------------------------------- #
