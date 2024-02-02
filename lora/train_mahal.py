@@ -773,6 +773,7 @@ class NetworkTrainer:
                                     random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
                                     if object_flag == 1 :
                                         if args.strict_training :
+                                            print(f'random_dist : {random_dist} | dist_max : {dist_max}')
                                             if random_dist < dist_max :
                                                 random_anomal_positions.append(1)
                                             else:
