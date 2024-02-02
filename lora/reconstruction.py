@@ -155,8 +155,8 @@ def main(args):
             network.apply_to(text_encoder, unet, True, True)
 
             # (3) save direction
-            #parent, detect_network_dir = os.path.split(args.detection_network_weights)
-            #detect_model_epoch = get_lora_epoch(detect_network_dir)
+            parent, detect_network_dir = os.path.split(args.detection_network_weights)
+            detect_model_epoch = get_lora_epoch(detect_network_dir)
             model_epoch = get_lora_epoch(weight)
             test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
             os.makedirs(test_lora_dir, exist_ok=True)
@@ -214,7 +214,7 @@ def main(args):
                                 org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                                 # ------------------------------------- [1] object mask ------------------------------ #
                                 # 1. object mask
-                                """
+
                                 network.load_weights(args.detection_network_weights)
                                 network.to(device)
                                 controller_ob = AttentionStore()
@@ -227,11 +227,10 @@ def main(args):
                                 controller_ob.reset()
                                 object_mask = get_crossattn_map(args, attn_stores,
                                                                 args.trg_layer)
-                                                                #'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
                                 object_mask_save_dir = os.path.join(class_base_folder, f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)                                
                                 background_mask = 1 - object_mask  ###################################################################### [res,res]
-                                """
+
                                 # ------------------------------------- [2] anomal mask ------------------------------ #
                                 # real network is getting good !
                                 weight_dir = os.path.join(args.network_weights, weight)
@@ -252,16 +251,13 @@ def main(args):
                                                                     #'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
                                     object_mask_save_dir = os.path.join(class_base_folder, f'{name}_{trg_layer}{ext}')
                                     save_latent(object_mask, object_mask_save_dir, org_h, org_w)
-                                """
+                                # 2. normal mask
                                 normal_mask = get_crossattn_map(args, attn_stores,
                                                                  args.trg_layer,
                                                                  thredhold=args.anormal_thred)
                                 normal_mask_save_dir = os.path.join(class_base_folder,
                                                                      f'{name}_normal_mask{ext}')
                                 save_latent(normal_mask, normal_mask_save_dir, org_h, org_w)
-                                
-
-
 
                                 # 3. latent mask
                                 recon_mask = background_mask + normal_mask
@@ -355,7 +351,6 @@ def main(args):
 
                                 tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
                                 anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
-                                """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

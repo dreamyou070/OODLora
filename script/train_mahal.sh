@@ -5,11 +5,11 @@ data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="res_64_down_1_no_task_mahal_attn_0.008_act_deact_text_frozen"
+save_folder="res_64_down_1_no_task_mahal_attn_0.008_act_deact_text_frozen_new_mahal_code"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_1_mahal_attn_0.001_act_deact/models/epoch-000002.safetensors"
 start_epoch=0
-port_number=58837
+port_number=58838zmfha
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
   --main_process_port $port_number ../lora/train_mahal.py --process_title parksooyeon \
