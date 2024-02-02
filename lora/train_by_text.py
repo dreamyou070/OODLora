@@ -300,6 +300,17 @@ class NetworkTrainer:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
         except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+
+        if args.unet_frozen :
+            unet_loras = network.unet_loras
+            for unet_lora in unet_loras:
+                unet_lora.requires_grad = False
+            te_loras = network.text_encoder_loras
+            params = []
+            for te_lora in te_loras:
+                params.extend(te_lora.parameters())
+            trainable_params = [{"params": params, "lr": args.unet_lr}]
+
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         print(f' step 7. dataloader')
@@ -876,6 +887,8 @@ if __name__ == "__main__":
     parser.add_argument("--normal_with_background", action="store_true", )
     parser.add_argument("--anormal_with_background", action="store_true", )
     parser.add_argument("--do_task_loss", action="store_true", )
+    parser.add_argument("--unet_frozen", action="store_true", )
+
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
