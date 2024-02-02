@@ -973,7 +973,7 @@ if __name__ == "__main__":
     parser.add_argument("--act_deact_weight", type=float, default=1.0)
     parser.add_argument("--all_data_dir", type=str)
     parser.add_argument("--concat_query", action='store_true')
-    parser.add_argument("--strict_training", type=float, default=1.0)
+    parser.add_argument("--strict_training", action='store_true')
     import ast
 
 
