@@ -35,5 +35,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --do_task_loss \
   --attn_loss_weight 0.001 \
   --back_training \
+  --cls_training \
   --trg_position "['down']" \
   --trg_part '["attn_1"]'

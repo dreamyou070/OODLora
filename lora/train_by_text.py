@@ -697,6 +697,9 @@ class NetworkTrainer:
                                     anormal_position = torch.where((anormal_mask == 0), 1, 0)  # head, pix_num
                                 normal_position = 1-anormal_position
 
+                                print(f'normal pixel num : {normal_position.sum()}')
+                                print(f'anormal pixel num : {anormal_position.sum()}')
+
                                 anormal_trigger_activation = (score_map * anormal_position)
                                 normal_trigger_activation = (score_map * normal_position)
                                 total_score = torch.ones_like(anormal_trigger_activation)
