@@ -6,9 +6,9 @@ train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/$
 all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex2/rgb"
 
 normal_folder='normal'
-save_folder="res_64_down_1_only_text_training"
+save_folder="res_64_down_1_t_2_anomal_add_query_unet_frozen"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_1_t_2_normal_attn_loss_weight_1_mahal_loss_new_code_disloss_2_data_10_act_deact_query_add_random/models/epoch-000004.safetensors"
+network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_1_t_2_anomal_add_query/models/epoch-000004.safetensors"
 start_epoch=0
 port_number=58832
 
@@ -35,4 +35,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --cross_map_res "[64]" \
   --detail_64_down \
   --trg_position "['down']" \
-  --trg_part '["attn_1"]' \
+  --trg_part '["attn_1"]'
