@@ -302,11 +302,19 @@ class NetworkTrainer:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
 
         if args.unet_frozen :
+            params = []
             unet_loras = network.unet_loras
             for unet_lora in unet_loras:
-                unet_lora.requires_grad = False
+                lora_name = unet_lora.lora_name
+                if 'to_k' in lora_name or 'to_v' in lora_name:
+                    if 'attn2' in lora_name :
+                        print(f'unet frozen layer : {lora_name}')
+                        params.extend(unet_lora.parameters())
+                    else :
+                        unet_lora.requires_grad = False
+                else :
+                        unet_lora.requires_grad = False
             te_loras = network.text_encoder_loras
-            params = []
             for te_lora in te_loras:
                 params.extend(te_lora.parameters())
             trainable_params = [{"params": params, "lr": args.unet_lr}]
