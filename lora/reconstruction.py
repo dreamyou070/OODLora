@@ -1,6 +1,5 @@
 import argparse
 from accelerate.utils import set_seed
-# from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
 import os
 import random
 import library.train_util as train_util
@@ -15,12 +14,8 @@ from utils.model_utils import get_state_dict, init_prompt
 from attention_store import AttentionStore
 import torch.nn as nn
 from utils.model_utils import call_unet
-from utils.scheduling_utils import next_step
-import math
 from utils.common_utils import get_lora_epoch, save_latent
 from utils.model_utils import get_crossattn_map
-from utils.image_utils import latent2image, numpy_to_pil
-from safetensors.torch import load_file
 
 try:
     from setproctitle import setproctitle
@@ -75,7 +70,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
 
             if is_cross_attention and mask is not None:
+                print(f'save query ')
                 if layer_name == args.trg_layer :
+                    print(f'save query, layer_name : {layer_name}')
                     controller.save_query(self_head_query, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
