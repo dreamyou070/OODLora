@@ -319,7 +319,44 @@ class NetworkTrainer:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
         except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+
+        print(f'\n (6.2) frozen or not')
+        if args.unet_frozen :
+            params = []
+            unet_loras = network.unet_loras
+            for unet_lora in unet_loras:
+                lora_name = unet_lora.lora_name
+                if 'to_k' in lora_name or 'to_v' in lora_name:
+                    if 'attn2' in lora_name :
+                        print(f'unet frozen layer : {lora_name}')
+                        params.extend(unet_lora.parameters())
+                    else :
+                        unet_lora.requires_grad = False
+                else :
+                        unet_lora.requires_grad = False
+            te_loras = network.text_encoder_loras
+            for te_lora in te_loras:
+                params.extend(te_lora.parameters())
+            trainable_params = [{"params": params, "lr": args.unet_lr}]
+
+        if args.text_frozen :
+            params = []
+            unet_loras = network.unet_loras
+            for unet_lora in unet_loras:
+                lora_name = unet_lora.lora_name
+                if 'to_k' in lora_name or 'to_v' in lora_name:
+                    if 'attn2' in lora_name:
+                        unet_lora.requires_grad = False
+                    else:
+                        params.extend(unet_lora.parameters())
+                else:
+                    params.extend(unet_lora.parameters())
+            te_loras = network.text_encoder_loras
+            for te_lora in te_loras:
+                te_lora.requires_grad = False
+            trainable_params = [{"params": params, "lr": args.text_encoder_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
+
 
         print(f' step 7. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
@@ -777,10 +814,8 @@ class NetworkTrainer:
                                     else :
                                         random_anomal_positions.append(0)
                                 random_anomal_positions = torch.tensor(random_anomal_positions)
-                                random_anomal_pixel_num = random_anomal_positions.sum()
-                                #print(f'random_anomal_pixel_num : {random_anomal_pixel_num}')
-                                random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).to(score_random_map.device)
-
+                                random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).\
+                                    to(score_random_map.device)
 
                                 normal_trigger_activation = (score_map * normal_position)
                                 normal_trigger_back_activation = (score_map * back_position)
@@ -966,20 +1001,15 @@ if __name__ == "__main__":
     parser.add_argument("--do_task_loss", action='store_true')
     parser.add_argument("--act_deact", action='store_true')
     parser.add_argument("--act_deact_weight", type=float, default=1.0)
-    parser.add_argument("--all_data_dir", type=str)
     parser.add_argument("--concat_query", action='store_true')
     parser.add_argument("--strict_training", action='store_true')
     parser.add_argument("--partial", action="store_true", )
     import ast
-
-
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
-
-
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
     parser.add_argument("--trg_layer", type=str)
     parser.add_argument("--trg_layer_list", type=arg_as_list, )
@@ -998,7 +1028,8 @@ if __name__ == "__main__":
     parser.add_argument("--normal_with_background", action="store_true", )
     parser.add_argument("--only_object_position", action="store_true", )
     parser.add_argument("--query_add_random", action="store_true", )
-
+    parser.add_argument("--unet_frozen", action="store_true", )
+    parser.add_argument("--text_frozen", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
