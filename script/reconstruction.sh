@@ -1,6 +1,6 @@
 #! /bin/bash
 class_name="bagel"
-folder_name="res_64_down_1_t_2_normal_attn_loss_weight_1_mahal_loss_new_code_disloss_2_data_10_act_deact_query_add_random"
+folder_name="res_64_down_1_t_2_normal_attn_loss_weight_1_mahal_loss_new_code_disloss_2_data_10_act_deact_query_add_random_strict_training"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
