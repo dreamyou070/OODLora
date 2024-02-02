@@ -714,153 +714,124 @@ class NetworkTrainer:
                 attn_loss, dist_loss = 0, 0
                 features = []
                 for i, layer_name in enumerate(attn_dict.keys()):
+                    if layer_name in args.trg_layer_name_list :
+                        map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
+                        map, random_map = map.chunk(2, dim=0)  # 8, res*res, c
 
-                    map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
-                    map, random_map = map.chunk(2, dim=0)  # 8, res*res, c
+                        if args.cls_training:
+                            cls_map, score_map = torch.chunk(map, 2, dim=-1) # 8, res*res, c
+                            cls_map = cls_map.squeeze()     # 8, res*res
+                            score_map = score_map.squeeze() # 8, res*res
 
-                    if args.cls_training:
-                        cls_map, score_map = torch.chunk(map, 2, dim=-1) # 8, res*res, c
-                        cls_map = cls_map.squeeze()     # 8, res*res
-                        score_map = score_map.squeeze() # 8, res*res
+                            cls_random_map, score_random_map = torch.chunk(random_map, 2, dim=-1)
+                            cls_random_map = cls_random_map.squeeze()
+                            score_random_map = score_random_map.squeeze() # 8, res*res
 
-                        cls_random_map, score_random_map = torch.chunk(random_map, 2, dim=-1)
-                        cls_random_map = cls_random_map.squeeze()
-                        score_random_map = score_random_map.squeeze() # 8, res*res
-
-                    else:
-                        score_map = map.squeeze()  # 8, res*res
-                        score_random_map = random_map.squeeze()  # 8, res*res
-                    res = int(map.shape[1] ** 0.5)
-                    head_num = int(score_map.shape[0])
-                    do_mask_loss = False
-                    if res in args.cross_map_res:
-                        if 'down' in layer_name:
-                            position = 'down'
-                        elif 'up' in layer_name:
-                            position = 'up'
-                        elif 'mid' in layer_name:
-                            position = 'mid'
-                        if 'attentions_0' in layer_name:
-                            part = 'attn_0'
-                        elif 'attentions_1' in layer_name:
-                            part = 'attn_1'
                         else:
-                            part = 'attn_2'
-                        if res == 64:
-                            if args.detail_64_up:
-                                if 'up' in layer_name:
-                                    do_mask_loss = True
-                            if args.detail_64_down:
-                                if 'down' in layer_name:
-                                    do_mask_loss = True
-                        else:
-                            if position in args.trg_position:
-                                do_mask_loss = True
+                            score_map = map.squeeze()  # 8, res*res
+                            score_random_map = random_map.squeeze()  # 8, res*res
+                        res = int(map.shape[1] ** 0.5)
+                        head_num = int(score_map.shape[0])
+                        query = query_dict[layer_name][0].squeeze()
+                        query, random_query = query.chunk(2, dim=0)
+                        query, random_query = query.squeeze(), random_query.squeeze()
+                        pix_num = query.shape[0]  # 4096             # 4096
+                        res = int(pix_num ** 0.5)  # 64
+                        anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
+                            0)  # [1,1,res,res], foreground = 1
+                        mask = anormal_mask.squeeze()  # res,res
+                        anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
+                                                   dim=0)  # .unsqueeze(-1)  # 8, res*res
+                        anormal_position = torch.where((anormal_mask == 0), 1, 0)  # head, pix_num
+                        normal_position = 1 - anormal_position
+                        back_position = 1 - normal_position
+                        object_position = mask.flatten()  # pix_num
 
-                        if do_mask_loss:
+                        # (0) random features
+                        random_features = []
+                        for i in range(pix_num) :
+                            r_feat = random_query[i, :].squeeze()
+                            random_features.append(r_feat.unsqueeze(0))
+                        random_vectors = torch.cat(random_features, dim=0)  # sample, dim
 
-                            if part in args.trg_part or int(res) == 8:
+                        # (1) object features
+                        for i in range(pix_num):
+                            if object_position[i] == 1:
+                                feat = query[i, :].squeeze()  # dim
+                                features.append(feat.unsqueeze(0))
+                        normal_vectors = torch.cat(features, dim=0)  # sample, dim
+                        """
+                        if 'mean' not in norm.keys() :
+                            normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+                            normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+                        else :
+                            normal_vector_mean_torch = norm['mean']
+                            normal_vectors_cov_torch = norm['cov']
+                        norm['mean'] = torch.mean(normal_vectors, dim=0)
+                        norm['cov'] = torch.cov(normal_vectors.transpose(0, 1))
+                        """
+                        normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+                        normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
 
-                                query = query_dict[layer_name][0].squeeze()
-                                query, random_query = query.chunk(2, dim=0)
-                                query, random_query = query.squeeze(), random_query.squeeze()
-                                pix_num = query.shape[0]  # 4096             # 4096
-                                res = int(pix_num ** 0.5)  # 64
-                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
-                                    0)  # [1,1,res,res], foreground = 1
-                                mask = anormal_mask.squeeze()  # res,res
-                                anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
-                                                           dim=0)  # .unsqueeze(-1)  # 8, res*res
-                                anormal_position = torch.where((anormal_mask == 0), 1, 0)  # head, pix_num
-                                normal_position = 1 - anormal_position
-                                back_position = 1 - normal_position
-                                object_position = mask.flatten()  # pix_num
+                        def mahal(u, v, cov):
+                            delta = u - v
+                            m = torch.dot(delta, torch.matmul(cov, delta))
+                            return torch.sqrt(m)
 
-                                # (0) random features
-                                random_features = []
-                                for i in range(pix_num) :
-                                    r_feat = random_query[i, :].squeeze()
-                                    random_features.append(r_feat.unsqueeze(0))
-                                random_vectors = torch.cat(random_features, dim=0)  # sample, dim
+                        mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
+                                             feat in normal_vectors]
+                        dist_max = torch.tensor(mahalanobis_dists).max()
+                        dist_mean = torch.tensor(mahalanobis_dists).mean()
+                        dist_loss += dist_mean
 
-                                # (1) object features
-                                for i in range(pix_num):
-                                    if object_position[i] == 1:
-                                        feat = query[i, :].squeeze()  # dim
-                                        features.append(feat.unsqueeze(0))
-                                normal_vectors = torch.cat(features, dim=0)  # sample, dim
-                                """
-                                if 'mean' not in norm.keys() :
-                                    normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-                                    normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
-                                else :
-                                    normal_vector_mean_torch = norm['mean']
-                                    normal_vectors_cov_torch = norm['cov']
-                                norm['mean'] = torch.mean(normal_vectors, dim=0)
-                                norm['cov'] = torch.cov(normal_vectors.transpose(0, 1))
-                                """
-                                normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-                                normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+                        random_anomal_positions = []
+                        for i in range(pix_num) :
+                            object_flag = object_position[i]
+                            feat = random_vectors[i, :]
+                            random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
+                            if object_flag == 1 :
+                                if random_dist >= dist_max:
+                                    random_anomal_positions.append(1)
+                                else:
+                                    random_anomal_positions.append(0)
+                            else :
+                                random_anomal_positions.append(0)
+                        random_anomal_positions = torch.tensor(random_anomal_positions)
+                        random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).\
+                            to(score_random_map.device)
 
-                                def mahal(u, v, cov):
-                                    delta = u - v
-                                    m = torch.dot(delta, torch.matmul(cov, delta))
-                                    return torch.sqrt(m)
+                        normal_trigger_activation = (score_map * normal_position)
+                        normal_trigger_back_activation = (score_map * back_position)
+                        anormal_trigger_activation = (score_random_map * random_anomal_positions)
+                        total_score = torch.ones_like(anormal_trigger_activation)
 
-                                mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
-                                                     feat in normal_vectors]
-                                dist_max = torch.tensor(mahalanobis_dists).max()
-                                dist_mean = torch.tensor(mahalanobis_dists).mean()
-                                dist_loss += dist_mean
+                        normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8
+                        normal_trigger_back_activation = normal_trigger_back_activation.sum(dim=-1)  # 8
+                        anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
+                        total_score = total_score.sum(dim=-1)  # 8
 
-                                random_anomal_positions = []
-                                for i in range(pix_num) :
-                                    object_flag = object_position[i]
-                                    feat = random_vectors[i, :]
-                                    random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
-                                    if object_flag == 1 :
-                                        if random_dist >= dist_max:
-                                            random_anomal_positions.append(1)
-                                        else:
-                                            random_anomal_positions.append(0)
-                                    else :
-                                        random_anomal_positions.append(0)
-                                random_anomal_positions = torch.tensor(random_anomal_positions)
-                                random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).\
-                                    to(score_random_map.device)
+                        normal_trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                        normal_trigger_back_activation_loss = (normal_trigger_back_activation / total_score) ** 2  # 8, res*res
+                        anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
 
-                                normal_trigger_activation = (score_map * normal_position)
-                                normal_trigger_back_activation = (score_map * back_position)
-                                anormal_trigger_activation = (score_random_map * random_anomal_positions)
-                                total_score = torch.ones_like(anormal_trigger_activation)
+                        activation_loss = args.normal_weight * normal_trigger_activation_loss\
+                                          + args.back_weight * normal_trigger_back_activation_loss
+                        # ---------------------------------- deactivating ------------------------------------ #
+                        if args.act_deact :
+                            activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
+                        if args.cls_training:
+                            normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
+                            normal_cls_back_activation = (cls_map * back_position).sum(dim=-1)
+                            anormal_cls_activation = (cls_random_map * random_anomal_positions).sum(dim=-1)
 
-                                normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8
-                                normal_trigger_back_activation = normal_trigger_back_activation.sum(dim=-1)  # 8
-                                anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
-                                total_score = total_score.sum(dim=-1)  # 8
-
-                                normal_trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                normal_trigger_back_activation_loss = (normal_trigger_back_activation / total_score) ** 2  # 8, res*res
-                                anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-
-                                activation_loss = args.normal_weight * normal_trigger_activation_loss\
-                                                  + args.back_weight * normal_trigger_back_activation_loss
-                                # ---------------------------------- deactivating ------------------------------------ #
-                                if args.act_deact :
-                                    activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
-                                if args.cls_training:
-                                    normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
-                                    normal_cls_back_activation = (cls_map * back_position).sum(dim=-1)
-                                    anormal_cls_activation = (cls_random_map * random_anomal_positions).sum(dim=-1)
-
-                                    normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
-                                    normal_cls_back_activation_loss = (1 - (normal_cls_back_activation / total_score)) ** 2
-                                    anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                    activation_loss += args.normal_weight * normal_cls_activation_loss \
-                                                     + args.back_weight * normal_cls_back_activation_loss
-                                    if args.act_deact :
-                                        activation_loss += args.act_deact_weight * anormal_cls_activation_loss
-                                attn_loss += activation_loss
+                            normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                            normal_cls_back_activation_loss = (1 - (normal_cls_back_activation / total_score)) ** 2
+                            anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
+                            activation_loss += args.normal_weight * normal_cls_activation_loss \
+                                             + args.back_weight * normal_cls_back_activation_loss
+                            if args.act_deact :
+                                activation_loss += args.act_deact_weight * anormal_cls_activation_loss
+                        attn_loss += activation_loss
                 dist_loss = dist_loss.mean()
                 attn_loss = attn_loss.mean()
                 ########################### 3. attn loss ###########################################################
@@ -1004,35 +975,24 @@ if __name__ == "__main__":
     parser.add_argument("--start_epoch", type=int, default=0)
     parser.add_argument("--valid_data_dir", type=str)
     parser.add_argument("--task_loss_weight", type=float, default=0.5)
-    parser.add_argument("--shuffle", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
-    parser.add_argument("--detail_64_up", action='store_true')
-    parser.add_argument("--detail_64_down", action='store_true')
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
     parser.add_argument("--do_task_loss", action='store_true')
     parser.add_argument("--act_deact", action='store_true')
     parser.add_argument("--act_deact_weight", type=float, default=1.0)
-    parser.add_argument("--concat_query", action='store_true')
-    parser.add_argument("--strict_training", action='store_true')
-    parser.add_argument("--partial", action="store_true", )
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
-    parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
-    parser.add_argument("--trg_layer", type=str)
     parser.add_argument("--trg_layer_list", type=arg_as_list, )
     # default=['down_blocks_0_attentions_1_transformer_blocks_0_attn2',
     #         'up_blocks_3_attentions_2_transformer_blocks_0_attn2'])
-    parser.add_argument("--training_layer", type=str)
-    parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
     parser.add_argument('--mahalanobis_loss_weight', type=float, default=1.0)
     parser.add_argument("--attn_loss_weight", type=float, default=1.0)
     parser.add_argument('--normal_weight', type=float, default=1.0)
-    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
     parser.add_argument("--cls_training", action="store_true", )
     parser.add_argument("--background_loss", action="store_true")
     parser.add_argument("--average_mask", action="store_true", )
