@@ -4,6 +4,7 @@ query1 = torch.randn(4,10)
 query2 = torch.randn(4,10)
 
 query_matrix = torch.matmul(query1, query2.t()) # 4 * 4
+query_matrix = torch.softmax(query_matrix, dim=1)
 print(query_matrix)
 pix_num = query_matrix.size(0)
 identity_matrix = torch.eye(pix_num)
