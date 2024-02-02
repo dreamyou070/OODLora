@@ -11,7 +11,7 @@ network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${n
 start_epoch=0
 port_number=58802
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
   --main_process_port $port_number ../lora/train_by_text.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
@@ -22,7 +22,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --lr_warmup_steps 144 --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 --resolution '512,512' --save_every_n_epochs 1 \
   --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
-  --max_train_steps 1000 \
+  --max_train_steps 500 \
   --max_train_epochs 500 \
   --attn_loss \
   --task_loss_weight 1.0 --seed 42 --class_caption 'good' \
@@ -36,5 +36,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --attn_loss_weight 0.001 \
   --back_training \
   --cls_training \
+  --truncate_pad --truncate_length 2 \
   --trg_position "['down']" \
   --trg_part '["attn_1"]'
