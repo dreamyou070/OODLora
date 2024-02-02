@@ -1,6 +1,6 @@
 #! /bin/bash
 class_name="bagel"
-folder_name="res_64_down_1_t_2_anomal_add_query_unet_frozen"
+folder_name="res_64_down_1_t_2_anomal_add_query_unet_frozen_task_train_attn_weight_0.001"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
