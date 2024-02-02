@@ -771,9 +771,8 @@ class NetworkTrainer:
                                     else :
                                         random_anomal_positions.append(0)
                                 random_anomal_positions = torch.tensor(random_anomal_positions)
-                                print(f'before repeat, random_anomal_positions : {random_anomal_positions.shape}')
-                                random_anormal_position = random_anomal_positions.unsqueeze(0).repeat(head_num,1).to(score_random_map.device)
-                                print(f'after repeat, random_anomal_positions : {random_anomal_positions.shape}')
+                                random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).to(score_random_map.device)
+
 
                                 anormal_trigger_activation = (score_map * anormal_position)
 
@@ -791,9 +790,7 @@ class NetworkTrainer:
                                                   args.back_weight * anormal_activation_loss
 
                                 # ---------------------------------- deactivating ------------------------------------ #
-                                print(f'score_random_map : {score_random_map.shape}')
-                                print(f'random_anormal_position : {random_anormal_position.shape}')
-                                random_anormal_trigger_activation = (score_random_map * random_anormal_position) # head, pix_num
+                                random_anormal_trigger_activation = (score_random_map * random_anomal_positions) # head, pix_num
 
 
                                 random_anormal_trigger_activation = random_anormal_trigger_activation.sum(dim=-1)  # 8
@@ -809,7 +806,7 @@ class NetworkTrainer:
                                     anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
                                     activation_loss += args.normal_weight * normal_cls_activation_loss + args.back_weight * anormal_cls_activation_loss
 
-                                    random_anormal_cls_activation = (cls_random_map * random_anormal_position).sum(dim=-1)
+                                    random_anormal_cls_activation = (cls_random_map * random_anomal_positions).sum(dim=-1)
                                     random_anormal_cls_activation_loss = (1-(random_anormal_cls_activation / total_score)) ** 2
                                     if args.act_deact :
                                         activation_loss += args.act_deact_weight * random_anormal_cls_activation_loss
