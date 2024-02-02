@@ -481,6 +481,7 @@ class NetworkTrainer:
                                          reduced_normal_vector_good_score_cov)
                              for vector in reduced_normal_vector_good_score_np]
         import matplotlib.pyplot as plt
+        plt.figure()
         plt.hist(mahalanobis_dists)
         save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
         plt.savefig(save_dir)
@@ -495,6 +496,7 @@ class NetworkTrainer:
                                          reduced_normal_vector_good_score_mean,
                                          reduced_normal_vector_good_score_cov)
                              for vector in reduced_normal_vector_np ]
+        plt.figure()
         plt.hist(mahalanobis_dists)
         save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
         plt.savefig(save_dir)
@@ -509,10 +511,11 @@ class NetworkTrainer:
                                          reduced_normal_vector_good_score_mean,
                                          reduced_normal_vector_good_score_cov)
                              for vector in reduced_anormal_vector_np]
+        plt.figure()
         plt.hist(mahalanobis_dists)
         save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
         plt.savefig(save_dir)
-
+        """
         # ----------------------------------------------------------------------------------------------------------- #
         print(f'\n step 7. optimizer (unet frozen) ')
         unet_loras = training_network.unet_loras
@@ -856,7 +859,8 @@ class NetworkTrainer:
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
-
+        """
+        
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 

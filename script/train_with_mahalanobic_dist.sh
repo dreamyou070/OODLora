@@ -1,17 +1,13 @@
 #! /bin/bash
-
 class_name="bagel"
 data_source='train_normal'
 data_folder='MVTec3D-AD'
-
-
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex2/rgb"
-
-normal_folder='normal'
-save_folder="test"
+normal_folder='anormal'
+save_folder="test_check_normal_anormal_mahalanobis_dist"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_32_16_down_all_text_attnloss_weight_0.01/models/epoch-000001.safetensors"
+network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_up_attn2_t_2_attn2/models/epoch-000002.safetensors"
 
 start_epoch=0
 port_number=59517
