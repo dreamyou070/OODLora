@@ -1,12 +1,12 @@
 #! /bin/bash
 class_name="bagel"
-folder_name="res_64_down_1_t_2_anomal_add_query_text_frozen"
+folder_name="res_64_down_1"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/normal/${folder_name}/models/epoch-000006.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
-port_number=50046
+port_number=50045
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} ../lora/reconstruction.py \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --sample_sampler ddim \
