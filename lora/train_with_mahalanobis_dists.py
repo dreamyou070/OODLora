@@ -466,7 +466,7 @@ class NetworkTrainer:
         variance_vector = (torch.tensor(good_score_normal_vectors_cov) *
                            identity_matrix).sum(dim=1).squeeze()
         sort_result, index_result = torch.sort(variance_vector, descending=False)
-        max_dim = 100
+        max_dim = 320
         important_dim = index_result[:max_dim]
         important_dim, _ = torch.sort(important_dim)
         # ----------------------------------------------------------------------------------------------------------- #
@@ -498,7 +498,7 @@ class NetworkTrainer:
                              for vector in reduced_normal_vector_np ]
         plt.figure()
         plt.hist(mahalanobis_dists)
-        save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
+        save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.png")
         plt.savefig(save_dir)
 
         # ----------------------------------------------------------------------------------------------------------- #
@@ -513,7 +513,7 @@ class NetworkTrainer:
                              for vector in reduced_anormal_vector_np]
         plt.figure()
         plt.hist(mahalanobis_dists)
-        save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
+        save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.png")
         plt.savefig(save_dir)
         """
         # ----------------------------------------------------------------------------------------------------------- #
