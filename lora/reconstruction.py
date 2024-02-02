@@ -55,6 +55,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             if context is not None:
                 is_cross_attention = True
             self_head_query = self.to_q(hidden_states)
+
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
@@ -307,17 +308,22 @@ def main(args):
                                 # (1) original
                                 org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
                                 org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
-                                call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
-                                attn_stores = controller.step_store
+                                call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, 1)
+                                org_query = controller.query_dict[args.try_layer][0].squeeze()
                                 controller.reset()
+                                """
                                 org_mask = get_crossattn_map(args, attn_stores,args.trg_layer,
                                                              thredhold=args.anormal_thred,
                                                              binarize = True)
                                 org_mask_save_dir = os.path.join(class_base_folder,
                                                                     f'{name}_org_mask{ext}')
                                 save_latent(org_mask, org_mask_save_dir, org_h, org_w)
-
+                                """
                                 # (2) recon
+                                call_unet(unet, latents[-1], 0, con[:, :args.truncate_length, :], None, 1)
+                                recon_query = controller.query_dict[args.try_layer][0].squeeze()
+                                controller.reset()
+                                """
                                 rec_latent = latents[-1]
                                 call_unet(unet, rec_latent, 0, con[:, :args.truncate_length, :], None, None)
                                 rec_attn_stores = controller.step_store
@@ -329,18 +335,20 @@ def main(args):
                                 rec_mask_save_dir = os.path.join(class_base_folder,
                                                                  f'{name}_recon_mask{ext}')
                                 save_latent(rec_mask, rec_mask_save_dir, org_h, org_w)
-
+                                """
                                 # (3) anomaly score
-                                anomaly_score = torch.abs(rec_mask - org_mask).cpu() ######################## [res,res]
-                                background_vector = background_mask.flatten().cpu()
-                                object_anomaly_socre_list = []
-                                for i in range(background_vector.shape[0]):
-                                    if background_vector[i] == 0:
-                                        object_anomaly_score = anomaly_score.flatten()[i].item()
-                                        object_anomaly_socre_list.append(object_anomaly_score)
-                                max_score = max(object_anomaly_socre_list)
-                                anomaly_score = anomaly_score / max_score
-                                anomaly_score = anomaly_score * object_mask.cpu()
+                                # pixel_num, dim
+
+                                query_matrix = torch.matmul(org_query, recon_query.T)
+                                pix_num = query_matrix.size(0)
+                                res = int(pix_num ** 0.5)
+                                similarity_vector = query_matrix.diag()  # 4 * 1
+                                min_score = similarity_vector.min()
+                                if min_score < 0:
+                                    similarity_vector = similarity_vector + min_score
+                                max_score = similarity_vector.max()
+                                similarity_vector = (similarity_vector / max_score).unsqueeze(0)
+                                anomaly_score = similarity_vector.reshape(res,res)
 
                                 # (4) save
                                 anomaly_score = anomaly_score.numpy()
