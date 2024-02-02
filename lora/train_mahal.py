@@ -678,8 +678,8 @@ class NetworkTrainer:
                         score_random_map = score_random_map.squeeze() # 8, res*res
 
                     else:
-                        score_map = map
-                        score_random_map = random_map
+                        score_map = map.squeeze()  # 8, res*res
+                        score_random_map = random_map.squeeze()  # 8, res*res
                     res = int(map.shape[1] ** 0.5)
                     head_num = int(score_map.shape[0])
                     do_mask_loss = False
@@ -768,9 +768,9 @@ class NetworkTrainer:
                                     else :
                                         random_anomal_positions.append(0)
                                 random_anomal_positions = torch.tensor(random_anomal_positions)
-                                random_anormal_position = torch.stack([random_anomal_positions for i in range(head_num)],
-                                                                  dim=0) # 8, res*res
-
+                                print(f'before repeat, random_anomal_positions : {random_anomal_positions}')
+                                random_anormal_position = torch.stack([random_anomal_positions for i in range(head_num)], dim=0)
+                                print(f'after repeat, random_anomal_positions : {random_anomal_positions}')
 
                                 anormal_trigger_activation = (score_map * anormal_position)
 
@@ -788,6 +788,8 @@ class NetworkTrainer:
                                                   args.back_weight * anormal_activation_loss
 
                                 # ---------------------------------- deactivating ------------------------------------ #
+                                print(f'score_random_map : {score_random_map.shape}')
+                                print(f'random_anormal_position : {random_anormal_position.shape}')
                                 random_anormal_trigger_activation = (score_random_map * random_anormal_position) # head, pix_num
 
 
