@@ -1535,6 +1535,7 @@ class UNet2DConditionModel(nn.Module):
         #print(f'after conv_in, down_block_res_samples : {len(down_block_res_samples)}')
         for i, downsample_block in enumerate(self.down_blocks) :
             if downsample_block.has_cross_attention:
+
                 sample, res_samples = downsample_block(hidden_states=sample,
                                                        temb=emb,
                                                        encoder_hidden_states=encoder_hidden_states,

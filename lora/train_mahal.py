@@ -34,8 +34,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
                 random_hidden_states = torch.randn_like(hidden_states)
                 random_hidden_states = random_hidden_states.to(hidden_states.device)
                 hidden_states = torch.cat([hidden_states, random_hidden_states], dim=0)
-            else :
-                hidden_states, random_hidden_states = hidden_states.chunk(2, dim=0)
+            #else :
+            #    hidden_states, random_hidden_states = hidden_states.chunk(2, dim=0)
 
             query = self.to_q(hidden_states) # "to_q learning"
             #random_query = self.to_q(random_hidden_states)
@@ -86,6 +86,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
+            if hidden_states.shape[0] != 1:
+                hidden_states = hidden_states.chunk(2, dim=0)[0]
             return hidden_states
 
         return forward
@@ -694,7 +696,7 @@ class NetworkTrainer:
                                                 text_encoder_conds,
                                                 batch,
                                                 weight_dtype, 1, None)
-                    noise_pred, _ = noise_pred.chunk(2, dim=0)
+                    #noise_pred, _ = noise_pred.chunk(2, dim=0)
                     #print(f'noise_pred: {noise_pred.shape}')
                 # ------------------------------------- (1) task loss ------------------------------------- #
                 if args.do_task_loss:
