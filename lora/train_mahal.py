@@ -653,10 +653,9 @@ class NetworkTrainer:
 
         # training loop
         if is_main_process:
-            gradient_dict = {}
             loss_dict = {}
 
-        norm = {}
+        features = []
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
 
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
@@ -712,7 +711,7 @@ class NetworkTrainer:
                 query_dict = attention_storer.query_dict
                 attention_storer.reset()
                 attn_loss, dist_loss = 0, 0
-                features = []
+
                 for i, layer_name in enumerate(attn_dict.keys()):
                     if layer_name in args.trg_layer_list :
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
@@ -758,6 +757,8 @@ class NetworkTrainer:
                         for i in range(pix_num):
                             if object_position[i] == 1:
                                 feat = query[i, :].squeeze()  # dim
+                                if len(features) >= 3000 :
+                                    features.pop(0)
                                 features.append(feat.unsqueeze(0))
                         normal_vectors = torch.cat(features, dim=0)  # sample, dim
                         """
@@ -835,7 +836,10 @@ class NetworkTrainer:
                 dist_loss = dist_loss.mean()
                 attn_loss = attn_loss.mean()
                 ########################### 3. attn loss ###########################################################
-                loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                if args.do_task_loss:
+                    loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                else :
+                    loss = args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
                 # ------------------------------------------------------------------------------------------------- #
                 if is_main_process:
                     loss_dict["loss/task_loss"] = task_loss.item()
