@@ -772,17 +772,10 @@ class NetworkTrainer:
                                     feat = random_vectors[i, :]
                                     random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
                                     if object_flag == 1 :
-                                        if args.strict_training :
-                                            print(f'random_dist : {random_dist} | dist_max : {dist_max}')
-                                            if random_dist < dist_max :
-                                                random_anomal_positions.append(1)
-                                            else:
-                                                random_anomal_positions.append(0)
-                                        else :
-                                            if random_dist > dist_mean :
-                                                random_anomal_positions.append(1)
-                                            else:
-                                                random_anomal_positions.append(0)
+                                        if random_dist >= dist_max:
+                                            random_anomal_positions.append(1)
+                                        else:
+                                            random_anomal_positions.append(0)
                                     else :
                                         random_anomal_positions.append(0)
                                 random_anomal_positions = torch.tensor(random_anomal_positions)
