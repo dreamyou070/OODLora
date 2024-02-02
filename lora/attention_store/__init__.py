@@ -29,6 +29,14 @@ class AttentionStore :
         else:
             self.query_dict[layer_name].append(query)
 
+    def save_key(self, key, layer_name):
+        if layer_name not in self.key_dict.keys():
+            self.key_dict[layer_name] = []
+            self.key_dict[layer_name].append(key)
+        else:
+            self.key_dict[layer_name].append(key)
+
+
     def store_normal_score(self, score):
         self.normal_score_list.append(score)
 
