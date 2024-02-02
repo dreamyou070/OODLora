@@ -409,24 +409,15 @@ class NetworkTrainer:
         abs_trigger_vector = torch.abs(trigger)
         print(f'abs_trigger_vector : {abs_trigger_vector}')
 
-
-
         # ----------------------------------------------------------------------------------------------------------- #
-        print(f'\n step 7. optimizer (text modal frozen) ')
+        print(f'\n step 7. optimizer (unet frozen) ')
         unet_loras = training_network.unet_loras
-        params = []
         for unet_lora in unet_loras:
-            lora_name = unet_lora.lora_name
-            if 'to_k' in lora_name or 'to_v' in lora_name :
-                if 'attn2' in lora_name :
-                    unet_lora.requires_grad = False
-                else :
-                    params.extend(unet_lora.parameters())
-            else :
-                params.extend(unet_lora.parameters())
+            unet_lora.requires_grad = False
         te_loras = training_network.text_encoder_loras
+        params = []
         for te_lora in te_loras:
-            te_lora.requires_grad = False
+            params.extend(te_lora.parameters())
         trainable_params = [{"params": params, "lr": args.unet_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
@@ -529,7 +520,7 @@ class NetworkTrainer:
         # training loop
         if is_main_process:
             loss_dict = {}
-        """
+
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
 
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
@@ -572,6 +563,7 @@ class NetworkTrainer:
                     # (1) targetting anomal position
                     ############################################## 1. targetting anomal position ##############################################
                     layer_1 = args.trg_layer_list[0]
+                    """
                     if args.concat_query :
                         layer_2 = args.trg_layer_list[1]
                         query_1 = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
@@ -579,6 +571,7 @@ class NetworkTrainer:
                         anormal_query = torch.cat([query_1, query_2], dim=-1)  # pix_num, 2*dim
                     else :
                         anormal_query = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
+                    
                     anormal_query = anormal_query.squeeze()             # 4096
                     pix_num = anormal_query.shape[0] # 4096             # 4096
                     res = int(pix_num ** 0.5)                           # 64
@@ -596,6 +589,7 @@ class NetworkTrainer:
                             anomal_positions.append(1)
                         else:
                             anomal_positions.append(0)
+                    """
                     head_num = 8
                     anomal_positions = torch.tensor(anomal_positions)
                     anomal_positions = anomal_positions.unsqueeze(0).repeat(head_num, 1).to(
@@ -716,7 +710,6 @@ class NetworkTrainer:
                                 remove_model(remove_ckpt_name)
                 # ------------------------------------------------------------------------------------------------------
                 # 1) total loss
-
                 current_loss = loss.detach().item()
                 if epoch == args.start_epoch:
                     loss_list.append(current_loss)
@@ -737,7 +730,6 @@ class NetworkTrainer:
                         logs = self.generate_step_logs(loss_dict, lr_scheduler)
                 if global_step >= args.max_train_steps:
                     break
-
 
             accelerator.wait_for_everyone()
             if args.save_every_n_epochs is not None:
@@ -762,7 +754,7 @@ class NetworkTrainer:
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
-        """
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
