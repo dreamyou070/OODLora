@@ -8,7 +8,7 @@ save_folder="res_64_up_2_t_2_normal_attn_loss_weight_1_mahal_loss_new_code_dislo
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 start_epoch=0
 port_number=58831
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_2_3_config \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
   --main_process_port $port_number ../lora/train_mahal.py \
   --process_title parksooyeon \
   --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
