@@ -29,31 +29,45 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
             if context is not None:
                 is_cross_attention = True
             query = self.to_q(hidden_states)
+            random_query = torch.randn_like(query)
             # --------------------------------------------------------------------------------------------------
             controller.save_query(query, layer_name)
+            controller.save_query(random_query, layer_name)
             # --------------------------------------------------------------------------------------------------
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
 
             query = self.reshape_heads_to_batch_dim(query)
+            random_query = self.reshape_heads_to_batch_dim(random_query)
+
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if self.upcast_attention:
                 query = query.float()
+                random_query = random_query.float()
                 key = key.float()
 
             attention_scores = torch.baddbmm(
                 torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            random_attention_scores = torch.baddbmm(
+                torch.empty(random_query.shape[0], random_query.shape[1], key.shape[1], dtype=random_query.dtype,
+                            device=random_query.device), random_query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
+            random_attention_probs = random_attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
+            random_attention_probs = random_attention_probs.to(value.dtype)
+
             if is_cross_attention:
                 if args.cls_training:
                     trg_map = attention_probs[:, :, :2]
+                    random_trg_map = random_attention_probs[:, :, :2]
                 else:
                     trg_map = attention_probs[:, :, 1]
+                    random_trg_map = random_attention_probs[:, :, 1]
                 controller.store(trg_map, layer_name)
+                controller.store(random_trg_map, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -652,12 +666,18 @@ class NetworkTrainer:
                 for i, layer_name in enumerate(attn_dict.keys()):
 
                     map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
+                    random_map = attn_dict[layer_name][1].squeeze()  # 8, res*res, c
+
                     if args.cls_training:
                         cls_map, score_map = torch.chunk(map, 2, dim=-1)
                         cls_map = cls_map.squeeze()
                         score_map = score_map.squeeze()
+                        cls_random_map, score_random_map = torch.chunk(random_map, 2, dim=-1)
+                        random_cls_map = random_cls_map.squeeze()
+                        random_score_map = random_score_map.squeeze()
                     else:
                         score_map = map
+                        score_random_map = random_map
                     res = int(map.shape[1] ** 0.5)
                     head_num = int(score_map.shape[0])
                     do_mask_loss = False
@@ -689,6 +709,8 @@ class NetworkTrainer:
                             if part in args.trg_part or int(res) == 8:
 
                                 query = query_dict[layer_name][0].squeeze()
+                                random_query = query_dict[layer_name][1].squeeze()
+
                                 pix_num = query.shape[0]  # 4096             # 4096
                                 res = int(pix_num ** 0.5)  # 64
 
@@ -700,16 +722,19 @@ class NetworkTrainer:
                                 anormal_position = torch.where((anormal_mask == 0), 1, 0)  # head, pix_num
                                 back_position = anormal_position
                                 normal_position = 1 - anormal_position
-
                                 object_position = mask.flatten()  # pix_num
 
+                                # (0) random features
+                                random_features = [random_query[i, :].squeeze() for i in range(pix_num)]
+                                random_vectors = torch.cat(random_features, dim=0)  # sample, dim
+
+                                # (1) object features
                                 for i in range(pix_num):
                                     if object_position[i] == 1:
                                         feat = query[i, :].squeeze()  # dim
                                         if len(features) > 10000 :
                                             features.pop(0)
                                         features.append(feat.unsqueeze(0))
-
                                 normal_vectors = torch.cat(features, dim=0)  # sample, dim
 
                                 #if 'mean' not in norm.keys() :
@@ -731,7 +756,20 @@ class NetworkTrainer:
                                 mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
                                                      feat in
                                                      normal_vectors]
-                                dist_loss += torch.tensor(mahalanobis_dists).mean()
+                                dist_mean = torch.tensor(mahalanobis_dists).mean()
+                                dist_loss += dist_mean
+
+                                random_anomal_positions = []
+                                for i, feat in enumerate(random_vectors) :
+                                    random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
+                                    if random_dist > dist_mean :
+                                        random_anomal_positions.append(1)
+                                    else :
+                                        random_anomal_positions.append(0)
+                                random_anomal_positions = torch.tensor(random_anomal_positions)
+                                random_anormal_position = torch.stack([random_anomal_positions for i in range(head_num)],
+                                                                  dim=0)
+
 
                                 anormal_trigger_activation = (score_map * anormal_position)
                                 normal_trigger_activation = (score_map * normal_position)
@@ -745,12 +783,26 @@ class NetworkTrainer:
 
                                 activation_loss = args.normal_weight * normal_activation_loss + \
                                                   args.back_weight * anormal_activation_loss
+
+                                # ---------------------------------- deactivating ------------------------------------ #
+                                random_anormal_trigger_activation = (random_score_map * random_anormal_position)
+                                random_anormal_trigger_activation = random_anormal_trigger_activation.sum(dim=-1)  # 8
+                                random_anormal_activation_loss = (random_anormal_trigger_activation / total_score) ** 2
+                                if args.act_deact :
+                                    activation_loss += args.act_deact_weight * random_anormal_activation_loss
+
+
                                 if args.cls_training:
                                     anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
                                     normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
                                     normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
                                     anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
                                     activation_loss += args.normal_weight * normal_cls_activation_loss + args.back_weight * anormal_cls_activation_loss
+
+                                    random_anormal_cls_activation = (random_cls_map * random_anormal_position).sum(dim=-1)
+                                    random_anormal_cls_activation_loss = (1-(random_anormal_cls_activation / total_score)) ** 2
+                                    if args.act_deact :
+                                        activation_loss += args.act_deact_weight * random_anormal_cls_activation_loss
                                 attn_loss += activation_loss
                 dist_loss = dist_loss.mean()
                 attn_loss = attn_loss.mean()
@@ -901,6 +953,7 @@ if __name__ == "__main__":
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
     parser.add_argument("--do_task_loss", action='store_true')
     parser.add_argument("--act_deact", action='store_true')
+    parser.add_argument("--act_deact_weight", type=float, default=1.0)
     parser.add_argument("--all_data_dir", type=str)
     parser.add_argument("--concat_query", action='store_true')
     import ast
