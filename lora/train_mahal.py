@@ -762,6 +762,7 @@ class NetworkTrainer:
                                 mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
                                                      feat in
                                                      normal_vectors]
+                                dist_max = torch.tensor(mahalanobis_dists).max()
                                 dist_mean = torch.tensor(mahalanobis_dists).mean()
                                 dist_loss += dist_mean
 
@@ -773,13 +774,12 @@ class NetworkTrainer:
 
                                         if args.strict_training :
                                             if args.partial :
-                                                if random_dist < dist_mean :
+                                                if random_dist < dist_max :
                                                     random_anomal_positions.append(1)
                                                 else:
                                                     random_anomal_positions.append(0)
-
                                         else :
-                                            if random_dist < dist_mean :
+                                            if random_dist > dist_mean :
                                                 random_anomal_positions.append(1)
                                             else:
                                                 random_anomal_positions.append(0)
