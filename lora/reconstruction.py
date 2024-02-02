@@ -225,8 +225,7 @@ def main(args):
                                 call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller_ob.step_store
                                 controller_ob.reset()
-                                #object_mask = get_crossattn_map(args, attn_stores,
-                                #                                args.trg_layer)
+                                object_mask = get_crossattn_map(args, attn_stores,args.trg_layer)
                                 #object_mask_save_dir = os.path.join(class_base_folder, f'{name}_object_mask{ext}')
                                 #save_latent(object_mask, object_mask_save_dir, org_h, org_w)
                                 background_mask = 1 - object_mask  ########################################## [res,res]
