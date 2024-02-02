@@ -28,8 +28,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
             is_cross_attention = False
             if context is not None:
                 is_cross_attention = True
-            query = self.to_q(hidden_states)
-            random_query = torch.randn_like(query)
+            random_hidden_states = torch.randn_like(hidden_states)
+            random_hidden_states = random_hidden_states.to(hidden_states.device)
+
+            query = self.to_q(hidden_states) # "to_q learning"
+            random_query = self.to_q(random_hidden_states)
             if args.query_add_random :
                 random_query = random_query + query
             # --------------------------------------------------------------------------------------------------
