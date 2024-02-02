@@ -42,6 +42,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
             #if args.query_add_random :
             #    random_query = random_query + query
             # --------------------------------------------------------------------------------------------------
+            print(f'saving query : {query.shape}')
             controller.save_query(query, layer_name)
             #controller.save_query(random_query, layer_name)
             # --------------------------------------------------------------------------------------------------
@@ -765,8 +766,11 @@ class NetworkTrainer:
                             if part in args.trg_part or int(res) == 8:
 
                                 query = query_dict[layer_name][0].squeeze()
-                                query, random_query = query.chunk(2, dim=0)
+                                print(f'saved query : {query.shape}')
 
+                                query, random_query = query.chunk(2, dim=0)
+                                query, random_query = query.squeeze(), random_query.squeeze()
+                                
                                 pix_num = query.shape[0]  # 4096             # 4096
                                 res = int(pix_num ** 0.5)  # 64
 
