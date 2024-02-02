@@ -685,7 +685,9 @@ class NetworkTrainer:
                             if position in args.trg_position:
                                 do_mask_loss = True
                         if do_mask_loss :
+
                             if part in args.trg_part or int(res) == 8 :
+
                                 anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                 mask = anormal_mask.squeeze()  # res,res
                                 anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
@@ -694,6 +696,7 @@ class NetworkTrainer:
                                 else:
                                     anormal_position = torch.where((anormal_mask == 0), 1, 0)  # head, pix_num
                                 normal_position = 1-anormal_position
+
                                 anormal_trigger_activation = (score_map * anormal_position)
                                 normal_trigger_activation = (score_map * normal_position)
                                 total_score = torch.ones_like(anormal_trigger_activation)
@@ -873,6 +876,7 @@ if __name__ == "__main__":
     parser.add_argument("--detail_64_down", action='store_true')
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
     parser.add_argument("--all_same_learning", action='store_true')
+    parser.add_argument("--back_training", action='store_true')
     parser.add_argument("--attn_loss_weight", type=float, default=1.0)
 
     import ast
