@@ -761,16 +761,17 @@ class NetworkTrainer:
                                 dist_loss += dist_mean
 
                                 random_anomal_positions = []
-                                for i, feat in enumerate(random_vectors) :
+                                for i in range(pix_num) :
+                                    feat = random_vectors[i, :]
                                     random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
                                     if random_dist > dist_mean :
                                         random_anomal_positions.append(1)
                                     else :
                                         random_anomal_positions.append(0)
-                                random_anomal_positions = torch.tensor(random_anomal_positions)
-                                print(f'before repeat, random_anomal_positions : {random_anomal_positions}')
-                                random_anormal_position = torch.stack([random_anomal_positions for i in range(head_num)], dim=0)
-                                print(f'after repeat, random_anomal_positions : {random_anomal_positions}')
+                                random_anomal_positions = torch.tensor(random_anomal_positions).unsqueeze(0)  # 1, pix_num
+                                random_anormal_position = random_anomal_positions.repeat(head_num, 1)  # 8, pix_num
+                                print(f'random_anormal_position : {random_anormal_position.shape}')
+                                
 
                                 anormal_trigger_activation = (score_map * anormal_position)
 
