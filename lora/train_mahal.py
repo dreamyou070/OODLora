@@ -28,51 +28,60 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
             is_cross_attention = False
             if context is not None:
                 is_cross_attention = True
-            random_hidden_states = torch.randn_like(hidden_states)
-            random_hidden_states = random_hidden_states.to(hidden_states.device)
+
+            b = hidden_states.shape[0]
+            if b == 1 :
+                random_hidden_states = torch.randn_like(hidden_states)
+                random_hidden_states = random_hidden_states.to(hidden_states.device)
+                hidden_states = torch.cat([hidden_states, random_hidden_states], dim=0)
+            else :
+                hidden_states, random_hidden_states = hidden_states.chunk(2, dim=0)
 
             query = self.to_q(hidden_states) # "to_q learning"
-            random_query = self.to_q(random_hidden_states)
-            if args.query_add_random :
-                random_query = random_query + query
+            #random_query = self.to_q(random_hidden_states)
+            #if args.query_add_random :
+            #    random_query = random_query + query
             # --------------------------------------------------------------------------------------------------
             controller.save_query(query, layer_name)
-            controller.save_query(random_query, layer_name)
+            #controller.save_query(random_query, layer_name)
             # --------------------------------------------------------------------------------------------------
             context = context if context is not None else hidden_states
+            context_b = context.shape[0]
+            if context_b != hidden_states.shape[0]:
+                context = torch.cat([context, context], dim=0)
             key = self.to_k(context)
             value = self.to_v(context)
 
             query = self.reshape_heads_to_batch_dim(query)
-            random_query = self.reshape_heads_to_batch_dim(random_query)
+            #random_query = self.reshape_heads_to_batch_dim(random_query)
 
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if self.upcast_attention:
                 query = query.float()
-                random_query = random_query.float()
+                #random_query = random_query.float()
                 key = key.float()
 
             attention_scores = torch.baddbmm(
                 torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype,
                             device=query.device), query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
-            random_attention_scores = torch.baddbmm(
-                torch.empty(random_query.shape[0], random_query.shape[1], key.shape[1], dtype=random_query.dtype,
-                            device=random_query.device), random_query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+            #random_attention_scores = torch.baddbmm(
+            #    torch.empty(random_query.shape[0], random_query.shape[1], key.shape[1], dtype=random_query.dtype,
+            #                device=random_query.device), random_query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
             attention_probs = attention_scores.softmax(dim=-1)
-            random_attention_probs = random_attention_scores.softmax(dim=-1)
+            #random_attention_probs = random_attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
-            random_attention_probs = random_attention_probs.to(value.dtype)
+            #random_attention_probs = random_attention_probs.to(value.dtype)
 
             if is_cross_attention:
                 if args.cls_training:
                     trg_map = attention_probs[:, :, :2]
-                    random_trg_map = random_attention_probs[:, :, :2]
+                    #random_trg_map = random_attention_probs[:, :, :2]
                 else:
                     trg_map = attention_probs[:, :, 1]
-                    random_trg_map = random_attention_probs[:, :, 1]
+                    #random_trg_map = random_attention_probs[:, :, 1]
                 controller.store(trg_map, layer_name)
-                controller.store(random_trg_map, layer_name)
+                #controller.store(random_trg_map, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -685,6 +694,7 @@ class NetworkTrainer:
                                                 text_encoder_conds,
                                                 batch,
                                                 weight_dtype, 1, None)
+                    print(f'noise_pred: {noise_pred.shape}')
                 # ------------------------------------- (1) task loss ------------------------------------- #
                 if args.do_task_loss:
                     if args.v_parameterization:
