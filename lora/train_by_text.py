@@ -410,12 +410,15 @@ class NetworkTrainer:
         print(f'abs_trigger_vector : {abs_trigger_vector}')
 
 
-        """
+
         # ----------------------------------------------------------------------------------------------------------- #
         print(f'\n step 7. optimizer (unet frozen) ')
         unet_loras = training_network.unet_loras
         te_loras = training_network.text_encoder_loras
         for unet_lora in unet_loras:
+            lora_name = unet_lora.lora_name
+            print(f' lora_name : {lora_name}')
+
             unet_lora.requires_grad = False
         params = []
         for te_lora in te_loras:
@@ -423,6 +426,7 @@ class NetworkTrainer:
         trainable_params = [{"params": params, "lr": args.text_encoder_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
+        """
         print(f' step 8. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
         train_dataloader = torch.utils.data.DataLoader(train_dataset_group, batch_size=args.train_batch_size,
