@@ -786,7 +786,7 @@ class NetworkTrainer:
                                         random_anomal_positions.append(0)
                                 random_anomal_positions = torch.tensor(random_anomal_positions)
                                 random_anomal_pixel_num = random_anomal_positions.sum()
-                                print(f'random_anomal_pixel_num : {random_anomal_pixel_num}')
+                                #print(f'random_anomal_pixel_num : {random_anomal_pixel_num}')
                                 random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).to(score_random_map.device)
 
 
