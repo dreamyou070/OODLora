@@ -70,9 +70,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 controller.store(attention_probs[:, :, :args.truncate_length], layer_name)
 
             if is_cross_attention and mask is not None:
-                print(f'save query ')
                 if layer_name == args.trg_layer :
-                    print(f'save query, layer_name : {layer_name}')
                     controller.save_query(self_head_query, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
@@ -306,7 +304,7 @@ def main(args):
                                 org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
                                 org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
                                 call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, 1)
-                                org_query = controller.query_dict[args.try_layer][0].squeeze()
+                                org_query = controller.query_dict[args.trg_layer][0].squeeze()
                                 controller.reset()
                                 """
                                 org_mask = get_crossattn_map(args, attn_stores,args.trg_layer,
@@ -318,7 +316,7 @@ def main(args):
                                 """
                                 # (2) recon
                                 call_unet(unet, latents[-1], 0, con[:, :args.truncate_length, :], None, 1)
-                                recon_query = controller.query_dict[args.try_layer][0].squeeze()
+                                recon_query = controller.query_dict[args.trg_layer][0].squeeze()
                                 controller.reset()
                                 """
                                 rec_latent = latents[-1]
