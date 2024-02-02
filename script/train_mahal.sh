@@ -1,5 +1,4 @@
 #! /bin/bash
-
 class_name="bagel"
 data_source='train_normal'
 data_folder='MVTec3D-AD'
