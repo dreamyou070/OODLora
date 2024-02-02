@@ -6,7 +6,7 @@ data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 #all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex2/rgb"
 normal_folder='normal'
-save_folder="res_64_down_1_t_2_normal_attn_loss_weight_1_mahal_loss_new_code"
+save_folder="res_64_down_1_t_2_normal_attn_loss_weight_1_mahal_loss_new_code_disloss_2_data_10"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 #network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_attn1_up_attn12_all_text_attnloss_weight_0.001/models/epoch-000004.safetensors"
 
@@ -45,5 +45,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --do_task_loss \
   --truncate_pad --truncate_length 2 \
   --normal_weight 1 \
-  --concat_query \
   --do_check_anormal

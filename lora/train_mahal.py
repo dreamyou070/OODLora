@@ -647,6 +647,7 @@ class NetworkTrainer:
                 query_dict = attention_storer.query_dict
                 attention_storer.reset()
                 attn_loss, dist_loss = 0, 0
+                features = set()
                 for i, layer_name in enumerate(attn_dict.keys()):
 
                     map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
@@ -683,6 +684,7 @@ class NetworkTrainer:
                             if position in args.trg_position:
                                 do_mask_loss = True
                         if do_mask_loss:
+
                             if part in args.trg_part or int(res) == 8:
 
                                 query = query_dict[layer_name][0].squeeze()
@@ -699,7 +701,7 @@ class NetworkTrainer:
                                 normal_position = 1 - anormal_position
 
                                 object_position = mask.flatten()  # pix_num
-                                features = set()
+
                                 for i in range(pix_num):
                                     if object_position[i] == 1:
                                         feat = query[i, :].squeeze()  # dim
@@ -750,13 +752,13 @@ class NetworkTrainer:
                 dist_loss = dist_loss.mean()
                 attn_loss = attn_loss.mean()
                 ########################### 3. attn loss ###########################################################
-                loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                loss_1 = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
                 # ------------------------------------------------------------------------------------------------- #
                 if is_main_process:
                     loss_dict["loss/task_loss"] = task_loss.item()
                     loss_dict["loss/attn_loss"] = attn_loss.item()
-                    loss_dict["loss/dist_loss"] = dist_loss.item()
-                accelerator.backward(loss)
+                    loss_dict["loss/dist_loss_1"] = dist_loss.item()
+                accelerator.backward(loss_1)
 
                 if accelerator.sync_gradients and args.max_grad_norm != 0.0:
                     params_to_clip = network.get_trainable_params()
@@ -765,6 +767,115 @@ class NetworkTrainer:
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad(set_to_none=True)
+
+                # ------------------------------------------------------------------------------------------------- #
+                with torch.no_grad():
+                    latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
+                    if torch.any(torch.isnan(latents)):
+                        accelerator.print("NaN found in latents, replacing with zeros")
+                        latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
+                    latents = latents * self.vae_scale_factor
+                with torch.set_grad_enabled(train_text_encoder):
+                    text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
+                                                            weight_dtype)
+                    if args.truncate_pad:
+                        text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
+                noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
+                                                                                                   noise_scheduler,
+                                                                                                   latents)
+                with accelerator.autocast():
+                    self.call_unet(args,accelerator,unet,noisy_latents,timesteps,text_encoder_conds,
+                                                batch,weight_dtype, 1, None)
+                query_dict = attention_storer.query_dict
+                attention_storer.reset()
+                dist_loss = 0
+                features = set()
+                for i, layer_name in enumerate(attn_dict.keys()):
+                    map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
+                    if args.cls_training:
+                        cls_map, score_map = torch.chunk(map, 2, dim=-1)
+                        cls_map = cls_map.squeeze()
+                        score_map = score_map.squeeze()
+                    else:
+                        score_map = map
+                    res = int(map.shape[1] ** 0.5)
+                    head_num = int(score_map.shape[0])
+                    do_mask_loss = False
+                    if res in args.cross_map_res:
+                        if 'down' in layer_name:
+                            position = 'down'
+                        elif 'up' in layer_name:
+                            position = 'up'
+                        elif 'mid' in layer_name:
+                            position = 'mid'
+                        if 'attentions_0' in layer_name:
+                            part = 'attn_0'
+                        elif 'attentions_1' in layer_name:
+                            part = 'attn_1'
+                        else:
+                            part = 'attn_2'
+                        if res == 64:
+                            if args.detail_64_up:
+                                if 'up' in layer_name:
+                                    do_mask_loss = True
+                            if args.detail_64_down:
+                                if 'down' in layer_name:
+                                    do_mask_loss = True
+                        else:
+                            if position in args.trg_position:
+                                do_mask_loss = True
+                        if do_mask_loss:
+
+                            if part in args.trg_part or int(res) == 8:
+
+                                query = query_dict[layer_name][0].squeeze()
+                                pix_num = query.shape[0]  # 4096             # 4096
+                                res = int(pix_num ** 0.5)  # 64
+
+                                anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
+                                    0)  # [1,1,res,res], foreground = 1
+                                mask = anormal_mask.squeeze()  # res,res
+                                anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
+                                                           dim=0)  # .unsqueeze(-1)  # 8, res*res
+                                anormal_position = torch.where((anormal_mask == 0), 1, 0)  # head, pix_num
+                                back_position = anormal_position
+                                normal_position = 1 - anormal_position
+
+                                object_position = mask.flatten()  # pix_num
+
+                                for i in range(pix_num):
+                                    if object_position[i] == 1:
+                                        feat = query[i, :].squeeze()  # dim
+                                        features.add(feat.unsqueeze(0))
+
+                                features = list(features)
+                                normal_vectors = torch.cat(features, dim=0)  # sample, dim
+                                if 'mean' not in norm.keys():
+                                    normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+                                    normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+                                else:
+                                    normal_vector_mean_torch = norm['mean']
+                                    normal_vectors_cov_torch = norm['cov']
+
+                                norm['mean'] = torch.mean(normal_vectors, dim=0)
+                                norm['cov'] = torch.cov(normal_vectors.transpose(0, 1))
+                                mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
+                                                     feat in
+                                                     normal_vectors]
+                                dist_loss += torch.tensor(mahalanobis_dists).mean()
+                dist_loss = dist_loss.mean()
+                loss_2 = args.mahalanobis_loss_weight * dist_loss
+                if is_main_process:
+                    loss_dict["loss/dist_loss_2"] = dist_loss.item()
+                accelerator.backward(loss_2)
+                # ------------------------------------------------------------------------------------------------- #
+                if accelerator.sync_gradients and args.max_grad_norm != 0.0:
+                    params_to_clip = network.get_trainable_params()
+                    accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad(set_to_none=True)
+                # ------------------------------------------------------------------------------------------------- #
 
                 # Checks if the accelerator has performed an optimization step behind the scenes
                 if accelerator.sync_gradients:
@@ -789,6 +900,7 @@ class NetworkTrainer:
                                 remove_model(remove_ckpt_name)
                 # ------------------------------------------------------------------------------------------------------
                 # 1) total loss
+                loss = loss_1 + loss_2
                 current_loss = loss.detach().item()
                 if epoch == args.start_epoch:
                     loss_list.append(current_loss)
@@ -797,18 +909,8 @@ class NetworkTrainer:
                     loss_list[step] = current_loss
                 loss_total += current_loss
                 avr_loss = loss_total / len(loss_list)
-
-                logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
                 if is_main_process:
                     progress_bar.set_postfix(**loss_dict)
-
-                # ------------------------------------------------------------------------------------------------------
-                # 2) total loss
-                if args.logging_dir is not None:
-                    # accelerator.log(logs, step=global_step)
-                    if is_main_process:
-                        logs = self.generate_step_logs(loss_dict, lr_scheduler)
-                        # wandb.log(logs)#, step=global_step)
                 if global_step >= args.max_train_steps:
                     break
             accelerator.wait_for_everyone()
