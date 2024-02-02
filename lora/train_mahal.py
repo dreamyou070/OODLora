@@ -765,26 +765,28 @@ class NetworkTrainer:
                                 dist_loss += dist_mean
 
                                 random_anomal_positions = []
-                                for i in range(pix_num) :
-                                    feat = random_vectors[i, :]
-                                    random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
+                                if args.partial :
+                                    for i in range(pix_num) :
+                                        feat = random_vectors[i, :]
+                                        random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
 
-                                    if args.strict_training :
-                                        if args.partial :
-                                            if random_dist < dist_mean :
-                                                random_anomal_positions.append(1)
-                                            else:
-                                                random_anomal_positions.append(0)
+                                        if args.strict_training :
+                                            if args.partial :
+                                                if random_dist < dist_mean :
+                                                    random_anomal_positions.append(1)
+                                                else:
+                                                    random_anomal_positions.append(0)
+
                                         else :
-                                            random_anomal_positions.append(1)
-                                    else :
-                                        if random_dist > dist_mean :
-                                            random_anomal_positions.append(0)
-                                        else:
-                                            random_anomal_positions.append(1)
+                                            if random_dist > dist_mean :
+                                                random_anomal_positions.append(0)
+                                            else:
+                                                random_anomal_positions.append(1)
 
-                                random_anomal_positions = torch.tensor(random_anomal_positions)
-                                random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).to(score_random_map.device)
+                                    random_anomal_positions = torch.tensor(random_anomal_positions)
+                                    random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).to(score_random_map.device)
+                                else :
+                                    random_anomal_positions = normal_position
 
 
                                 anormal_trigger_activation = (score_map * anormal_position)
