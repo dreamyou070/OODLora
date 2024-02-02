@@ -46,7 +46,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             # ---------------------------------------------------------------------------------------------------------
             context = context if context is not None else hidden_states
             key = self.to_k(context)
-            controller.save_key(self, key, layer_name)
+            controller.save_key(key, layer_name)
 
 
             value = self.to_v(context)
@@ -412,21 +412,25 @@ class NetworkTrainer:
 
 
         # ----------------------------------------------------------------------------------------------------------- #
-        print(f'\n step 7. optimizer (unet frozen) ')
+        print(f'\n step 7. optimizer (text modal frozen) ')
         unet_loras = training_network.unet_loras
-        te_loras = training_network.text_encoder_loras
+        params = []
         for unet_lora in unet_loras:
             lora_name = unet_lora.lora_name
-            print(f' lora_name : {lora_name}')
-
-            unet_lora.requires_grad = False
-        params = []
+            if 'to_k' in lora_name or 'to_v' in lora_name :
+                if 'attn2' in lora_name :
+                    unet_lora.requires_grad = False
+                else :
+                    params.extend(unet_lora.parameters())
+            else :
+                params.extend(unet_lora.parameters())
+        te_loras = training_network.text_encoder_loras
         for te_lora in te_loras:
-            params.extend(te_lora.parameters())
-        trainable_params = [{"params": params, "lr": args.text_encoder_lr}]
+            te_lora.requires_grad = False
+        trainable_params = [{"params": params, "lr": args.unet_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
-        """
+
         print(f' step 8. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
         train_dataloader = torch.utils.data.DataLoader(train_dataset_group, batch_size=args.train_batch_size,
@@ -525,7 +529,7 @@ class NetworkTrainer:
         # training loop
         if is_main_process:
             loss_dict = {}
-
+        """
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
 
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
@@ -759,8 +763,6 @@ class NetworkTrainer:
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
         """
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
