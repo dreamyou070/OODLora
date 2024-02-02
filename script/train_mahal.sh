@@ -11,7 +11,7 @@ output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${no
 #network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_attn1_up_attn12_all_text_attnloss_weight_0.001/models/epoch-000004.safetensors"
 
 start_epoch=0
-port_number=59864
+port_number=58825
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
   --main_process_port $port_number ../lora/train_mahal.py \
