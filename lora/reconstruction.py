@@ -225,9 +225,9 @@ def main(args):
                                 call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
                                 attn_stores = controller_ob.step_store
                                 controller_ob.reset()
-                                object_mask = get_crossattn_map(args, attn_stores,
-                                                                args.trg_layer)
-                                object_mask_save_dir = os.path.join(class_base_folder, f'{name}_object_mask{ext}')
+                                #object_mask = get_crossattn_map(args, attn_stores,
+                                #                                args.trg_layer)
+                                #object_mask_save_dir = os.path.join(class_base_folder, f'{name}_object_mask{ext}')
                                 save_latent(object_mask, object_mask_save_dir, org_h, org_w)                                
                                 background_mask = 1 - object_mask  ###################################################################### [res,res]
 
@@ -249,20 +249,21 @@ def main(args):
                                     object_mask = get_crossattn_map(args, attn_stores,
                                                                     trg_layer)
                                                                     #'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
-                                    object_mask_save_dir = os.path.join(class_base_folder, f'{name}_{trg_layer}{ext}')
+                                    object_mask_save_dir = os.path.join(class_base_folder, f'{name}_z_{trg_layer}{ext}')
                                     save_latent(object_mask, object_mask_save_dir, org_h, org_w)
                                 # 2. normal mask
                                 normal_mask = get_crossattn_map(args, attn_stores,
                                                                  args.trg_layer,
                                                                  thredhold=args.anormal_thred)
-                                normal_mask_save_dir = os.path.join(class_base_folder,
-                                                                     f'{name}_normal_mask{ext}')
-                                save_latent(normal_mask, normal_mask_save_dir, org_h, org_w)
+
+                                #normal_mask_save_dir = os.path.join(class_base_folder,
+                                #                                     f'{name}_normal_mask{ext}')
+                                #save_latent(normal_mask, normal_mask_save_dir, org_h, org_w)
 
                                 # 3. latent mask
                                 recon_mask = background_mask + normal_mask
                                 recon_mask = torch.where(recon_mask == 0, 0, 1)
-                                recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_recon_mask{ext}')
+                                recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_z_recon_mask{ext}')
                                 save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
                                 # 4. final latent mask
                                 recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
@@ -311,8 +312,8 @@ def main(args):
                                 attn_stores = controller.step_store
                                 controller.reset()
                                 org_mask = get_crossattn_map(args, attn_stores,args.trg_layer,
-                                                                thredhold=args.anormal_thred,
-                                                                binarize = True)
+                                                             thredhold=args.anormal_thred,
+                                                             binarize = True)
                                 org_mask_save_dir = os.path.join(class_base_folder,
                                                                     f'{name}_org_mask{ext}')
                                 save_latent(org_mask, org_mask_save_dir, org_h, org_w)
@@ -323,11 +324,11 @@ def main(args):
                                 rec_attn_stores = controller.step_store
                                 controller.reset()
                                 rec_mask = get_crossattn_map(args, rec_attn_stores,
-                                                             'up_blocks_3_attentions_2_transformer_blocks_0_attn2',
+                                                             args.trg_layer,
                                                              thredhold=args.anormal_thred,
                                                              binarize = True)
                                 rec_mask_save_dir = os.path.join(class_base_folder,
-                                                                 f'{name}_rec_mask{ext}')
+                                                                 f'{name}_recon_mask{ext}')
                                 save_latent(rec_mask, rec_mask_save_dir, org_h, org_w)
 
                                 # (3) anomaly score
