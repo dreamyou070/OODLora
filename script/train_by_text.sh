@@ -5,7 +5,7 @@ data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 
 normal_folder='normal'
-save_folder="res_64_down_1_t_2_anomal_add_query_unet_frozen"
+save_folder="res_64_down_1_t_2_anomal_add_query_text_frozen"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_1_t_2_anomal_add_query/models/epoch-000004.safetensors"
 start_epoch=0
@@ -35,6 +35,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_c
   --do_task_loss \
   --attn_loss_weight 0.001 \
   --cls_training \
-  --unet_frozen \
+  --text_frozen \
   --trg_position "['down']" \
   --trg_part '["attn_1"]'
