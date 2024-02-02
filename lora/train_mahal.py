@@ -608,7 +608,6 @@ class NetworkTrainer:
             loss_dict = {}
 
         norm = {}
-        features = []
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
 
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
@@ -662,7 +661,7 @@ class NetworkTrainer:
                 query_dict = attention_storer.query_dict
                 attention_storer.reset()
                 attn_loss, dist_loss = 0, 0
-
+                features = []
                 for i, layer_name in enumerate(attn_dict.keys()):
 
                     map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
@@ -726,28 +725,31 @@ class NetworkTrainer:
                                 object_position = mask.flatten()  # pix_num
 
                                 # (0) random features
-                                random_features = [random_query[i, :].squeeze() for i in range(pix_num)]
+                                random_features = []
+                                for i in range(pix_num) :
+                                    r_feat = random_query[i, :].squeeze()
+                                    random_features.append(r_feat.unsqueeze(0))
                                 random_vectors = torch.cat(random_features, dim=0)  # sample, dim
 
                                 # (1) object features
                                 for i in range(pix_num):
                                     if object_position[i] == 1:
                                         feat = query[i, :].squeeze()  # dim
-                                        if len(features) > 10000 :
-                                            features.pop(0)
+                                        #if len(features) > 10000 :
+                                        #    features.pop(0)
                                         features.append(feat.unsqueeze(0))
                                 normal_vectors = torch.cat(features, dim=0)  # sample, dim
 
-                                #if 'mean' not in norm.keys() :
-                                #    normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-                                #    normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
-                                #else :
-                                #    normal_vector_mean_torch = norm['mean']
-                                #    normal_vectors_cov_torch = norm['cov']
-                                #norm['mean'] = torch.mean(normal_vectors, dim=0)
-                                #norm['cov'] = torch.cov(normal_vectors.transpose(0, 1))
-                                normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-                                normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+                                if 'mean' not in norm.keys() :
+                                    normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+                                    normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+                                else :
+                                    normal_vector_mean_torch = norm['mean']
+                                    normal_vectors_cov_torch = norm['cov']
+                                norm['mean'] = torch.mean(normal_vectors, dim=0)
+                                norm['cov'] = torch.cov(normal_vectors.transpose(0, 1))
+                                #normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+                                #normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
 
                                 def mahal(u, v, cov):
                                     delta = u - v
@@ -768,10 +770,10 @@ class NetworkTrainer:
                                         random_anomal_positions.append(1)
                                     else :
                                         random_anomal_positions.append(0)
-                                random_anomal_positions = torch.tensor(random_anomal_positions).unsqueeze(0)  # 1, pix_num
-                                random_anormal_position = random_anomal_positions.repeat(head_num, 1)  # 8, pix_num
-                                print(f'random_anormal_position : {random_anormal_position.shape}')
-                                
+                                random_anomal_positions = torch.tensor(random_anomal_positions)
+                                print(f'before repeat, random_anomal_positions : {random_anomal_positions.shape}')
+                                random_anormal_position = torch.stack([random_anomal_positions for i in range(head_num)], dim=0)
+                                print(f'after repeat, random_anomal_positions : {random_anomal_positions.shape}')
 
                                 anormal_trigger_activation = (score_map * anormal_position)
 
