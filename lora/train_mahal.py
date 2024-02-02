@@ -761,19 +761,16 @@ class NetworkTrainer:
                         else:
                             if position in args.trg_position:
                                 do_mask_loss = True
+
                         if do_mask_loss:
 
                             if part in args.trg_part or int(res) == 8:
 
                                 query = query_dict[layer_name][0].squeeze()
-                                print(f'saved query : {query.shape}')
-
                                 query, random_query = query.chunk(2, dim=0)
                                 query, random_query = query.squeeze(), random_query.squeeze()
-                                
                                 pix_num = query.shape[0]  # 4096             # 4096
                                 res = int(pix_num ** 0.5)  # 64
-
                                 anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
                                     0)  # [1,1,res,res], foreground = 1
                                 mask = anormal_mask.squeeze()  # res,res
