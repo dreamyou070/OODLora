@@ -724,6 +724,7 @@ class NetworkTrainer:
                                                            dim=0)  # .unsqueeze(-1)  # 8, res*res
                                 anormal_position = torch.where((anormal_mask == 0), 1, 0)  # head, pix_num
                                 normal_position = 1 - anormal_position
+                                back_position = 1 - normal_position
                                 object_position = mask.flatten()  # pix_num
 
                                 # (0) random features
@@ -778,53 +779,46 @@ class NetworkTrainer:
                                                     random_anomal_positions.append(0)
 
                                         else :
-                                            if random_dist > dist_mean :
-                                                random_anomal_positions.append(0)
-                                            else:
+                                            if random_dist < dist_mean :
                                                 random_anomal_positions.append(1)
-
+                                            else:
+                                                random_anomal_positions.append(0)
                                     random_anomal_positions = torch.tensor(random_anomal_positions)
                                     random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).to(score_random_map.device)
                                 else :
                                     random_anomal_positions = normal_position
 
-
-                                anormal_trigger_activation = (score_map * anormal_position)
-
-
                                 normal_trigger_activation = (score_map * normal_position)
+                                normal_trigger_back_activation = (score_map * back_position)
+                                anormal_trigger_activation = (score_random_map * random_anomal_positions)
                                 total_score = torch.ones_like(anormal_trigger_activation)
-                                anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
+
                                 normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8
+                                normal_trigger_back_activation = normal_trigger_back_activation.sum(dim=-1)  # 8
+                                anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
                                 total_score = total_score.sum(dim=-1)  # 8
-                                normal_activation_loss = (1 - (
-                                            normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                                anormal_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
 
-                                activation_loss = args.normal_weight * normal_activation_loss + \
-                                                  args.back_weight * anormal_activation_loss
+                                normal_trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                                normal_trigger_back_activation_loss = (normal_trigger_back_activation / total_score) ** 2  # 8, res*res
+                                anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
 
+                                activation_loss = args.normal_weight * normal_trigger_activation_loss\
+                                                  + args.back_weight * normal_trigger_back_activation_loss
                                 # ---------------------------------- deactivating ------------------------------------ #
-                                random_anormal_trigger_activation = (score_random_map * random_anomal_positions) # head, pix_num
-
-
-                                random_anormal_trigger_activation = random_anormal_trigger_activation.sum(dim=-1)  # 8
-                                random_anormal_activation_loss = (random_anormal_trigger_activation / total_score) ** 2
                                 if args.act_deact :
-                                    activation_loss += args.act_deact_weight * random_anormal_activation_loss
-
-
+                                    activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
                                 if args.cls_training:
-                                    anormal_cls_activation = (cls_map * anormal_position).sum(dim=-1)
                                     normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
-                                    normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
-                                    anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                    activation_loss += args.normal_weight * normal_cls_activation_loss + args.back_weight * anormal_cls_activation_loss
+                                    normal_cls_back_activation = (cls_map * back_position).sum(dim=-1)
+                                    anormal_cls_activation = (cls_random_map * random_anomal_positions).sum(dim=-1)
 
-                                    random_anormal_cls_activation = (cls_random_map * random_anomal_positions).sum(dim=-1)
-                                    random_anormal_cls_activation_loss = (1-(random_anormal_cls_activation / total_score)) ** 2
+                                    normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                    normal_cls_back_activation_loss = (1 - (normal_cls_back_activation / total_score)) ** 2
+                                    anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
+                                    activation_loss += args.normal_weight * normal_cls_activation_loss \
+                                                     + args.back_weight * normal_cls_back_activation_loss
                                     if args.act_deact :
-                                        activation_loss += args.act_deact_weight * random_anormal_cls_activation_loss
+                                        activation_loss += args.act_deact_weight * anormal_cls_activation_loss
                                 attn_loss += activation_loss
                 dist_loss = dist_loss.mean()
                 attn_loss = attn_loss.mean()
