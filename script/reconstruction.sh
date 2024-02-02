@@ -2,7 +2,7 @@
 
 class_name="bagel"
 #            res_64_down_1_t_2_normal_attn_loss_weight_0.001_without_mahal_loss
-folder_name="res_64_down_1_t_2_normal_attn_loss_weight_1_mahal_loss_new_code_disloss_2_data_10"
+folder_name="res_64_down_1_t_2_normal_attn_loss_weight_1_mahal_loss_new_code_disloss_2_data_10_act_deact_add_random_query_strict_training"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 
