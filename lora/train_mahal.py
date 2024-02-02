@@ -338,7 +338,7 @@ class NetworkTrainer:
                 lora_name = unet_lora.lora_name
                 if 'to_k' in lora_name or 'to_v' in lora_name:
                     if 'attn2' in lora_name :
-                        print(f'unet frozen layer : {lora_name}')
+                        print(f'unet train layer : {lora_name}')
                         params.extend(unet_lora.parameters())
                     else :
                         unet_lora.requires_grad = False
