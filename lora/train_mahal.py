@@ -890,8 +890,8 @@ class NetworkTrainer:
                         remove_model(remove_ckpt_name)
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
-            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
-                               text_encoder, unet)
+            #self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
+            #                   text_encoder, unet)
             attention_storer.reset()
         if is_main_process:
             network = accelerator.unwrap_model(network)
