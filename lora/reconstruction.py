@@ -291,6 +291,7 @@ def main(args):
                                 recon_image.save(img_dir)
 
                                 # ----------------------------- [4] anomaly map -------------------------------------- #
+                                """
                                 network.restore()
                                 network.load_weights(weight_dir)
                                 network.to(device)
@@ -306,19 +307,19 @@ def main(args):
                                 call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, 1)
                                 org_query = controller.query_dict[args.trg_layer][0].squeeze()
                                 controller.reset()
-                                """
+                                
                                 org_mask = get_crossattn_map(args, attn_stores,args.trg_layer,
                                                              thredhold=args.anormal_thred,
                                                              binarize = True)
                                 org_mask_save_dir = os.path.join(class_base_folder,
                                                                     f'{name}_org_mask{ext}')
                                 save_latent(org_mask, org_mask_save_dir, org_h, org_w)
-                                """
+                                
                                 # (2) recon
                                 call_unet(unet, latents[-1], 0, con[:, :args.truncate_length, :], None, 1)
                                 recon_query = controller.query_dict[args.trg_layer][0].squeeze()
                                 controller.reset()
-                                """
+                                
                                 rec_latent = latents[-1]
                                 call_unet(unet, rec_latent, 0, con[:, :args.truncate_length, :], None, None)
                                 rec_attn_stores = controller.step_store
@@ -330,7 +331,7 @@ def main(args):
                                 rec_mask_save_dir = os.path.join(class_base_folder,
                                                                  f'{name}_recon_mask{ext}')
                                 save_latent(rec_mask, rec_mask_save_dir, org_h, org_w)
-                                """
+                                
                                 # (3) anomaly score
                                 # pixel_num, dim
 
@@ -339,13 +340,13 @@ def main(args):
                                 pix_num = query_matrix.size(0)
                                 res = int(pix_num ** 0.5)
                                 similarity_vector = query_matrix.diag().unsqueeze(0)
-                                """
+                                
                                 min_score = similarity_vector.min()
                                 if min_score < 0:
                                     similarity_vector = similarity_vector + min_score
                                 max_score = similarity_vector.max()
                                 similarity_vector = (similarity_vector / max_score).unsqueeze(0)
-                                """
+                                
                                 anomaly_score = similarity_vector.reshape(res,res)
 
                                 # (4) save
@@ -357,6 +358,7 @@ def main(args):
 
                                 tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
                                 anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
+                                """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
