@@ -772,7 +772,7 @@ class NetworkTrainer:
                                         random_anomal_positions.append(0)
                                 random_anomal_positions = torch.tensor(random_anomal_positions)
                                 print(f'before repeat, random_anomal_positions : {random_anomal_positions.shape}')
-                                random_anormal_position = torch.stack([random_anomal_positions for i in range(head_num)], dim=0)
+                                random_anormal_position = random_anomal_positions.unsqueeze(0).repeat(head_num,1).to(score_random_map.device)
                                 print(f'after repeat, random_anomal_positions : {random_anomal_positions.shape}')
 
                                 anormal_trigger_activation = (score_map * anormal_position)
