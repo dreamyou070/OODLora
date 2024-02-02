@@ -485,6 +485,10 @@ class NetworkTrainer:
         plt.hist(mahalanobis_dists)
         save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
         plt.savefig(save_dir)
+        save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.txt")
+        with open(save_dir, 'w') as f:
+            for d in mahalanobis_dists :
+                f.write(f'{d},')
 
         # ----------------------------------------------------------------------------------------------------------- #
         # [2] normal vectors
@@ -500,6 +504,10 @@ class NetworkTrainer:
         plt.hist(mahalanobis_dists)
         save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.png")
         plt.savefig(save_dir)
+        save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.txt")
+        with open(save_dir, 'w') as f:
+            for d in mahalanobis_dists:
+                f.write(f'{d},')
 
         # ----------------------------------------------------------------------------------------------------------- #
         # [3] anormal vectors
@@ -515,6 +523,10 @@ class NetworkTrainer:
         plt.hist(mahalanobis_dists)
         save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.png")
         plt.savefig(save_dir)
+        save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.txt")
+        with open(save_dir, 'w') as f:
+            for d in mahalanobis_dists:
+                f.write(f'{d},')
         """
         # ----------------------------------------------------------------------------------------------------------- #
         print(f'\n step 7. optimizer (unet frozen) ')
