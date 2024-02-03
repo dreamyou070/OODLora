@@ -336,10 +336,9 @@ class NetworkTrainer:
                     controller.reset()
                     from utils.model_utils import get_crossattn_map
                     trg_layer = args.trg_layer_list[0]
-                    for trg_layer in args.trg_layer_list:
-                        trigger_map = get_crossattn_map(args, attn_stores, trg_layer,
-                                                        binarize = False).flatten()
-                        query = query_dict[trg_layer][0]
+                    trigger_map = get_crossattn_map(args, attn_stores, trg_layer,
+                                                    binarize = False).flatten()
+                    query = query_dict[trg_layer][0].squeeze(0) # batch, pix_num, dim
 
                 # -------------------------------------------------------------------------------------------------------- #
                 if 'good' in class_name:
@@ -365,7 +364,6 @@ class NetworkTrainer:
                             back_vector_list.add(feature)
                 else:
                     for pix_idx in range(mask_vector.shape[0]):
-
                         feature = query[pix_idx, :].cpu()
                         if feature.dim() == 1:
                             feature = feature.unsqueeze(0)
