@@ -751,13 +751,14 @@ class NetworkTrainer:
                         query = query_dict[layer_name][0].squeeze()
                         pix_num = query.shape[0]  # 4096
 
+                        for i in range(pix_num):
+                            feat = query[i, :].squeeze()  # dim
+                            if len(features) >= 3000:
+                                features.pop(0)
+                            features.append(feat.unsqueeze(0))
+                        normal_vectors = torch.cat(features, dim=0)  # sample, dim
+
                         if not args.unet_frozen:
-                            for i in range(pix_num):
-                                feat = query[i, :].squeeze()  # dim
-                                if len(features) >= 3000 :
-                                    features.pop(0)
-                                features.append(feat.unsqueeze(0))
-                            normal_vectors = torch.cat(features, dim=0)  # sample, dim
                             mu = torch.mean(normal_vectors, dim=0)
                             cov = torch.cov(normal_vectors.transpose(0, 1))
                             random_vector_generator = MultivariateNormal(mu, cov)

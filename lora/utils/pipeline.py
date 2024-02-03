@@ -483,11 +483,18 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
         scheduler: SchedulerMixin,
         safety_checker: StableDiffusionSafetyChecker,
         feature_extractor: CLIPFeatureExtractor,
-        requires_safety_checker: bool = True,):
+        random_vector_generator: Optional,
+        trg_layer_list: Optional,
+        requires_safety_checker: bool = True, ):
+
         super().__init__(vae=vae,text_encoder=text_encoder,tokenizer=tokenizer,unet=unet,scheduler=scheduler, safety_checker=safety_checker,feature_extractor=feature_extractor,requires_safety_checker=requires_safety_checker,)
         #self.clip_skip = clip_skip
 
         self.__init__additional__()
+        if random_vector_generator is not None:
+            self.random_vector_generator = random_vector_generator
+        if trg_layer_list is not None :
+            self.trg_layer_list = trg_layer_list
         #self.clip_skip = 1
 
     def __init__additional__(self):
@@ -764,7 +771,15 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
 
             unet_additional_args = {}
             # predict the noise residual
-            noise_pred = self.unet(latent_model_input, t, encoder_hidden_states=text_embeddings, **unet_additional_args).sample
+            if self.random_vector_generator is not None and i == 0 :
+                noise_pred = self.unet(latent_model_input,
+                                       t,
+                                       encoder_hidden_states=text_embeddings,
+                                       trg_indexs_list=self.random_vector_generator,
+                                       mask=self.trg_layer_list,
+                                       **unet_additional_args).sample
+            else :
+                noise_pred = self.unet(latent_model_input, t, encoder_hidden_states=text_embeddings, **unet_additional_args).sample
 
             # perform guidance
             if do_classifier_free_guidance:
@@ -778,6 +793,118 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
             latent_list.append(latents)
 
         #return latents
+        return latent_list
+
+    @torch.no_grad()
+    def random_gen(
+            self,
+            prompt: Union[str, List[str]],
+            negative_prompt: Optional[Union[str, List[str]]] = None,
+            image: Union[torch.FloatTensor, PIL.Image.Image] = None,
+            height: int = 512,
+            width: int = 512,
+            num_inference_steps: int = 50,
+            guidance_scale: float = 7.5,
+            strength: float = 0.8,
+            num_images_per_prompt: Optional[int] = 1,
+            eta: float = 0.0,
+            generator: Optional[torch.Generator] = None,
+            latents: Optional[torch.FloatTensor] = None,
+            max_embeddings_multiples: Optional[int] = 3,
+            output_type: Optional[str] = "pil",
+            return_dict: bool = True,
+            callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
+            is_cancelled_callback: Optional[Callable[[], bool]] = None,
+            reference_image: Optional[Union[torch.FloatTensor, PIL.Image.Image]] = None,
+            mask: Union[torch.FloatTensor, PIL.Image.Image] = None,
+    ):
+
+        # 0. Default height and width to unet
+        height = height or self.unet.config.sample_size * self.vae_scale_factor
+        width = width or self.unet.config.sample_size * self.vae_scale_factor
+
+        # 2. Define call parameters
+        batch_size = 1 if isinstance(prompt, str) else len(prompt)
+        device = self._execution_device
+        # here `guidance_scale` is defined analog to the guidance weight `w` of equation (2)
+        # of the Imagen paper: https://arxiv.org/pdf/2205.11487.pdf . `guidance_scale = 1`
+        # corresponds to doing no classifier free guidance.
+        do_classifier_free_guidance = guidance_scale > 1.0
+
+        # 3. Encode input prompt
+        text_embeddings = self._encode_prompt(
+            prompt,
+            device,
+            num_images_per_prompt,
+            do_classifier_free_guidance,
+            negative_prompt,
+            max_embeddings_multiples,
+        )
+        dtype = text_embeddings.dtype
+
+        # 4. Preprocess image and mask
+        if isinstance(image, PIL.Image.Image):
+            image = preprocess_image(image)
+        if image is not None:
+            image = image.to(device=self.device, dtype=dtype)
+
+        # 5. set timesteps
+        self.scheduler.set_timesteps(num_inference_steps, device=device)
+        timesteps, num_inference_steps = self.get_timesteps(num_inference_steps, strength, device, image is None)
+        latent_timestep = timesteps[:1].repeat(batch_size * num_images_per_prompt)
+
+        # 6. Prepare latent variables
+        latents, init_latents_orig, noise = self.prepare_latents(
+            image,
+            latent_timestep,
+            batch_size * num_images_per_prompt,
+            height,
+            width,
+            dtype,
+            device,
+            generator,
+            latents,
+        )
+        noise = latents
+        # (1) init latent maskint
+        # if mask is not None:
+        #    latents = reference_image * mask + latents * (1 - mask)
+
+        # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
+        extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
+
+        # 8. Denoising loop
+        latent_list = []
+        for i, t in enumerate(self.progress_bar(timesteps)):
+            if reference_image is not None:
+                latents = self.scheduler.add_noise(reference_image, noise, t)
+            # expand the latents if we are doing classifier free guidance
+            latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+            latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
+
+            unet_additional_args = {}
+            # predict the noise residual
+            if self.random_vector_generator is not None  :
+                noise_pred = self.unet(latent_model_input,
+                                       t,
+                                       encoder_hidden_states=text_embeddings,
+                                       trg_indexs_list=self.random_vector_generator,
+                                       mask=self.trg_layer_list,
+                                       **unet_additional_args).sample
+            else:
+                noise_pred = self.unet(latent_model_input, t, encoder_hidden_states=text_embeddings,
+                                       **unet_additional_args).sample
+
+            # perform guidance
+            if do_classifier_free_guidance:
+                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+
+            # compute the previous noisy sample x_t -> x_t-1
+            latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+            latent_list.append(latents)
+
+        # return latents
         return latent_list
 
     def latents_to_image(self, latents):

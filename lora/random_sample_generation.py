@@ -36,6 +36,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
                 is_cross_attention = True
 
             if mask is not None and layer_name in mask :
+
+                query = self.to_q(hidden_states)
+                query = self.reshape_heads_to_batch_dim(query)
+
                 b, pixel_num, dim = hidden_states.shape
                 random_hidden_states = []
                 for p in range(pixel_num):
@@ -47,14 +51,18 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
                     random_query = self.reshape_heads_to_batch_dim(random_query.unsqueeze(0))
                 else :
                     random_query = self.reshape_heads_to_batch_dim(random_query)
+                uncon_query, con_query = query.chunk(2, dim=0)
+                query = torch.cat([uncon_query, random_query], dim=0)
 
-            query = self.to_q(hidden_states)
-            if mask is not None and layer_name in mask:
-                controller.save_query(query, layer_name)
+            else :
+                query = self.to_q(hidden_states)
+                query = self.reshape_heads_to_batch_dim(query)
+            #if mask is not None and layer_name in mask:
+            #    controller.save_query(query, layer_name)
+
             context = context if context is not None else hidden_states
             key = self.to_k(context)
             value = self.to_v(context)
-            query = self.reshape_heads_to_batch_dim(query)
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
             if self.upcast_attention:
@@ -360,8 +368,8 @@ class NetworkTrainer:
             cov_dir = os.path.join(base_dir,
                                    f'record_lora_eopch_{model_epoch_int}_mahalanobis/normal_vectors_cov_torch.pt')
             mu = torch.load(mu_dir).to(accelerator.device)
-            cov = torch.load(cov_dir).to(accelerator.device)
-            cov = cov * torch.eye(320)
+            cov = torch.load(cov_dir)
+            cov = (cov * torch.eye(320)).to(accelerator.device)
             random_vector_generator = MultivariateNormal(mu, cov)
 
         if args.text_frozen :
@@ -677,216 +685,92 @@ class NetworkTrainer:
             cov = torch.eye(320)
             random_vector_generator = MultivariateNormal(mu, cov)
 
-        for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
+        # ------------------------------------------------- pipeline ------------------------------------------------- #
+        from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
+        from utils.image_utils import load_image
+        from utils.scheduling_utils import get_scheduler
+        from torchvision import transforms
+        from PIL import Image
 
-            accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
-            current_epoch.value = epoch + 1
-            network.on_epoch_start(text_encoder, unet)
-            for step, batch in enumerate(train_dataloader):
-                current_step.value = global_step
-                # with accelerator.accumulate(network):
-                on_step_start(text_encoder, unet)
+        scheduler_cls = get_scheduler(args.sample_sampler, args.v_parameterization)[0]
+        scheduler = scheduler_cls(num_train_timesteps=args.scheduler_timesteps,
+                                  beta_start=args.scheduler_linear_start,
+                                  beta_end=args.scheduler_linear_end,
+                                  beta_schedule=args.scheduler_schedule)
+        pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
+                            text_encoder=text_encoder, tokenizer=tokenizer, unet=unet,scheduler=scheduler,
+                            safety_checker=None, feature_extractor=None, requires_safety_checker=False,
+                            random_vector_generator =random_vector_generator, trg_layer_list = args.trg_layer_list)
+
+        gen_img_base_folder = os.path.join(base_dir, "generated_images")
+
+        class Mahalanobis_dataset(torch.utils.data.Dataset):
+            def __init__(self, train_data_dir):
+
+                self.vae_scale_factor = 0.18215
+                self.image_transforms = transforms.Compose([transforms.ToTensor(),
+                                                            transforms.Normalize([0.5], [0.5]), ])
+
+                self.imgs = []
+                parent, rgb = os.path.split(train_data_dir)  # train_normal, rgb
+                mask_base_dir = os.path.join(parent, 'mask')
+                class_names = os.listdir(train_data_dir)
+                for class_name in class_names:
+                    rgb_class_dir = os.path.join(train_data_dir, class_name)
+                    mask_class_dir = os.path.join(mask_base_dir, class_name)
+                    images = os.listdir(rgb_class_dir)
+                    for img in images:
+                        rgb_dir = os.path.join(rgb_class_dir, img)
+                        mask_dir = os.path.join(mask_class_dir, img)
+                        self.imgs.append((rgb_dir, mask_dir, class_name))
+
+            def __len__(self):
+                return len(self.imgs)
+
+            def __getitem__(self, idx):
+
+                rgb_dir, mask_dir, class_name = self.imgs[idx]
+                # latent
+                img = load_image(rgb_dir, 512, 512)  # ndarray, dim=3
+                torch_img = self.image_transforms(img).unsqueeze(0)  # dim = 4, torch image
                 with torch.no_grad():
-                    if "latents" in batch and batch["latents"] is not None:
-                        latents = batch["latents"].to(accelerator.device)
-                    else:
-                        latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
-                        if torch.any(torch.isnan(latents)):
-                            accelerator.print("NaN found in latents, replacing with zeros")
-                            latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
-                    latents = latents * self.vae_scale_factor
-                with torch.set_grad_enabled(train_text_encoder):
-                    text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders,
-                                                            weight_dtype)
-                    if args.truncate_pad:
-                        text_encoder_conds = text_encoder_conds[:, :args.truncate_length, :]
-                noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                                   noise_scheduler,
-                                                                                                   latents)
-                with accelerator.autocast():
-                    noise_pred = self.call_unet(args,
-                                                accelerator,
-                                                unet,
-                                                noisy_latents,
-                                                timesteps,
-                                                text_encoder_conds,
-                                                batch,
-                                                weight_dtype, random_vector_generator, args.trg_layer_list)
+                    latent = vae.encode(torch_img.to(vae.device, dtype=vae_dtype)).latent_dist.sample()
+                    latent = latent * self.vae_scale_factor
+                # mask
+                img_masks = transforms.ToTensor()(Image.open(mask_dir).
+                                                  convert('L').resize((64, 64), Image.BICUBIC))  # [64,64]
+                object_mask = torch.where(img_masks > 0.5, 1, 0).float().squeeze()  # res,res
+                sample = {}
+                sample['latent'] = latent
+                sample['object_mask'] = object_mask
+                sample['class_name'] = class_name
+                return sample
 
-                # ------------------------------------- (1) task loss ------------------------------------- #
-                if args.do_task_loss:
-                    if args.v_parameterization:
-                        target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                    else:
-                        target = noise
-                    loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
-                    loss = loss.mean([1, 2, 3])
-                    loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                    loss = loss * loss_weights
-                    task_loss = loss.mean()
-                    task_loss = task_loss * args.task_loss_weight
+        mahal_dataset = Mahalanobis_dataset(args.all_data_dir)
+        num_samples = len(mahal_dataset)
 
-                # ------------------------------------- (2) attn loss ------------------------------------- #
-                attn_dict = attention_storer.step_store
-                query_dict = attention_storer.query_dict
-                attention_storer.reset()
-                attn_loss, dist_loss = 0, 0
+        for i in range(num_samples):
+            sample = mahal_dataset.__getitem__(i)
+            class_name = sample['class_name']
+            checking = False
+            if args.do_check_anormal:
+                checking = True
+            else:
+                if 'good' in class_name:
+                    checking = True
+            if checking:
+                latent = sample['latent']  # 1,4,64,64
+                if latent.dim() == 3:
+                    org_latent = latent.unsqueeze(0)
+                org_latent = latent.to(accelerator.device)  # 1,4,64,64
+                latents = pipeline.random_gen(prompt=args.prompt, height=512, width=512, num_inference_steps=args.num_ddim_steps,
+                    guidance_scale=args.guidance_scale, negative_prompt=args.negative_prompt, reference_image=org_latent)
+                register_attention_control.reset()
+                gen_image = pipeline.latents_to_image(latents[-1])[0].resize((512,512))
+                gen_image_dir = os.path.join(gen_img_base_folder, f'{name}_recon{ext}')
+                gen_image.save(gen_image_dir)
 
-                for i, layer_name in enumerate(attn_dict.keys()):
 
-                    if layer_name in args.trg_layer_list :
-                        map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
-                        map, random_map = map.chunk(2, dim=0)  # 8, res*res, c
-                        if args.cls_training:
-                            cls_map, score_map = torch.chunk(map, 2, dim=-1) # 8, res*res, c
-                            cls_map = cls_map.squeeze()     # 8, res*res
-                            score_map = score_map.squeeze() # 8, res*res
-                            cls_random_map, score_random_map = torch.chunk(random_map, 2, dim=-1)
-                            cls_random_map = cls_random_map.squeeze()
-                            score_random_map = score_random_map.squeeze() # 8, res*res
-                        else:
-                            score_map = map.squeeze()  # 8, res*res
-                            score_random_map = random_map.squeeze()  # 8, res*res
-
-                        query = query_dict[layer_name][0].squeeze()
-                        pix_num = query.shape[0]  # 4096
-
-                        if not args.unet_frozen:
-                            for i in range(pix_num):
-                                feat = query[i, :].squeeze()  # dim
-                                if len(features) >= 3000 :
-                                    features.pop(0)
-                                features.append(feat.unsqueeze(0))
-                            normal_vectors = torch.cat(features, dim=0)  # sample, dim
-                            mu = torch.mean(normal_vectors, dim=0)
-                            cov = torch.cov(normal_vectors.transpose(0, 1))
-                            random_vector_generator = MultivariateNormal(mu, cov)
-
-                        mahalanobis_dists = [mahal(feat, mu, cov) for feat in normal_vectors]
-                        dist_mean = torch.tensor(mahalanobis_dists).mean()
-                        dist_loss += dist_mean.requires_grad_()
-                        if args.do_attn_loss:
-                            """ if all be white, loss would be 0 """
-                            normal_trigger_activation = score_map.sum(dim=-1)  # 8
-                            anormal_trigger_activation = score_random_map.sum(dim=-1)  # 8
-                            total_score = torch.ones_like(normal_trigger_activation).sum(dim=-1)  # 8
-                            normal_trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                            activation_loss = args.normal_weight * normal_trigger_activation_loss
-                            # ---------------------------------- deactivating ------------------------------------ #
-                            if args.act_deact :
-                                anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                                activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
-                            if args.cls_training:
-                                normal_cls_activation_loss = cls_map.sum(dim=-1)  # 8
-                                anormal_cls_activation_loss = cls_random_map.sum(dim=-1)  # 8
-                                normal_cls_activation_loss = (normal_cls_activation_loss / total_score) ** 2
-                                anormal_cls_activation_loss = (1 - (anormal_cls_activation_loss / total_score)) ** 2
-                                activation_loss += args.normal_weight * normal_cls_activation_loss
-                                if args.act_deact :
-                                    activation_loss += args.act_deact_weight * anormal_cls_activation_loss
-                            attn_loss += activation_loss
-                if args.do_dist_loss:
-                    dist_loss = dist_loss.mean()
-                if args.do_attn_loss:
-                    attn_loss = attn_loss.mean()
-                ########################### 3. attn loss ###########################################################
-                if args.do_task_loss :
-                    if args.do_attn_loss:
-                        if args.do_dist_loss:
-                            loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
-                        else :
-                            loss = args.task_loss_weight * task_loss + args.attn_loss_weight * attn_loss
-                    else :
-                        if args.do_dist_loss:
-                            loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss
-                        else:
-                            loss = args.task_loss_weight * task_loss
-                else :
-                    if args.do_attn_loss:
-                        if args.do_dist_loss:
-                            loss = args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
-                        else :
-                            loss = args.attn_loss_weight * attn_loss
-                    else :
-                        if args.do_dist_loss:
-                            loss = args.mahalanobis_loss_weight * dist_loss
-                        else :
-                            print(f'No loss is backpropt')
-                # ------------------------------------------------------------------------------------------------- #
-                if is_main_process:
-                    if args.do_task_loss:
-                        loss_dict["loss/task_loss"] = task_loss.item()
-                    if args.do_attn_loss:
-                        loss_dict["loss/attn_loss"] = attn_loss.item()
-                    loss_dict["loss/dist_loss"] = dist_loss.item()
-                accelerator.backward(loss)
-
-                if accelerator.sync_gradients and args.max_grad_norm != 0.0:
-                    params_to_clip = network.get_trainable_params()
-                    accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
-
-                optimizer.step()
-                lr_scheduler.step()
-                optimizer.zero_grad(set_to_none=True)
-                # ------------------------------------------------------------------------------------------------- #
-
-                # Checks if the accelerator has performed an optimization step behind the scenes
-                if accelerator.sync_gradients:
-                    progress_bar.update(1)
-                    global_step += 1
-                    self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer,
-                                       text_encoder, unet)
-                    attention_storer.reset()
-
-                    # 指定ステップごとにモデルを保存
-                    if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
-                        accelerator.wait_for_everyone()
-                        if accelerator.is_main_process:
-                            ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
-                            save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch)
-                            if args.save_state:
-                                train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
-                            remove_step_no = train_util.get_remove_step_no(args, global_step)
-                            if remove_step_no is not None:
-                                remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as,
-                                                                                 remove_step_no)
-                                remove_model(remove_ckpt_name)
-                # ------------------------------------------------------------------------------------------------------
-                # 1) total loss
-                current_loss = loss.detach().item()
-                if epoch == args.start_epoch:
-                    loss_list.append(current_loss)
-                else:
-                    loss_total -= loss_list[step]
-                    loss_list[step] = current_loss
-                loss_total += current_loss
-                avr_loss = loss_total / len(loss_list)
-                if is_main_process:
-                    progress_bar.set_postfix(**loss_dict)
-                if global_step >= args.max_train_steps:
-                    break
-            accelerator.wait_for_everyone()
-            if args.save_every_n_epochs is not None:
-                saving = (epoch + 1) % args.save_every_n_epochs == 0 and (
-                        epoch + 1) < args.start_epoch + num_train_epochs
-                if is_main_process and saving:
-                    ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
-                    save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch + 1)
-                    remove_epoch_no = train_util.get_remove_epoch_no(args, epoch + 1)
-                    if remove_epoch_no is not None:
-                        remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as,
-                                                                          remove_epoch_no)
-                        remove_model(remove_ckpt_name)
-                    if args.save_state:
-                        train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
-            self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer,
-                               text_encoder, unet)
-            attention_storer.reset()
-        if is_main_process:
-            network = accelerator.unwrap_model(network)
-        accelerator.end_training()
-        if is_main_process and args.save_state:
-            train_util.save_state_on_train_end(args, accelerator)
 
 
 if __name__ == "__main__":
@@ -979,6 +863,12 @@ if __name__ == "__main__":
     parser.add_argument("--add_random_query", action="store_true", )
     parser.add_argument("--unet_frozen", action="store_true", )
     parser.add_argument("--text_frozen", action="store_true", )
+    parser.add_argument("--trg_layer", type=str)
+    parser.add_argument("--trg_layer_list", type=arg_as_list, )
+    parser.add_argument("--trg_lora_epoch", type=str)
+    parser.add_argument("--guidance_scale", type=float, default=8.5)
+    parser.add_argument("--prompt", type=str, default='teddy bear, wearing like a super hero')
+    parser.add_argument("--negative_prompt", type=str)
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
