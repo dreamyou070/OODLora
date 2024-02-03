@@ -498,6 +498,11 @@ if __name__ == "__main__":
         choices=[None, "float", "fp16", "bf16"],
         help="precision in saving / 保存時に精度を変更して保存する",
     )
+    parser.add_argument(
+        "--lowram",
+        action="store_true",
+        help="enable low RAM optimization. e.g. load models to VRAM instead of RAM (for machines which have bigger VRAM than RAM such as Colab and Kaggle) / メインメモリが少ない環境向け最適化を有効にする。たとえばVRAMにモデルを読み込むなど（ColabやKaggleなどRAMに比べてVRAMが多い環境向け）",
+    )
     args = parser.parse_args()
     trainer = NetworkTrainer()
     trainer.train(args)
