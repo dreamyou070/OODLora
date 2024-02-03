@@ -16,6 +16,8 @@ import torch.nn as nn
 from utils.model_utils import call_unet
 from utils.common_utils import get_lora_epoch, save_latent
 from utils.model_utils import get_crossattn_map
+from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
+import numpy as np
 
 try:
     from setproctitle import setproctitle
@@ -151,8 +153,6 @@ def main(args):
             network.apply_to(text_encoder, unet, True, True)
 
             # (3) save direction
-            parent, detect_network_dir = os.path.split(args.detection_network_weights)
-            detect_model_epoch = get_lora_epoch(detect_network_dir)
             model_epoch = get_lora_epoch(weight)
             test_lora_dir = os.path.join(args.output_dir, f'lora_{model_epoch}')
             os.makedirs(test_lora_dir, exist_ok=True)
@@ -208,25 +208,7 @@ def main(args):
 
                                 org_img = load_image(test_img_dir, 512, 512)
                                 org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
-                                # ------------------------------------- [1] object mask ------------------------------ #
-                                # 1. object mask
-
-                                network.load_weights(args.detection_network_weights)
-                                network.to(device)
-                                controller_ob = AttentionStore()
-                                register_attention_control(unet, controller_ob)
-                                with torch.no_grad():
-                                    context_ob = init_prompt(tokenizer, text_encoder, device, args.prompt)
-                                uncon_ob, con_ob = torch.chunk(context_ob, 2)
-                                call_unet(unet, org_vae_latent, 0, con_ob[:, :args.truncate_length, :], None, None)
-                                attn_stores = controller_ob.step_store
-                                controller_ob.reset()
-                                object_mask = get_crossattn_map(args, attn_stores,args.trg_layer)
-                                #object_mask_save_dir = os.path.join(class_base_folder, f'{name}_object_mask{ext}')
-                                #save_latent(object_mask, object_mask_save_dir, org_h, org_w)
-                                background_mask = 1 - object_mask  ########################################## [res,res]
-
-                                # ------------------------------------- [2] anomal mask ------------------------------ #
+                                # ------------------------------------- [1] anomal mask ------------------------------ #
                                 # real network is getting good !
                                 weight_dir = os.path.join(args.network_weights, weight)
                                 network.restore()
@@ -241,51 +223,26 @@ def main(args):
                                 attn_stores = controller.step_store
                                 controller.reset()
                                 for trg_layer in args.trg_layer_list :
-                                    object_mask = get_crossattn_map(args, attn_stores,
-                                                                    trg_layer)
-                                                                #'up_blocks_3_attentions_2_transformer_blocks_0_attn2')
+                                    object_mask = get_crossattn_map(args, attn_stores, trg_layer)
                                     object_mask_save_dir = os.path.join(class_base_folder, f'{name}_z_{trg_layer}{ext}')
                                     save_latent(object_mask, object_mask_save_dir, org_h, org_w)
                                 # 2. normal mask
-                                normal_mask = get_crossattn_map(args, attn_stores,
-                                                                 args.trg_layer,
-                                                                 thredhold=args.anormal_thred)
-
-                                #normal_mask_save_dir = os.path.join(class_base_folder,
-                                #                                     f'{name}_normal_mask{ext}')
-                                #save_latent(normal_mask, normal_mask_save_dir, org_h, org_w)
+                                normal_mask = get_crossattn_map(args, attn_stores, args.trg_layer,
+                                                                thredhold=args.anormal_thred)
 
                                 # 3. latent mask
-                                recon_mask = background_mask + normal_mask
-                                recon_mask = torch.where(recon_mask == 0, 0, 1)
+                                recon_mask = normal_mask
                                 recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_z_recon_mask{ext}')
                                 save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
-                                # 4. final latent mask
                                 recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
                                 # ---------------------------------- [2] reconstruction ------------------------------ #
-                                from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
-                                import numpy as np
-                                network.restore()
-                                network.load_weights(args.detection_network_weights)
-                                network.to(device)
                                 pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
-                                                                                   text_encoder=text_encoder,
-                                                                                   tokenizer=tokenizer,
-                                                                                   unet=unet,
-                                                                                   scheduler=scheduler,
-                                                                                   safety_checker=None,
-                                                                                   feature_extractor=None,
-                                                                                   requires_safety_checker=False, )
-                                latents = pipeline(prompt=args.prompt,
-                                                   height=512,
-                                                   width=512,
-                                                   num_inference_steps=args.num_ddim_steps,
-                                                   guidance_scale=args.guidance_scale,
-                                                   negative_prompt=args.negative_prompt,
-                                                   reference_image =org_vae_latent,
-                                                   mask=recon_mask)
-
+                                               text_encoder=text_encoder,tokenizer=tokenizer,unet=unet,scheduler=scheduler,
+                                               safety_checker=None,feature_extractor=None, requires_safety_checker=False, )
+                                latents = pipeline(prompt=args.prompt,height=512,width=512,num_inference_steps=args.num_ddim_steps,
+                                                   guidance_scale=args.guidance_scale,negative_prompt=args.negative_prompt,
+                                                   reference_image =org_vae_latent,mask=recon_mask)
                                 recon_image = pipeline.latents_to_image(latents[-1])[0].resize((org_h, org_w))
                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                 recon_image.save(img_dir)
