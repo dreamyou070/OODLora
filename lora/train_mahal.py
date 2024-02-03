@@ -315,6 +315,35 @@ class NetworkTrainer:
         except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
 
+        class_name = 'bagel'
+        from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
+        import numpy as np
+        from diffusers import DDIMScheduler
+        scheduler = DDIMScheduler(num_train_timesteps=args.scheduler_timesteps,
+                                  beta_start=args.scheduler_linear_start,
+                                  beta_end=args.scheduler_linear_end,
+                                  beta_schedule=args.scheduler_schedule)
+        pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
+                                                           text_encoder=text_encoder,
+                                                           tokenizer=tokenizer,
+                                                           unet=unet,
+                                                           scheduler=scheduler,
+                                                           safety_checker=None,
+                                                           feature_extractor=None,
+                                                           requires_safety_checker=False, )
+        latents = pipeline(prompt='bagel',
+                           height=512,
+                           width=512,
+                           num_inference_steps=30,
+                           guidance_scale=8.5,
+                           negative_prompt=args.negative_prompt,
+                           num_images_per_prompt=100,)
+        gen_latent = latents[-1]
+        print(f'gen_latent shape : {gen_latent.shape}')
+        #gen_image = pipeline.latents_to_image(latents[-1])[0].resize(args.resolution)
+
+
+    """
         print(f'\n (6.2) frozen or not')
         if args.unet_frozen :
             params = []
@@ -921,6 +950,7 @@ class NetworkTrainer:
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
+        """
 
 
 if __name__ == "__main__":
@@ -950,7 +980,10 @@ if __name__ == "__main__":
                         help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
-
+    parser.add_argument("--scheduler_linear_start", type=float, default=0.00085)
+    parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
+    parser.add_argument("--scheduler_timesteps", type=int, default=1000)
+    parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
 
     # step 4. training
     train_util.add_training_arguments(parser, True)
@@ -1014,6 +1047,10 @@ if __name__ == "__main__":
     parser.add_argument("--add_random_query", action="store_true", )
     parser.add_argument("--unet_frozen", action="store_true", )
     parser.add_argument("--text_frozen", action="store_true", )
+    parser.add_argument("--guidance_scale", type=float, default=8.5)
+    parser.add_argument("--prompt", type=str, default='teddy bear, wearing like a super hero')
+    parser.add_argument("--negative_prompt", type=str,
+                        default="low quality, worst quality, bad anatomy, bad composition, poor, low effort")
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
