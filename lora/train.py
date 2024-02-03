@@ -317,51 +317,6 @@ class NetworkTrainer:
         except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
 
-        print(f'\n (6.2) frozen or not')
-        if args.unet_frozen :
-            params = []
-            unet_loras = network.unet_loras
-            for unet_lora in unet_loras:
-                lora_name = unet_lora.lora_name
-                if 'to_k' in lora_name or 'to_v' in lora_name:
-                    if 'attn2' in lora_name :
-                        print(f'unet train layer : {lora_name}')
-                        params.extend(unet_lora.parameters())
-                    else :
-                        unet_lora.requires_grad = False
-                else :
-                        unet_lora.requires_grad = False
-            te_loras = network.text_encoder_loras
-            for te_lora in te_loras:
-                params.extend(te_lora.parameters())
-            trainable_params = [{"params": params, "lr": args.unet_lr}]
-
-            parnet_dir, lora_dir = os.path.split(args.network_weights)
-            name, _ = os.path.splitext(lora_dir)
-            lora_epoch = name.split('-')[-1]
-            parent, _ = os.path.split(parnet_dir)
-
-            frozen_mean = torch.load(os.path.join(parent,
-                                                  f"record_lora_eopch_{lora_epoch}/normal_vector_mean_torch.pt"))
-            frozen_cov =  torch.load(os.path.join(parent,
-                                                  f"record_lora_eopch_{lora_epoch}/normal_vector_cov_torch.pt"))
-
-        if args.text_frozen :
-            params = []
-            unet_loras = network.unet_loras
-            for unet_lora in unet_loras:
-                lora_name = unet_lora.lora_name
-                if 'to_k' in lora_name or 'to_v' in lora_name:
-                    if 'attn2' in lora_name:
-                        unet_lora.requires_grad = False
-                    else:
-                        params.extend(unet_lora.parameters())
-                else:
-                    params.extend(unet_lora.parameters())
-            te_loras = network.text_encoder_loras
-            for te_lora in te_loras:
-                te_lora.requires_grad = False
-            trainable_params = [{"params": params, "lr": args.text_encoder_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
         print(f' step 7. dataloader')
@@ -649,8 +604,8 @@ class NetworkTrainer:
 
         # training loop
         if is_main_process:
+            gradient_dict = {}
             loss_dict = {}
-
         features = []
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
 
@@ -759,10 +714,6 @@ class NetworkTrainer:
                             delta = u - v
                             m = torch.dot(delta, torch.matmul(cov, delta))
                             return torch.sqrt(m)
-
-                        if args.unet_frozen :
-                            normal_vector_mean_torch = frozen_mean
-                            normal_vectors_cov_torch = frozen_cov
 
                         mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
                                              feat in normal_vectors]
