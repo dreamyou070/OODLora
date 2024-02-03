@@ -439,7 +439,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_key", type=str)
     # step 2. dataset
     train_util.add_dataset_arguments(parser, True, True, True)
-    parser.add_argument("--output_dir", type=str, default='')
+    parser.add_argument("--outputq_dir", type=str, default='')
     parser.add_argument("--class_caption", type=str, default='')
     # step 3. model
     train_util.add_sd_models_arguments(parser)
