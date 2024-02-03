@@ -514,6 +514,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("--xformers", action="store_true",
                         help="use xformers for CrossAttention / CrossAttentionにxformersを使う")
+    parser.add_argument(
+        "--sdpa",
+        action="store_true",
+        help="use sdpa for CrossAttention (requires PyTorch 2.0) / CrossAttentionにsdpaを使う（PyTorch 2.0が必要）",
+    )
     args = parser.parse_args()
     trainer = NetworkTrainer()
     trainer.train(args)
