@@ -361,6 +361,7 @@ class NetworkTrainer:
                             else :
                                 normal_vector_bad_score_list.add(feature)
                                 normal_vector_list.add(feature)
+                            print(f' ** nomal score : {attn_score}')
                             normal_scores.append(attn_score)
                         else:
                             if feature.dim() == 1:
@@ -376,6 +377,7 @@ class NetworkTrainer:
                                 feature = feature.unsqueeze(0)
                                 if type(attn_score) == torch.Tensor:
                                     attn_score = attn_score.item()
+                            print(f'anomal score : {attn_score}')
                             anormal_vector_list.add(feature)
                             anomal_scores.append(attn_score)
                 if i % 20 == 0:
