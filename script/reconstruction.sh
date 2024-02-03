@@ -1,13 +1,13 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_down_task_loss_mahal_dist_attn_loss_0.001_actdeact_perlin_noise_second_code"
+folder_name="res_64_down_task_loss_mahal_dist_attn_loss_0.01_actdeact_perlin_noise_second_code"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/object_detection/models/epoch-000110.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
-port_number=50011
+port_number=50013
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} ../lora/reconstruction.py \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -28,5 +28,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --only_zero_save \
   --class_name ${class_name} \
   --anormal_thred 0.5 \
-  --trg_layer "up_blocks_3_attentions_2_transformer_blocks_0_attn2" \
-  --trg_layer_list "['up_blocks_3_attentions_2_transformer_blocks_0_attn2']"
+  --trg_layer "down_blocks_1_attentions_2_transformer_blocks_0_attn2" \
+  --trg_layer_list "['down_blocks_1_attentions_2_transformer_blocks_0_attn2']"
