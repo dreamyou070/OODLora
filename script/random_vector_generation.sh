@@ -18,6 +18,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --logging_dir "${output_dir}/logs" \
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 \
+  --seed 42 \
   --resolution '512,512' \
   --class_caption 'good' \
   --all_data_dir "${all_data_dir}" \

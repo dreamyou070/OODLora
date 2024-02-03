@@ -348,7 +348,7 @@ class NetworkTrainer:
                 if 'good' in class_name:
                     for pix_idx in range(mask_vector.shape[0]):
                         feature = query[pix_idx, :].cpu()
-                        attn_score = trigger_map[pix_idx].cpu()
+                        attn_score = trigger_map[pix_idx].cpu() # score
                         if mask_vector[pix_idx] == 1:
                             if feature.dim() == 1:
                                 feature = feature.unsqueeze(0)
