@@ -674,8 +674,7 @@ class NetworkTrainer:
                                                 text_encoder_conds,
                                                 batch,
                                                 weight_dtype, 1, None)
-                    #noise_pred, _ = noise_pred.chunk(2, dim=0)
-                    #print(f'noise_pred: {noise_pred.shape}')
+
                 # ------------------------------------- (1) task loss ------------------------------------- #
                 if args.do_task_loss:
                     if args.v_parameterization:
@@ -699,20 +698,16 @@ class NetworkTrainer:
                     if layer_name in args.trg_layer_list :
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         map, random_map = map.chunk(2, dim=0)  # 8, res*res, c
-
                         if args.cls_training:
                             cls_map, score_map = torch.chunk(map, 2, dim=-1) # 8, res*res, c
                             cls_map = cls_map.squeeze()     # 8, res*res
                             score_map = score_map.squeeze() # 8, res*res
-
                             cls_random_map, score_random_map = torch.chunk(random_map, 2, dim=-1)
                             cls_random_map = cls_random_map.squeeze()
                             score_random_map = score_random_map.squeeze() # 8, res*res
-
                         else:
                             score_map = map.squeeze()  # 8, res*res
                             score_random_map = random_map.squeeze()  # 8, res*res
-                        res = int(map.shape[1] ** 0.5)
                         head_num = int(score_map.shape[0])
                         query = query_dict[layer_name][0].squeeze()
                         query, random_query = query.chunk(2, dim=0)
@@ -776,7 +771,7 @@ class NetworkTrainer:
                                 feat = random_vectors[i, :]
                                 random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
                                 if object_flag == 1 :
-                                    if random_dist >= dist_max:
+                                    if random_dist < dist_max:
                                         random_anomal_positions.append(1)
                                     else:
                                         random_anomal_positions.append(0)

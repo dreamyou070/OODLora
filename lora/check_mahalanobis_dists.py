@@ -84,7 +84,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
 
-
 class NetworkTrainer:
 
     def __init__(self):
@@ -191,7 +190,6 @@ class NetworkTrainer:
     def train(self, args):
 
         args.logging_dir = os.path.join(args.output_dir, 'logs')
-        parent, name = os.path.split(args.output_dir)
 
         print(f'\n step 1. setting')
         print(f' (1) session')
@@ -205,14 +203,10 @@ class NetworkTrainer:
 
         print(f'\n step 2. dataset')
         tokenizer = train_util.load_tokenizer(args)
-        tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
-
 
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
         is_main_process = accelerator.is_main_process
-        # if args.log_with == 'wandb' and is_main_process:
-        #    wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
 
         print(f'\n step 4. save directory')
         save_base_dir = args.output_dir
@@ -222,22 +216,14 @@ class NetworkTrainer:
         print(f' (4.1) config saving')
         with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
-        # logging_file = os.path.join(args.output_dir, f"validation_log_{time}.txt")
 
         print(f'\n step 5. model')
         weight_dtype, save_dtype = train_util.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
         print(f' (5.1) base model')
-
-        model_version, training_text_encoder, vae, training_unet = self.load_target_model(args, weight_dtype,
+        model_version, frozen_text_encoder, vae, frozen_unet = self.load_target_model(args, weight_dtype,
                                                                                           accelerator)
-        training_text_encoders = training_text_encoder if isinstance(training_text_encoder, list) else [
-            training_text_encoder]
-        model_version, frozen_text_encoder, enc_vae, frozen_unet = self.load_target_model(args, weight_dtype,
-                                                                                          accelerator)
-
         train_util.replace_unet_modules(frozen_unet, args.mem_eff_attn, args.xformers, args.sdpa)
-        train_util.replace_unet_modules(training_unet, args.mem_eff_attn, args.xformers, args.sdpa)
         if torch.__version__ >= "2.0.0":
             vae.set_use_memory_efficient_attention_xformers(args.xformers)
 
@@ -246,40 +232,20 @@ class NetworkTrainer:
         accelerator.print("import network module:", args.network_module)
         network_module = importlib.import_module(args.network_module)
         net_kwargs = {}
-        if args.dim_from_weights:
-            frozen_network, _ = network_module.create_network_from_weights(1, args.network_weights, vae,
-                                           frozen_text_encoder, frozen_unet,**net_kwargs)
-            training_network, _ = network_module.create_network_from_weights(1, args.network_weights, vae,
-                                                                             training_text_encoder, training_unet,
-                                                                             **net_kwargs)
-        else:
-            frozen_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae,
-                                                           frozen_text_encoder, frozen_unet,
-                                                           neuron_dropout=args.network_dropout, **net_kwargs, )
-            training_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae,
-                                                             training_text_encoder, training_unet,
-                                                             neuron_dropout=args.network_dropout, **net_kwargs, )
+        frozen_network = network_module.create_network(1.0, args.network_dim, args.network_alpha, vae,
+                                 frozen_text_encoder, frozen_unet, neuron_dropout=args.network_dropout, **net_kwargs, )
 
         print(' (5.3) lora with unet and text encoder')
         train_unet = not args.network_train_text_encoder_only
         train_text_encoder = not args.network_train_unet_only
         frozen_network.apply_to(frozen_text_encoder, frozen_unet, train_text_encoder, train_unet)
-        training_network.apply_to(training_text_encoder, training_unet, train_text_encoder, train_unet)
-        print(' (5.4) lora resume?')
-        if args.network_weights is not None:
-            frozen_network.load_weights(args.network_weights)
-            training_network.load_weights(args.network_weights)
-        if args.gradient_checkpointing:
-            for t_enc in training_text_encoders:
-                t_enc.gradient_checkpointing_enable()
-            del t_enc
-            training_network.enable_gradient_checkpointing()  # may have no effect
+        frozen_network.load_weights(args.network_weights)
 
         # -------------------------------------------------------------------------------------------------------- #
-
         print(f'\n step 6. make memory bank')
         device = accelerator.device
-        frozen_unet, frozen_text_encoder, network = frozen_unet.to(device), frozen_text_encoder.to(device), frozen_network.to(device)
+        frozen_unet, frozen_text_encoder, network = frozen_unet.to(device),frozen_text_encoder.to(device),\
+            frozen_network.to(device)
 
         class Mahalanobis_dataset(torch.utils.data.Dataset):
             def __init__(self, train_data_dir):
@@ -327,9 +293,8 @@ class NetworkTrainer:
         controller = AttentionStore()
         register_attention_control(frozen_unet, controller, mask_threshold=args.mask_threshold)
         with torch.no_grad():
-            text_input = tokenizer(['good'], padding="max_length",
-                                   max_length=tokenizer.model_max_length,
-                                   truncation=True, return_tensors="pt", )
+            text_input = tokenizer([args.class_caption], padding="max_length",
+                                   max_length=tokenizer.model_max_length, truncation=True, return_tensors="pt", )
             text = text_input.input_ids.to(device)
             text_embeddings = frozen_text_encoder(text)[0][:, :2, :]
 
@@ -472,8 +437,6 @@ if __name__ == "__main__":
     train_util.add_dataset_arguments(parser, True, True, True)
     parser.add_argument("--mask_dir", type=str, default='')
     parser.add_argument("--class_caption", type=str, default='')
-    parser.add_argument("--no_metadata", action="store_true",
-                        help="do not save metadata in output model")
     # step 3. model
     train_util.add_sd_models_arguments(parser)
     parser.add_argument("--network_weights", type=str, default=None,
@@ -481,56 +444,27 @@ if __name__ == "__main__":
     parser.add_argument("--network_module", type=str, default=None,
                         help="network module to train / 学習対象のネットワークのモジュール")
     parser.add_argument("--network_dim", type=int, default=None,
-                        help="network dimensions (depends on each network) / モジュールの次元数（ネットワークにより定義は異なります）")
+                        help="network dimensions (depends on each network)")
     parser.add_argument("--network_alpha", type=float, default=1,
-                        help="alpha for LoRA weight scaling, default 1 (same as network_dim for same behavior as old version)", )
+               help="alpha for LoRA weight scaling, default 1 (same as network_dim for same behavior as old version)", )
     parser.add_argument("--network_dropout", type=float, default=None,
-                        help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
-    parser.add_argument("--network_args", type=str, default=None, nargs="*",
-                        help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
-    # step 4. training
-    train_util.add_training_arguments(parser, True)
-    custom_train_functions.add_custom_train_arguments(parser)
-    parser.add_argument("--unet_lr", type=float, default=None, help="learning rate for U-Net / U-Netの学習率")
-    parser.add_argument("--text_encoder_lr", type=float, default=None,
-                        help="learning rate for Text Encoder / Text Encoderの学習率")
-    # step 5. optimizer
-    train_util.add_optimizer_arguments(parser)
-    config_util.add_config_arguments(parser)
-    parser.add_argument("--save_model_as", type=str, default="safetensors",
-                        choices=[None, "ckpt", "pt", "safetensors"],
-                        help="format to save the model (default is .safetensors) / モデル保存時の形式（デフォルトはsafetensors）", )
+           help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_train_unet_only", action="store_true",
                         help="only training U-Net part / U-Net関連部分のみ学習する")
     parser.add_argument("--network_train_text_encoder_only", action="store_true",
                         help="only training Text Encoder part / Text Encoder関連部分のみ学習する")
-    parser.add_argument("--training_comment", type=str, default=None,
-                        help="arbitrary comment string stored in metadata / メタデータに記録する任意のコメント文字列")
-    parser.add_argument("--dim_from_weights", action="store_true",
-                        help="automatically determine dim (rank) from network_weights / dim (rank)をnetwork_weightsで指定した重みから自動で決定する", )
     parser.add_argument("--scale_weight_norms", type=float, default=None,
                         help="Scale the weight of each key pair to help prevent overtraing via exploding gradients. ", )
     parser.add_argument("--base_weights", type=str, default=None, nargs="*",
-                        help="network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みファイル", )
+                        help="network weights to merge into the model before training", )
     parser.add_argument("--base_weights_multiplier", type=float, default=None, nargs="*",
-                        help="multiplier for network weights to merge into the model before training / 学習前にあらかじめモデルにマージするnetworkの重みの倍率", )
+                        help="multiplier for network weights to merge into the model before training", )
     parser.add_argument("--no_half_vae", action="store_true",
-                        help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precisionでも fp16/bf16 VAEを使わずfloat VAEを使う", )
+                        help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precision",)
     parser.add_argument("--mask_threshold", type=float, default=0.5)
-    parser.add_argument("--resume_lora_training", action="store_true", )
-    parser.add_argument("--start_epoch", type=int, default=0)
-    parser.add_argument("--valid_data_dir", type=str)
-    parser.add_argument("--task_loss_weight", type=float, default=0.5)
-    parser.add_argument("--shuffle", action='store_true')
     parser.add_argument("--truncate_pad", action='store_true')
     parser.add_argument("--truncate_length", type=int, default=3)
-    parser.add_argument("--detail_64_up", action='store_true')
-    parser.add_argument("--detail_64_down", action='store_true')
-    parser.add_argument("--anormal_sample_normal_loss", action='store_true')
-    parser.add_argument("--do_task_loss", action='store_true')
-    parser.add_argument("--act_deact", action='store_true')
     parser.add_argument("--all_data_dir", type=str)
-    parser.add_argument("--attn_loss_weight", type=float, default=1)
     parser.add_argument("--concat_query", action='store_true')
     import ast
     def arg_as_list(arg):
@@ -540,17 +474,8 @@ if __name__ == "__main__":
         return v
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
     parser.add_argument("--trg_layer", type=str)
-    parser.add_argument("--trg_layer_list", type=arg_as_list, default=['down_blocks_0_attentions_1_transformer_blocks_0_attn2',
-                                                                        'up_blocks_3_attentions_2_transformer_blocks_0_attn2'])
-    parser.add_argument("--training_layer", type=str)
-    parser.add_argument('--trg_position', type=arg_as_list, default=['down', 'up'])
-    parser.add_argument('--anormal_weight', type=float, default=1.0)
-    parser.add_argument('--normal_weight', type=float, default=1.0)
-    parser.add_argument("--cross_map_res", type=arg_as_list, default=[64, 32, 16, 8])
-    parser.add_argument("--cls_training", action="store_true", )
-    parser.add_argument("--background_loss", action="store_true")
+    parser.add_argument("--trg_layer_list", type=arg_as_list, default=['down_blocks_0_attentions_1_transformer_blocks_0_attn2'])
     parser.add_argument("--average_mask", action="store_true", )
-    parser.add_argument("--attn_loss", action="store_true", )
     parser.add_argument("--normal_with_background", action="store_true", )
     parser.add_argument("--only_object_position", action="store_true", )
     parser.add_argument("--do_check_anormal", action="store_true", )
