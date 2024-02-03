@@ -384,7 +384,7 @@ class NetworkTrainer:
                             anomal_scores.append(attn_score)
                         else :
                             print(f'anomal sample not anomal position score : {attn_score}')
-                            
+
                 if i % 20 == 0:
                     print(f'normal_vector_good_score_list : {len(normal_vector_good_score_list)}, '
                           f'normal_vector_bad_score_list : {len(normal_vector_bad_score_list)}, '
