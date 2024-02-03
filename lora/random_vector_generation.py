@@ -372,6 +372,8 @@ class NetworkTrainer:
                     for pix_idx in range(mask_vector.shape[0]):
                         feature = query[pix_idx, :].cpu()
                         attn_score = trigger_map[pix_idx].cpu()  # score
+                        if type(attn_score) == torch.Tensor:
+                            attn_score = attn_score.item()
                         if mask_vector[pix_idx] == 1:
                             if feature.dim() == 1:
                                 feature = feature.unsqueeze(0)
@@ -380,6 +382,9 @@ class NetworkTrainer:
                             print(f'anomal score : {attn_score}')
                             anormal_vector_list.add(feature)
                             anomal_scores.append(attn_score)
+                        else :
+                            print(f'anomal sample not anomal position score : {attn_score}')
+                            
                 if i % 20 == 0:
                     print(f'normal_vector_good_score_list : {len(normal_vector_good_score_list)}, '
                           f'normal_vector_bad_score_list : {len(normal_vector_bad_score_list)}, '
