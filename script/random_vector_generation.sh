@@ -2,7 +2,7 @@
 class_name="bagel"
 data_source='train_normal'
 data_folder='MVTec3D-AD'
-all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex/rgb"
+all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_normal/rgb"
 normal_folder='normal'
 save_folder="random_vector_generating"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"

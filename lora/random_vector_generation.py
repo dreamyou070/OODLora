@@ -365,6 +365,7 @@ class NetworkTrainer:
                                 feature = feature.unsqueeze(0)
                             back_vector_list.add(feature)
                 else:
+
                     for pix_idx in range(mask_vector.shape[0]):
                         feature = query[pix_idx, :].cpu()
                         if mask_vector[pix_idx] == 1:
@@ -396,8 +397,6 @@ class NetworkTrainer:
 
         from torch.distributions.multivariate_normal import MultivariateNormal
         random_vector_generator = MultivariateNormal(mu,cov)
-
-
         # ----------------------------------------------------------------------------------------------------------- #
         # [1] good mahalanobis distances
         if args.normal_good_check:
