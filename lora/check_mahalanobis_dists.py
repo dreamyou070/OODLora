@@ -484,6 +484,5 @@ if __name__ == "__main__":
     parser.add_argument("--only_object_position", action="store_true", )
     parser.add_argument("--do_check_anormal", action="store_true", )
     args = parser.parse_args()
-    args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
     trainer.train(args)
