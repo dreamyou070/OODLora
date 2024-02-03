@@ -1076,11 +1076,11 @@ class BaseDataset(torch.utils.data.Dataset):
             gen_anomal_images = os.listdir(anomal_base_dir)
             random_index = random.randint(0, len(gen_anomal_images) - 1)
             anomal_img_path = os.path.join(anomal_base_dir, gen_anomal_images[random_index])
-            anomal_img_pil = Image.open(anomal_img_path).resize((512, 512))
-            anomal_img_np = np.array(anomal_img_pil).astype(np.float32) / 255.0  # 512, 512, 3, value = 0 - 1
+            anomal_img = load_image(anomal_img_path, self.height, self.width)
+
             # (3.1) perlin noise
             perlin_scale = 6
-            min_perlin_scale = 2
+            min_perlin_scale = 0
             random_scale_x = torch.randint(min_perlin_scale, perlin_scale, (1,))
             random_scale_y = torch.randint(min_perlin_scale, perlin_scale, (1,))
             perlin_scalex = 2 ** (random_scale_x.numpy()[0])
@@ -1091,9 +1091,8 @@ class BaseDataset(torch.utils.data.Dataset):
             perlin_thr = np.where(perlin_noise > threshold, np.ones_like(perlin_noise),
                                   np.zeros_like(perlin_noise))
             perlin_thr_np = np.expand_dims(perlin_thr, axis=2)  # [512,512,1]
-            img_thr_np = anomal_img_np * perlin_thr_np
-            beta = torch.rand(1).numpy()[0] * 0.8
-            augmented_img = (1 - perlin_thr_np) * img + (1 - beta) * img_thr_np + beta * img * (perlin_thr_np)
+            anomal_img = (1 - perlin_thr_np) * img + (perlin_thr_np) * anomal_img # np
+
             # --------------------------------------------------------------------------------------------------------------
             # (4) anomal mask
             anomal_mask_pil = Image.fromarray((perlin_thr * 255).astype(np.uint8))
@@ -1176,7 +1175,7 @@ class BaseDataset(torch.utils.data.Dataset):
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                 latents = None
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
-                anomal_image = self.image_transforms(augmented_img)
+                anomal_image = self.image_transforms(anomal_img)
 
             images.append(image)
             anomal_images.append(anomal_image)
