@@ -327,12 +327,9 @@ class NetworkTrainer:
                 with torch.no_grad():
                     if con.dim() != 3:
                         con = con.unsqueeze(0)
-                    #call_unet(frozen_unet, latent, 0, text_embeddings.to(device)[:,:2,:], 1, args.trg_layer_list)
                     call_unet(frozen_unet, latent, 0, con[:, :args.truncate_length, :], 1, args.trg_layer_list)
-
                     layer_1 = args.trg_layer_list[0]
                     query = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
-
                     if args.cls_training :
                         attn = controller.step_store[layer_1][0].squeeze()  # 8, pix_num, 2
                         cls_map, trigger_map = attn.chunk(2, dim=-1)
