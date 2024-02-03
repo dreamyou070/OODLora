@@ -768,66 +768,76 @@ class NetworkTrainer:
                         dist_mean = torch.tensor(mahalanobis_dists).mean()
                         dist_loss += dist_mean
 
-                        random_anomal_positions = []
-                        for i in range(pix_num) :
-                            object_flag = object_position[i]
-                            feat = random_vectors[i, :]
-                            random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
-                            if object_flag == 1 :
-                                if random_dist >= dist_max:
-                                    random_anomal_positions.append(1)
-                                else:
+                        if args.do_attn_loss:
+
+                            random_anomal_positions = []
+                            for i in range(pix_num) :
+                                object_flag = object_position[i]
+                                feat = random_vectors[i, :]
+                                random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
+                                if object_flag == 1 :
+                                    if random_dist >= dist_max:
+                                        random_anomal_positions.append(1)
+                                    else:
+                                        random_anomal_positions.append(0)
+                                else :
                                     random_anomal_positions.append(0)
-                            else :
-                                random_anomal_positions.append(0)
-                        random_anomal_positions = torch.tensor(random_anomal_positions)
-                        random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).\
-                            to(score_random_map.device)
+                            random_anomal_positions = torch.tensor(random_anomal_positions)
+                            random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).\
+                                to(score_random_map.device)
 
-                        normal_trigger_activation = (score_map * normal_position)
-                        normal_trigger_back_activation = (score_map * back_position)
-                        anormal_trigger_activation = (score_random_map * random_anomal_positions)
-                        total_score = torch.ones_like(anormal_trigger_activation)
+                            normal_trigger_activation = (score_map * normal_position)
+                            normal_trigger_back_activation = (score_map * back_position)
+                            anormal_trigger_activation = (score_random_map * random_anomal_positions)
+                            total_score = torch.ones_like(anormal_trigger_activation)
 
-                        normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8
-                        normal_trigger_back_activation = normal_trigger_back_activation.sum(dim=-1)  # 8
-                        anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
-                        total_score = total_score.sum(dim=-1)  # 8
+                            normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8
+                            normal_trigger_back_activation = normal_trigger_back_activation.sum(dim=-1)  # 8
+                            anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
+                            total_score = total_score.sum(dim=-1)  # 8
 
-                        normal_trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                        normal_trigger_back_activation_loss = (normal_trigger_back_activation / total_score) ** 2  # 8, res*res
-                        anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
+                            normal_trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
+                            normal_trigger_back_activation_loss = (normal_trigger_back_activation / total_score) ** 2  # 8, res*res
+                            anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
 
-                        activation_loss = args.normal_weight * normal_trigger_activation_loss\
-                                          + args.back_weight * normal_trigger_back_activation_loss
-                        # ---------------------------------- deactivating ------------------------------------ #
-                        if args.act_deact :
-                            activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
-                        if args.cls_training:
-                            normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
-                            normal_cls_back_activation = (cls_map * back_position).sum(dim=-1)
-                            anormal_cls_activation = (cls_random_map * random_anomal_positions).sum(dim=-1)
-
-                            normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
-                            normal_cls_back_activation_loss = (1 - (normal_cls_back_activation / total_score)) ** 2
-                            anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                            activation_loss += args.normal_weight * normal_cls_activation_loss \
-                                             + args.back_weight * normal_cls_back_activation_loss
+                            activation_loss = args.normal_weight * normal_trigger_activation_loss\
+                                              + args.back_weight * normal_trigger_back_activation_loss
+                            # ---------------------------------- deactivating ------------------------------------ #
                             if args.act_deact :
-                                activation_loss += args.act_deact_weight * anormal_cls_activation_loss
-                        attn_loss += activation_loss
+                                activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
+                            if args.cls_training:
+                                normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
+                                normal_cls_back_activation = (cls_map * back_position).sum(dim=-1)
+                                anormal_cls_activation = (cls_random_map * random_anomal_positions).sum(dim=-1)
+
+                                normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
+                                normal_cls_back_activation_loss = (1 - (normal_cls_back_activation / total_score)) ** 2
+                                anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
+                                activation_loss += args.normal_weight * normal_cls_activation_loss \
+                                                 + args.back_weight * normal_cls_back_activation_loss
+                                if args.act_deact :
+                                    activation_loss += args.act_deact_weight * anormal_cls_activation_loss
+                            attn_loss += activation_loss
                 dist_loss = dist_loss.mean()
-                attn_loss = attn_loss.mean()
+                if args.do_attn_loss:
+                    attn_loss = attn_loss.mean()
                 ########################### 3. attn loss ###########################################################
-                if args.do_task_loss:
-                    loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                if args.do_task_loss :
+                    if args.do_attn_loss:
+                        loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                    else :
+                        loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss
                 else :
-                    loss = args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                    if args.do_attn_loss:
+                        loss = args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                    else :
+                        loss = args.mahalanobis_loss_weight * dist_loss
                 # ------------------------------------------------------------------------------------------------- #
                 if is_main_process:
                     if args.do_task_loss:
                         loss_dict["loss/task_loss"] = task_loss.item()
-                    loss_dict["loss/attn_loss"] = attn_loss.item()
+                    if args.do_attn_loss:
+                        loss_dict["loss/attn_loss"] = attn_loss.item()
                     loss_dict["loss/dist_loss"] = dist_loss.item()
                 accelerator.backward(loss)
 
@@ -967,6 +977,9 @@ if __name__ == "__main__":
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
     parser.add_argument("--do_task_loss", action='store_true')
+    parser.add_argument("--do_attn_loss", action='store_true')
+    parser.add_argument("--attn_loss_weight", type=float, default=1.0)
+    parser.add_argument('--normal_weight', type=float, default=1.0)
     parser.add_argument("--act_deact", action='store_true')
     parser.add_argument("--act_deact_weight", type=float, default=1.0)
     import ast
@@ -976,15 +989,11 @@ if __name__ == "__main__":
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
     parser.add_argument("--trg_layer_list", type=arg_as_list, )
-    # default=['down_blocks_0_attentions_1_transformer_blocks_0_attn2',
-    #         'up_blocks_3_attentions_2_transformer_blocks_0_attn2'])
     parser.add_argument('--mahalanobis_loss_weight', type=float, default=1.0)
-    parser.add_argument("--attn_loss_weight", type=float, default=1.0)
-    parser.add_argument('--normal_weight', type=float, default=1.0)
+
     parser.add_argument("--cls_training", action="store_true", )
     parser.add_argument("--background_loss", action="store_true")
     parser.add_argument("--average_mask", action="store_true", )
-    parser.add_argument("--attn_loss", action="store_true", )
     parser.add_argument("--normal_with_background", action="store_true", )
     parser.add_argument("--only_object_position", action="store_true", )
     parser.add_argument("--query_add_random", action="store_true", )
