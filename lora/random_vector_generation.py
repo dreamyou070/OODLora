@@ -30,7 +30,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
                 is_cross_attention = True
 
             query = self.to_q(hidden_states)  # batch, pix_num, dim
-            controller.save_query(query, layer_name)
+            if layer_name in mask:
+                controller.save_query(query, layer_name)
 
             # ---------------------------------------------------------------------------------------------------------
             context = context if context is not None else hidden_states
@@ -50,7 +51,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
 
-            if is_cross_attention and trg_indexs_list is not None:
+            if is_cross_attention and layer_name in mask :
                 if args.cls_training:
                     trg_map = attention_probs[:, :, :2]
                 else:
@@ -328,6 +329,8 @@ class NetworkTrainer:
                         text_embeddings = text_embeddings.unsqueeze(0)
                     call_unet(frozen_unet, latent, 0, text_embeddings.to(device)[:,:2,:], 1, args.trg_layer_list)
                     layer_1 = args.trg_layer_list[0]
+
+
                     if args.concat_query :
                         layer_2 = args.trg_layer_list[1]
                         query_1 = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
@@ -335,7 +338,9 @@ class NetworkTrainer:
                         query = torch.cat([query_1, query_2], dim=-1)  # pix_num, 2*dim
                     else :
                         query = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
+
                     controller.reset()
+
                     if args.cls_training :
                         attn = controller.step_store[layer_1][0].squeeze()  # 1, pix_num, 2
                         cls_map, trigger_map = attn.chunk(2, dim=-1)
