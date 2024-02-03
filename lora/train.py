@@ -364,7 +364,6 @@ class NetworkTrainer:
             trainable_params = [{"params": params, "lr": args.text_encoder_lr}]
         optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
 
-
         print(f' step 7. dataloader')
         n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
         train_dataloader = torch.utils.data.DataLoader(train_dataset_group, batch_size=args.train_batch_size,
@@ -658,6 +657,7 @@ class NetworkTrainer:
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
             current_epoch.value = epoch + 1
             network.on_epoch_start(text_encoder, unet)
+
             for step, batch in enumerate(train_dataloader):
                 current_step.value = global_step
                 # with accelerator.accumulate(network):
