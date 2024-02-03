@@ -207,9 +207,7 @@ def main(args):
                             org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                             # ------------------------------------- [1] anomal mask ------------------------------ #
                             # real network is getting good !
-                            weight_dir = os.path.join(args.network_weights, weight)
-                            network.restore()
-                            network.load_weights(weight_dir)
+                            network.load_weights(args.network_weights)
                             network.to(device)
                             controller = AttentionStore()
                             register_attention_control(unet, controller)
@@ -220,16 +218,9 @@ def main(args):
                             attn_stores = controller.step_store
                             controller.reset()
                             for trg_layer in args.trg_layer_list :
-                                object_mask = get_crossattn_map(args, attn_stores, trg_layer)
-                                object_mask_save_dir = os.path.join(class_base_folder, f'{name}_z_{trg_layer}{ext}')
-                                save_latent(object_mask, object_mask_save_dir, org_h, org_w)
-                            # 2. normal mask
-                            normal_mask = get_crossattn_map(args, attn_stores, args.trg_layer,
-                                                            thredhold=args.anormal_thred)
-
-                            # 3. latent mask
-                            recon_mask = normal_mask
-                            recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_z_recon_mask{ext}')
+                                recon_mask = get_crossattn_map(args, attn_stores, trg_layer)
+                                org_img_score = get_crossattn_map(args, attn_stores, trg_layer, binarize = False)
+                            recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_recon_mask{ext}')
                             save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
                             recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
@@ -245,36 +236,17 @@ def main(args):
                             recon_image.save(img_dir)
 
                             # ----------------------------- [4] anomaly map -------------------------------------- #
-                            # (1) original
-                            org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
-                            org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
-                            call_unet(unet, org_vae_latent, 0, con, None, 1)
-                            trg_layer = args.trg_layer_list[0]
-                            org_query = controller.query_dict[trg_layer][0].squeeze(0)
-                            org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
+                            call_unet(unet, latents[-1], 0, con[:, :args.truncate_length, :], None, None)
+                            attn_stores = controller.step_store
                             controller.reset()
-
-                            # (2) recon
-                            recon_latent = latents
-                            call_unet(unet, recon_latent, 0, con, None, 1)
-                            recon_query = controller.query_dict[trg_layer][0].squeeze(0)
-                            controller.reset()
-                            recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
-
-                            # (3) anomaly score
-                            anomaly_score = (org_query @ recon_query.T).cpu()
-                            pix_num = anomaly_score.shape[0]
-                            anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
-                            anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
-                            anomaly_score = anomaly_score.unsqueeze(0).reshape(64, 64)
-                            anomaly_score = anomaly_score.numpy()
-
-                            anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
-                            anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
-                            anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
-                            tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
-                            anomaly_score_pil.save(anomaly_mask_save_dir)
-                            anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
+                            for trg_layer in args.trg_layer_list:
+                                recon_img_score = get_crossattn_map(args, attn_stores, trg_layer, binarize=False)
+                            score_diff = torch.abs(recon_img_score - org_img_score)
+                            score_diff = score_diff.cpu().numpy()
+                            score_diff_map = Image.fromarray((score_diff * 255).astype(np.uint8)).resize((org_h, org_w))
+                            score_diff_map.save(os.path.join(class_base_folder, f'{name}_score_diff{ext}'))
+                break
+            break
 
 
 if __name__ == "__main__":
