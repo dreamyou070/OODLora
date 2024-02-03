@@ -519,6 +519,7 @@ if __name__ == "__main__":
         action="store_true",
         help="use sdpa for CrossAttention (requires PyTorch 2.0) / CrossAttentionにsdpaを使う（PyTorch 2.0が必要）",
     )
+    parser.add_argument("--cls_training", action="store_true", )
     args = parser.parse_args()
     trainer = NetworkTrainer()
     trainer.train(args)

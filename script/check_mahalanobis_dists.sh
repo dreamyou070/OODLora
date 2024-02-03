@@ -25,4 +25,5 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --output_dir "$output_dir" \
   --do_check_anormal \
   --trg_layer_list "['up_blocks_3_attentions_2_transformer_blocks_0_attn2']" \
+  --cls_training \
   --network_weights "$network_weights"
