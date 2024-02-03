@@ -180,7 +180,7 @@ def main(args):
                             # ------------------------------------- [1] anomal mask ------------------------------ #
                             # real network is getting good !
 
-                            network.load_weights(args.weight_dir)
+                            network.load_weights(args.network_weights)
                             network.to(device)
                             controller = AttentionStore()
                             register_attention_control(unet, controller)
