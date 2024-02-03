@@ -32,6 +32,8 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
             b = hidden_states.shape[0]
             if b == 1 :
                 random_hidden_states = torch.randn_like(hidden_states)
+                if args.add_random_query :
+                    random_hidden_states = hidden_states + random_hidden_states
                 random_hidden_states = random_hidden_states.to(hidden_states.device)
                 hidden_states = torch.cat([hidden_states, random_hidden_states], dim=0)
 
@@ -1005,7 +1007,7 @@ if __name__ == "__main__":
     parser.add_argument("--average_mask", action="store_true", )
     parser.add_argument("--normal_with_background", action="store_true", )
     parser.add_argument("--only_object_position", action="store_true", )
-    parser.add_argument("--query_add_random", action="store_true", )
+    parser.add_argument("--add_random_query", action="store_true", )
     parser.add_argument("--unet_frozen", action="store_true", )
     parser.add_argument("--text_frozen", action="store_true", )
     args = parser.parse_args()
