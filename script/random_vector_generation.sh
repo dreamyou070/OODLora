@@ -2,7 +2,7 @@
 class_name="bagel"
 data_source='train_normal'
 data_folder='MVTec3D-AD'
-all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_normal/rgb"
+all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex/rgb"
 normal_folder='normal'
 save_folder="random_vector_generating"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
@@ -23,6 +23,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --class_caption 'good' \
   --all_data_dir "${all_data_dir}" \
   --output_dir "$output_dir" \
+  --truncate_length 2 \
   --trg_layer_list "['down_blocks_0_attentions_1_transformer_blocks_0_attn2']" \
   --cls_training \
   --network_weights "$network_weights"

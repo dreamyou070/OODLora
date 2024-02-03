@@ -297,17 +297,11 @@ class NetworkTrainer:
         mahal_dataset = Mahalanobis_dataset(args.all_data_dir)
         controller = AttentionStore()
         register_attention_control(frozen_unet, controller, mask_threshold=args.mask_threshold)
-        #with torch.no_grad():
-        #    text_input = tokenizer([args.class_caption], padding="max_length",
-        #                           max_length=tokenizer.model_max_length, truncation=True, return_tensors="pt", )
-        #    text = text_input.input_ids.to(device)
-        #    text_embeddings = frozen_text_encoder(text)[0][:, :2, :]
 
         from utils.model_utils import get_state_dict, init_prompt
         with torch.no_grad():
             context = init_prompt(tokenizer, frozen_text_encoder, device, 'good')
         uncon, con = torch.chunk(context, 2)
-
 
         normal_vector_list = set()
         normal_vector_good_score_list, normal_vector_bad_score_list = set(), set()
@@ -337,20 +331,16 @@ class NetworkTrainer:
                     call_unet(frozen_unet, latent, 0, con[:, :args.truncate_length, :], 1, args.trg_layer_list)
 
                     layer_1 = args.trg_layer_list[0]
-                    if args.concat_query :
-                        layer_2 = args.trg_layer_list[1]
-                        query_1 = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
-                        query_2 = controller.query_dict[layer_2][0].squeeze()  # pix_num, dim
-                        query = torch.cat([query_1, query_2], dim=-1)  # pix_num, 2*dim
-                    else :
-                        query = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
+                    query = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
+
                     if args.cls_training :
-                        attn = controller.step_store[layer_1][0].squeeze()  # 1, pix_num, 2
+                        attn = controller.step_store[layer_1][0].squeeze()  # 8, pix_num, 2
                         cls_map, trigger_map = attn.chunk(2, dim=-1)
                     else :
                         attn = controller.step_store[layer_1][0].squeeze()  # 1, pix_num, 1
                         trigger_map = attn.squeeze()
                     controller.reset()
+                    print(f'cls_map : {cls_map.shape} | trigger_map : {trigger_map.shape}')
                     trigger_map = trigger_map.squeeze()
                     trigger_map = trigger_map.mean(dim=0) # pix_num
                     cls_map = cls_map.squeeze()
