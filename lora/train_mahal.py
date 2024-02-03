@@ -35,7 +35,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
             if context is not None:
                 is_cross_attention = True
 
-            if layer_name in mask :
+            if mask is not None and layer_name in mask :
                 b, pixel_num, dim = hidden_states.shape
                 random_hidden_states = []
                 for p in range(pixel_num):
@@ -49,7 +49,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
                     random_query = self.reshape_heads_to_batch_dim(random_query)
 
             query = self.to_q(hidden_states)
-            if layer_name in mask:
+            if mask is not None and layer_name in mask:
                 controller.save_query(query, layer_name)
             context = context if context is not None else hidden_states
             key = self.to_k(context)
@@ -66,13 +66,11 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
 
-            if layer_name in mask:
+            if mask is not None and layer_name in mask and is_cross_attention :
                 random_attention_scores = torch.baddbmm(torch.empty(random_query.shape[0], random_query.shape[1], key.shape[1],
                       dtype=random_query.dtype, device=random_query.device), random_query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
                 random_attention_probs = random_attention_scores.softmax(dim=-1)
                 random_attention_probs = random_attention_probs.to(value.dtype)
-
-            if is_cross_attention and layer_name in mask:
                 if args.cls_training:
                     trg_map = attention_probs[:, :, :2]
                     random_trg_map = random_attention_probs[:, :, :2]
