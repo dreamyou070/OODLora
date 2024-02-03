@@ -8,7 +8,7 @@ network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_trai
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
 port_number=50015
 
-NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} ../lora/reconstruction.py \
+NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} ../lora/recon_test.py \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --sample_sampler ddim \
   --seed 42 \
