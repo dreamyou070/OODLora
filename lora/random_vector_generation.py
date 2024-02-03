@@ -391,7 +391,7 @@ class NetworkTrainer:
 
         mu = torch.tensor(mean)
         cov = torch.tensor(cov)
-        cov = torch.eye(cov.shape[0]) * cov
+        #cov = torch.eye(cov.shape[0]) * cov
 
 
         torch.save(mu.cpu(), os.path.join(record_save_dir, "normal_vector_mean_torch.pt"))
