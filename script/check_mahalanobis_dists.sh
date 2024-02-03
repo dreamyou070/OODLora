@@ -5,9 +5,9 @@ data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex2/rgb"
 normal_folder='normal'
-save_folder="test_check_normal_anormal_mahalanobis_dist"
+save_folder="res_64_down_task_loss_mahal_dist_attn_loss_0.001"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_only_dist_loss/models/epoch-000005.safetensors"
+network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_task_loss_mahal_dist_attn_loss_0.001/models/epoch-000006.safetensors"
 
 start_epoch=0
 port_number=59517

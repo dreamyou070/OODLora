@@ -211,8 +211,12 @@ class NetworkTrainer:
         print(f'\n step 4. save directory')
         save_base_dir = args.output_dir
         _, folder_name = os.path.split(save_base_dir)
-        record_save_dir = os.path.join(args.output_dir, "record_reduced_dim")
+        parent, network_dir = os.path.split(args.network_weights)
+        name, ex = os.path.splitext(network_dir)
+        lora_epoch = int(name.split('-')[-1])
+        record_save_dir = os.path.join(args.output_dir, f"record_lora_eopch_{lora_epoch}")
         os.makedirs(record_save_dir, exist_ok=True)
+
         print(f' (4.1) config saving')
         with open(os.path.join(record_save_dir, 'config.json'), 'w') as f:
             json.dump(vars(args), f, indent=4)
