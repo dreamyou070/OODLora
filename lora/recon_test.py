@@ -208,13 +208,13 @@ def main(args):
                             org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                             # ------------------------------------- [1] anomal mask ------------------------------ #
                             # real network is getting good !
-                            network.restore()
+                            #network.restore()
 
-                            from safetensors.torch import load_file
-                            weights_sd = load_file(args.network_weights)
-                            for k in weights_sd.keys():
-                                print(f' {k} : {weights_sd[k].shape}')
-                            
+                            #from safetensors.torch import load_file
+                            #weights_sd = load_file(args.network_weights)
+                            #for k in weights_sd.keys():
+                            #    print(f' {k} : {weights_sd[k].shape}')
+
                             network.load_weights(args.network_weights)
                             network.to(device)
                             controller = AttentionStore()
