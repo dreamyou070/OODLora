@@ -43,7 +43,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
                     random_hidden_states.append(random_vector)
                 random_hidden_states = torch.stack(random_hidden_states, dim=0).to(hidden_states.device)
                 random_query = self.to_q(random_hidden_states)
-                random_query = self.reshape_heads_to_batch_dim(random_query)
+                if random_query.dim() != 3:
+                    random_query = self.reshape_heads_to_batch_dim(random_query.unsqueeze(0))
+                else :
+                    random_query = self.reshape_heads_to_batch_dim(random_query)
 
             query = self.to_q(hidden_states)
             if layer_name in mask:
@@ -767,16 +770,17 @@ class NetworkTrainer:
                             total_score = torch.ones_like(normal_trigger_activation).sum(dim=-1)  # 8
                             normal_trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                             anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                            activation_loss = args.normal_weight * normal_trigger_activation_loss
+                            #activation_loss = args.normal_weight * normal_trigger_activation_loss
                             # ---------------------------------- deactivating ------------------------------------ #
                             if args.act_deact :
-                                activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
+                                #activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
+                                activation_loss = args.act_deact_weight * anormal_trigger_activation_loss
                             if args.cls_training:
                                 normal_cls_activation_loss = cls_map.sum(dim=-1)  # 8
                                 anormal_cls_activation_loss = cls_random_map.sum(dim=-1)  # 8
                                 normal_cls_activation_loss = (normal_cls_activation_loss / total_score) ** 2
                                 anormal_cls_activation_loss = (1 - (anormal_cls_activation_loss / total_score)) ** 2
-                                activation_loss += args.normal_weight * normal_cls_activation_loss
+                                #activation_loss += args.normal_weight * normal_cls_activation_loss
                                 if args.act_deact :
                                     activation_loss += args.act_deact_weight * anormal_cls_activation_loss
                             attn_loss += activation_loss
