@@ -5,8 +5,7 @@ class_name="bagel"
 folder_name="res_64_down_1_task_loss_mahal_dist_attn_loss_0.008_actdeact_mahal_anomal"
 data_name="MVTec3D-AD"
 normality_folder='normal'
-network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models/"
-
+network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models/epoch-000002.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
 port_number=50015
 
@@ -20,7 +19,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --network_dim 64 \
   --network_alpha 4 \
   --network_weights ${network_weight_folder} \
-  --detection_network_weights ${detection_network_weights} \
   --num_ddim_steps 30 \
   --prompt 'good' \
   --negative_prompt "low quality, worst quality, bad anatomy, bad composition, poor, low effort" \

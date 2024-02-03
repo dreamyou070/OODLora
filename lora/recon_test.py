@@ -105,9 +105,9 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
 def main(args):
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
-    args.output_dir = os.path.join(parent, 'reconstruction_with_test_data')
+    args.output_dir = os.path.join(parent, 'reconstruction_with_test_data_20240203')
     if args.training_test :
-        args.output_dir = os.path.join(parent, 'reconstruction_with_training_data')
+        args.output_dir = os.path.join(parent, 'reconstruction_with_training_data_20240203')
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f' \n step 1. setting')
@@ -151,6 +151,7 @@ def main(args):
         classes = os.listdir(test_folder)
 
         for class_name in classes:
+            class_name_output_dir = os.path.join(args.output_dir, class_name)
             flag = True
             if args.only_normal_infer:
                 if 'good' not in class_name:
@@ -199,13 +200,13 @@ def main(args):
                                                guidance_scale=args.guidance_scale,negative_prompt=args.negative_prompt,
                                                reference_image =org_vae_latent,mask=recon_mask)
                             recon_image = pipeline.latents_to_image(latents[-1])[0].resize((org_h, org_w))
-                            img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
+                            img_dir = os.path.join(class_name_output_dir, f'{name}_recon{ext}')
                             recon_image.save(img_dir)
 
                             # ----------------------------- [4] anomaly map -------------------------------------- #
                             # (1) original
                             org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
-                            org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
+                            org_img.save(os.path.join(class_name_output_dir, f'{name}_org{ext}'))
                             call_unet(unet, org_vae_latent, 0, con, None, 1)
                             trg_layer = args.trg_layer_list[0]
                             org_query = controller.query_dict[trg_layer][0].squeeze(0)
@@ -229,11 +230,10 @@ def main(args):
 
                             anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
                             anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
-                            anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
-                            tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
+                            anomaly_mask_save_dir = os.path.join(class_name_output_dir, f'{name}_anomaly_map{ext}')
                             anomaly_score_pil.save(anomaly_mask_save_dir)
-                            anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
-
+                    break
+                break
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
