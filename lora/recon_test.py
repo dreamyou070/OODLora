@@ -102,7 +102,6 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
             cross_att_count += register_recr(net[1], 0, net[0])
     controller.num_att_layers = cross_att_count
 
-
 def main(args):
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
     parent, _ = os.path.split(parent)
@@ -180,8 +179,8 @@ def main(args):
                             org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                             # ------------------------------------- [1] anomal mask ------------------------------ #
                             # real network is getting good !
-                            weight_dir = args.network_weights
-                            network.load_weights(weight_dir)
+
+                            network.load_weights(args.weight_dir)
                             network.to(device)
                             controller = AttentionStore()
                             register_attention_control(unet, controller)
@@ -191,53 +190,49 @@ def main(args):
                             call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, None)
                             attn_stores = controller.step_store
                             controller.reset()
-                            recon_mask = get_crossattn_map(args, attn_stores, args.trg_layer,
-                                                            thredhold=args.anormal_thred)
-                            recon_mask_save_dir = os.path.join(class_name_output_dir, f'{name}_recon_mask{ext}')
+                            for trg_layer in args.trg_layer_list:
+                                normal_mask = get_crossattn_map(args, attn_stores, trg_layer)
+                            recon_mask = normal_mask
+                            recon_mask_save_dir = os.path.join(class_name_output_dir, f'{name}_z_recon_mask{ext}')
                             save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
-
                             recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
                             # ---------------------------------- [2] reconstruction ------------------------------ #
                             pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
-                                           text_encoder=text_encoder,tokenizer=tokenizer,unet=unet,scheduler=scheduler,
-                                           safety_checker=None,feature_extractor=None, requires_safety_checker=False, )
-                            latents = pipeline(prompt=args.prompt,height=512,width=512,num_inference_steps=args.num_ddim_steps,
-                                               guidance_scale=args.guidance_scale,negative_prompt=args.negative_prompt,
-                                               reference_image =org_vae_latent,mask=recon_mask)
+                                                                               text_encoder=text_encoder,
+                                                                               tokenizer=tokenizer, unet=unet,
+                                                                               scheduler=scheduler,
+                                                                               safety_checker=None,
+                                                                               feature_extractor=None,
+                                                                               requires_safety_checker=False, )
+                            latents = pipeline(prompt=args.prompt, height=512, width=512,
+                                               num_inference_steps=args.num_ddim_steps,
+                                               guidance_scale=args.guidance_scale, negative_prompt=args.negative_prompt,
+                                               reference_image=org_vae_latent, mask=recon_mask)
                             recon_image = pipeline.latents_to_image(latents[-1])[0].resize((org_h, org_w))
                             img_dir = os.path.join(class_name_output_dir, f'{name}_recon{ext}')
                             recon_image.save(img_dir)
 
-
                             # ----------------------------- [4] anomaly map -------------------------------------- #
                             # (1) original
+                            """
                             org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
                             org_img.save(os.path.join(class_name_output_dir, f'{name}_org{ext}'))
                             call_unet(unet, org_vae_latent, 0, con, None, 1)
-                            attn_stores = controller.step_store # batch, pix-num, 2?1?
-
-
+                            trg_layer = args.trg_layer_list[0]
+                            org_query = controller.query_dict[trg_layer][0].squeeze(0)
+                            org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
                             controller.reset()
-                            org_mask = get_crossattn_map(args, attn_stores, args.trg_layer,
-                                                           thredhold=args.anormal_thred)
-
 
                             # (2) recon
-                            recon_latent = latents[-1]
+                            recon_latent = latents
                             call_unet(unet, recon_latent, 0, con, None, 1)
-                            attn_stores = controller.step_store
+                            recon_query = controller.query_dict[trg_layer][0].squeeze(0)
                             controller.reset()
-                            recon_mask = get_crossattn_map(args, attn_stores, args.trg_layer,
-                                                           thredhold=args.anormal_thred)
+                            recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
 
                             # (3) anomaly score
-                            anomaly_score = torch.abs(org_mask - recon_mask).cpu().numpy() # res, res
-                            anomaly_score = anomaly_score * 255
-                            anomaly_score_pil = Image.fromarray(anomaly_score.astype(np.uint8)).resize((org_h, org_w))
-                            anomaly_mask_save_dir = os.path.join(class_name_output_dir, f'{name}_anomaly_map{ext}')
-                            anomaly_score_pil.save(anomaly_mask_save_dir)
-                            """
+                            anomaly_score = (org_query @ recon_query.T).cpu()
                             pix_num = anomaly_score.shape[0]
                             anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
                             anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
@@ -246,8 +241,10 @@ def main(args):
 
                             anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
                             anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
-                            anomaly_mask_save_dir = os.path.join(class_name_output_dir, f'{name}_anomaly_map{ext}')
+                            anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
+                            tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
                             anomaly_score_pil.save(anomaly_mask_save_dir)
+                            anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
                             """
                     break
                 break
