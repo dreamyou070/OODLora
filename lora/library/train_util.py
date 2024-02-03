@@ -1093,7 +1093,7 @@ class BaseDataset(torch.utils.data.Dataset):
             perlin_thr_np = np.expand_dims(perlin_thr, axis=2)  # [512,512,1]
             img_thr_np = anomal_img_np * perlin_thr_np
             beta = torch.rand(1).numpy()[0] * 0.8
-            augmented_img = (1 - perlin_thr_np) * image + (1 - beta) * img_thr_np + beta * image * (perlin_thr_np)
+            augmented_img = (1 - perlin_thr_np) * img + (1 - beta) * img_thr_np + beta * img * (perlin_thr_np)
             # --------------------------------------------------------------------------------------------------------------
             # (4) anomal mask
             anomal_mask_pil = Image.fromarray((perlin_thr * 255).astype(np.uint8))
