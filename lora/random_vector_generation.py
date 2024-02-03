@@ -395,8 +395,7 @@ class NetworkTrainer:
                 normal_vectors_cov_torch = torch.cov(normal_vector_good_score.transpose(0, 1))
 
         from torch.distributions.multivariate_normal import MultivariateNormal
-        random_vector_generator = MultivariateNormal(mu,
-                                                     torch.eye(320))
+        random_vector_generator = MultivariateNormal(mu,cov)
 
 
         # ----------------------------------------------------------------------------------------------------------- #

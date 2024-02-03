@@ -12,7 +12,7 @@ from library.custom_train_functions import prepare_scheduler_for_custom_training
 import torch
 from torch import nn
 from attention_store import AttentionStore
-
+from torch.distributions.multivariate_normal import MultivariateNormal
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -20,29 +20,36 @@ except (ImportError, ModuleNotFoundError):
 import os
 
 
+def mahal(u, v, cov):
+    delta = u - v
+    m = torch.dot(delta, torch.matmul(cov, delta))
+    return torch.sqrt(m)
+
 def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  # if mask_threshold is 1, use itself
 
     def ca_forward(self, layer_name):
 
         def forward(hidden_states, context=None, trg_indexs_list=None, mask=None):
             is_cross_attention = False
+
             if context is not None:
                 is_cross_attention = True
 
-            b = hidden_states.shape[0]
-            if b == 1 :
-                random_hidden_states = torch.randn_like(hidden_states)
-                if args.add_random_query :
-                    random_hidden_states = hidden_states + random_hidden_states
-                random_hidden_states = random_hidden_states.to(hidden_states.device)
-                hidden_states = torch.cat([hidden_states, random_hidden_states], dim=0)
+            if layer_name in mask :
+                b, pixel_num, dim = hidden_states.shape
+                random_hidden_states = []
+                for p in range(pixel_num):
+                    random_vector = trg_indexs_list.sample()
+                    random_hidden_states.append(random_vector)
+                random_hidden_states = torch.stack(random_hidden_states, dim=0)
+                random_query = self.to_q(random_hidden_states)
+                random_query = self.reshape_heads_to_batch_dim(random_query)
 
             query = self.to_q(hidden_states)
-            controller.save_query(query, layer_name)
+            if layer_name in mask:
+                controller.save_query(random_query, layer_name)
             context = context if context is not None else hidden_states
-            context_b = context.shape[0]
-            if context_b != hidden_states.shape[0]:
-                context = torch.cat([context, context], dim=0)
+
             key = self.to_k(context)
             value = self.to_v(context)
 
@@ -58,12 +65,21 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
             attention_probs = attention_scores.softmax(dim=-1)
             attention_probs = attention_probs.to(value.dtype)
 
-            if is_cross_attention:
+            if layer_name in mask:
+                random_attention_scores = torch.baddbmm(torch.empty(random_query.shape[0], random_query.shape[1], key.shape[1],
+                      dtype=random_query.dtype, device=random_query.device), random_query, key.transpose(-1, -2), beta=0, alpha=self.scale, )
+                random_attention_probs = random_attention_scores.softmax(dim=-1)
+                random_attention_probs = random_attention_probs.to(value.dtype)
+
+            if is_cross_attention and layer_name in mask:
                 if args.cls_training:
                     trg_map = attention_probs[:, :, :2]
+                    random_trg_map = random_attention_probs[:, :, :2]
                 else:
                     trg_map = attention_probs[:, :, 1]
+                    random_trg_map = random_attention_probs[:, :, 1]
                 controller.store(trg_map, layer_name)
+                controller.store(random_trg_map, layer_name)
 
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
@@ -315,36 +331,6 @@ class NetworkTrainer:
         except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
 
-        class_name = 'bagel'
-        from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
-        import numpy as np
-        from diffusers import DDIMScheduler
-        if args.gen_images :
-            scheduler = DDIMScheduler(num_train_timesteps=args.scheduler_timesteps,
-                                      beta_start=args.scheduler_linear_start,
-                                      beta_end=args.scheduler_linear_end,
-                                      beta_schedule=args.scheduler_schedule)
-            pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
-                                                               text_encoder=text_encoder,
-                                                               tokenizer=tokenizer,
-                                                               unet=unet,
-                                                               scheduler=scheduler,
-                                                               safety_checker=None,
-                                                               feature_extractor=None,
-                                                               requires_safety_checker=False, )
-            latents = pipeline(prompt='bagel',
-                               height=512,
-                               width=512,
-                               num_inference_steps=30,
-                               guidance_scale=8.5,
-                               negative_prompt=args.negative_prompt,
-                               num_images_per_prompt=100,)
-            gen_latent = latents[-1]
-            print(f'gen_latent shape : {gen_latent.shape}')
-        #gen_image = pipeline.latents_to_image(latents[-1])[0].resize(args.resolution)
-
-
-    """
         print(f'\n (6.2) frozen or not')
         if args.unet_frozen :
             params = []
@@ -369,10 +355,12 @@ class NetworkTrainer:
             lora_epoch = name.split('-')[-1]
             parent, _ = os.path.split(parnet_dir)
 
-            frozen_mean = torch.load(os.path.join(parent,
-                                                  f"record_lora_eopch_{lora_epoch}/normal_vector_mean_torch.pt"))
-            frozen_cov =  torch.load(os.path.join(parent,
-                                                  f"record_lora_eopch_{lora_epoch}/normal_vector_cov_torch.pt"))
+            mu = torch.load(os.path.join(parent,
+                                                  f"record_lora_eopch_{lora_epoch}_mahalanobis/normal_vector_mean_torch.pt"))
+            cov =  torch.load(os.path.join(parent,
+                                                  f"record_lora_eopch_{lora_epoch}_mahalanobis/normal_vector_cov_torch.pt"))
+
+            random_vector_generator = MultivariateNormal(mu, cov)
 
         if args.text_frozen :
             params = []
@@ -681,6 +669,10 @@ class NetworkTrainer:
             loss_dict = {}
 
         features = []
+        if not args.unet_frozen :
+            mu = torch.randn(320)
+            cov = torch.eye(320)
+        random_vector_generator = MultivariateNormal(mu, cov)
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
 
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
@@ -715,7 +707,7 @@ class NetworkTrainer:
                                                 timesteps,
                                                 text_encoder_conds,
                                                 batch,
-                                                weight_dtype, 1, None)
+                                                weight_dtype, random_vector_generator, args.trg_layer_list)
 
                 # ------------------------------------- (1) task loss ------------------------------------- #
                 if args.do_task_loss:
@@ -737,6 +729,7 @@ class NetworkTrainer:
                 attn_loss, dist_loss = 0, 0
 
                 for i, layer_name in enumerate(attn_dict.keys()):
+
                     if layer_name in args.trg_layer_list :
                         map = attn_dict[layer_name][0].squeeze()  # 8, res*res, c
                         map, random_map = map.chunk(2, dim=0)  # 8, res*res, c
@@ -750,102 +743,40 @@ class NetworkTrainer:
                         else:
                             score_map = map.squeeze()  # 8, res*res
                             score_random_map = random_map.squeeze()  # 8, res*res
-                        head_num = int(score_map.shape[0])
+
                         query = query_dict[layer_name][0].squeeze()
-                        query, random_query = query.chunk(2, dim=0)
-                        query, random_query = query.squeeze(), random_query.squeeze()
-                        pix_num = query.shape[0]  # 4096             # 4096
-                        res = int(pix_num ** 0.5)  # 64
-                        anormal_mask = batch["anormal_masks"][0][res].unsqueeze(
-                            0)  # [1,1,res,res], foreground = 1
-                        mask = anormal_mask.squeeze()  # res,res
-                        anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],
-                                                   dim=0)  # .unsqueeze(-1)  # 8, res*res
-                        anormal_position = torch.where((anormal_mask == 0), 1, 0)  # head, pix_num
-                        normal_position = 1 - anormal_position
-                        back_position = 1 - normal_position
-                        object_position = mask.flatten()  # pix_num
+                        pix_num = query.shape[0]  # 4096
 
-                        # (0) random features
-                        random_features = []
-                        for i in range(pix_num) :
-                            r_feat = random_query[i, :].squeeze()
-                            random_features.append(r_feat.unsqueeze(0))
-                        random_vectors = torch.cat(random_features, dim=0)  # sample, dim
-
-                        # (1) object features
                         for i in range(pix_num):
-                            if object_position[i] == 1:
-                                feat = query[i, :].squeeze()  # dim
-                                if len(features) >= 3000 :
-                                    features.pop(0)
-                                features.append(feat.unsqueeze(0))
+                            feat = query[i, :].squeeze()  # dim
+                            if len(features) >= 3000 :
+                                features.pop(0)
+                            features.append(feat.unsqueeze(0))
                         normal_vectors = torch.cat(features, dim=0)  # sample, dim
-                        normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-                        normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+                        mu = torch.mean(normal_vectors, dim=0)
+                        cov = torch.cov(normal_vectors.transpose(0, 1))
+                        random_vector_generator = MultivariateNormal(mu, cov)
 
-                        def mahal(u, v, cov):
-                            delta = u - v
-                            m = torch.dot(delta, torch.matmul(cov, delta))
-                            return torch.sqrt(m)
-
-                        if args.unet_frozen :
-                            normal_vector_mean_torch = frozen_mean
-                            normal_vectors_cov_torch = frozen_cov
-
-                        mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
-                                             feat in normal_vectors]
-                        dist_max = torch.tensor(mahalanobis_dists).max()
+                        mahalanobis_dists = [mahal(feat, mu, cov) for feat in normal_vectors]
                         dist_mean = torch.tensor(mahalanobis_dists).mean()
                         dist_loss += dist_mean.requires_grad_()
 
                         if args.do_attn_loss:
-
-                            random_anomal_positions = []
-                            for i in range(pix_num) :
-                                object_flag = object_position[i]
-                                feat = random_vectors[i, :]
-                                random_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
-                                if object_flag == 1 :
-                                    if random_dist < dist_max:
-                                        random_anomal_positions.append(1)
-                                    else:
-                                        random_anomal_positions.append(0)
-                                else :
-                                    random_anomal_positions.append(0)
-                            random_anomal_positions = torch.tensor(random_anomal_positions)
-                            random_anomal_positions = random_anomal_positions.unsqueeze(0).repeat(head_num,1).\
-                                to(score_random_map.device)
-
-                            normal_trigger_activation = (score_map * normal_position)
-                            normal_trigger_back_activation = (score_map * back_position)
-                            anormal_trigger_activation = (score_random_map * random_anomal_positions)
-                            total_score = torch.ones_like(anormal_trigger_activation)
-
-                            normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8
-                            normal_trigger_back_activation = normal_trigger_back_activation.sum(dim=-1)  # 8
-                            anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
-                            total_score = total_score.sum(dim=-1)  # 8
-
+                            normal_trigger_activation = score_map.sum(dim=-1)  # 8
+                            anormal_trigger_activation = score_random_map.sum(dim=-1)  # 8
+                            total_score = torch.ones_like(normal_trigger_activation).sum(dim=-1)  # 8
                             normal_trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                            normal_trigger_back_activation_loss = (normal_trigger_back_activation / total_score) ** 2  # 8, res*res
                             anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-
-                            activation_loss = args.normal_weight * normal_trigger_activation_loss\
-                                              + args.back_weight * normal_trigger_back_activation_loss
+                            activation_loss = args.normal_weight * normal_trigger_activation_loss
                             # ---------------------------------- deactivating ------------------------------------ #
                             if args.act_deact :
                                 activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
                             if args.cls_training:
-                                normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
-                                normal_cls_back_activation = (cls_map * back_position).sum(dim=-1)
-                                anormal_cls_activation = (cls_random_map * random_anomal_positions).sum(dim=-1)
-
-                                normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
-                                normal_cls_back_activation_loss = (1 - (normal_cls_back_activation / total_score)) ** 2
-                                anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                activation_loss += args.normal_weight * normal_cls_activation_loss \
-                                                 + args.back_weight * normal_cls_back_activation_loss
+                                normal_cls_activation_loss = cls_map.sum(dim=-1)  # 8
+                                anormal_cls_activation_loss = cls_random_map.sum(dim=-1)  # 8
+                                normal_cls_activation_loss = (normal_cls_activation_loss / total_score) ** 2
+                                anormal_cls_activation_loss = (1 - (anormal_cls_activation_loss / total_score)) ** 2
+                                activation_loss += args.normal_weight * normal_cls_activation_loss
                                 if args.act_deact :
                                     activation_loss += args.act_deact_weight * anormal_cls_activation_loss
                             attn_loss += activation_loss
@@ -951,7 +882,6 @@ class NetworkTrainer:
         accelerator.end_training()
         if is_main_process and args.save_state:
             train_util.save_state_on_train_end(args, accelerator)
-        """
 
 
 if __name__ == "__main__":
@@ -981,10 +911,7 @@ if __name__ == "__main__":
                         help="Drops neurons out of training every step (0 or None is default behavior (no dropout), 1 would drop all neurons)", )
     parser.add_argument("--network_args", type=str, default=None, nargs="*",
                         help="additional argmuments for network (key=value) / ネットワークへの追加の引数")
-    parser.add_argument("--scheduler_linear_start", type=float, default=0.00085)
-    parser.add_argument("--scheduler_linear_end", type=float, default=0.012)
-    parser.add_argument("--scheduler_timesteps", type=int, default=1000)
-    parser.add_argument("--scheduler_schedule", type=str, default="scaled_linear")
+
 
     # step 4. training
     train_util.add_training_arguments(parser, True)
@@ -1048,11 +975,6 @@ if __name__ == "__main__":
     parser.add_argument("--add_random_query", action="store_true", )
     parser.add_argument("--unet_frozen", action="store_true", )
     parser.add_argument("--text_frozen", action="store_true", )
-    parser.add_argument("--guidance_scale", type=float, default=8.5)
-    parser.add_argument("--prompt", type=str, default='teddy bear, wearing like a super hero')
-    parser.add_argument("--negative_prompt", type=str,
-                        default="low quality, worst quality, bad anatomy, bad composition, poor, low effort")
-    parser.add_argument("--gen_images", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
