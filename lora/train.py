@@ -964,7 +964,6 @@ if __name__ == "__main__":
     parser.add_argument("--cls_training", action="store_true", )
     parser.add_argument("--background_loss", action="store_true")
     parser.add_argument("--average_mask", action="store_true", )
-    parser.add_argument("--normal_with_background", action="store_true", )
     parser.add_argument("--only_object_position", action="store_true", )
     parser.add_argument("--add_random_query", action="store_true", )
     parser.add_argument("--unet_frozen", action="store_true", )
