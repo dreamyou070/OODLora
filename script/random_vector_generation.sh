@@ -9,7 +9,7 @@ output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${no
 network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_1_task_loss_mahal_dist_attn_loss_0.008_actdeact_mahal_anomal/models/epoch-000007.safetensors"
 
 start_epoch=0
-port_number=59517
+port_number=59518
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port $port_number ../lora/random_vector_generation.py \

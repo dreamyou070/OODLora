@@ -329,8 +329,6 @@ class NetworkTrainer:
                         text_embeddings = text_embeddings.unsqueeze(0)
                     call_unet(frozen_unet, latent, 0, text_embeddings.to(device)[:,:2,:], 1, args.trg_layer_list)
                     layer_1 = args.trg_layer_list[0]
-
-
                     if args.concat_query :
                         layer_2 = args.trg_layer_list[1]
                         query_1 = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
@@ -356,6 +354,8 @@ class NetworkTrainer:
                                 feature = feature.unsqueeze(0)
                             if type(attn_score) == torch.Tensor:
                                 attn_score = attn_score.item()
+                            print(f'attn_score : {attn_score}')
+
                             if attn_score > 0.5 :
                                 normal_vector_good_score_list.add(feature)
                                 normal_vector_list.add(feature)
