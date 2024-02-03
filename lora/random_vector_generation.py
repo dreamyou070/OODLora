@@ -315,11 +315,15 @@ class NetworkTrainer:
             sample = mahal_dataset.__getitem__(i)
             class_name = sample['class_name']
             checking = False
+
             if args.do_check_anormal :
                 checking = True
+
             else :
                 if 'good' in class_name:
                     checking = True
+
+
             if checking :
                 latent = sample['latent']  # 1,4,64,64
                 if latent.dim() == 3:
