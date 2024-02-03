@@ -314,6 +314,90 @@ class NetworkTrainer:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
         except:
             trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr)
+        unet.requires_grad_(False)
+        unet.to(dtype=weight_dtype)
+        for t_enc in text_encoders:
+            t_enc.requires_grad_(False)
+        enc_unet.requires_grad_(False)
+        enc_unet.to(dtype=weight_dtype)
+        for enc_t_enc in enc_text_encoders:
+            enc_t_enc.requires_grad_(False)
+
+        print(f'\n step 7. training preparing')
+        if train_unet and train_text_encoder:
+            if len(text_encoders) > 1:
+                unet, t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler, = accelerator.prepare(
+                    unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler, )
+                text_encoder = text_encoders = [t_enc1, t_enc2]
+                del t_enc1, t_enc2
+                enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1],
+                                                                        enc_unet)
+                enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
+                del enc_t_enc1, enc_t_enc2
+            else:
+                unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+                    unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler)
+                text_encoders = [text_encoder]
+                enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
+                enc_text_encoders = [enc_text_encoder]
+        elif train_unet:
+            unet, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+                unet, network, optimizer, train_dataloader, lr_scheduler)
+            enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
+            text_encoder.to(accelerator.device)
+        elif train_text_encoder:
+            if len(text_encoders) > 1:
+                t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+                    text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler)
+                text_encoder = text_encoders = [t_enc1, t_enc2]
+                del t_enc1, t_enc2
+                enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1],
+                                                                        enc_unet)
+                enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
+                del enc_t_enc1, enc_t_enc2
+            else:
+                text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+                    text_encoder, network, optimizer, train_dataloader, lr_scheduler)
+                text_encoders = [text_encoder]
+                enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
+                enc_text_encoders = [enc_text_encoder]
+            unet.to(accelerator.device,
+                    dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
+            enc_unet.to(accelerator.device,
+                        dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
+        else:
+            network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(network, optimizer,
+                                                                                     train_dataloader, lr_scheduler)
+        text_encoders = train_util.transform_models_if_DDP(text_encoders)
+        unet, network = train_util.transform_models_if_DDP([unet, network])
+        enc_text_encoders = train_util.transform_models_if_DDP(enc_text_encoders)
+        enc_unet = train_util.transform_models_if_DDP([enc_unet])[0]
+        if args.gradient_checkpointing:
+            unet.train()
+            for t_enc in text_encoders:
+                t_enc.train()
+                if train_text_encoder:
+                    t_enc.text_model.embeddings.requires_grad_(True)
+            if not train_text_encoder:  # train U-Net only
+                unet.parameters().__next__().requires_grad_(True)
+        else:
+            unet.eval()
+            for t_enc in text_encoders:
+                t_enc.eval()
+            enc_unet.eval()
+            for enc_t_enc in enc_text_encoders:
+                enc_t_enc.eval()
+        del t_enc
+        del enc_text_encoders, enc_vae
+
+        network.prepare_grad_etc(text_encoder, unet)
+        vae.requires_grad_(False)
+        vae.eval()
+        vae.to(accelerator.device, dtype=vae_dtype)
+
+        print(f'\n step 7. training preparing')
+        if args.full_fp16:
+            train_util.patch_accelerator_for_fp16_training(accelerator)
 
         class_name = 'bagel'
         from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
