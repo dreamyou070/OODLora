@@ -766,7 +766,7 @@ class NetworkTrainer:
                                              feat in normal_vectors]
                         dist_max = torch.tensor(mahalanobis_dists).max()
                         dist_mean = torch.tensor(mahalanobis_dists).mean()
-                        dist_loss += dist_mean
+                        dist_loss += dist_mean.requires_grad_()
 
                         if args.do_attn_loss:
 
