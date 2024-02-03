@@ -305,7 +305,7 @@ class NetworkTrainer:
 
         from utils.model_utils import get_state_dict, init_prompt
         with torch.no_grad():
-            context = init_prompt(tokenizer, frozen_text_encoder, device, args.prompt)
+            context = init_prompt(tokenizer, frozen_text_encoder, device, 'good')
         uncon, con = torch.chunk(context, 2)
 
 
