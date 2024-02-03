@@ -3909,6 +3909,7 @@ def load_tokenizer(args: argparse.Namespace):
 
 
 def prepare_accelerator(args: argparse.Namespace):
+    print(f'args.logging_dir : {args.logging_dir}')
     if args.logging_dir is None:
         logging_dir = None
     else:
