@@ -951,7 +951,7 @@ if __name__ == "__main__":
     parser.add_argument('--normal_weight', type=float, default=1.0)
     parser.add_argument("--act_deact", action='store_true')
     parser.add_argument("--act_deact_weight", type=float, default=1.0)
-    parser.add_argument("--normal_with_back", action = 'stoe_true')
+    parser.add_argument("--normal_with_back", action = 'store_true')
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
