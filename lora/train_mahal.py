@@ -334,6 +334,16 @@ class NetworkTrainer:
                 params.extend(te_lora.parameters())
             trainable_params = [{"params": params, "lr": args.unet_lr}]
 
+            parnet_dir, lora_dir = os.path.split(args.network_weights)
+            name, _ = os.path.splitext(lora_dir)
+            lora_epoch = name.split('-')[-1]
+            parent, _ = os.path.split(parnet_dir)
+
+            frozen_mean = torch.load(os.path.join(parent,
+                                                  f"record_lora_eopch_{lora_epoch}/normal_vector_mean_torch.pt"))
+            frozen_cov =  torch.load(os.path.join(parent,
+                                                  f"record_lora_eopch_{lora_epoch}/normal_vector_cov_torch.pt"))
+
         if args.text_frozen :
             params = []
             unet_loras = network.unet_loras
@@ -741,16 +751,6 @@ class NetworkTrainer:
                                     features.pop(0)
                                 features.append(feat.unsqueeze(0))
                         normal_vectors = torch.cat(features, dim=0)  # sample, dim
-                        """
-                        if 'mean' not in norm.keys() :
-                            normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-                            normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
-                        else :
-                            normal_vector_mean_torch = norm['mean']
-                            normal_vectors_cov_torch = norm['cov']
-                        norm['mean'] = torch.mean(normal_vectors, dim=0)
-                        norm['cov'] = torch.cov(normal_vectors.transpose(0, 1))
-                        """
                         normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
                         normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
 
@@ -758,6 +758,10 @@ class NetworkTrainer:
                             delta = u - v
                             m = torch.dot(delta, torch.matmul(cov, delta))
                             return torch.sqrt(m)
+
+                        if args.unet_frozen :
+                            normal_vector_mean_torch = frozen_mean
+                            normal_vectors_cov_torch = frozen_cov
 
                         mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
                                              feat in normal_vectors]
