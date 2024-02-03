@@ -338,7 +338,7 @@ class NetworkTrainer:
                                num_inference_steps=30,
                                guidance_scale=8.5,
                                negative_prompt=args.negative_prompt,
-                               num_images_per_prompt=100,)
+                               num_images_per_prompt=2,)
             gen_latent = latents[-1]
             gen_images = pipeline.latents_to_image(gen_latent)
 
