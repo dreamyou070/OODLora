@@ -491,6 +491,13 @@ if __name__ == "__main__":
     parser.add_argument("--log_tracker_config",type=str,default=None,)
     parser.add_argument("--gradient_accumulation_steps",type=int,default=1,)
     parser.add_argument("--mixed_precision", type=str, default="no", choices=["no", "fp16", "bf16"],)
+    parser.add_argument(
+        "--save_precision",
+        type=str,
+        default=None,
+        choices=[None, "float", "fp16", "bf16"],
+        help="precision in saving / 保存時に精度を変更して保存する",
+    )
     args = parser.parse_args()
     trainer = NetworkTrainer()
     trainer.train(args)
