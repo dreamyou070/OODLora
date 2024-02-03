@@ -404,8 +404,7 @@ class NetworkTrainer:
         # [1] good mahalanobis distances
         if args.normal_good_check:
             if len(normal_vector_good_score_list) > 0:
-                mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
-                                     feat in normal_vector_good_score]
+                mahalanobis_dists = [mahal(feat, mu, cov) for feat in normal_vector_good_score]
                 plt.figure()
                 plt.hist(mahalanobis_dists)
                 save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
@@ -415,8 +414,7 @@ class NetworkTrainer:
                     for d in mahalanobis_dists :
                         f.write(f'{d},')
         else :
-            mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
-                                 feat in normal_vectors]
+            mahalanobis_dists = [mahal(feat, mu, cov) for feat in normal_vectors]
             plt.figure()
             plt.hist(mahalanobis_dists)
             save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.png")
@@ -428,8 +426,7 @@ class NetworkTrainer:
         # ----------------------------------------------------------------------------------------------------------- #
         if args.do_check_anormal:
             anormal_vectors = torch.cat(list(anormal_vector_list), dim=0)  # sample, dim
-            a_mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
-                                 feat in anormal_vectors]
+            a_mahalanobis_dists = [mahal(feat, mu, cov) for feat in anormal_vectors]
             plt.figure()
             plt.hist(a_mahalanobis_dists)
             save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.png")
