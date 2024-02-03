@@ -761,14 +761,15 @@ class NetworkTrainer:
                         dist_loss += dist_mean.requires_grad_()
 
                         if args.do_attn_loss:
+                            """ if all be white, loss would be 0 """
                             normal_trigger_activation = score_map.sum(dim=-1)  # 8
                             anormal_trigger_activation = score_random_map.sum(dim=-1)  # 8
                             total_score = torch.ones_like(normal_trigger_activation).sum(dim=-1)  # 8
                             normal_trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                            anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
                             activation_loss = args.normal_weight * normal_trigger_activation_loss
                             # ---------------------------------- deactivating ------------------------------------ #
                             if args.act_deact :
+                                anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
                                 activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
                             if args.cls_training:
                                 normal_cls_activation_loss = cls_map.sum(dim=-1)  # 8

@@ -109,6 +109,7 @@ def main(args):
     if args.training_test :
         args.output_dir = os.path.join(parent, 'reconstruction_with_training_data_20240203')
     os.makedirs(args.output_dir, exist_ok=True)
+    print(f'output_dir: {args.output_dir}')
 
     print(f' \n step 1. setting')
     train_util.verify_training_args(args)
