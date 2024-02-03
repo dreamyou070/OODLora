@@ -319,27 +319,28 @@ class NetworkTrainer:
         from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
         import numpy as np
         from diffusers import DDIMScheduler
-        scheduler = DDIMScheduler(num_train_timesteps=args.scheduler_timesteps,
-                                  beta_start=args.scheduler_linear_start,
-                                  beta_end=args.scheduler_linear_end,
-                                  beta_schedule=args.scheduler_schedule)
-        pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
-                                                           text_encoder=text_encoder,
-                                                           tokenizer=tokenizer,
-                                                           unet=unet,
-                                                           scheduler=scheduler,
-                                                           safety_checker=None,
-                                                           feature_extractor=None,
-                                                           requires_safety_checker=False, )
-        latents = pipeline(prompt='bagel',
-                           height=512,
-                           width=512,
-                           num_inference_steps=30,
-                           guidance_scale=8.5,
-                           negative_prompt=args.negative_prompt,
-                           num_images_per_prompt=100,)
-        gen_latent = latents[-1]
-        print(f'gen_latent shape : {gen_latent.shape}')
+        if args.gen_images :
+            scheduler = DDIMScheduler(num_train_timesteps=args.scheduler_timesteps,
+                                      beta_start=args.scheduler_linear_start,
+                                      beta_end=args.scheduler_linear_end,
+                                      beta_schedule=args.scheduler_schedule)
+            pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
+                                                               text_encoder=text_encoder,
+                                                               tokenizer=tokenizer,
+                                                               unet=unet,
+                                                               scheduler=scheduler,
+                                                               safety_checker=None,
+                                                               feature_extractor=None,
+                                                               requires_safety_checker=False, )
+            latents = pipeline(prompt='bagel',
+                               height=512,
+                               width=512,
+                               num_inference_steps=30,
+                               guidance_scale=8.5,
+                               negative_prompt=args.negative_prompt,
+                               num_images_per_prompt=100,)
+            gen_latent = latents[-1]
+            print(f'gen_latent shape : {gen_latent.shape}')
         #gen_image = pipeline.latents_to_image(latents[-1])[0].resize(args.resolution)
 
 
@@ -1051,6 +1052,7 @@ if __name__ == "__main__":
     parser.add_argument("--prompt", type=str, default='teddy bear, wearing like a super hero')
     parser.add_argument("--negative_prompt", type=str,
                         default="low quality, worst quality, bad anatomy, bad composition, poor, low effort")
+    parser.add_argument("--gen_images", action="store_true", )
     args = parser.parse_args()
     args = train_util.read_config_from_file(args, parser)
     trainer = NetworkTrainer()
