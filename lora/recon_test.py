@@ -152,6 +152,7 @@ def main(args):
 
         for class_name in classes:
             class_name_output_dir = os.path.join(args.output_dir, class_name)
+            os.makedirs(class_name_output_dir, exist_ok=True)
             flag = True
             if args.only_normal_infer:
                 if 'good' not in class_name:
@@ -208,20 +209,29 @@ def main(args):
                             org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
                             org_img.save(os.path.join(class_name_output_dir, f'{name}_org{ext}'))
                             call_unet(unet, org_vae_latent, 0, con, None, 1)
-                            trg_layer = args.trg_layer_list[0]
-                            org_query = controller.query_dict[trg_layer][0].squeeze(0)
-                            org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
+                            attn_stores = controller.step_store # batch, pix-num, 2?1?
+
+
                             controller.reset()
+                            org_mask = get_crossattn_map(args, attn_stores, args.trg_layer,
+                                                           thredhold=args.anormal_thred)
+
 
                             # (2) recon
                             recon_latent = latents
                             call_unet(unet, recon_latent, 0, con, None, 1)
-                            recon_query = controller.query_dict[trg_layer][0].squeeze(0)
+                            attn_stores = controller.step_store
                             controller.reset()
-                            recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
+                            recon_mask = get_crossattn_map(args, attn_stores, args.trg_layer,
+                                                           thredhold=args.anormal_thred)
 
                             # (3) anomaly score
-                            anomaly_score = (org_query @ recon_query.T).cpu()
+                            anomaly_score = torch.abs(org_mask - recon_mask).cpu().numpy() # res, res
+                            anomaly_score = anomaly_score * 255
+                            anomaly_score_pil = Image.fromarray(anomaly_score.astype(np.uint8)).resize((org_h, org_w))
+                            anomaly_mask_save_dir = os.path.join(class_name_output_dir, f'{name}_anomaly_map{ext}')
+                            anomaly_score_pil.save(anomaly_mask_save_dir)
+                            """
                             pix_num = anomaly_score.shape[0]
                             anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
                             anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
@@ -232,6 +242,7 @@ def main(args):
                             anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
                             anomaly_mask_save_dir = os.path.join(class_name_output_dir, f'{name}_anomaly_map{ext}')
                             anomaly_score_pil.save(anomaly_mask_save_dir)
+                            """
                     break
                 break
 
