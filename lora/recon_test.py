@@ -209,6 +209,12 @@ def main(args):
                             # ------------------------------------- [1] anomal mask ------------------------------ #
                             # real network is getting good !
                             network.restore()
+
+                            from safetensors.torch import load_file
+                            weights_sd = load_file(args.network_weights)
+                            for k in weights_sd.keys():
+                                print(f' {k} : {weights_sd[k].shape}')
+                            
                             network.load_weights(args.network_weights)
                             network.to(device)
                             controller = AttentionStore()
@@ -238,6 +244,8 @@ def main(args):
                             recon_image.save(img_dir)
 
                             # ----------------------------- [4] anomaly map -------------------------------------- #
+                            org_image = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
+                            org_image.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
                             call_unet(unet, latents[-1], 0, con[:, :args.truncate_length, :], None, None)
                             attn_stores = controller.step_store
                             controller.reset()
