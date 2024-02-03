@@ -2,12 +2,12 @@
 class_name="bagel"
 data_source='train_normal'
 data_folder='MVTec3D-AD'
-train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
-all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex2/rgb"
+#train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
+all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_normal/rgb"
 normal_folder='normal'
-save_folder="res_64_down_task_loss_mahal_dist_attn_loss_0.001"
+save_folder="res_64_down_task_loss_mahal_dist_attn_loss_0.001_actdeact_frozen_unet"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_task_loss_mahal_dist_attn_loss_0.001/models/epoch-000006.safetensors"
+network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_task_loss_mahal_dist_attn_loss_0.001_actdeact/models/epoch-000006.safetensors"
 
 start_epoch=0
 port_number=59517
@@ -23,7 +23,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --class_caption 'good' \
   --all_data_dir "${all_data_dir}" \
   --output_dir "$output_dir" \
-  --do_check_anormal \
-  --trg_layer_list "['up_blocks_3_attentions_2_transformer_blocks_0_attn2']" \
+  --trg_layer_list "['down_blocks_0_attentions_1_transformer_blocks_0_attn2']" \
   --cls_training \
   --network_weights "$network_weights"

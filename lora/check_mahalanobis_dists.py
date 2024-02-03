@@ -381,29 +381,36 @@ class NetworkTrainer:
             m = torch.dot(delta, torch.matmul(cov, delta))
             return torch.sqrt(m)
 
-        if len(normal_vector_good_score_list) > 0:
-            normal_vector_good_score = torch.cat(list(normal_vector_good_score_list), dim=0)  # sample, dim
-            normal_vector_mean_torch = torch.mean(normal_vector_good_score, dim=0)
-            normal_vectors_cov_torch = torch.cov(normal_vector_good_score.transpose(0, 1))
-        else :
-            normal_vectors = torch.cat(list(normal_vector_list), dim=0)  # sample, dim
-            normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-            normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+        normal_vectors = torch.cat(list(normal_vector_list), dim=0)  # sample, dim
+        normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+        normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+
+        torch.save(normal_vector_mean_torch, os.path.join(record_save_dir, "normal_vector_mean_torch.pt"))
+        torch.save(normal_vectors_cov_torch, os.path.join(record_save_dir, "normal_vectors_cov_torch.pt"))
+
+        if args.normal_good_check :
+            if len(normal_vector_good_score_list) > 0:
+                normal_vector_good_score = torch.cat(list(normal_vector_good_score_list), dim=0)  # sample, dim
+                normal_vector_mean_torch = torch.mean(normal_vector_good_score, dim=0)
+                normal_vectors_cov_torch = torch.cov(normal_vector_good_score.transpose(0, 1))
+
+
 
 
         # ----------------------------------------------------------------------------------------------------------- #
         # [1] good mahalanobis distances
-        if len(normal_vector_good_score_list) > 0:
-            mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
-                                 feat in normal_vector_good_score]
-            plt.figure()
-            plt.hist(mahalanobis_dists)
-            save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
-            plt.savefig(save_dir)
-            save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.txt")
-            with open(save_dir, 'w') as f:
-                for d in mahalanobis_dists :
-                    f.write(f'{d},')
+        if args.normal_good_check:
+            if len(normal_vector_good_score_list) > 0:
+                mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
+                                     feat in normal_vector_good_score]
+                plt.figure()
+                plt.hist(mahalanobis_dists)
+                save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
+                plt.savefig(save_dir)
+                save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.txt")
+                with open(save_dir, 'w') as f:
+                    for d in mahalanobis_dists :
+                        f.write(f'{d},')
         else :
             mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
                                  feat in normal_vectors]
@@ -491,10 +498,8 @@ if __name__ == "__main__":
     parser.add_argument("--log_tracker_config",type=str,default=None,)
     parser.add_argument("--gradient_accumulation_steps",type=int,default=1,)
     parser.add_argument("--mixed_precision", type=str, default="no", choices=["no", "fp16", "bf16"],)
-    parser.add_argument(
-        "--save_precision",
-        type=str,
-        default=None,
+    parser.add_argument("--normal_good_check", action = 'store_true')
+    parser.add_argument("--save_precision",type=str,default=None,
         choices=[None, "float", "fp16", "bf16"],
         help="precision in saving / 保存時に精度を変更して保存する",
     )
@@ -517,8 +522,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sdpa",
         action="store_true",
-        help="use sdpa for CrossAttention (requires PyTorch 2.0) / CrossAttentionにsdpaを使う（PyTorch 2.0が必要）",
-    )
+        help="use sdpa for CrossAttention (requires PyTorch 2.0) / CrossAttentionにsdpaを使う（PyTorch 2.0が必要）",)
     parser.add_argument("--cls_training", action="store_true", )
     args = parser.parse_args()
     trainer = NetworkTrainer()
