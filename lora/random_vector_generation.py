@@ -349,12 +349,12 @@ class NetworkTrainer:
                         feature = query[pix_idx, :].cpu()
                         attn_score = trigger_map[pix_idx].cpu() # score
                         cls_score = cls_map[pix_idx].cpu() # score
+                        if type(attn_score) == torch.Tensor:
+                            attn_score = attn_score.item()
+
                         if mask_vector[pix_idx] == 1:
                             if feature.dim() == 1:
                                 feature = feature.unsqueeze(0)
-                            if type(attn_score) == torch.Tensor:
-                                attn_score = attn_score.item()
-
                             if attn_score > 0.5 :
                                 normal_vector_good_score_list.add(feature)
                                 normal_vector_list.add(feature)
@@ -364,11 +364,11 @@ class NetworkTrainer:
                             print(f' ** nomal score : {attn_score}')
                             normal_scores.append(attn_score)
                         else:
+                            print(f' ** back score : {attn_score}')
                             if feature.dim() == 1:
                                 feature = feature.unsqueeze(0)
                             back_vector_list.add(feature)
                 else:
-
                     for pix_idx in range(mask_vector.shape[0]):
                         feature = query[pix_idx, :].cpu()
                         attn_score = trigger_map[pix_idx].cpu()  # score
