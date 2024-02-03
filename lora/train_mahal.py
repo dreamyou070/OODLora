@@ -50,12 +50,10 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
 
             query = self.to_q(hidden_states)
             if layer_name in mask:
-                controller.save_query(random_query, layer_name)
+                controller.save_query(query, layer_name)
             context = context if context is not None else hidden_states
-
             key = self.to_k(context)
             value = self.to_v(context)
-
             query = self.reshape_heads_to_batch_dim(query)
             key = self.reshape_heads_to_batch_dim(key)
             value = self.reshape_heads_to_batch_dim(value)
@@ -756,7 +754,6 @@ class NetworkTrainer:
                                 features.pop(0)
                             features.append(feat.unsqueeze(0))
                         normal_vectors = torch.cat(features, dim=0)  # sample, dim
-                        print(f'normal_vectors.shape : {normal_vectors.shape}')
                         mu = torch.mean(normal_vectors, dim=0)
                         cov = torch.cov(normal_vectors.transpose(0, 1))
                         random_vector_generator = MultivariateNormal(mu, cov)
