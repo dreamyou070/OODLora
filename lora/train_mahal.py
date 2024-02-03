@@ -813,20 +813,33 @@ class NetworkTrainer:
                                 if args.act_deact :
                                     activation_loss += args.act_deact_weight * anormal_cls_activation_loss
                             attn_loss += activation_loss
-                dist_loss = dist_loss.mean()
+                if args.do_dist_loss:
+                    dist_loss = dist_loss.mean()
                 if args.do_attn_loss:
                     attn_loss = attn_loss.mean()
                 ########################### 3. attn loss ###########################################################
                 if args.do_task_loss :
                     if args.do_attn_loss:
-                        loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                        if args.do_dist_loss:
+                            loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                        else :
+                            loss = args.task_loss_weight * task_loss + args.attn_loss_weight * attn_loss
                     else :
-                        loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss
+                        if args.do_dist_loss:
+                            loss = args.task_loss_weight * task_loss + args.mahalanobis_loss_weight * dist_loss
+                        else:
+                            loss = args.task_loss_weight * task_loss
                 else :
                     if args.do_attn_loss:
-                        loss = args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                        if args.do_dist_loss:
+                            loss = args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
+                        else :
+                            loss = args.attn_loss_weight * attn_loss
                     else :
-                        loss = args.mahalanobis_loss_weight * dist_loss
+                        if args.do_dist_loss:
+                            loss = args.mahalanobis_loss_weight * dist_loss
+                        else :
+                            print(f'No loss is backpropt')
                 # ------------------------------------------------------------------------------------------------- #
                 if is_main_process:
                     if args.do_task_loss:
@@ -972,6 +985,7 @@ if __name__ == "__main__":
     parser.add_argument("--truncate_length", type=int, default=3)
     parser.add_argument("--anormal_sample_normal_loss", action='store_true')
     parser.add_argument("--do_task_loss", action='store_true')
+    parser.add_argument("--do_dist_loss", action='store_true')
     parser.add_argument("--do_attn_loss", action='store_true')
     parser.add_argument("--attn_loss_weight", type=float, default=1.0)
     parser.add_argument('--normal_weight', type=float, default=1.0)
