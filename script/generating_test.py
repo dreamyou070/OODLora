@@ -10,7 +10,7 @@ cov_dir = os.path.join(base_dir, f'record_lora_eopch_7_mahalanobis_only_normal/n
 
 mu = torch.load(mu_dir)
 cov = torch.load(cov_dir)
-#cov = cov * torch.eye(320)
+cov = cov * torch.eye(320)
 
 def mahal(u, v, cov):
     delta = u - v
@@ -18,7 +18,7 @@ def mahal(u, v, cov):
     return torch.sqrt(m)
 
 random_vector_generator = MultivariateNormal(mu, cov)
-for i in range(10) :
+for i in range(100) :
     random_vector = random_vector_generator.sample()
     dist = mahal(random_vector, mu, cov)
     print(f'{i} trial dist = {dist}')
