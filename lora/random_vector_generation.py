@@ -391,8 +391,11 @@ class NetworkTrainer:
             return torch.sqrt(m)
 
         normal_vectors = torch.cat(list(normal_vector_list), dim=0)  # sample, dim
-        mu = torch.mean(normal_vectors, dim=0)
+        import numpy as np
+        mu = torch.mean(normal_vectors, dim=0).squeeze()
+        dim = normal_vectors.shape[0]
         cov = torch.cov(normal_vectors.transpose(0, 1))
+        cov = torch.eye(dim).to(cov.device) * cov
 
         torch.save(mu, os.path.join(record_save_dir, "normal_vector_mean_torch.pt"))
         torch.save(cov, os.path.join(record_save_dir, "normal_vectors_cov_torch.pt"))
@@ -403,17 +406,23 @@ class NetworkTrainer:
                 normal_vector_mean_torch = torch.mean(normal_vector_good_score, dim=0)
                 normal_vectors_cov_torch = torch.cov(normal_vector_good_score.transpose(0, 1))
 
+
         from torch.distributions.multivariate_normal import MultivariateNormal
+
         random_vector_generator = MultivariateNormal(mu,cov)
+
+
         # ----------------------------------------------------------------------------------------------------------- #
         # [1] good mahalanobis distances
         if args.normal_good_check:
             if len(normal_vector_good_score_list) > 0:
+
                 mahalanobis_dists = [mahal(feat, mu, cov) for feat in normal_vector_good_score]
                 plt.figure()
                 plt.hist(mahalanobis_dists)
                 save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
                 plt.savefig(save_dir)
+
                 save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.txt")
                 with open(save_dir, 'w') as f:
                     for d in mahalanobis_dists :
