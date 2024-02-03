@@ -486,21 +486,24 @@ class NetworkTrainer:
                                                                safety_checker=None,
                                                                feature_extractor=None,
                                                                requires_safety_checker=False, )
-            latents = pipeline(prompt='bagel',
-                               height=512,
-                               width=512,
-                               num_inference_steps=30,
-                               guidance_scale=8.5,
-                               negative_prompt=args.negative_prompt,
-                               num_images_per_prompt=100,)
-            gen_latent = latents[-1]
-            gen_images = pipeline.latents_to_image(gen_latent)
+            global_num = 0
+            for i in range(20):
+                latents = pipeline(prompt='bagel',
+                                   height=512,
+                                   width=512,
+                                   num_inference_steps=30,
+                                   guidance_scale=8.5,
+                                   negative_prompt=args.negative_prompt,
+                                   num_images_per_prompt=5,)
+                gen_latent = latents[-1]
+                gen_images = pipeline.latents_to_image(gen_latent)
 
-            parent, rgb = os.path.split(args.train_data_dir)
-            gen_image_base_dir = os.path.join(parent, 'gen_images')
-            for i, gen_img in enumerate(gen_images) :
-                gen_img_dir = os.path.join(gen_image_base_dir, f'gen_img_{i}.png')
-                gen_img.save(gen_img_dir)
+                parent, rgb = os.path.split(args.train_data_dir)
+                gen_image_base_dir = os.path.join(parent, 'gen_images')
+                for i, gen_img in enumerate(gen_images) :
+                    global_num += 1
+                    gen_img_dir = os.path.join(gen_image_base_dir, f'gen_img_{global_num}.png')
+                    gen_img.save(gen_img_dir)
 
 
 
