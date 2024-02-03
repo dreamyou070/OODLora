@@ -16,6 +16,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --main_process_port $port_number ../lora/check_mahalanobis_dists.py \
   --process_title parksooyeon \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
+  --logging_dir "${output_dir}/logs" \
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 \
   --resolution '512,512' \
