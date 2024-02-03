@@ -703,6 +703,10 @@ class NetworkTrainer:
                         anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
                         back_position = 1 - normal_position
 
+                        if args.normal_with_back :
+                            normal_position = normal_position + back_position
+                            object_position = object_position + (1 - object_position)
+
                         # (1) object features
                         for i in range(pix_num):
                             if object_position[i] == 1:
@@ -742,11 +746,15 @@ class NetworkTrainer:
                             normal_trigger_back_activation_loss = (normal_trigger_back_activation / total_score) ** 2  # 8, res*res
                             anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
 
-                            activation_loss = args.normal_weight * normal_trigger_activation_loss\
+                            if args.normal_with_back :
+                                activation_loss = args.normal_weight * normal_trigger_activation_loss
+                            else :
+                                activation_loss = args.normal_weight * normal_trigger_activation_loss\
                                               + args.back_weight * normal_trigger_back_activation_loss
                             # ---------------------------------- deactivating ------------------------------------ #
                             if args.act_deact :
                                 activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
+
                             if args.cls_training:
                                 normal_cls_activation = (cls_map * normal_position).sum(dim=-1)
                                 normal_cls_back_activation = (cls_map * back_position).sum(dim=-1)
@@ -755,8 +763,11 @@ class NetworkTrainer:
                                 normal_cls_activation_loss = (normal_cls_activation / total_score) ** 2
                                 normal_cls_back_activation_loss = (1 - (normal_cls_back_activation / total_score)) ** 2
                                 anormal_cls_activation_loss = (1 - (anormal_cls_activation / total_score)) ** 2
-                                activation_loss += args.normal_weight * normal_cls_activation_loss \
-                                                 + args.back_weight * normal_cls_back_activation_loss
+                                if args.normal_with_back :
+                                    activation_loss += args.normal_weight * normal_cls_activation_loss
+                                else :
+                                    activation_loss += args.normal_weight * normal_cls_activation_loss \
+                                                       + args.back_weight * normal_cls_back_activation_loss
                                 if args.act_deact :
                                     activation_loss += args.act_deact_weight * anormal_cls_activation_loss
                             attn_loss += activation_loss
@@ -940,6 +951,7 @@ if __name__ == "__main__":
     parser.add_argument('--normal_weight', type=float, default=1.0)
     parser.add_argument("--act_deact", action='store_true')
     parser.add_argument("--act_deact_weight", type=float, default=1.0)
+    parser.add_argument("--normal_with_back", action = 'stoe_true')
     import ast
     def arg_as_list(arg):
         v = ast.literal_eval(arg)
