@@ -1326,7 +1326,7 @@ class BaseDataset(torch.utils.data.Dataset):
         example["loss_weights"] = torch.FloatTensor(loss_weights)
         example["caption_attention_mask"] = caption_attention_masks
         example["images"] = images
-        example["anormal_images"] = anomal_images
+        example["anomal_images"] = anomal_images
         example["mask_imgs"] = mask_imgs
         example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
         example["captions"] = captions
