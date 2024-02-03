@@ -354,11 +354,8 @@ class NetworkTrainer:
             lora_epoch = name.split('-')[-1]
             parent, _ = os.path.split(parnet_dir)
 
-            mu = torch.load(os.path.join(parent,
-                                                  f"record_lora_eopch_{lora_epoch}_mahalanobis/normal_vector_mean_torch.pt"))
-            cov =  torch.load(os.path.join(parent,
-                                                  f"record_lora_eopch_{lora_epoch}_mahalanobis/normal_vector_cov_torch.pt"))
-
+            mu = torch.load(os.path.join(parent,f"record_lora_eopch_{lora_epoch}_mahalanobis/normal_vector_mean_torch.pt"))
+            cov =  torch.load(os.path.join(parent,f"record_lora_eopch_{lora_epoch}_mahalanobis/normal_vector_cov_torch.pt"))
             random_vector_generator = MultivariateNormal(mu, cov)
 
         if args.text_frozen :
