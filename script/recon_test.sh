@@ -4,7 +4,7 @@ class_name="bagel"
 folder_name="res_64_down_1_task_loss_mahal_dist_attn_loss_0.008_actdeact_mahal_anomal"
 data_name="MVTec3D-AD"
 normality_folder='normal'
-network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models/epoch-000002.safetensors"
+network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models/epoch-000005.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
 port_number=50015
 

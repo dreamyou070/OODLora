@@ -193,6 +193,9 @@ def main(args):
                             controller.reset()
                             recon_mask = get_crossattn_map(args, attn_stores, args.trg_layer,
                                                             thredhold=args.anormal_thred)
+                            recon_mask_save_dir = os.path.join(class_name_output_dir, f'{name}_recon_mask{ext}')
+                            save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
+
                             recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
                             # ---------------------------------- [2] reconstruction ------------------------------ #
@@ -205,6 +208,7 @@ def main(args):
                             recon_image = pipeline.latents_to_image(latents[-1])[0].resize((org_h, org_w))
                             img_dir = os.path.join(class_name_output_dir, f'{name}_recon{ext}')
                             recon_image.save(img_dir)
+
 
                             # ----------------------------- [4] anomaly map -------------------------------------- #
                             # (1) original
