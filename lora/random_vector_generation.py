@@ -315,15 +315,11 @@ class NetworkTrainer:
             sample = mahal_dataset.__getitem__(i)
             class_name = sample['class_name']
             checking = False
-
             if args.do_check_anormal :
                 checking = True
-
             else :
                 if 'good' in class_name:
                     checking = True
-
-
             if checking :
                 latent = sample['latent']  # 1,4,64,64
                 if latent.dim() == 3:
@@ -340,19 +336,22 @@ class NetworkTrainer:
                     controller.reset()
                     from utils.model_utils import get_crossattn_map
                     trg_layer = args.trg_layer_list[0]
-                    query = query_dict[trg_layer][0]
                     for trg_layer in args.trg_layer_list:
                         trigger_map = get_crossattn_map(args, attn_stores, trg_layer,
                                                         binarize = False).flatten()
-                feature = query[pix_idx, :].cpu()
-                if feature.dim() == 1:
-                    feature = feature.unsqueeze(0)
-                attn_score = trigger_map[pix_idx].cpu()  # score
-                if type(attn_score) == torch.Tensor:
-                    attn_score = attn_score.item()
+                        query = query_dict[trg_layer][0]
+
                 # -------------------------------------------------------------------------------------------------------- #
                 if 'good' in class_name:
                     for pix_idx in range(mask_vector.shape[0]):
+
+                        feature = query[pix_idx, :].cpu()
+                        if feature.dim() == 1:
+                            feature = feature.unsqueeze(0)
+                        attn_score = trigger_map[pix_idx].cpu()  # score
+                        if type(attn_score) == torch.Tensor:
+                            attn_score = attn_score.item()
+
                         if mask_vector[pix_idx] == 1:
                             if attn_score > 0.5 :
                                 normal_vector_good_score_list.add(feature)
@@ -366,6 +365,14 @@ class NetworkTrainer:
                             back_vector_list.add(feature)
                 else:
                     for pix_idx in range(mask_vector.shape[0]):
+
+                        feature = query[pix_idx, :].cpu()
+                        if feature.dim() == 1:
+                            feature = feature.unsqueeze(0)
+                        attn_score = trigger_map[pix_idx].cpu()  # score
+                        if type(attn_score) == torch.Tensor:
+                            attn_score = attn_score.item()
+
                         if mask_vector[pix_idx] == 1:
                             print(f'anomal score : {attn_score}')
                             anormal_vector_list.add(feature)
