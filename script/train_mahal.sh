@@ -5,11 +5,11 @@ data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 normal_folder='normal'
-save_folder="res_64_down_1_task_loss_mahal_dist_attn_loss_0.1_actdeact_mahal_anomal"
+save_folder="res_64_up_2_task_loss_mahal_dist_attn_loss_0.1_actdeact_mahal_anomal"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 #network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_1_mahal_attn_0.001_act_deact/models/epoch-000002.safetensors"
 start_epoch=0
-port_number=58878
+port_number=58879
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
   --main_process_port $port_number ../lora/train_mahal.py --process_title parksooyeon \
@@ -24,8 +24,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --train_data_dir "$train_data_dir" --resolution '512,512' --class_caption 'good' \
   --output_dir "$output_dir" \
   --do_task_loss --task_loss_weight 1.0 \
-  --do_attn_loss --attn_loss_weight 0.1 --cls_training --back_training \
-  --trg_layer_list "['down_blocks_0_attentions_1_transformer_blocks_0_attn2']" \
+  --do_attn_loss --attn_loss_weight 0.1 --cls_training \
+  --trg_layer_list "['up_blocks_3_attentions_2_transformer_blocks_0_attn2']" \
   --act_deact --act_deact_weight 1.0 \
   --mahalanobis_loss_weight 1 \
   # --add_random_query
