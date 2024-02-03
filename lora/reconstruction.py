@@ -128,7 +128,6 @@ def main(args):
     network_weights = os.listdir(args.network_weights)
 
     for weight in network_weights:
-
         if accelerator.is_main_process:
 
             # (1) call basic model
@@ -176,6 +175,12 @@ def main(args):
             if args.training_test :
                 test_folder = os.path.join(args.concept_image_folder, 'train_normal_test')
 
+            weight_dir = os.path.join(args.network_weights, weight)
+            network.load_weights(weight_dir)
+            network.to(device)
+            controller = AttentionStore()
+            register_attention_control(unet, controller)
+
             classes = os.listdir(test_folder)
 
             for class_name in classes:
@@ -205,17 +210,9 @@ def main(args):
 
                         if accelerator.is_main_process:
                             with torch.no_grad():
-
                                 org_img = load_image(test_img_dir, 512, 512)
                                 org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                                 # ------------------------------------- [1] anomal mask ------------------------------ #
-                                # real network is getting good !
-                                weight_dir = os.path.join(args.network_weights, weight)
-                                network.restore()
-                                network.load_weights(weight_dir)
-                                network.to(device)
-                                controller = AttentionStore()
-                                register_attention_control(unet, controller)
                                 with torch.no_grad():
                                     context = init_prompt(tokenizer, text_encoder, device, args.prompt)
                                 uncon, con = torch.chunk(context, 2)
@@ -233,9 +230,11 @@ def main(args):
                                 # 3. latent mask
                                 recon_mask = normal_mask
                                 recon_mask_save_dir = os.path.join(class_base_folder, f'{name}_z_recon_mask{ext}')
-                                save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
-                                recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
 
+                                save_latent(recon_mask, recon_mask_save_dir, org_h, org_w)
+                                """
+                                recon_mask = (recon_mask.unsqueeze(0).unsqueeze(0)).repeat(1, 4, 1, 1)
+    
                                 # ---------------------------------- [2] reconstruction ------------------------------ #
                                 pipeline = AnomalyDetectionStableDiffusionPipeline(vae=vae,
                                                text_encoder=text_encoder,tokenizer=tokenizer,unet=unet,scheduler=scheduler,
@@ -246,76 +245,40 @@ def main(args):
                                 recon_image = pipeline.latents_to_image(latents[-1])[0].resize((org_h, org_w))
                                 img_dir = os.path.join(class_base_folder, f'{name}_recon{ext}')
                                 recon_image.save(img_dir)
-
+    
                                 # ----------------------------- [4] anomaly map -------------------------------------- #
-                                """
-                                network.restore()
-                                network.load_weights(weight_dir)
-                                network.to(device)
-                                controller = AttentionStore()
-                                register_attention_control(unet, controller)
-                                with torch.no_grad():
-                                    context = init_prompt(tokenizer, text_encoder, device, args.prompt)
-                                uncon, con = torch.chunk(context, 2)
-
                                 # (1) original
                                 org_img = pipeline.latents_to_image(org_vae_latent)[0].resize((org_h, org_w))
                                 org_img.save(os.path.join(class_base_folder, f'{name}_org{ext}'))
-                                call_unet(unet, org_vae_latent, 0, con[:, :args.truncate_length, :], None, 1)
-                                org_query = controller.query_dict[args.trg_layer][0].squeeze()
+                                call_unet(unet, org_vae_latent, 0, con, None, 1)
+                                trg_layer = args.trg_layer_list[0]
+                                org_query = controller.query_dict[trg_layer][0].squeeze(0)
+                                org_query = org_query / (torch.norm(org_query, dim=1, keepdim=True))
                                 controller.reset()
-                                
-                                org_mask = get_crossattn_map(args, attn_stores,args.trg_layer,
-                                                             thredhold=args.anormal_thred,
-                                                             binarize = True)
-                                org_mask_save_dir = os.path.join(class_base_folder,
-                                                                    f'{name}_org_mask{ext}')
-                                save_latent(org_mask, org_mask_save_dir, org_h, org_w)
-                                
+    
                                 # (2) recon
-                                call_unet(unet, latents[-1], 0, con[:, :args.truncate_length, :], None, 1)
-                                recon_query = controller.query_dict[args.trg_layer][0].squeeze()
+                                recon_latent = latents
+                                call_unet(unet, recon_latent, 0, con, None, 1)
+                                recon_query = controller.query_dict[trg_layer][0].squeeze(0)
                                 controller.reset()
-                                
-                                rec_latent = latents[-1]
-                                call_unet(unet, rec_latent, 0, con[:, :args.truncate_length, :], None, None)
-                                rec_attn_stores = controller.step_store
-                                controller.reset()
-                                rec_mask = get_crossattn_map(args, rec_attn_stores,
-                                                             args.trg_layer,
-                                                             thredhold=args.anormal_thred,
-                                                             binarize = True)
-                                rec_mask_save_dir = os.path.join(class_base_folder,
-                                                                 f'{name}_recon_mask{ext}')
-                                save_latent(rec_mask, rec_mask_save_dir, org_h, org_w)
-                                
+                                recon_query = recon_query / (torch.norm(recon_query, dim=1, keepdim=True))
+    
                                 # (3) anomaly score
-                                # pixel_num, dim
-
-                                query_matrix = torch.matmul(org_query, recon_query.T)
-                                query_matrix = torch.softmax(query_matrix, dim=1)
-                                pix_num = query_matrix.size(0)
-                                res = int(pix_num ** 0.5)
-                                similarity_vector = query_matrix.diag().unsqueeze(0)
-                                
-                                min_score = similarity_vector.min()
-                                if min_score < 0:
-                                    similarity_vector = similarity_vector + min_score
-                                max_score = similarity_vector.max()
-                                similarity_vector = (similarity_vector / max_score).unsqueeze(0)
-                                
-                                anomaly_score = similarity_vector.reshape(res,res)
-
-                                # (4) save
-                                anomaly_score = anomaly_score.detach().cpu().numpy()
+                                anomaly_score = (org_query @ recon_query.T).cpu()
+                                pix_num = anomaly_score.shape[0]
+                                anomaly_score = (torch.eye(pix_num) * anomaly_score).sum(dim=0)
+                                anomaly_score = anomaly_score / anomaly_score.max()  # 0 ~ 1
+                                anomaly_score = anomaly_score.unsqueeze(0).reshape(64, 64)
+                                anomaly_score = anomaly_score.numpy()
+    
                                 anomaly_score_pil = Image.fromarray((255 - (anomaly_score * 255)).astype(np.uint8))
                                 anomaly_score_pil = anomaly_score_pil.resize((org_h, org_w))
                                 anomaly_mask_save_dir = os.path.join(class_base_folder, f'{name}{ext}')
-                                anomaly_score_pil.save(anomaly_mask_save_dir)
-
                                 tiff_anomaly_mask_save_dir = os.path.join(evaluate_class_dir, f'{name}.tiff')
+                                anomaly_score_pil.save(anomaly_mask_save_dir)
                                 anomaly_score_pil.save(tiff_anomaly_mask_save_dir)
                                 """
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
