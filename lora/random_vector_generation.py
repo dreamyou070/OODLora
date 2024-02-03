@@ -338,15 +338,13 @@ class NetworkTrainer:
                         query = torch.cat([query_1, query_2], dim=-1)  # pix_num, 2*dim
                     else :
                         query = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
-
-                    controller.reset()
-
                     if args.cls_training :
                         attn = controller.step_store[layer_1][0].squeeze()  # 1, pix_num, 2
                         cls_map, trigger_map = attn.chunk(2, dim=-1)
                     else :
                         attn = controller.step_store[layer_1][0].squeeze()  # 1, pix_num, 1
                         trigger_map = attn.squeeze()
+                    controller.reset()
                     trigger_map = trigger_map.squeeze()
                     trigger_map = trigger_map.mean(dim=0) # pix_num
                 if 'good' in class_name:
