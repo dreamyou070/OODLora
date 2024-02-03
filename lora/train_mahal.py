@@ -349,13 +349,19 @@ class NetworkTrainer:
                 params.extend(te_lora.parameters())
             trainable_params = [{"params": params, "lr": args.unet_lr}]
 
-            parnet_dir, lora_dir = os.path.split(args.network_weights)
-            name, _ = os.path.splitext(lora_dir)
-            lora_epoch = name.split('-')[-1]
-            parent, _ = os.path.split(parnet_dir)
+            network_weights = '/home/dreamyou070/Lora/OODLora/result/MVTec3D-AD_experiment/bagel/lora_training/normal/res_64_down_1_task_loss_mahal_dist_attn_loss_0.008_actdeact_mahal_anomal/models/epoch-000003.safetensors'
+            base, model_name = os.path.split(network_weights)
+            name, ext = os.path.splitext(model_name)
+            model_epoch_int = int(name.split('-')[-1])
+            base_dir, _ = os.path.split(base)
 
-            mu = torch.load(os.path.join(parent,f"record_lora_eopch_{lora_epoch}_mahalanobis/normal_vector_mean_torch.pt"))
-            cov =  torch.load(os.path.join(parent,f"record_lora_eopch_{lora_epoch}_mahalanobis/normal_vector_cov_torch.pt"))
+            mu_dir = os.path.join(base_dir,
+                                  f'record_lora_eopch_{model_epoch_int}_mahalanobis/normal_vector_mean_torch.pt')
+            cov_dir = os.path.join(base_dir,
+                                   f'record_lora_eopch_{model_epoch_int}_mahalanobis/normal_vectors_cov_torch.pt')
+            mu = torch.load(mu_dir).to(accelerator.device)
+            cov = torch.load(cov_dir).to(accelerator.device)
+            cov = cov * torch.eye(320)
             random_vector_generator = MultivariateNormal(mu, cov)
 
         if args.text_frozen :
@@ -665,10 +671,12 @@ class NetworkTrainer:
             loss_dict = {}
 
         features = []
+
         if not args.unet_frozen :
             mu = torch.randn(320)
             cov = torch.eye(320)
-        random_vector_generator = MultivariateNormal(mu, cov)
+            random_vector_generator = MultivariateNormal(mu, cov)
+
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
 
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
@@ -743,15 +751,16 @@ class NetworkTrainer:
                         query = query_dict[layer_name][0].squeeze()
                         pix_num = query.shape[0]  # 4096
 
-                        for i in range(pix_num):
-                            feat = query[i, :].squeeze()  # dim
-                            if len(features) >= 3000 :
-                                features.pop(0)
-                            features.append(feat.unsqueeze(0))
-                        normal_vectors = torch.cat(features, dim=0)  # sample, dim
-                        mu = torch.mean(normal_vectors, dim=0)
-                        cov = torch.cov(normal_vectors.transpose(0, 1))
-                        random_vector_generator = MultivariateNormal(mu, cov)
+                        if not args.unet_frozen:
+                            for i in range(pix_num):
+                                feat = query[i, :].squeeze()  # dim
+                                if len(features) >= 3000 :
+                                    features.pop(0)
+                                features.append(feat.unsqueeze(0))
+                            normal_vectors = torch.cat(features, dim=0)  # sample, dim
+                            mu = torch.mean(normal_vectors, dim=0)
+                            cov = torch.cov(normal_vectors.transpose(0, 1))
+                            random_vector_generator = MultivariateNormal(mu, cov)
 
                         mahalanobis_dists = [mahal(feat, mu, cov) for feat in normal_vectors]
                         dist_mean = torch.tensor(mahalanobis_dists).mean()

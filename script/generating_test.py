@@ -2,23 +2,21 @@ import os
 import torch
 from torch.distributions.multivariate_normal import MultivariateNormal
 import numpy as np
+"""
+network_weights = '/home/dreamyou070/Lora/OODLora/result/MVTec3D-AD_experiment/bagel/lora_training/normal/res_64_down_1_task_loss_mahal_dist_attn_loss_0.008_actdeact_mahal_anomal/models/epoch-000003.safetensors'
+base, model_name = os.path.split(network_weights)
+name, ext = os.path.splitext(model_name)
+model_epoch_int = int(name.split('-')[-1])
+base_dir, _ = os.path.split(base)
 
-base_dir = '/home/dreamyou070/Lora/OODLora/result/MVTec3D-AD_experiment/bagel/lora_training/normal/random_vector_generating/'
-
-mu_dir =  os.path.join(base_dir, f'record_lora_eopch_7_mahalanobis_only_normal/normal_vector_mean_torch.pt')
-cov_dir = os.path.join(base_dir, f'record_lora_eopch_7_mahalanobis_only_normal/normal_vectors_cov_torch.pt')
-
-mu = torch.load(mu_dir)
-cov = torch.load(cov_dir)
-cov = cov * torch.eye(320)
-
+mu_dir =  os.path.join(base_dir, f'record_lora_eopch_{model_epoch_int}_mahalanobis/normal_vector_mean_torch.pt')
+cov_dir = os.path.join(base_dir, f'record_lora_eopch_{model_epoch_int}_mahalanobis/normal_vectors_cov_torch.pt')
+"""
+mu = torch.randn(320).to('cuda')
+cov = torch.eye(320).to('cuda')
+random_vector_generator = MultivariateNormal(mu, cov)
+#random_vector_generator.to('cuda')
 def mahal(u, v, cov):
     delta = u - v
     m = torch.dot(delta, torch.matmul(cov, delta))
     return torch.sqrt(m)
-
-random_vector_generator = MultivariateNormal(mu, cov)
-for i in range(100) :
-    random_vector = random_vector_generator.sample()
-    dist = mahal(random_vector*100, mu, cov)
-    print(f'{i} trial dist = {dist}')
