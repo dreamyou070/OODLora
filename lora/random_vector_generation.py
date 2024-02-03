@@ -214,7 +214,7 @@ class NetworkTrainer:
         parent, network_dir = os.path.split(args.network_weights)
         name, ex = os.path.splitext(network_dir)
         lora_epoch = int(name.split('-')[-1])
-        record_save_dir = os.path.join(args.output_dir, f"record_lora_eopch_{lora_epoch}")
+        record_save_dir = os.path.join(args.output_dir, f"record_lora_eopch_{lora_epoch}_mahalanobis")
         os.makedirs(record_save_dir, exist_ok=True)
 
         print(f' (4.1) config saving')
@@ -382,11 +382,11 @@ class NetworkTrainer:
             return torch.sqrt(m)
 
         normal_vectors = torch.cat(list(normal_vector_list), dim=0)  # sample, dim
-        normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-        normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+        mu = torch.mean(normal_vectors, dim=0)
+        cov = torch.cov(normal_vectors.transpose(0, 1))
 
-        torch.save(normal_vector_mean_torch, os.path.join(record_save_dir, "normal_vector_mean_torch.pt"))
-        torch.save(normal_vectors_cov_torch, os.path.join(record_save_dir, "normal_vectors_cov_torch.pt"))
+        torch.save(mu, os.path.join(record_save_dir, "normal_vector_mean_torch.pt"))
+        torch.save(cov, os.path.join(record_save_dir, "normal_vectors_cov_torch.pt"))
 
         if args.normal_good_check :
             if len(normal_vector_good_score_list) > 0:
@@ -394,7 +394,9 @@ class NetworkTrainer:
                 normal_vector_mean_torch = torch.mean(normal_vector_good_score, dim=0)
                 normal_vectors_cov_torch = torch.cov(normal_vector_good_score.transpose(0, 1))
 
-
+        from torch.distributions.multivariate_normal import MultivariateNormal
+        random_vector_generator = MultivariateNormal(mu,
+                                                     torch.eye(320))
 
 
         # ----------------------------------------------------------------------------------------------------------- #
