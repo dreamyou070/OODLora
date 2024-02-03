@@ -483,6 +483,7 @@ if __name__ == "__main__":
     parser.add_argument("--normal_with_background", action="store_true", )
     parser.add_argument("--only_object_position", action="store_true", )
     parser.add_argument("--do_check_anormal", action="store_true", )
+    parser.add_argument("--seed",type=int, default=42)
     args = parser.parse_args()
     trainer = NetworkTrainer()
     trainer.train(args)
