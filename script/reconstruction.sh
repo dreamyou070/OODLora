@@ -1,7 +1,7 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_down_1_mahal_attn_0.001_act_deact_text_frozen_without_task_loss_no_actdeact"
+folder_name="res_64_down_task_loss_mahal_dist_attn_loss_0.001_actdeact"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
