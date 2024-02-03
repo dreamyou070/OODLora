@@ -1,28 +1,16 @@
-import importlib, argparse, gc, math, os, sys, random, time, json, toml, shutil
-import numpy as np
+import importlib, argparse, gc, math, os, sys, random, time, json, toml
 from PIL import Image
-from multiprocessing import Value
-from tqdm import tqdm
 from accelerate.utils import set_seed
-from diffusers import DDPMScheduler
 from library import model_util
 import library.train_util as train_util
 import library.config_util as config_util
-from library.config_util import (ConfigSanitizer, BlueprintGenerator, )
 import library.custom_train_functions as custom_train_functions
-from library.custom_train_functions import prepare_scheduler_for_custom_training
 import torch
 from torch import nn
-import wandb
 from attention_store import AttentionStore
-from random import sample
-import einops
-from scipy.spatial.distance import mahalanobis
 from utils.model_utils import call_unet
-from utils.model_utils import get_state_dict, init_prompt
 from torchvision import transforms
 from utils.image_utils import load_image
-
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -217,41 +205,7 @@ class NetworkTrainer:
         print(f'\n step 2. dataset')
         tokenizer = train_util.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
-        train_util.prepare_dataset_args(args, True)
-        use_class_caption = args.class_caption is not None
 
-        print(f' (2.1) training dataset')
-        if args.dataset_class is None:
-            blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, False, True))
-            user_config = {}
-            user_config['datasets'] = [{"subsets": None}]
-            subsets_dict_list = []
-            for subsets_dict in config_util.generate_dreambooth_subsets_config_by_subdirs(args.train_data_dir,
-                                                                                          args.reg_data_dir,
-                                                                                          args.class_caption):
-                if use_class_caption:
-                    subsets_dict['class_caption'] = args.class_caption
-                subsets_dict_list.append(subsets_dict)
-                user_config['datasets'][0]['subsets'] = subsets_dict_list
-            print(f'User config: {user_config}')
-
-            # --------------------------------------------------------------------------------------------------------
-            """ config_util.generate_dreambooth_subsets_config_by_subdirs """
-            blueprint = blueprint_generator.generate(user_config,  # about data directory
-                                                     args,
-                                                     tokenizer=tokenizer)
-
-            print(f'blueprint.dataset_group : {blueprint.dataset_group}')
-            train_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
-
-        else:
-            train_dataset_group = train_util.load_arbitrary_dataset(args, tokenizer)
-
-        print(f' (2.3) collater')
-        current_epoch = Value("i", 0)
-        current_step = Value("i", 0)
-        ds_for_collater = train_dataset_group if args.max_data_loader_n_workers == 0 else None
-        collater = train_util.collater_class(current_epoch, current_step, ds_for_collater)
 
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
@@ -278,10 +232,8 @@ class NetworkTrainer:
                                                                                           accelerator)
         training_text_encoders = training_text_encoder if isinstance(training_text_encoder, list) else [
             training_text_encoder]
-
         model_version, frozen_text_encoder, enc_vae, frozen_unet = self.load_target_model(args, weight_dtype,
                                                                                           accelerator)
-        frozen_text_encoders = frozen_text_encoder if isinstance(frozen_text_encoder, list) else [frozen_text_encoder]
 
         train_util.replace_unet_modules(frozen_unet, args.mem_eff_attn, args.xformers, args.sdpa)
         train_util.replace_unet_modules(training_unet, args.mem_eff_attn, args.xformers, args.sdpa)
@@ -295,8 +247,7 @@ class NetworkTrainer:
         net_kwargs = {}
         if args.dim_from_weights:
             frozen_network, _ = network_module.create_network_from_weights(1, args.network_weights, vae,
-                                                                           frozen_text_encoder, frozen_unet,
-                                                                           **net_kwargs)
+                                           frozen_text_encoder, frozen_unet,**net_kwargs)
             training_network, _ = network_module.create_network_from_weights(1, args.network_weights, vae,
                                                                              training_text_encoder, training_unet,
                                                                              **net_kwargs)
@@ -477,383 +428,6 @@ class NetworkTrainer:
             for d in mahalanobis_dists :
                 f.write(f'{d},')
 
-        # ----------------------------------------------------------------------------------------------------------- #
-        # [2] normal vectors
-        """
-        normal_vector = torch.cat(list(normal_vector_list), dim=0).cpu()
-        normal_vector_np = normal_vector.cpu().numpy()
-        normal_mahalanobis_dists = [mahalanobis(vector, good_score_normal_vectors_mean, good_score_normal_vectors_cov)
-                             for vector in normal_vector_np]
-        plt.figure()
-        plt.hist(normal_mahalanobis_dists)
-        plt.savefig(os.path.join(record_save_dir, "normal_mahalanobis_distances.png"))
-        save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.txt")
-        with open(save_dir, 'w') as f:
-            for d in normal_mahalanobis_dists :
-                f.write(f'{d},')
-        """
-        # ----------------------------------------------------------------------------------------------------------- #
-        # [3] anormal vectors
-        anormal_vectors = torch.cat(list(anormal_vector_list), dim=0)
-        anomal_dists = []
-        for feat in anormal_vectors:
-            anomal_dist = mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch)
-            print(f'anomal_dist : {anomal_dist}')
-            anomal_dists.append(anomal_dist)
-
-        plt.figure()
-        plt.hist(anomal_dists)
-        plt.savefig(os.path.join(record_save_dir, "anormal_mahalanobis_distances.png"))
-        save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.txt")
-        with open(save_dir, 'w') as ff:
-            for d in anomal_dists :
-                ff.write(f'{d},')
-
-        """
-        # ----------------------------------------------------------------------------------------------------------- #
-        print(f'\n step 7. optimizer (unet frozen) ')
-        unet_loras = training_network.unet_loras
-        te_loras = training_network.text_encoder_loras
-        for unet_lora in unet_loras:
-            unet_lora.requires_grad = False
-        params = []
-        for te_lora in te_loras:
-            params.extend(te_lora.parameters())
-        trainable_params = [{"params": params, "lr": args.text_encoder_lr}]
-        optimizer_name, optimizer_args, optimizer = train_util.get_optimizer(args, trainable_params)
-
-        print(f' step 8. dataloader')
-        n_workers = min(args.max_data_loader_n_workers, os.cpu_count() - 1)
-        train_dataloader = torch.utils.data.DataLoader(train_dataset_group, batch_size=args.train_batch_size,
-                                                       shuffle=True,
-                                                       collate_fn=collater, num_workers=n_workers,
-                                                       persistent_workers=args.persistent_data_loader_workers, )
-        if args.max_train_epochs is not None:
-            args.max_train_steps = args.max_train_epochs * math.ceil(
-                len(train_dataloader) / accelerator.num_processes / args.gradient_accumulation_steps)
-            accelerator.print(f"override steps. steps for {args.max_train_epochs} epochs / {args.max_train_steps}")
-
-        print(f'\n step 9. lr')
-        lr_scheduler = train_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
-        if args.full_fp16:
-            assert (args.mixed_precision == "fp16"), "full_fp16 requires mixed precision='fp16'"
-            accelerator.print("enable full fp16 training.")
-            training_network.to(weight_dtype)
-        elif args.full_bf16:
-            assert (
-                    args.mixed_precision == "bf16"), "full_bf16 requires mixed precision='bf16' / mixed_precision='bf16'"
-            accelerator.print("enable full bf16 training.")
-            training_network.to(weight_dtype)
-        frozen_unet.requires_grad_(False)
-        frozen_unet.to(dtype=weight_dtype)
-        training_unet.requires_grad_(False)
-        training_unet.to(dtype=weight_dtype)
-        for frozen_text_encoder in frozen_text_encoders:
-            frozen_text_encoder.requires_grad_(False)
-
-        print(f'\n step 10. training preparing')
-        frozen_unet, frozen_text_encoder, frozen_network = frozen_unet.to(accelerator.device), frozen_text_encoder.to(
-            accelerator.device), \
-            frozen_network.to(accelerator.device)
-        training_unet = training_unet.to(accelerator.device)
-        training_text_encoder, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-            training_text_encoder, optimizer, train_dataloader, lr_scheduler)
-        training_network = training_network.to(accelerator.device)
-        training_network.prepare_grad_etc(training_text_encoder, training_unet)
-        vae.requires_grad_(False)
-        vae.eval()
-        vae.to(accelerator.device, dtype=vae_dtype)
-        if args.full_fp16:
-            train_util.patch_accelerator_for_fp16_training(accelerator)
-
-        frozen_attention_storer = AttentionStore()
-        register_attention_control(frozen_unet, frozen_attention_storer, mask_threshold=args.mask_threshold)
-        training_attention_storer = AttentionStore()
-        register_attention_control(training_unet, training_attention_storer, mask_threshold=args.mask_threshold)
-
-        print(f' * * * * * * * * training * * * * * * * * ')
-        num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
-        num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
-        if (args.save_n_epoch_ratio is not None) and (args.save_n_epoch_ratio > 0):
-            args.save_every_n_epochs = math.floor(num_train_epochs / args.save_n_epoch_ratio) or 1
-        total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
-        accelerator.print("running training / 学習開始")
-        accelerator.print(
-            f"  num train images * repeats / 学習画像の数×繰り返し回数: {train_dataset_group.num_train_images}")
-        accelerator.print(f"  num reg images / 正則化画像の数: {train_dataset_group.num_reg_images}")
-        accelerator.print(f"  num batches per epoch / 1epochのバッチ数: {len(train_dataloader)}")
-        accelerator.print(f"  num epochs / epoch数: {num_train_epochs}")
-        accelerator.print(f"  gradient accumulation steps / 勾配を合計するステップ数 = {args.gradient_accumulation_steps}")
-        accelerator.print(f"  total optimization steps / 学習ステップ数: {args.max_train_steps}")
-        progress_bar = tqdm(range(args.max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process,
-                            desc="steps")
-        global_step = 0
-        noise_scheduler = DDPMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear",
-                                        num_train_timesteps=1000, clip_sample=False)
-        prepare_scheduler_for_custom_training(noise_scheduler, accelerator.device)
-        loss_list = []
-        loss_total = 0.0
-        del train_dataset_group
-        # callback for step start
-        if hasattr(training_network, "on_step_start"):
-            on_step_start = training_network.on_step_start
-        else:
-            on_step_start = lambda *args, **kwargs: None
-
-        # function for saving/removing
-        def save_model(ckpt_name, unwrapped_nw, steps, epoch_no, force_sync_upload=False):
-            os.makedirs(args.output_dir, exist_ok=True)
-            save_model_base_dir = os.path.join(args.output_dir, "models")
-            os.makedirs(save_model_base_dir, exist_ok=True)
-            ckpt_file = os.path.join(save_model_base_dir, ckpt_name)
-
-            accelerator.print(f"\nsaving checkpoint: {ckpt_file}")
-            sai_metadata = train_util.get_sai_model_spec(None, args, self.is_sdxl, True, False)
-            unwrapped_nw.save_weights(ckpt_file, save_dtype, {})
-
-        def remove_model(old_ckpt_name):
-            old_ckpt_file = os.path.join(args.output_dir, old_ckpt_name)
-            if os.path.exists(old_ckpt_file):
-                accelerator.print(f"removing old checkpoint: {old_ckpt_file}")
-                os.remove(old_ckpt_file)
-
-        # training loop
-        if is_main_process:
-            loss_dict = {}
-
-        for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
-
-            accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
-            current_epoch.value = epoch + 1
-            training_network.on_epoch_start(training_text_encoder, training_unet)
-            for step, batch in enumerate(train_dataloader):
-                current_step.value = global_step
-                with accelerator.accumulate(training_network):
-                    on_step_start(training_text_encoder, training_unet)
-                    with torch.no_grad():
-                        if "latents" in batch and batch["latents"] is not None:
-                            latents = batch["latents"].to(accelerator.device)
-                        else:
-                            latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
-                            if torch.any(torch.isnan(latents)):
-                                accelerator.print("NaN found in latents, replacing with zeros")
-                                latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
-                        latents = latents * self.vae_scale_factor
-                        random_latent = torch.randn_like(latents)  # head, z_dim
-                        anomal_latent = latents + random_latent  # head, 4, h, w
-                    with torch.set_grad_enabled(train_text_encoder):
-                        frozen_text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers,
-                                                                          frozen_text_encoders,weight_dtype)
-                        training_text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers,
-                                                                         training_text_encoders,
-                                                                         weight_dtype)
-                        if args.truncate_pad:
-                            training_text_encoder_conds = training_text_encoder_conds[:, :args.truncate_length, :]
-                            frozen_text_encoder_conds = frozen_text_encoder_conds[:, :args.truncate_length, :]
-                    # ------------------------------------- get position ------------------------------------- #
-                    noise, frozen_noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                              noise_scheduler, anomal_latent)
-                    with accelerator.autocast():
-                        self.call_unet(args, accelerator, frozen_unet, frozen_noisy_latents,
-                                       timesteps, frozen_text_encoder_conds, batch, weight_dtype, 1, args.trg_layer)
-
-                    frozen_query_dict = frozen_attention_storer.query_dict
-                    frozen_attention_storer.reset()
-
-                    # (1) targetting anomal position
-                    ############################################## 1. targetting anomal position ##############################################
-                    layer_1 = args.trg_layer_list[0]
-                    if args.concat_query :
-                        layer_2 = args.trg_layer_list[1]
-                        query_1 = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
-                        query_2 = controller.query_dict[layer_2][1].squeeze()  # pix_num, dim
-                        anormal_query = torch.cat([query_1, query_2], dim=-1)  # pix_num, 2*dim
-                    else :
-                        anormal_query = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
-                    anormal_query = anormal_query.squeeze()             # 4096
-                    pix_num = anormal_query.shape[0] # 4096             # 4096
-                    res = int(pix_num ** 0.5)                           # 64
-                    img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                    img_mask = img_masks.squeeze()  # res,res
-                    object_position = img_mask.flatten()  # res*res
-
-                    pix_num = anormal_query.shape[0]
-                    anomal_positions = []
-                    for pix_idx in range(pix_num):
-                        feature = anormal_query[pix_idx, :].squeeze()
-                        dist = mahalanobis(feature.detach().cpu(), good_score_normal_vectors_mean,
-                                           good_score_normal_vectors_cov)
-                        if dist > max_dist :
-                            anomal_positions.append(1)
-                        else:
-                            anomal_positions.append(0)
-                    head_num = 8
-                    anomal_positions = torch.tensor(anomal_positions)
-                    anomal_positions = anomal_positions.unsqueeze(0).repeat(head_num, 1).to(
-                        object_position.device)  # head_num, res*res
-                    object_position = object_position.unsqueeze(0).repeat(head_num, 1)  # head_num, res*res
-
-                    # ----------------------------------------------------------------------------------------- #
-                    input_latent = torch.cat((latents, anomal_latent), dim=0)  # 2*head, z_dim
-                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args,
-                                                                                       noise_scheduler,input_latent)
-                    input_text = torch.cat((training_text_encoder_conds, training_text_encoder_conds), dim=0)  # 2*head, seq_len, dim
-                    with accelerator.autocast():
-                        noise_pred = self.call_unet(args, accelerator, training_unet, noisy_latents,
-                                        timesteps, input_text, batch, weight_dtype, 1, args.trg_layer)
-
-                    # ------------------------------------- (1) task loss ------------------------------------- #
-                    if args.do_task_loss:
-                        normal_noise_pred, anormal_noise_pred = torch.chunk(noise_pred, 2, dim=0)
-                        if args.v_parameterization:
-                            target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                        else:
-                            target = noise
-                        if args.act_deact:
-                            target = target.chunk(2, dim=0)[0]
-                        target = target.chunk(2, dim=0)[0]  # head, z_dim, pix_num, pix_num
-                        loss = torch.nn.functional.mse_loss(normal_noise_pred.float(),
-                                                            target.float(), reduction="none")
-                        loss = loss.mean([1, 2, 3])
-                        loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                        loss = loss * loss_weights
-                        task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-                        task_loss = task_loss * args.task_loss_weight
-
-                    # ------------------------------------- (2) attn loss ------------------------------------- #
-                    attn_loss = 0
-                    attn_dict = training_attention_storer.step_store
-                    training_attention_storer.reset()
-                    # (1) targetting anomal position
-                    # down_blocks_0_attentions_0_transformer_blocks_0_attn2
-                    attn = attn_dict[args.training_layer][0].squeeze()  # 16, res*res, 2
-                    pix_num = attn.shape[1]
-                    res = int(pix_num ** 0.5)
-                    normal_attn, anormal_attn = torch.chunk(attn, 2, dim=0)
-                    # -------------------------------------------------------------------------------------
-                    # (3) score map
-                    if args.cls_training:
-                        normal_cls, normal_score = torch.chunk(normal_attn, 2, dim=-1)
-                        anomal_cls, anomal_score = torch.chunk(anormal_attn, 2, dim=-1)
-                        normal_cls_map, anomal_cls_map = normal_cls.squeeze(), anomal_cls.squeeze()
-                    else :
-                        normal_score = normal_attn # 8, res*res, 1
-                        anomal_score = anormal_attn
-                    normal_score_map, anomal_score_map = normal_score.squeeze(), anomal_score.squeeze()
-
-                    normal_trigger_activation = (normal_score_map * object_position).sum(dim=-1)
-                    anomal_trigger_activation = (anomal_score_map * anomal_positions).sum(dim=-1)  # head, pix_num
-                    total_score = torch.ones_like(anomal_trigger_activation)
-                    if args.cls_training:
-                        normal_cls_activation = (normal_cls_map * object_position).sum(dim=-1)
-                        anomal_cls_activation = (anomal_cls_map * anomal_positions).sum(dim=-1)
-
-                    anomal_activation_loss = ((anomal_trigger_activation / total_score)) ** 2  # 8, res*res
-                    activation_loss = args.anormal_weight * anomal_activation_loss
-                    if args.act_deact:
-                        normal_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
-                        activation_loss += args.normal_weight * normal_activation_loss
-                    if args.cls_training:
-                        anomal_cls_loss = (1 - (anomal_cls_activation / total_score)) ** 2
-                        activation_loss += args.anormal_weight * anomal_cls_loss
-                        if args.act_deact:
-                            normal_cls_loss = ((normal_cls_activation / total_score)) ** 2
-                            activation_loss += args.normal_weight * normal_cls_loss
-                    attn_loss += activation_loss
-                    attn_loss = attn_loss.mean()
-
-                    if args.do_task_loss:
-                        loss = task_loss
-                        if args.attn_loss:
-                            loss += args.attn_loss_weight * attn_loss
-                    else:
-                        loss = attn_loss
-                    if is_main_process:
-                        if args.do_task_loss:
-                            loss_dict["loss/task_loss"] = task_loss.item()
-                        if args.attn_loss:
-                            loss_dict["loss/attn_loss"] = attn_loss.item()
-                    accelerator.backward(loss)
-                    # -----------------------------------------------------------------------------------------------
-                    if accelerator.sync_gradients and args.max_grad_norm != 0.0:
-                        params_to_clip = training_network.get_trainable_params()
-                        accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
-                    optimizer.step()
-                    lr_scheduler.step()
-                    optimizer.zero_grad(set_to_none=True)
-                    
-
-                # Checks if the accelerator has performed an optimization step behind the scenes
-                if accelerator.sync_gradients:
-                    progress_bar.update(1)
-                    global_step += 1
-                    # self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer,
-                    #                   text_encoder, unet)
-                    frozen_attention_storer.reset()
-                    training_attention_storer.reset()
-
-                    # 指定ステップごとにモデルを保存
-                    if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
-                        accelerator.wait_for_everyone()
-                        if accelerator.is_main_process:
-                            ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
-                            save_model(ckpt_name, accelerator.unwrap_model(training_network), global_step, epoch)
-                            if args.save_state:
-                                train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
-                            remove_step_no = train_util.get_remove_step_no(args, global_step)
-                            if remove_step_no is not None:
-                                remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as,
-                                                                                 remove_step_no)
-                                remove_model(remove_ckpt_name)
-                # ------------------------------------------------------------------------------------------------------
-                # 1) total loss
-                
-                current_loss = loss.detach().item()
-                if epoch == args.start_epoch:
-                    loss_list.append(current_loss)
-                else:
-                    loss_total -= loss_list[step]
-                    loss_list[step] = current_loss
-                loss_total += current_loss
-                avr_loss = loss_total / len(loss_list)
-
-                logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-                progress_bar.set_postfix(**logs)
-
-                # ------------------------------------------------------------------------------------------------------
-                # 2) total loss
-                if args.logging_dir is not None:
-                    # accelerator.log(logs, step=global_step)
-                    if is_main_process:
-                        logs = self.generate_step_logs(loss_dict, lr_scheduler)
-                if global_step >= args.max_train_steps:
-                    break
-                
-                
-            accelerator.wait_for_everyone()
-            if args.save_every_n_epochs is not None:
-                saving = (epoch + 1) % args.save_every_n_epochs == 0 and (
-                        epoch + 1) < args.start_epoch + num_train_epochs
-                if is_main_process and saving:
-                    ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
-                    save_model(ckpt_name, accelerator.unwrap_model(training_network), global_step, epoch + 1)
-                    remove_epoch_no = train_util.get_remove_epoch_no(args, epoch + 1)
-                    if remove_epoch_no is not None:
-                        remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as,
-                                                                          remove_epoch_no)
-                        remove_model(remove_ckpt_name)
-                    if args.save_state:
-                        train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
-            # self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
-            frozen_attention_storer.reset()
-            training_attention_storer.reset()
-            
-        if is_main_process:
-            network_ = accelerator.unwrap_model(training_network)
-        accelerator.end_training()
-        if is_main_process and args.save_state:
-            train_util.save_state_on_train_end(args, accelerator)
-        """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -932,8 +506,6 @@ if __name__ == "__main__":
         if type(v) is not list:
             raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (arg))
         return v
-
-
     parser.add_argument("--trg_part", type=arg_as_list, default=['down', 'up'])
     parser.add_argument("--trg_layer", type=str)
     parser.add_argument("--trg_layer_list", type=arg_as_list, default=['down_blocks_0_attentions_1_transformer_blocks_0_attn2',
