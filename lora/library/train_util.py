@@ -27,7 +27,6 @@ import hashlib
 import subprocess
 from io import BytesIO
 import toml
-
 from tqdm import tqdm
 import torch
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -62,9 +61,7 @@ from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipel
 import library.model_util as model_util
 import library.huggingface_util as huggingface_util
 import library.sai_model_spec as sai_model_spec
-
-# from library.attention_processors import FlashAttnProcessor
-# from library.hypernetwork import replace_attentions_for_hypernetwork
+from utils.perlin import rand_perlin_2d_np
 from library.original_unet import UNet2DConditionModel
 
 # Tokenizer: checkpointから読み込むのではなくあらかじめ提供されているものを使う
@@ -1088,6 +1085,7 @@ class BaseDataset(torch.utils.data.Dataset):
             random_scale_y = torch.randint(min_perlin_scale, perlin_scale, (1,))
             perlin_scalex = 2 ** (random_scale_x.numpy()[0])
             perlin_scaley = 2 ** (random_scale_y.numpy()[0])
+
             perlin_noise = rand_perlin_2d_np((512, 512), (perlin_scalex, perlin_scaley))  # 0 ~ 1
             threshold = 0.5
             perlin_thr = np.where(perlin_noise > threshold, np.ones_like(perlin_noise),
