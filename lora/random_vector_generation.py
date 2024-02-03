@@ -308,6 +308,9 @@ class NetworkTrainer:
         back_vector_list = set()
         anormal_vector_list = set()
         num_samples = len(mahal_dataset)
+        normal_scores = []
+        anomal_scores = []
+
         for i in range(num_samples):
             sample = mahal_dataset.__getitem__(i)
             class_name = sample['class_name']
@@ -337,7 +340,6 @@ class NetworkTrainer:
                         attn = controller.step_store[layer_1][0].squeeze()  # 1, pix_num, 1
                         trigger_map = attn.squeeze()
                     controller.reset()
-                    print(f'cls_map : {cls_map.shape} | trigger_map : {trigger_map.shape}')
                     trigger_map = trigger_map.squeeze()
                     trigger_map = trigger_map.mean(dim=0) # pix_num
                     cls_map = cls_map.squeeze()
@@ -352,7 +354,6 @@ class NetworkTrainer:
                                 feature = feature.unsqueeze(0)
                             if type(attn_score) == torch.Tensor:
                                 attn_score = attn_score.item()
-                            print(f'attn_score : {attn_score} | cls_score : {cls_score}')
 
                             if attn_score > 0.5 :
                                 normal_vector_good_score_list.add(feature)
@@ -360,6 +361,7 @@ class NetworkTrainer:
                             else :
                                 normal_vector_bad_score_list.add(feature)
                                 normal_vector_list.add(feature)
+                            normal_scores.append(attn_score)
                         else:
                             if feature.dim() == 1:
                                 feature = feature.unsqueeze(0)
@@ -368,10 +370,14 @@ class NetworkTrainer:
 
                     for pix_idx in range(mask_vector.shape[0]):
                         feature = query[pix_idx, :].cpu()
+                        attn_score = trigger_map[pix_idx].cpu()  # score
                         if mask_vector[pix_idx] == 1:
                             if feature.dim() == 1:
                                 feature = feature.unsqueeze(0)
+                                if type(attn_score) == torch.Tensor:
+                                    attn_score = attn_score.item()
                             anormal_vector_list.add(feature)
+                            anomal_scores.append(attn_score)
                 if i % 20 == 0:
                     print(f'normal_vector_good_score_list : {len(normal_vector_good_score_list)}, '
                           f'normal_vector_bad_score_list : {len(normal_vector_bad_score_list)}, '
@@ -420,6 +426,10 @@ class NetworkTrainer:
             with open(save_dir, 'w') as f:
                 for d in mahalanobis_dists:
                     f.write(f'{d},')
+            score_save_dir = os.path.join(record_save_dir, "normal_score.txt")
+            with open(score_save_dir, 'w') as f:
+                for d in normal_scores:
+                    f.write(f'{d},')
         # ----------------------------------------------------------------------------------------------------------- #
         if args.do_check_anormal:
             anormal_vectors = torch.cat(list(anormal_vector_list), dim=0)  # sample, dim
@@ -431,6 +441,10 @@ class NetworkTrainer:
             save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.txt")
             with open(save_dir, 'w') as f:
                 for d in a_mahalanobis_dists:
+                    f.write(f'{d},')
+            anomal_score_save_dir = os.path.join(record_save_dir, "anormal_score.txt")
+            with open(anomal_score_save_dir, 'w') as f:
+                for d in anomal_scores:
                     f.write(f'{d},')
 
 
