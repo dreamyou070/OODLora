@@ -831,9 +831,7 @@ class NetworkTrainer:
                     if args.do_attn_loss:
                         loss = args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
                     else :
-
                         loss = args.mahalanobis_loss_weight * dist_loss
-                        print(f'loss : {loss}')
                 # ------------------------------------------------------------------------------------------------- #
                 if is_main_process:
                     if args.do_task_loss:
