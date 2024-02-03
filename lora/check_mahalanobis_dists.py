@@ -11,6 +11,7 @@ from attention_store import AttentionStore
 from utils.model_utils import call_unet
 from torchvision import transforms
 from utils.image_utils import load_image
+import matplotlib.pyplot as plt
 try:
     from setproctitle import setproctitle
 except (ImportError, ModuleNotFoundError):
@@ -411,22 +412,53 @@ class NetworkTrainer:
             m = torch.dot(delta, torch.matmul(cov, delta))
             return torch.sqrt(m)
 
-        normal_vector_good_score = torch.cat(list(normal_vector_good_score_list), dim=0)  # sample, dim
-        normal_vector_mean_torch = torch.mean(normal_vector_good_score, dim=0)
-        normal_vectors_cov_torch = torch.cov(normal_vector_good_score.transpose(0, 1))
+        if len(normal_vector_good_score_list) > 0:
+            normal_vector_good_score = torch.cat(list(normal_vector_good_score_list), dim=0)  # sample, dim
+            normal_vector_mean_torch = torch.mean(normal_vector_good_score, dim=0)
+            normal_vectors_cov_torch = torch.cov(normal_vector_good_score.transpose(0, 1))
+        else :
+            normal_vectors = torch.cat(list(normal_vector_list), dim=0)  # sample, dim
+            normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+            normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+
+
         # ----------------------------------------------------------------------------------------------------------- #
         # [1] good mahalanobis distances
-        mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
-                             feat in normal_vector_good_score]
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.hist(mahalanobis_dists)
-        save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
-        plt.savefig(save_dir)
-        save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.txt")
-        with open(save_dir, 'w') as f:
-            for d in mahalanobis_dists :
-                f.write(f'{d},')
+        if len(normal_vector_good_score_list) > 0:
+            mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
+                                 feat in normal_vector_good_score]
+            plt.figure()
+            plt.hist(mahalanobis_dists)
+            save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.png")
+            plt.savefig(save_dir)
+            save_dir = os.path.join(record_save_dir, "normal_goodscore_mahalanobis_distances.txt")
+            with open(save_dir, 'w') as f:
+                for d in mahalanobis_dists :
+                    f.write(f'{d},')
+        else :
+            mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
+                                 feat in normal_vectors]
+            plt.figure()
+            plt.hist(mahalanobis_dists)
+            save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.png")
+            plt.savefig(save_dir)
+            save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.txt")
+            with open(save_dir, 'w') as f:
+                for d in mahalanobis_dists:
+                    f.write(f'{d},')
+        # ----------------------------------------------------------------------------------------------------------- #
+        if args.do_check_anormal:
+            anormal_vectors = torch.cat(list(anormal_vector_list), dim=0)  # sample, dim
+            a_mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
+                                 feat in anormal_vectors]
+            plt.figure()
+            plt.hist(a_mahalanobis_dists)
+            save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.png")
+            plt.savefig(save_dir)
+            save_dir = os.path.join(record_save_dir, "anormal_mahalanobis_distances.txt")
+            with open(save_dir, 'w') as f:
+                for d in a_mahalanobis_dists:
+                    f.write(f'{d},')
 
 
 if __name__ == "__main__":

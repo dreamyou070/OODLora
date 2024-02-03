@@ -2,12 +2,11 @@
 class_name="bagel"
 data_source='train_normal'
 data_folder='MVTec3D-AD'
-train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
 all_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex2/rgb"
 normal_folder='normal'
 save_folder="test_check_normal_anormal_mahalanobis_dist"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_only_dist_loss/models/epoch-000004.safetensors"
+network_weights="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_only_dist_loss/models/epoch-000005.safetensors"
 
 start_epoch=0
 port_number=59517
@@ -23,25 +22,12 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --lr_warmup_steps 144 --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 --resolution '512,512' --save_every_n_epochs 1 \
   --sample_every_n_epochs 1 \
   --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
-  --max_train_steps 1000 \
-  --max_train_epochs 500 \
-  --attn_loss \
-  --task_loss_weight 1.0 --seed 42 --class_caption 'good' \
+  --seed 42 --class_caption 'good' \
   --wandb_init_name ${class_name} \
-  --train_data_dir "$train_data_dir" \
   --all_data_dir "${all_data_dir}" \
   --start_epoch $start_epoch \
   --output_dir "$output_dir" \
-  --cross_map_res "[64]" \
-  --detail_64_down \
-  --trg_position "['down']" \
-  --trg_part '["attn_1"]' \
-  --act_deact \
-  --cls_training \
-  --do_task_loss \
-  --normal_weight 0.001 \
   --do_check_anormal \
   --trg_layer_list "['up_blocks_3_attentions_2_transformer_blocks_0_attn2']" \
   --network_weights "$network_weights" \
   --training_layer 'up_blocks_3_attentions_2_transformer_blocks_0_attn2'
-  # try layer = query feature checking
