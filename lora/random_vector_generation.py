@@ -348,6 +348,7 @@ class NetworkTrainer:
                         if feature.dim() == 1:
                             feature = feature.unsqueeze(0)
                         attn_score = trigger_map[pix_idx].cpu()  # score
+
                         if type(attn_score) == torch.Tensor:
                             attn_score = attn_score.item()
 
@@ -357,10 +358,8 @@ class NetworkTrainer:
                             else :
                                 normal_vector_bad_score_list.add(feature)
                             normal_vector_list.add(feature)
-                            print(f' ** nomal score : {attn_score}')
                             normal_scores.append(attn_score)
                         else:
-                            print(f' ** back score : {attn_score}')
                             back_vector_list.add(feature)
                 else:
                     for pix_idx in range(mask_vector.shape[0]):
@@ -370,14 +369,9 @@ class NetworkTrainer:
                         attn_score = trigger_map[pix_idx].cpu()  # score
                         if type(attn_score) == torch.Tensor:
                             attn_score = attn_score.item()
-
                         if mask_vector[pix_idx] == 1:
-                            print(f'anomal score : {attn_score}')
                             anormal_vector_list.add(feature)
                             anomal_scores.append(attn_score)
-                        else :
-                            print(f'anomal sample not anomal position score : {attn_score}')
-
                 if i % 20 == 0:
                     print(f'normal_vector_good_score_list : {len(normal_vector_good_score_list)}, '
                           f'normal_vector_bad_score_list : {len(normal_vector_bad_score_list)}, '
@@ -390,30 +384,25 @@ class NetworkTrainer:
 
         normal_vectors = torch.cat(list(normal_vector_list), dim=0)  # sample, dim
         import numpy as np
-        mu = torch.mean(normal_vectors, dim=0).squeeze()
-        dim = normal_vectors.shape[0]
-        cov = torch.cov(normal_vectors.transpose(0, 1))
-        cov = torch.eye(dim).to(cov.device) * cov
 
-        torch.save(mu, os.path.join(record_save_dir, "normal_vector_mean_torch.pt"))
-        torch.save(cov, os.path.join(record_save_dir, "normal_vectors_cov_torch.pt"))
+
+        mean = torch.mean(normal_vectors.cpu(), dim=0).numpy()
+        cov = np.cov(normal_vectors.cpu().numpy(), rowvar=False)
+
+        mu = torch.tensor(mean)
+        cov = torch.tensor(cov)
+        cov = torch.eye(cov.shape[0]) * cov
+
+
+        torch.save(mu.cpu(), os.path.join(record_save_dir, "normal_vector_mean_torch.pt"))
+        torch.save(cov.cpu(), os.path.join(record_save_dir, "normal_vectors_cov_torch.pt"))
 
         if args.normal_good_check :
+
             if len(normal_vector_good_score_list) > 0:
                 normal_vector_good_score = torch.cat(list(normal_vector_good_score_list), dim=0)  # sample, dim
                 normal_vector_mean_torch = torch.mean(normal_vector_good_score, dim=0)
                 normal_vectors_cov_torch = torch.cov(normal_vector_good_score.transpose(0, 1))
-
-
-        from torch.distributions.multivariate_normal import MultivariateNormal
-
-        random_vector_generator = MultivariateNormal(mu,cov)
-
-
-        # ----------------------------------------------------------------------------------------------------------- #
-        # [1] good mahalanobis distances
-        if args.normal_good_check:
-            if len(normal_vector_good_score_list) > 0:
 
                 mahalanobis_dists = [mahal(feat, mu, cov) for feat in normal_vector_good_score]
                 plt.figure()
@@ -425,20 +414,20 @@ class NetworkTrainer:
                 with open(save_dir, 'w') as f:
                     for d in mahalanobis_dists :
                         f.write(f'{d},')
-        else :
-            mahalanobis_dists = [mahal(feat, mu, cov) for feat in normal_vectors]
-            plt.figure()
-            plt.hist(mahalanobis_dists)
-            save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.png")
-            plt.savefig(save_dir)
-            save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.txt")
-            with open(save_dir, 'w') as f:
-                for d in mahalanobis_dists:
-                    f.write(f'{d},')
-            score_save_dir = os.path.join(record_save_dir, "normal_score.txt")
-            with open(score_save_dir, 'w') as f:
-                for d in normal_scores:
-                    f.write(f'{d},')
+
+        mahalanobis_dists = [mahal(feat, mu, cov) for feat in normal_vectors]
+        plt.figure()
+        plt.hist(mahalanobis_dists)
+        save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.png")
+        plt.savefig(save_dir)
+        save_dir = os.path.join(record_save_dir, "normal_mahalanobis_distances.txt")
+        with open(save_dir, 'w') as f:
+            for d in mahalanobis_dists:
+                f.write(f'{d},')
+        score_save_dir = os.path.join(record_save_dir, "normal_score.txt")
+        with open(score_save_dir, 'w') as f:
+            for d in normal_scores:
+                f.write(f'{d},')
         # ----------------------------------------------------------------------------------------------------------- #
         if args.do_check_anormal:
             anormal_vectors = torch.cat(list(anormal_vector_list), dim=0)  # sample, dim
@@ -455,6 +444,9 @@ class NetworkTrainer:
             with open(anomal_score_save_dir, 'w') as f:
                 for d in anomal_scores:
                     f.write(f'{d},')
+
+        from torch.distributions.multivariate_normal import MultivariateNormal
+        random_vector_generator = MultivariateNormal(mu, cov)
 
 
 if __name__ == "__main__":

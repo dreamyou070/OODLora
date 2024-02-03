@@ -51,15 +51,12 @@ conv_inv = torch.eye(320)
 sample = torch.randn(320)
 
 
-embedding_vectors = torch.randn(10, 320)
-cov = np.cov(embedding_vectors.numpy(), rowvar=False)
+import numpy as np
+normal_vectors = torch.randn(10, 320)
+mean = torch.mean(normal_vectors.cpu(), dim=0).numpy()
+cov = np.cov(normal_vectors.cpu().numpy(), rowvar=False)
 
-cov_torch = torch.tensor(cov)
-cov_torch = torch.eye(320) * cov_torch
-print(f'cov = {cov_torch}')
-dist = mahalanobis(sample, mean, cov_torch)
-print(f'dist = {dist}')
-random_vector_generator = MultivariateNormal(mean, cov_torch)
-random_vector = random_vector_generator.sample()
-dist = mahalanobis(random_vector, mean, cov_torch)
-print(f'dist = {dist}')
+mu = torch.tensor(mean)
+cov = torch.tensor(cov)
+cov = torch.eye(cov.shape[0]) * cov
+generator = MultivariateNormal(mu, cov)
