@@ -360,8 +360,8 @@ class NetworkTrainer:
             cov_dir = os.path.join(base_dir,
                                    f'record_lora_eopch_{model_epoch_int}_mahalanobis/normal_vectors_cov_torch.pt')
             mu = torch.load(mu_dir).to(accelerator.device)
-            cov = torch.load(cov_dir)
-            cov = (cov * torch.eye(320)).to(accelerator.device)
+            cov = torch.load(cov_dir).to(accelerator.device)
+            cov = cov * torch.eye(320)
             random_vector_generator = MultivariateNormal(mu, cov)
 
         if args.text_frozen :
