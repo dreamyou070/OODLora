@@ -507,7 +507,13 @@ if __name__ == "__main__":
         "--vae", type=str, default=None,
         help="path to checkpoint of vae to replace / VAEを入れ替える場合、VAEのcheckpointファイルまたはディレクトリ"
     )
-
+    parser.add_argument(
+        "--mem_eff_attn",
+        action="store_true",
+        help="use memory efficient attention for CrossAttention / CrossAttentionに省メモリ版attentionを使う",
+    )
+    parser.add_argument("--xformers", action="store_true",
+                        help="use xformers for CrossAttention / CrossAttentionにxformersを使う")
     args = parser.parse_args()
     trainer = NetworkTrainer()
     trainer.train(args)
