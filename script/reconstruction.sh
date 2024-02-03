@@ -1,13 +1,13 @@
 #! /bin/bash
 
 class_name="bagel"
-folder_name="res_64_down_task_loss_mahal_attn_loss_0.01_actdeact"
+folder_name="res_64_down_task_loss_mahal_dist_attn_loss_0.001_actdeact"
 data_name="MVTec3D-AD"
 normality_folder='normal'
 network_weight_folder="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/${folder_name}/models"
 detection_network_weights="../result/${data_name}_experiment/${class_name}/lora_training/${normality_folder}/object_detection/models/epoch-000110.safetensors"
 img_folder="../../../MyData/anomaly_detection/${data_name}/${class_name}"
-port_number=50001
+port_number=50004
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config --main_process_port ${port_number} ../lora/reconstruction.py \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
