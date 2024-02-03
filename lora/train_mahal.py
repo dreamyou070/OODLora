@@ -41,7 +41,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore, ):  
                 for p in range(pixel_num):
                     random_vector = trg_indexs_list.sample()
                     random_hidden_states.append(random_vector)
-                random_hidden_states = torch.stack(random_hidden_states, dim=0)
+                random_hidden_states = torch.stack(random_hidden_states, dim=0).to(hidden_states.device)
                 random_query = self.to_q(random_hidden_states)
                 random_query = self.reshape_heads_to_batch_dim(random_query)
 
