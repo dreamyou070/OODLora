@@ -218,7 +218,7 @@ def main(args):
 
 
                             # (2) recon
-                            recon_latent = latents
+                            recon_latent = latents[-1]
                             call_unet(unet, recon_latent, 0, con, None, 1)
                             attn_stores = controller.step_store
                             controller.reset()
