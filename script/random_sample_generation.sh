@@ -12,7 +12,7 @@ start_epoch=0
 port_number=58875
 
 NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
-  --main_process_port $port_number ../lora/train_mahal.py --process_title parksooyeon \
+  --main_process_port $port_number ../lora/random_sample_generation.py --process_title parksooyeon \
   --wandb_init_name ${class_name} --log_with wandb --wandb_api_key 3a3bc2f629692fa154b9274a5bbe5881d47245dc  \
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora --network_dim 64 --network_alpha 4 \
