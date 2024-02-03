@@ -389,8 +389,8 @@ class NetworkTrainer:
         mean = torch.mean(normal_vectors.cpu(), dim=0).numpy()
         cov = np.cov(normal_vectors.cpu().numpy(), rowvar=False)
 
-        mu = torch.tensor(mean)
-        cov = torch.tensor(cov)
+        mu = torch.tensor(mean,dtype = torch.float32)
+        cov = torch.tensor(cov,dtype = torch.float32)
         #cov = torch.eye(cov.shape[0]) * cov
 
 
