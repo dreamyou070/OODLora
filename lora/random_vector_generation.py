@@ -335,54 +335,38 @@ class NetworkTrainer:
                     if con.dim() != 3:
                         con = con.unsqueeze(0)
                     call_unet(frozen_unet, latent, 0, con[:, :args.truncate_length, :], 1, args.trg_layer_list)
-                    layer_1 = args.trg_layer_list[0]
-                    query = controller.query_dict[layer_1][0].squeeze()  # pix_num, dim
-                    if args.cls_training :
-                        attn = controller.step_store[layer_1][0].squeeze()  # 8, pix_num, 2
-                        cls_map, trigger_map = attn.chunk(2, dim=-1)
-                    else :
-                        attn = controller.step_store[layer_1][0].squeeze()  # 1, pix_num, 1
-                        trigger_map = attn.squeeze()
+                    attn_stores = controller.step_store
+                    query_dict = controller.query_dict
                     controller.reset()
-                    trigger_map = trigger_map.squeeze()
-                    trigger_map = trigger_map.mean(dim=0) # pix_num
-                    cls_map = cls_map.squeeze()
-                    cls_map = cls_map.mean(dim=0) # pix_num
+                    from utils.model_utils import get_crossattn_map
+                    trg_layer = args.trg_layer_list[0]
+                    query = query_dict[trg_layer][0]
+                    for trg_layer in args.trg_layer_list:
+                        trigger_map = get_crossattn_map(args, attn_stores, trg_layer,
+                                                        binarize = False).flatten()
+                feature = query[pix_idx, :].cpu()
+                if feature.dim() == 1:
+                    feature = feature.unsqueeze(0)
+                attn_score = trigger_map[pix_idx].cpu()  # score
+                if type(attn_score) == torch.Tensor:
+                    attn_score = attn_score.item()
+                # -------------------------------------------------------------------------------------------------------- #
                 if 'good' in class_name:
                     for pix_idx in range(mask_vector.shape[0]):
-                        feature = query[pix_idx, :].cpu()
-                        attn_score = trigger_map[pix_idx].cpu() # score
-                        cls_score = cls_map[pix_idx].cpu() # score
-                        if type(attn_score) == torch.Tensor:
-                            attn_score = attn_score.item()
-
                         if mask_vector[pix_idx] == 1:
-                            if feature.dim() == 1:
-                                feature = feature.unsqueeze(0)
                             if attn_score > 0.5 :
                                 normal_vector_good_score_list.add(feature)
-                                normal_vector_list.add(feature)
                             else :
                                 normal_vector_bad_score_list.add(feature)
-                                normal_vector_list.add(feature)
+                            normal_vector_list.add(feature)
                             print(f' ** nomal score : {attn_score}')
                             normal_scores.append(attn_score)
                         else:
                             print(f' ** back score : {attn_score}')
-                            if feature.dim() == 1:
-                                feature = feature.unsqueeze(0)
                             back_vector_list.add(feature)
                 else:
                     for pix_idx in range(mask_vector.shape[0]):
-                        feature = query[pix_idx, :].cpu()
-                        attn_score = trigger_map[pix_idx].cpu()  # score
-                        if type(attn_score) == torch.Tensor:
-                            attn_score = attn_score.item()
                         if mask_vector[pix_idx] == 1:
-                            if feature.dim() == 1:
-                                feature = feature.unsqueeze(0)
-                                if type(attn_score) == torch.Tensor:
-                                    attn_score = attn_score.item()
                             print(f'anomal score : {attn_score}')
                             anormal_vector_list.add(feature)
                             anomal_scores.append(attn_score)
