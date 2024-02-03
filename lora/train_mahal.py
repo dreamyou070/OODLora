@@ -756,6 +756,7 @@ class NetworkTrainer:
                                 features.pop(0)
                             features.append(feat.unsqueeze(0))
                         normal_vectors = torch.cat(features, dim=0)  # sample, dim
+                        print(f'normal_vectors.shape : {normal_vectors.shape}')
                         mu = torch.mean(normal_vectors, dim=0)
                         cov = torch.cov(normal_vectors.transpose(0, 1))
                         random_vector_generator = MultivariateNormal(mu, cov)
