@@ -756,12 +756,6 @@ class NetworkTrainer:
                         mahalanobis_dists = [mahal(feat, mu, cov) for feat in normal_vectors]
                         dist_mean = torch.tensor(mahalanobis_dists).mean()
                         dist_loss += dist_mean.requires_grad_()
-
-                        print("dist_loss", dist_loss)
-
-
-
-
                         if args.do_attn_loss:
                             """ if all be white, loss would be 0 """
                             normal_trigger_activation = score_map.sum(dim=-1)  # 8

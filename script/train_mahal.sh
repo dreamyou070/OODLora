@@ -26,6 +26,6 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --do_task_loss --task_loss_weight 1.0 \
   --do_dist_loss --mahalanobis_loss_weight 1 \
   --do_attn_loss --attn_loss_weight 0.009 --cls_training --normal_weight 0.7 --act_deact --act_deact_weight 1.0 \
-  --trg_layer_list "['down_blocks_0-_attentions_1_transformer_blocks_0_attn2']"
+  --trg_layer_list "['down_blocks_0_attentions_1_transformer_blocks_0_attn2']"
   # --add_random_query
   # --text_frozen --network_weights "$network_weights"
