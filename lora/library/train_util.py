@@ -1027,7 +1027,7 @@ class BaseDataset(torch.utils.data.Dataset):
         input_ids2_list = []
         class_input_ids_list = []
         latents_list = []
-        images = []
+        images, anomal_images = [], []
         original_sizes_hw = []
         crop_top_lefts = []
         target_sizes_hw = []
@@ -1056,24 +1056,9 @@ class BaseDataset(torch.utils.data.Dataset):
             parent, name = os.path.split(absolute_path)      # parent = 120_good , name = 000.png
             super_parent, class_name = os.path.split(parent) # class_name = 120_good
             super_super_parent, change = os.path.split(super_parent) # dir = 120
-            anormal_mask_dir = os.path.join(super_super_parent, 'gt', class_name, name)
+            #anormal_mask_dir = os.path.join(super_super_parent, 'gt', class_name, name)
             pixel_mask_dir = os.path.join(super_super_parent, 'mask', class_name, name)
-
-            # second code : if higher than 0, be 1 other 0
-            # third, if higher than 0.5, than 1 else 0
             p = 0.5
-            anormal_mask_64 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
-            anormal_mask_64 = torch.where(anormal_mask_64 > p, 1, 0).float()
-            anormal_mask_32 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
-            anormal_mask_32 = torch.where(anormal_mask_32 > p, 1, 0).float()
-            anormal_mask_16 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((16, 16), Image.BICUBIC))
-            anormal_mask_16 = torch.where(anormal_mask_16 > p, 1, 0).float()
-            anormal_mask_8 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((8, 8), Image.BICUBIC))
-            anormal_mask_8 = torch.where(anormal_mask_8 > p, 1, 0).float()
-            anormal_mask_dict = {64 : anormal_mask_64,
-                                 32 : anormal_mask_32,16 : anormal_mask_16,8 : anormal_mask_8}
-            anormal_masks.append(anormal_mask_dict)
-
             pixel_mask_64 = transforms.ToTensor()(
                 Image.open(pixel_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
             pixel_mask_64 = torch.where(pixel_mask_64 > p, 1, 0).float()
@@ -1088,7 +1073,51 @@ class BaseDataset(torch.utils.data.Dataset):
             pixel_mask_dict = {64: pixel_mask_64, 32: pixel_mask_32, 16: pixel_mask_16, 8: pixel_mask_8}
             img_masks.append(pixel_mask_dict)
 
-
+            # --------------------------------------------------------------------------------------------------------------
+            # (3) anomal image making
+            anomal_base_dir = os.path.join(super_super_parent, 'gen_images')
+            gen_anomal_images = os.listdir(anomal_base_dir)
+            random_index = random.randint(0, len(gen_anomal_images) - 1)
+            anomal_img_path = os.path.join(anomal_base_dir, gen_anomal_images[random_index])
+            anomal_img_pil = Image.open(anomal_img_path).resize((512, 512))
+            anomal_img_np = np.array(anomal_img_pil).astype(np.float32) / 255.0  # 512, 512, 3, value = 0 - 1
+            # (3.1) perlin noise
+            perlin_scale = 6
+            min_perlin_scale = 2
+            random_scale_x = torch.randint(min_perlin_scale, perlin_scale, (1,))
+            random_scale_y = torch.randint(min_perlin_scale, perlin_scale, (1,))
+            perlin_scalex = 2 ** (random_scale_x.numpy()[0])
+            perlin_scaley = 2 ** (random_scale_y.numpy()[0])
+            perlin_noise = rand_perlin_2d_np((512, 512), (perlin_scalex, perlin_scaley))  # 0 ~ 1
+            threshold = 0.5
+            perlin_thr = np.where(perlin_noise > threshold, np.ones_like(perlin_noise),
+                                  np.zeros_like(perlin_noise))
+            perlin_thr_np = np.expand_dims(perlin_thr, axis=2)  # [512,512,1]
+            img_thr_np = anomal_img_np * perlin_thr_np
+            beta = torch.rand(1).numpy()[0] * 0.8
+            augmented_img = (1 - perlin_thr_np) * image + (1 - beta) * img_thr_np + beta * image * (perlin_thr_np)
+            # --------------------------------------------------------------------------------------------------------------
+            # (4) anomal mask
+            anomal_mask_pil = Image.fromarray((perlin_thr * 255).astype(np.uint8))
+            #anormal_mask_64 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
+            #anormal_mask_64 = torch.where(anormal_mask_64 > p, 1, 0).float()
+            #anormal_mask_32 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
+            #anormal_mask_32 = torch.where(anormal_mask_32 > p, 1, 0).float()
+            #anormal_mask_16 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((16, 16), Image.BICUBIC))
+            #anormal_mask_16 = torch.where(anormal_mask_16 > p, 1, 0).float()
+            #anormal_mask_8 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((8, 8), Image.BICUBIC))
+            #anormal_mask_8 = torch.where(anormal_mask_8 > p, 1, 0).float()
+            anormal_mask_64 = transforms.ToTensor()(anomal_mask_pil.resize((64, 64), Image.BICUBIC))
+            anormal_mask_64 = torch.where(anormal_mask_64 > p, 1, 0).float()
+            anormal_mask_32 = transforms.ToTensor()(anomal_mask_pil.resize((32, 32), Image.BICUBIC))
+            anormal_mask_32 = torch.where(anormal_mask_32 > p, 1, 0).float()
+            anormal_mask_16 = transforms.ToTensor()(anomal_mask_pil.resize((16, 16), Image.BICUBIC))
+            anormal_mask_16 = torch.where(anormal_mask_16 > p, 1, 0).float()
+            anormal_mask_8 = transforms.ToTensor()(anomal_mask_pil.resize((8, 8), Image.BICUBIC))
+            anormal_mask_8 = torch.where(anormal_mask_8 > p, 1, 0).float()
+            anormal_mask_dict = {64 : anormal_mask_64, 32 : anormal_mask_32,
+                                 16 : anormal_mask_16,8 : anormal_mask_8}
+            anormal_masks.append(anormal_mask_dict)
 
 
             caption = str(class_name.split('_')[-1]).strip()
@@ -1098,6 +1127,7 @@ class BaseDataset(torch.utils.data.Dataset):
             flipped = subset.flip_aug and random.random() < 0.5  # not flipped or flipped with 50% chance
 
             # image/latentsを処理する
+
             if self.enable_bucket:
                 img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
             else:
@@ -1112,14 +1142,10 @@ class BaseDataset(torch.utils.data.Dataset):
                         img = img[:, p : p + self.width]
                         masked_img = masked_img[:, p : p + self.width]
                 im_h, im_w = img.shape[0:2]
-                #masked_img_h, masked_img_w = masked_img.shape[0:2]
                 assert (im_h == self.height and im_w == self.width), f"image size is small / 画像サイズが小さいようです: {image_info.absolute_path}"
                 original_size = [im_w, im_h]
                 crop_ltrb = (0, 0, 0, 0)
-                # augmentation
-
                 aug = self.aug_helper.get_augmentor(subset.color_aug)
-
                 # ------------------------------------------------------------------------------------------------------------------------ #
                 # augmentationを行う
                 if aug is not None:
@@ -1152,8 +1178,10 @@ class BaseDataset(torch.utils.data.Dataset):
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                 latents = None
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
+                anomal_image = self.image_transforms(augmented_img)
 
             images.append(image)
+            anomal_images.append(anomal_image)
 
             latents_list.append(latents)
             target_size = (image.shape[2], image.shape[1]) if image is not None else (latents.shape[2] * 8, latents.shape[1] * 8)
@@ -1285,6 +1313,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
         if images[0] is not None:
             images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
+            anomal_images = torch.stack(anomal_images).to(memory_format=torch.contiguous_format).float()
 
         else:
             images = None
@@ -1299,6 +1328,7 @@ class BaseDataset(torch.utils.data.Dataset):
         example["loss_weights"] = torch.FloatTensor(loss_weights)
         example["caption_attention_mask"] = caption_attention_masks
         example["images"] = images
+        example["anormal_images"] = anomal_images
         example["mask_imgs"] = mask_imgs
         example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
         example["captions"] = captions

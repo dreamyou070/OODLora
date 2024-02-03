@@ -756,7 +756,6 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
         # 8. Denoising loop
         latent_list = []
         for i, t in enumerate(self.progress_bar(timesteps)):
-            print(f't : {i}')
             if reference_image is not None:
                 ref = self.scheduler.add_noise(reference_image, noise, t)
             # expand the latents if we are doing classifier free guidance
