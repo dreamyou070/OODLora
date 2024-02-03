@@ -503,6 +503,11 @@ if __name__ == "__main__":
         action="store_true",
         help="enable low RAM optimization. e.g. load models to VRAM instead of RAM (for machines which have bigger VRAM than RAM such as Colab and Kaggle) / メインメモリが少ない環境向け最適化を有効にする。たとえばVRAMにモデルを読み込むなど（ColabやKaggleなどRAMに比べてVRAMが多い環境向け）",
     )
+    parser.add_argument(
+        "--vae", type=str, default=None,
+        help="path to checkpoint of vae to replace / VAEを入れ替える場合、VAEのcheckpointファイルまたはディレクトリ"
+    )
+
     args = parser.parse_args()
     trainer = NetworkTrainer()
     trainer.train(args)
