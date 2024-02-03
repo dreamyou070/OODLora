@@ -297,11 +297,17 @@ class NetworkTrainer:
         mahal_dataset = Mahalanobis_dataset(args.all_data_dir)
         controller = AttentionStore()
         register_attention_control(frozen_unet, controller, mask_threshold=args.mask_threshold)
+        #with torch.no_grad():
+        #    text_input = tokenizer([args.class_caption], padding="max_length",
+        #                           max_length=tokenizer.model_max_length, truncation=True, return_tensors="pt", )
+        #    text = text_input.input_ids.to(device)
+        #    text_embeddings = frozen_text_encoder(text)[0][:, :2, :]
+
+        from utils.model_utils import get_state_dict, init_prompt
         with torch.no_grad():
-            text_input = tokenizer([args.class_caption], padding="max_length",
-                                   max_length=tokenizer.model_max_length, truncation=True, return_tensors="pt", )
-            text = text_input.input_ids.to(device)
-            text_embeddings = frozen_text_encoder(text)[0][:, :2, :]
+            context = init_prompt(tokenizer, frozen_text_encoder, device, args.prompt)
+        uncon, con = torch.chunk(context, 2)
+
 
         normal_vector_list = set()
         normal_vector_good_score_list, normal_vector_bad_score_list = set(), set()
@@ -325,9 +331,11 @@ class NetworkTrainer:
                 mask = sample['object_mask']  # res,res
                 mask_vector = mask.flatten()  # pix_num
                 with torch.no_grad():
-                    if text_embeddings.dim() != 3:
-                        text_embeddings = text_embeddings.unsqueeze(0)
-                    call_unet(frozen_unet, latent, 0, text_embeddings.to(device)[:,:2,:], 1, args.trg_layer_list)
+                    if con.dim() != 3:
+                        con = con.unsqueeze(0)
+                    #call_unet(frozen_unet, latent, 0, text_embeddings.to(device)[:,:2,:], 1, args.trg_layer_list)
+                    call_unet(frozen_unet, latent, 0, con[:, :args.truncate_length, :], 1, args.trg_layer_list)
+
                     layer_1 = args.trg_layer_list[0]
                     if args.concat_query :
                         layer_2 = args.trg_layer_list[1]
