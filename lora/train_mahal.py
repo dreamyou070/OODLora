@@ -720,7 +720,7 @@ class NetworkTrainer:
                     loss = loss.mean([1, 2, 3])
                     loss_weights = batch["loss_weights"]  # 各sampleごとのweight
                     loss = loss * loss_weights
-                    task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                    task_loss = loss.mean()  
                     task_loss = task_loss * args.task_loss_weight
 
                 # ------------------------------------- (2) attn loss ------------------------------------- #
@@ -768,17 +768,16 @@ class NetworkTrainer:
                             total_score = torch.ones_like(normal_trigger_activation).sum(dim=-1)  # 8
                             normal_trigger_activation_loss = (1 - (normal_trigger_activation / total_score)) ** 2  # 8, res*res
                             anormal_trigger_activation_loss = (anormal_trigger_activation / total_score) ** 2  # 8, res*res
-                            #activation_loss = args.normal_weight * normal_trigger_activation_loss
+                            activation_loss = args.normal_weight * normal_trigger_activation_loss
                             # ---------------------------------- deactivating ------------------------------------ #
                             if args.act_deact :
-                                #activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
-                                activation_loss = args.act_deact_weight * anormal_trigger_activation_loss
+                                activation_loss += args.act_deact_weight * anormal_trigger_activation_loss
                             if args.cls_training:
                                 normal_cls_activation_loss = cls_map.sum(dim=-1)  # 8
                                 anormal_cls_activation_loss = cls_random_map.sum(dim=-1)  # 8
                                 normal_cls_activation_loss = (normal_cls_activation_loss / total_score) ** 2
                                 anormal_cls_activation_loss = (1 - (anormal_cls_activation_loss / total_score)) ** 2
-                                #activation_loss += args.normal_weight * normal_cls_activation_loss
+                                activation_loss += args.normal_weight * normal_cls_activation_loss
                                 if args.act_deact :
                                     activation_loss += args.act_deact_weight * anormal_cls_activation_loss
                             attn_loss += activation_loss
