@@ -1,5 +1,6 @@
 #! /bin/bash
 
+
 class_name="bagel"
 folder_name="res_64_down_task_loss_mahal_dist_attn_loss_0.008_actdeact_perlin_noise_second_code_normal_with_back"
 data_name="MVTec3D-AD"
