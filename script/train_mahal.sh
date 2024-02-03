@@ -30,4 +30,3 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --mahalanobis_loss_weight 1 \
   # --add_random_query
   # --text_frozen --network_weights "$network_weights"
-  # --do_task_loss --task_loss_weight 1 --act_deact --act_deact_weight 1.0 \
