@@ -720,7 +720,7 @@ class NetworkTrainer:
                     loss = loss.mean([1, 2, 3])
                     loss_weights = batch["loss_weights"]  # 各sampleごとのweight
                     loss = loss * loss_weights
-                    task_loss = loss.mean()  
+                    task_loss = loss.mean()
                     task_loss = task_loss * args.task_loss_weight
 
                 # ------------------------------------- (2) attn loss ------------------------------------- #
