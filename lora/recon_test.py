@@ -105,6 +105,7 @@ def register_attention_control(unet: nn.Module, controller: AttentionStore,
 
 def main(args):
     parent = os.path.split(args.network_weights)[0]  # unique_folder,
+    parent, _ = os.path.split(parent)
     args.output_dir = os.path.join(parent, 'reconstruction_with_test_data_20240203')
     if args.training_test :
         args.output_dir = os.path.join(parent, 'reconstruction_with_training_data_20240203')
@@ -207,6 +208,7 @@ def main(args):
                             org_vae_latent = image2latent(org_img, vae, device, weight_dtype)
                             # ------------------------------------- [1] anomal mask ------------------------------ #
                             # real network is getting good !
+                            network.restore()
                             network.load_weights(args.network_weights)
                             network.to(device)
                             controller = AttentionStore()
@@ -245,8 +247,10 @@ def main(args):
                             score_diff = score_diff.cpu().numpy()
                             score_diff_map = Image.fromarray((score_diff * 255).astype(np.uint8)).resize((org_h, org_w))
                             score_diff_map.save(os.path.join(class_base_folder, f'{name}_score_diff{ext}'))
+                    break
                 break
             break
+
 
 
 if __name__ == "__main__":
