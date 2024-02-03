@@ -20,5 +20,5 @@ def mahal(u, v, cov):
 random_vector_generator = MultivariateNormal(mu, cov)
 for i in range(100) :
     random_vector = random_vector_generator.sample()
-    dist = mahal(random_vector, mu, cov)
+    dist = mahal(random_vector*100, mu, cov)
     print(f'{i} trial dist = {dist}')
