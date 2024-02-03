@@ -484,7 +484,7 @@ if __name__ == "__main__":
     parser.add_argument("--only_object_position", action="store_true", )
     parser.add_argument("--do_check_anormal", action="store_true", )
     parser.add_argument("--seed",type=int, default=42)
-    parser.add_argument("--logging_dir",type=str,default=None,)
+    parser.add_argument("--logging_dir",type=str,default='logs')
     parser.add_argument("--log_with",type=str,default=None,choices=["tensorboard", "wandb", "all"],)
     parser.add_argument("--log_prefix", type=str, default=None,help="add prefix for each log directory")
     parser.add_argument("--log_tracker_name",type=str,default=None,)
