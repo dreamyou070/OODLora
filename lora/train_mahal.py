@@ -842,9 +842,10 @@ class NetworkTrainer:
                     loss = args.mahalanobis_loss_weight * dist_loss + args.attn_loss_weight * attn_loss
                 # ------------------------------------------------------------------------------------------------- #
                 if is_main_process:
-                    loss_dict["loss/task_loss"] = task_loss.item()
+                    if args.do_task_loss:
+                        loss_dict["loss/task_loss"] = task_loss.item()
                     loss_dict["loss/attn_loss"] = attn_loss.item()
-                    loss_dict["loss/dist_loss_1"] = dist_loss.item()
+                    loss_dict["loss/dist_loss"] = dist_loss.item()
                 accelerator.backward(loss)
 
                 if accelerator.sync_gradients and args.max_grad_norm != 0.0:
