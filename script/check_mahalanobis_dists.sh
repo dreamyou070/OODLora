@@ -18,9 +18,8 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_con
   --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
   --network_module networks.lora \
   --network_dim 64 --network_alpha 4 \
-  --optimizer_type AdamW --lr_scheduler cosine_with_restarts \
   --resolution '512,512' \
-  --seed 42 --class_caption 'good' \
+  --class_caption 'good' \
   --all_data_dir "${all_data_dir}" \
   --output_dir "$output_dir" \
   --do_check_anormal \
