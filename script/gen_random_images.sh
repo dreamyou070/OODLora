@@ -3,7 +3,8 @@
 class_name="bagel"
 data_source='train_normal'
 data_folder='MVTec3D-AD'
-train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
+#train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/${data_source}/rgb"
+train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/train_ex2/rgb"
 normal_folder='normal'
 save_folder="res_64_down_task_loss_mahal_dist_attn_loss_0.001_actdeact_perline_noise"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
