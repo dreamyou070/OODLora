@@ -300,6 +300,7 @@ class NetworkTrainer:
         network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
         print(' (5.4) lora resume?')
         if args.network_weights is not None:
+            print(f'loading network')
             info = network.load_weights(args.network_weights)
             accelerator.print(f"load network weights from {args.network_weights}: {info}")
         if args.gradient_checkpointing:
@@ -490,7 +491,7 @@ class NetworkTrainer:
                                                                trg_layer_list =None)
             global_num = 0
             for i in range(20):
-                latents = pipeline(prompt='bagel',
+                latents = pipeline(prompt='good',
                                    height=512,
                                    width=512,
                                    num_inference_steps=30,
