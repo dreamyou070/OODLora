@@ -485,7 +485,9 @@ class NetworkTrainer:
                                                                scheduler=scheduler,
                                                                safety_checker=None,
                                                                feature_extractor=None,
-                                                               requires_safety_checker=False, )
+                                                               requires_safety_checker=False,
+                                                               random_vector_generator=None,
+                                                               trg_layer_list =None)
             global_num = 0
             for i in range(20):
                 latents = pipeline(prompt='bagel',
