@@ -298,6 +298,7 @@ class NetworkTrainer:
         train_unet = not args.network_train_text_encoder_only
         train_text_encoder = not args.network_train_unet_only
         network.apply_to(text_encoder, unet, train_text_encoder, train_unet)
+
         print(' (5.4) lora resume?')
         if args.network_weights is not None:
             print(f'loading network')
