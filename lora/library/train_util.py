@@ -1072,12 +1072,12 @@ class BaseDataset(torch.utils.data.Dataset):
 
             # --------------------------------------------------------------------------------------------------------------
             # (3) anomal image making
-            anomal_base_dir = os.path.join(super_super_parent, 'gen_images')
+            anomal_base_dir = os.path.join(super_super_parent, 'gen_images_20240204')
             gen_anomal_images = os.listdir(anomal_base_dir)
             random_index = random.randint(0, len(gen_anomal_images) - 1)
             anomal_img_path = os.path.join(anomal_base_dir, gen_anomal_images[random_index])
             anomal_img = load_image(anomal_img_path, self.height, self.width)
-
+            """
             # (3.1) perlin noise
             perlin_scale = 6
             min_perlin_scale = 0
@@ -1115,6 +1115,7 @@ class BaseDataset(torch.utils.data.Dataset):
             anormal_mask_dict = {64 : anormal_mask_64, 32 : anormal_mask_32,
                                  16 : anormal_mask_16,8 : anormal_mask_8}
             anormal_masks.append(anormal_mask_dict)
+            """
 
 
             caption = str(class_name.split('_')[-1]).strip()
@@ -1127,6 +1128,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
             if self.enable_bucket:
                 img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
+
             else:
                 im_h, im_w = img.shape[0:2]
                 if im_h > self.height or im_w > self.width:
