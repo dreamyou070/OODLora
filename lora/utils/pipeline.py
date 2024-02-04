@@ -771,15 +771,7 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
 
             unet_additional_args = {}
             # predict the noise residual
-            if self.random_vector_generator is not None and i == 0 :
-                noise_pred = self.unet(latent_model_input,
-                                       t,
-                                       encoder_hidden_states=text_embeddings,
-                                       trg_indexs_list=self.random_vector_generator,
-                                       mask=self.trg_layer_list,
-                                       **unet_additional_args).sample
-            else :
-                noise_pred = self.unet(latent_model_input, t, encoder_hidden_states=text_embeddings, **unet_additional_args).sample
+            noise_pred = self.unet(latent_model_input, t, encoder_hidden_states=text_embeddings, **unet_additional_args).sample
 
             # perform guidance
             if do_classifier_free_guidance:
@@ -1007,4 +999,7 @@ class AnomalyDetectionStableDiffusionPipeline(StableDiffusionPipeline):
             is_cancelled_callback=is_cancelled_callback,
             callback_steps=callback_steps,
         )
+
+
+
 
