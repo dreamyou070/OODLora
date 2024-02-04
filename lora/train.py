@@ -700,7 +700,7 @@ class NetworkTrainer:
 
                         #normal_position = torch.stack([normal_position.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)  # 8, res*res
                         #normal_position = torch.where((normal_position == 1), 1, 0)  # 8, res*res
-                        anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
+                        #anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
                         #back_position = 1 - normal_position
 
                         #if args.normal_with_back :
