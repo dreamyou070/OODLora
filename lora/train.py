@@ -606,7 +606,8 @@ class NetworkTrainer:
         if is_main_process:
             gradient_dict = {}
             loss_dict = {}
-        features = []
+        nomal_features = []
+        anomal_features = []
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
 
             accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + num_train_epochs}")
@@ -688,47 +689,58 @@ class NetworkTrainer:
                         pix_num = query.shape[0]  # 4096             # 4096
                         res = int(pix_num ** 0.5)  # 64
 
-                        """
-                        anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)
-                        anormal_mask = anormal_mask.squeeze()  # res,res
-                        anormal_mask = torch.stack([anormal_mask.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)  # 8, res*res
 
-                        normal_position = batch["img_masks"][0][res].unsqueeze(0)
-                        normal_position = normal_position.squeeze()  # res,res
-                        object_position = normal_position.flatten()  # pix_num
+                        #anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)
+                        #anormal_mask = anormal_mask.squeeze()  # res,res
+                        #anormal_mask = torch.stack([anormal_mask.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)  # 8, res*res
 
-                        normal_position = torch.stack([normal_position.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)  # 8, res*res
-                        normal_position = torch.where((normal_position == 1), 1, 0)  # 8, res*res
+                        #normal_position = batch["img_masks"][0][res].unsqueeze(0)
+                        #normal_position = normal_position.squeeze()  # res,res
+                        #object_position = normal_position.flatten()  # pix_num
+
+                        #normal_position = torch.stack([normal_position.flatten() for i in range(head_num)], dim=0)  # .unsqueeze(-1)  # 8, res*res
+                        #normal_position = torch.where((normal_position == 1), 1, 0)  # 8, res*res
                         anormal_position = torch.where((anormal_mask == 1), 1, 0)  # head, pix_num
-                        back_position = 1 - normal_position
+                        #back_position = 1 - normal_position
 
-                        if args.normal_with_back :
-                            normal_position = normal_position + back_position
-                            object_position = object_position + (1 - object_position)
+                        #if args.normal_with_back :
+                        #    normal_position = normal_position + back_position
+                        #    object_position = object_position + (1 - object_position)
 
                         # (1) object features
                         for i in range(pix_num):
-                            if object_position[i] == 1:
-                                feat = query[i, :].squeeze()  # dim
-                                if len(features) >= 3000 :
-                                    features.pop(0)
-                                features.append(feat.unsqueeze(0))
+                            #if object_position[i] == 1:
+                            nomal_feat = query[i, :].squeeze()  # dim
+                            anomal_feat = random_query[i, :].squeeze()  # dim
+                            if len(nomal_features) >= 3000 :
+                                nomal_features.pop(0)
+                                anomal_features.pop(0)
+                            nomal_features.append(nomal_feat)
+                            anomal_features.append(anomal_feat)
                         
-                        normal_vectors = torch.cat(features, dim=0)  # sample, dim
+                        normal_vectors = torch.cat(nomal_features, dim=0)  # sample, dim
                         normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
                         normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
+
+                        anomal_vectors = torch.cat(anomal_features, dim=0)  # sample, dim
 
                         def mahal(u, v, cov):
                             delta = u - v
                             m = torch.dot(delta, torch.matmul(cov, delta))
                             return torch.sqrt(m)
 
-                        mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
-                                             feat in normal_vectors]
-                        dist_max = torch.tensor(mahalanobis_dists).max()
-                        dist_mean = torch.tensor(mahalanobis_dists).mean()
-                        dist_loss += dist_mean.requires_grad_()
-                        """
+                        nomal_mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
+                                                   feat in normal_vectors]
+                        anomal_mahalanobis_dists = [mahal(feat, normal_vector_mean_torch, normal_vectors_cov_torch) for
+                                                        feat in anomal_vectors]
+                        nomal_dist_mean = torch.tensor(nomal_mahalanobis_dists).mean()
+                        anomal_dist_mean = torch.tensor(anomal_mahalanobis_dists).mean()
+                        total_dist = nomal_dist_mean + anomal_dist_mean
+                        nomal_dist_loss = (nomal_dist_mean / total_dist) ** 2
+                        anomal_dist_loss = (1-(anomal_dist_mean / total_dist)) ** 2
+
+                        dist_loss += nomal_dist_loss.requires_grad_() + anomal_dist_loss.requires_grad_()
+
 
                         # ------------------------------------- (2-1) attn loss ------------------------------------- #
                         if args.do_attn_loss:
@@ -762,8 +774,8 @@ class NetworkTrainer:
                                 activation_loss += args.normal_weight * normal_cls_activation_loss
                                 activation_loss += args.act_deact_weight * anormal_cls_activation_loss
                             attn_loss += activation_loss
-                #if args.do_dist_loss:
-                #    dist_loss = dist_loss.mean()
+                if args.do_dist_loss:
+                    dist_loss = dist_loss.mean()
                 if args.do_attn_loss:
                     attn_loss = attn_loss.mean()
                 ########################### 3. attn loss ###########################################################
