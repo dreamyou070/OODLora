@@ -716,8 +716,10 @@ class NetworkTrainer:
                                 nomal_features.pop(0)
                                 anomal_features.pop(0)
                             if nomal_feat.dim() == 1 and anomal_feat.dim() == 1:
-                            nomal_features.append(nomal_feat.unsqueeze(0))
-                            anomal_features.append(anomal_feat.unsqueeze(0))
+                                nomal_feat = nomal_feat.unsqueeze(0)
+                                anomal_feat = anomal_feat.unsqueeze(0)
+                            nomal_features.append(nomal_feat)
+                            anomal_features.append(anomal_feat)
                         
                         normal_vectors = torch.cat(nomal_features, dim=0)  # sample, dim
                         normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
