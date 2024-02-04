@@ -719,7 +719,9 @@ class NetworkTrainer:
                             anomal_features.append(anomal_feat)
                         
                         normal_vectors = torch.cat(nomal_features, dim=0)  # sample, dim
+                        print(f'normal_vectors.shape : {normal_vectors.shape}')
                         normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
+
                         normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
 
                         anomal_vectors = torch.cat(anomal_features, dim=0)  # sample, dim
