@@ -715,15 +715,13 @@ class NetworkTrainer:
                             if len(nomal_features) >= 3000 :
                                 nomal_features.pop(0)
                                 anomal_features.pop(0)
-                            nomal_features.append(nomal_feat)
-                            anomal_features.append(anomal_feat)
+                            if nomal_feat.dim() == 1 and anomal_feat.dim() == 1:
+                            nomal_features.append(nomal_feat.unsqueeze(0))
+                            anomal_features.append(anomal_feat.unsqueeze(0))
                         
                         normal_vectors = torch.cat(nomal_features, dim=0)  # sample, dim
-                        print(f'normal_vectors.shape : {normal_vectors.shape}')
                         normal_vector_mean_torch = torch.mean(normal_vectors, dim=0)
-
                         normal_vectors_cov_torch = torch.cov(normal_vectors.transpose(0, 1))
-
                         anomal_vectors = torch.cat(anomal_features, dim=0)  # sample, dim
 
                         def mahal(u, v, cov):
