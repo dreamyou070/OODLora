@@ -469,7 +469,7 @@ class NetworkTrainer:
         if args.full_fp16:
             train_util.patch_accelerator_for_fp16_training(accelerator)
 
-        class_name = 'bagel'
+        class_name = 'good'
         from utils.pipeline import AnomalyDetectionStableDiffusionPipeline
         import numpy as np
         from diffusers import DDIMScheduler
@@ -499,7 +499,7 @@ class NetworkTrainer:
                 gen_images = pipeline.latents_to_image(gen_latent)
 
                 parent, rgb = os.path.split(args.train_data_dir)
-                gen_image_base_dir = os.path.join(parent, 'gen_images')
+                gen_image_base_dir = os.path.join(parent, 'gen_images_20240204')
                 for i, gen_img in enumerate(gen_images) :
                     global_num += 1
                     gen_img_dir = os.path.join(gen_image_base_dir, f'gen_img_{global_num}.png')

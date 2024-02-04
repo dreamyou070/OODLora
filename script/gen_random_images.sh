@@ -8,7 +8,7 @@ train_data_dir="../../../MyData/anomaly_detection/${data_folder}/${class_name}/t
 normal_folder='normal'
 save_folder="res_64_down_task_loss_mahal_dist_attn_loss_0.001_actdeact_perline_noise"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
-#network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_1_mahal_attn_0.001_act_deact/models/epoch-000002.safetensors"
+network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_1_again/models/epoch-000004.safetensors"
 start_epoch=0
 port_number=58877
 
