@@ -1054,21 +1054,25 @@ class BaseDataset(torch.utils.data.Dataset):
             super_parent, class_name = os.path.split(parent) # class_name = 120_good
             super_super_parent, change = os.path.split(super_parent) # dir = 120
             #anormal_mask_dir = os.path.join(super_super_parent, 'gt', class_name, name)
-            pixel_mask_dir = os.path.join(super_super_parent, 'mask', class_name, name)
+            pixel_mask_dir = os.path.join(super_super_parent, 'object_mask', class_name, name)
+            pixel_mask_pil = Image.open(pixel_mask_dir).convert('L').resize((512,512))
+            pixel_mask_np = np.array(pixel_mask_pil) / 255
+            pixel_mask_np = np.where(pixel_mask_np > 0.5, 1, 0)
+
+
+
             p = 0.5
-            pixel_mask_64 = transforms.ToTensor()(
-                Image.open(pixel_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
+            pixel_mask_64 = transforms.ToTensor()(pixel_mask_pil.resize((64, 64), Image.BICUBIC))
             pixel_mask_64 = torch.where(pixel_mask_64 > p, 1, 0).float()
-            pixel_mask_32 = transforms.ToTensor()(
-                Image.open(pixel_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
+            pixel_mask_32 = transforms.ToTensor()(pixel_mask_pil.resize((32, 32), Image.BICUBIC))
             pixel_mask_32 = torch.where(pixel_mask_32 > p, 1, 0).float()
-            pixel_mask_16 = transforms.ToTensor()(
-                Image.open(pixel_mask_dir).convert('L').resize((16, 16), Image.BICUBIC))
+            pixel_mask_16 = transforms.ToTensor()(pixel_mask_pil.resize((16, 16), Image.BICUBIC))
             pixel_mask_16 = torch.where(pixel_mask_16 > p, 1, 0).float()
-            pixel_mask_8 = transforms.ToTensor()(Image.open(pixel_mask_dir).convert('L').resize((8, 8), Image.BICUBIC))
+            pixel_mask_8 = transforms.ToTensor()(pixel_mask_pil.resize((8, 8), Image.BICUBIC))
             pixel_mask_8 = torch.where(pixel_mask_8 > p, 1, 0).float()
             pixel_mask_dict = {64: pixel_mask_64, 32: pixel_mask_32, 16: pixel_mask_16, 8: pixel_mask_8}
             img_masks.append(pixel_mask_dict)
+
 
             # --------------------------------------------------------------------------------------------------------------
             # (3) anomal image making
@@ -1077,7 +1081,7 @@ class BaseDataset(torch.utils.data.Dataset):
             random_index = random.randint(0, len(gen_anomal_images) - 1)
             anomal_img_path = os.path.join(anomal_base_dir, gen_anomal_images[random_index])
             anomal_img = load_image(anomal_img_path, self.height, self.width)
-            """
+
             # (3.1) perlin noise
             perlin_scale = 6
             min_perlin_scale = 0
@@ -1088,35 +1092,28 @@ class BaseDataset(torch.utils.data.Dataset):
 
             perlin_noise = rand_perlin_2d_np((512, 512), (perlin_scalex, perlin_scaley))  # 0 ~ 1
             threshold = 0.5
-            perlin_thr = np.where(perlin_noise > threshold, np.ones_like(perlin_noise),
-                                  np.zeros_like(perlin_noise))
-            perlin_thr_np = np.expand_dims(perlin_thr, axis=2)  # [512,512,1]
+            perlin_thr = np.where(perlin_noise > threshold, np.ones_like(perlin_noise), np.zeros_like(perlin_noise))
+            anomal_mask = pixel_mask_np * perlin_thr
+
+
+            perlin_thr_np = np.expand_dims(anomal_mask, axis=2)  # [512,512,1]
             anomal_img = (1 - perlin_thr_np) * img + (perlin_thr_np) * anomal_img # np
 
             # --------------------------------------------------------------------------------------------------------------
             # (4) anomal mask
             anomal_mask_pil = Image.fromarray((perlin_thr * 255).astype(np.uint8))
-            #anormal_mask_64 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((64, 64), Image.BICUBIC))
-            #anormal_mask_64 = torch.where(anormal_mask_64 > p, 1, 0).float()
-            #anormal_mask_32 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((32, 32), Image.BICUBIC))
-            #anormal_mask_32 = torch.where(anormal_mask_32 > p, 1, 0).float()
-            #anormal_mask_16 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((16, 16), Image.BICUBIC))
-            #anormal_mask_16 = torch.where(anormal_mask_16 > p, 1, 0).float()
-            #anormal_mask_8 = transforms.ToTensor()(Image.open(anormal_mask_dir).convert('L').resize((8, 8), Image.BICUBIC))
-            #anormal_mask_8 = torch.where(anormal_mask_8 > p, 1, 0).float()
-            anormal_mask_64 = transforms.ToTensor()(anomal_mask_pil.resize((64, 64), Image.BICUBIC))
+            anormal_mask_64 = transforms.ToTensor()(anomal_mask_pil.convert('L').resize((64, 64), Image.BICUBIC))
             anormal_mask_64 = torch.where(anormal_mask_64 > p, 1, 0).float()
-            anormal_mask_32 = transforms.ToTensor()(anomal_mask_pil.resize((32, 32), Image.BICUBIC))
+            anormal_mask_32 = transforms.ToTensor()(anomal_mask_pil.convert('L').resize((32, 32), Image.BICUBIC))
             anormal_mask_32 = torch.where(anormal_mask_32 > p, 1, 0).float()
-            anormal_mask_16 = transforms.ToTensor()(anomal_mask_pil.resize((16, 16), Image.BICUBIC))
+            anormal_mask_16 = transforms.ToTensor()(anomal_mask_pil.convert('L').resize((16, 16), Image.BICUBIC))
             anormal_mask_16 = torch.where(anormal_mask_16 > p, 1, 0).float()
-            anormal_mask_8 = transforms.ToTensor()(anomal_mask_pil.resize((8, 8), Image.BICUBIC))
+            anormal_mask_8 = transforms.ToTensor()(anomal_mask_pil.convert('L').resize((8, 8), Image.BICUBIC))
             anormal_mask_8 = torch.where(anormal_mask_8 > p, 1, 0).float()
+
             anormal_mask_dict = {64 : anormal_mask_64, 32 : anormal_mask_32,
                                  16 : anormal_mask_16,8 : anormal_mask_8}
             anormal_masks.append(anormal_mask_dict)
-            """
-
 
             caption = str(class_name.split('_')[-1]).strip()
 
