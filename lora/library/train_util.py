@@ -1076,7 +1076,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
             # --------------------------------------------------------------------------------------------------------------
             # (3) anomal image making
-            anomal_base_dir = os.path.join(super_super_parent, 'gen_images_20240204')
+            anomal_base_dir = os.path.join(super_super_parent, 'anomal_source')
             gen_anomal_images = os.listdir(anomal_base_dir)
             random_index = random.randint(0, len(gen_anomal_images) - 1)
             anomal_img_path = os.path.join(anomal_base_dir, gen_anomal_images[random_index])
