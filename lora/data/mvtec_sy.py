@@ -2,10 +2,9 @@ import os
 import numpy as np
 from torch.utils.data import Dataset
 import torch
-import cv2
 import random
 import glob
-from data.perlin import rand_perlin_2d_np
+from lora.data.perlin import rand_perlin_2d_np
 from PIL import Image
 from torchvision import transforms
 from numpy.random import default_rng
