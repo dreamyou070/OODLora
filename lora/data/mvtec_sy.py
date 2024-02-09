@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 import torch
 import random
 import glob
-from lora.data.perlin import rand_perlin_2d_np
+from data.perlin import rand_perlin_2d_np
 from PIL import Image
 from torchvision import transforms
 from numpy.random import default_rng
