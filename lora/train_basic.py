@@ -149,23 +149,6 @@ class NetworkTrainer:
         text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
         return model_util.get_model_version_str_for_sd1_sd2(args.v2, args.v_parameterization), text_encoder, vae, unet
 
-    def extract_triggerword_index(self, input_ids):
-        cls_token = 49406
-        pad_token = 49407
-        if input_ids.dim() == 3:
-            input_ids = torch.flatten(input_ids, start_dim=1)
-        batch_num, sen_len = input_ids.size()
-        batch_index_list = []
-
-        for batch_index in range(batch_num):
-            token_ids = input_ids[batch_index, :].squeeze()
-            index_list = []
-            for index, token_id in enumerate(token_ids):
-                if token_id != cls_token and token_id != pad_token:
-                    index_list.append(index)
-            batch_index_list.append(index_list)
-        return batch_index_list
-
     def get_text_cond(self, args, accelerator, batch, tokenizers, text_encoders, weight_dtype):
         input_ids = batch["input_ids"].to(accelerator.device)  # batch, torch_num, sen_len
         encoder_hidden_states = train_util.get_hidden_states(args, input_ids,

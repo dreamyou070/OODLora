@@ -214,7 +214,7 @@ class NetworkTrainer:
         tokenizer = train_util.load_tokenizer(args)
         tokenizers = tokenizer if isinstance(tokenizer, list) else [tokenizer]
 
-        from lora.data.mvtec_sy import MVTecDRAEMTrainDataset
+        from data.mvtec_sy import MVTecDRAEMTrainDataset
         obj_dir = os.path.join(args.train_data_dir, 'bagel')
         train_dir = os.path.join(obj_dir, "train")
         root_dir = os.path.join(train_dir, "good/rgb")
