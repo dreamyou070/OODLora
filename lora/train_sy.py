@@ -509,7 +509,7 @@ class NetworkTrainer:
                 # with accelerator.accumulate(network):
                 on_step_start(text_encoder, unet)
                 with torch.no_grad():
-                    latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
+                    latents = vae.encode(batch["image"].to(dtype=vae_dtype)).latent_dist.sample()
                     if torch.any(torch.isnan(latents)):
                         accelerator.print("NaN found in latents, replacing with zeros")
                         latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
