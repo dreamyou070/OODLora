@@ -497,8 +497,7 @@ class NetworkTrainer:
                 os.remove(old_ckpt_file)
 
         # training loop
-        if is_main_process:
-            loss_dict = {}
+        loss_dict = {}
 
         for epoch in range(args.start_epoch, args.start_epoch + num_train_epochs):
 
