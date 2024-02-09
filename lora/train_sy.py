@@ -223,7 +223,7 @@ class NetworkTrainer:
                                          anomaly_source_path=args.anomaly_source_path,
                                          resize_shape=[512, 512],
                                          tokenizer=tokenizer,
-                                         caption=args.trigger_word,
+                                         caption='bagel',
                                          use_perlin=True,
                                          num_repeat=args.num_repeat,
                                          anomal_only_on_object=args.anomal_only_on_object)
