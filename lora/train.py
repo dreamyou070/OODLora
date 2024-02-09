@@ -358,6 +358,7 @@ class NetworkTrainer:
 
         print(f'\n step 7. training preparing')
         if train_unet and train_text_encoder:
+            print(f' training both ')
             if len(text_encoders) > 1:
                 unet, t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler, = accelerator.prepare(
                     unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler, )
@@ -368,6 +369,7 @@ class NetworkTrainer:
                 enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
                 del enc_t_enc1, enc_t_enc2
             else:
+                print(f' len of text encoder = {len(text_encoders)}')
                 unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
                     unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler)
                 text_encoders = [text_encoder]
