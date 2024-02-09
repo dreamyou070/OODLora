@@ -5,7 +5,7 @@ data_source='train_normal'
 data_folder='MVTec3D-AD'
 train_data_dir="../../../MyData/anomaly_detection/${data_folder}"
 normal_folder='normal'
-save_folder="data_gen_training_test"
+save_folder="data_gen_training_test_2"
 output_dir="../result/${data_folder}_experiment/${class_name}/lora_training/${normal_folder}/${save_folder}"
 network_weights="../result/MVTec3D-AD_experiment/${class_name}/lora_training/${normal_folder}/res_64_down_1_again/models/epoch-000004.safetensors"
 start_epoch=0
@@ -20,7 +20,7 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --optimizer_type AdamW --lr_scheduler cosine_with_restarts \
   --lr_warmup_steps 144 --learning_rate 0.0003 --unet_lr 0.0001 --text_encoder_lr 0.00005 \
   --save_every_n_epochs 1 --sample_every_n_epochs 1 --sample_prompts ../../../MyData/anomaly_detection/inference.txt \
-  --start_epoch $start_epoch --max_train_steps 10 --max_train_epochs 10 \
+  --start_epoch $start_epoch --max_train_steps 100 --max_train_epochs 100 \
   --train_data_dir "$train_data_dir" --resolution '512,512' --class_caption 'good' \
   --output_dir "$output_dir" \
   --do_task_loss --task_loss_weight 1.0 \
