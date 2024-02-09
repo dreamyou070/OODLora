@@ -540,8 +540,6 @@ class NetworkTrainer:
                     target = noise.chunk(2, dim=0)[0]
                 loss = torch.nn.functional.mse_loss(noise_pred.float(),target.float(), reduction="none")
                 loss = loss.mean([1, 2, 3])
-                loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                loss = loss * loss_weights
                 task_loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
                 task_loss = task_loss * args.task_loss_weight
                 loss = args.task_loss_weight * task_loss
