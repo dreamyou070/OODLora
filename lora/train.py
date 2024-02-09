@@ -625,6 +625,7 @@ class NetworkTrainer:
                 with torch.no_grad():
                     a = batch['images']
                     print(f'batch["images"].shape: {a.shape}')
+                    print(f'vae_dtype: {vae_dtype}')
                     latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample()
                     anomal_latents = vae.encode(batch["anomal_images"].to(dtype=vae_dtype)).latent_dist.sample() # anomal images
                     if torch.any(torch.isnan(latents)):
