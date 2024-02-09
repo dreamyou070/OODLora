@@ -1275,7 +1275,6 @@ class BaseDataset(torch.utils.data.Dataset):
                         input_ids2_list.append(token_caption2)
         # ------------------------------------------------------------------------------------------------------------
         example = {}
-        # ---------------------------------------------------------------------------------------------------------------------------------------
         # input_ids
         if len(text_encoder_outputs1_list) == 0:
             if self.token_padding_disabled :
@@ -3997,6 +3996,7 @@ def _load_target_model(args: argparse.Namespace, weight_dtype,
     name_or_path = os.path.realpath(name_or_path) if os.path.islink(name_or_path) else name_or_path
     load_stable_diffusion_format = os.path.isfile(name_or_path)  # determine SD or Diffusers
     if load_stable_diffusion_format:
+        print(f' Checking *********************************************** ')
         print(f"load StableDiffusion checkpoint: {name_or_path}")
         text_encoder, vae, unet = model_util.load_models_from_stable_diffusion_checkpoint(
             args.v2, name_or_path, device, unet_use_linear_projection_in_v2=unet_use_linear_projection_in_v2
