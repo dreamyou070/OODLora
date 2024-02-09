@@ -218,7 +218,7 @@ class NetworkTrainer:
         obj_dir = os.path.join(args.train_data_dir, 'bagel')
         train_dir = os.path.join(obj_dir, "train")
         root_dir = os.path.join(train_dir, "good/rgb")
-        args.anomaly_source_path = os.path.join(args.data_path, "anomal_source")
+        args.anomaly_source_path = os.path.join(args.train_data_dir, "anomal_source")
         dataset = MVTecDRAEMTrainDataset(root_dir=root_dir,
                                          anomaly_source_path=args.anomaly_source_path,
                                          resize_shape=[512, 512],
