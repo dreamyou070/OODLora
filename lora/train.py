@@ -308,6 +308,7 @@ class NetworkTrainer:
             info = network.load_weights(args.network_weights)
             accelerator.print(f"load network weights from {args.network_weights}: {info}")
         if args.gradient_checkpointing:
+            print(f' Not Gradeitn Checking')
             unet.enable_gradient_checkpointing()
             for t_enc in text_encoders:
                 t_enc.gradient_checkpointing_enable()
