@@ -225,8 +225,8 @@ class NetworkTrainer:
                                          tokenizer=tokenizer,
                                          caption='bagel',
                                          use_perlin=True,
-                                         num_repeat=args.num_repeat,
-                                         anomal_only_on_object=args.anomal_only_on_object)
+                                         num_repeat=1,
+                                         anomal_only_on_object=True)
 
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
