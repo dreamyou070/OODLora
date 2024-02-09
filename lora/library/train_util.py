@@ -1124,6 +1124,7 @@ class BaseDataset(torch.utils.data.Dataset):
             # image/latentsを処理する
 
             if self.enable_bucket:
+                print('bucket ....................... ')
                 img, original_size, crop_ltrb = trim_and_resize_if_required(subset.random_crop, img, image_info.bucket_reso, image_info.resized_size)
 
             else:
@@ -1173,6 +1174,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 if flipped:
                     img = img[:, ::-1, :].copy()  # copy to avoid negative stride problem
                 latents = None
+                print(f'self.image_transforms(img) : {self.image_transforms}')
                 image = self.image_transforms(img)  # -1.0~1.0のtorch.Tensorになる
                 anomal_image = self.image_transforms(anomal_img)
 
@@ -1307,7 +1309,11 @@ class BaseDataset(torch.utils.data.Dataset):
             example["text_encoder_pool2_list"] = torch.stack(text_encoder_pool2_list)
 
         if images[0] is not None:
+            each = images[0]
+            print(f'each shape: {each.shape}')
             images = torch.stack(images).to(memory_format=torch.contiguous_format).float()
+            print(f'images shape: {images.shape}')
+
             anomal_images = torch.stack(anomal_images).to(memory_format=torch.contiguous_format).float()
 
         else:

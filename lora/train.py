@@ -276,12 +276,10 @@ class NetworkTrainer:
 
         model_version, enc_text_encoder, enc_vae, enc_unet = self.load_target_model(args, weight_dtype, accelerator)
         model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
-        print(f'type of text_encoder: {type(text_encoder)}')
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
         enc_text_encoders = enc_text_encoder if isinstance(enc_text_encoder, list) else [enc_text_encoder]
         train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
         if torch.__version__ >= "2.0.0":
-            print(f'args.xformers: {args.xformers}')
             vae.set_use_memory_efficient_attention_xformers(args.xformers)
         print(' (5.2) lora model')
         sys.path.append(os.path.dirname(__file__))
@@ -358,7 +356,6 @@ class NetworkTrainer:
 
         print(f'\n step 7. training preparing')
         if train_unet and train_text_encoder:
-            print(f' training both ')
             if len(text_encoders) > 1:
                 unet, t_enc1, t_enc2, network, optimizer, train_dataloader, lr_scheduler, = accelerator.prepare(
                     unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler, )
@@ -369,7 +366,6 @@ class NetworkTrainer:
                 enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
                 del enc_t_enc1, enc_t_enc2
             else:
-                print(f' len of text encoder = {len(text_encoders)}')
                 unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
                     unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler)
                 text_encoders = [text_encoder]
@@ -634,6 +630,7 @@ class NetworkTrainer:
                         latents = torch.where(torch.isnan(latents), torch.zeros_like(latents), latents)
                         anomal_latents = torch.where(torch.isnan(anomal_latents), torch.zeros_like(anomal_latents),
                                                      anomal_latents)
+                    print(f'self.vae_scale_factor: {self.vae_scale_factor}')
                     latents = latents * self.vae_scale_factor
                     anomal_latents = anomal_latents * self.vae_scale_factor
                     input_latents = torch.cat([latents, anomal_latents], dim=0)
