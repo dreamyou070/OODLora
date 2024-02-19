@@ -189,7 +189,6 @@ class NetworkTrainer:
 
         args.logging_dir = os.path.join(args.output_dir, 'logs')
         parent, name = os.path.split(args.output_dir)
-        args.wandb_run_name = name
 
         print(f'\n step 1. setting')
         print(f' (1) session')
@@ -243,8 +242,6 @@ class NetworkTrainer:
         print(f'\n step 3. preparing accelerator')
         accelerator = train_util.prepare_accelerator(args)
         is_main_process = accelerator.is_main_process
-        if args.log_with == 'wandb' and is_main_process:
-            wandb.init(project=args.wandb_init_name, name=args.wandb_run_name)
 
         print(f'\n step 4. save directory')
         save_base_dir = args.output_dir
@@ -261,10 +258,8 @@ class NetworkTrainer:
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
         print(f' (5.1) base model')
 
-        model_version, enc_text_encoder, enc_vae, enc_unet = self.load_target_model(args, weight_dtype, accelerator)
         model_version, text_encoder, vae, unet = self.load_target_model(args, weight_dtype, accelerator)
         text_encoders = text_encoder if isinstance(text_encoder, list) else [text_encoder]
-        enc_text_encoders = enc_text_encoder if isinstance(enc_text_encoder, list) else [enc_text_encoder]
         train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
         if torch.__version__ >= "2.0.0": vae.set_use_memory_efficient_attention_xformers(args.xformers)
         print(' (5.2) lora model')
@@ -334,10 +329,6 @@ class NetworkTrainer:
         unet.to(dtype=weight_dtype)
         for t_enc in text_encoders:
             t_enc.requires_grad_(False)
-        enc_unet.requires_grad_(False)
-        enc_unet.to(dtype=weight_dtype)
-        for enc_t_enc in enc_text_encoders:
-            enc_t_enc.requires_grad_(False)
 
         print(f'\n step 7. training preparing')
         if train_unet and train_text_encoder:
@@ -346,20 +337,13 @@ class NetworkTrainer:
                     unet, text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler, )
                 text_encoder = text_encoders = [t_enc1, t_enc2]
                 del t_enc1, t_enc2
-                enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1],
-                                                                        enc_unet)
-                enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
-                del enc_t_enc1, enc_t_enc2
             else:
                 unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
                     unet, text_encoder, network, optimizer, train_dataloader, lr_scheduler)
                 text_encoders = [text_encoder]
-                enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
-                enc_text_encoders = [enc_text_encoder]
         elif train_unet:
             unet, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
                 unet, network, optimizer, train_dataloader, lr_scheduler)
-            enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
             text_encoder.to(accelerator.device)
         elif train_text_encoder:
             if len(text_encoders) > 1:
@@ -367,27 +351,17 @@ class NetworkTrainer:
                     text_encoders[0], text_encoders[1], network, optimizer, train_dataloader, lr_scheduler)
                 text_encoder = text_encoders = [t_enc1, t_enc2]
                 del t_enc1, t_enc2
-                enc_t_enc1, enc_t_enc2, enc_unet, = accelerator.prepare(enc_text_encoders[0], enc_text_encoders[1],
-                                                                        enc_unet)
-                enc_text_encoder = enc_text_encoders = [enc_t_enc1, enc_t_enc2]
-                del enc_t_enc1, enc_t_enc2
             else:
                 text_encoder, network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
                     text_encoder, network, optimizer, train_dataloader, lr_scheduler)
                 text_encoders = [text_encoder]
-                enc_t_enc, enc_unet, = accelerator.prepare(enc_text_encoder, enc_unet)
-                enc_text_encoders = [enc_text_encoder]
             unet.to(accelerator.device,
                     dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
-            enc_unet.to(accelerator.device,
-                        dtype=weight_dtype)  # move to device because unet is not prepared by accelerator
         else:
             network, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(network, optimizer,
                                                                                      train_dataloader, lr_scheduler)
         text_encoders = train_util.transform_models_if_DDP(text_encoders)
         unet, network = train_util.transform_models_if_DDP([unet, network])
-        enc_text_encoders = train_util.transform_models_if_DDP(enc_text_encoders)
-        enc_unet = train_util.transform_models_if_DDP([enc_unet])[0]
         if args.gradient_checkpointing:
             unet.train()
             for t_enc in text_encoders:
@@ -400,11 +374,7 @@ class NetworkTrainer:
             unet.eval()
             for t_enc in text_encoders:
                 t_enc.eval()
-            enc_unet.eval()
-            for enc_t_enc in enc_text_encoders:
-                enc_t_enc.eval()
         del t_enc
-        del enc_text_encoders, enc_vae
 
         network.prepare_grad_etc(text_encoder, unet)
         vae.requires_grad_(False)
@@ -701,11 +671,12 @@ class NetworkTrainer:
 
                                     if part in args.trg_part or int(res) == 8 :
 
-                                        img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
-                                        img_mask = img_masks.squeeze()  # res,res
-                                        img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)
+                                        #img_masks = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                        #img_mask = img_masks.squeeze()  # res,res
+                                        #img_mask = torch.stack([img_mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)
 
-                                        anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                        #anormal_mask = batch["anormal_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
+                                        anormal_mask = batch["img_masks"][0][res].unsqueeze(0)  # [1,1,res,res], foreground = 1
                                         mask = anormal_mask.squeeze()  # res,res
                                         anormal_mask = torch.stack([mask.flatten() for i in range(head_num)],dim=0)  # .unsqueeze(-1)  # 8, res*res, 1
 
@@ -737,12 +708,12 @@ class NetworkTrainer:
                                             normal_position = torch.where((anormal_position == 0), 1,
                                                                           0)  # head, pix_num
 
-                                        anormal_trigger_activation = (score_map * anormal_position)
-                                        normal_trigger_activation = (score_map * normal_position)
+                                        anormal_trigger_activation = (score_map * anormal_position) # 8, res*res
+                                        normal_trigger_activation = (score_map * normal_position)   # 8, res*res
                                         total_score = torch.ones_like(anormal_trigger_activation)
 
-                                        anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8
-                                        normal_trigger_activation = normal_trigger_activation.sum(dim=-1)  # 8
+                                        anormal_trigger_activation = anormal_trigger_activation.sum(dim=-1)  # 8 -> anormal position 의 score 만 더한다.
+                                        normal_trigger_activation = normal_trigger_activation.sum(dim=-1)    # 8 -> normal position 의 score 만 더한다.
                                         total_score = total_score.sum(dim=-1)  # 8
 
                                         if args.cls_training :
@@ -892,7 +863,6 @@ class NetworkTrainer:
                     # accelerator.log(logs, step=global_step)
                     if is_main_process:
                         logs = self.generate_step_logs(loss_dict, lr_scheduler)
-                        wandb.log(logs)#, step=global_step)
                 if global_step >= args.max_train_steps:
                     break
             accelerator.wait_for_everyone()

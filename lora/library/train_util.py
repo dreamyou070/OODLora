@@ -1054,7 +1054,7 @@ class BaseDataset(torch.utils.data.Dataset):
             super_parent, class_name = os.path.split(parent) # class_name = 120_good
             super_super_parent, change = os.path.split(super_parent) # dir = 120
             #anormal_mask_dir = os.path.join(super_super_parent, 'gt', class_name, name)
-            pixel_mask_dir = os.path.join(super_super_parent, 'object_mask', class_name, name)
+            pixel_mask_dir = os.path.join(super_super_parent, 'gt', class_name, name)
             pixel_mask_pil = Image.open(pixel_mask_dir).convert('L').resize((512,512))
             pixel_mask_np = np.array(pixel_mask_pil) / 255
             pixel_mask_np = np.where(pixel_mask_np > 0.5, 1, 0)
