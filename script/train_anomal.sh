@@ -22,7 +22,4 @@ NCCL_P2P_DISABLE=1 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2
   --start_epoch $start_epoch --max_train_steps 500 --max_train_epochs 500 \
   --train_data_dir "$train_data_dir" --resolution '512,512' --class_caption 'good' \
   --output_dir "$output_dir" \
-  --do_task_loss --task_loss_weight 1.0 \
-  --do_dist_loss --mahalanobis_loss_weight 1 \
-  --do_attn_loss --attn_loss_weight 0.008 --cls_training --normal_weight 1.0 --act_deact --act_deact_weight 1.0 \
-  --trg_layer_list "['up_blocks_3_attentions_2_transformer_blocks_0_attn2']"
+  --trg_layer_list "['up_blocks_3_attentions_2_transformer_blocks_0_attn2']" --attn_loss
